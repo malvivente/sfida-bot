@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2 } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2 } from 'lucide-react';
 import { MatchData } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
@@ -12,6 +12,8 @@ interface DuelLobbyProps {
   onCreateMatch: (wagerGram: string) => Promise<boolean | void> | void;
   onJoinMatch: (matchId: string, wagerGram: string) => void;
   onSpectateMatch: (matchId: string) => void;
+  onCancelMatch?: (matchId: string) => void;
+  onClearAllMatches?: () => void;
   createError?: string | null;
   onClearError?: () => void;
 }
@@ -21,6 +23,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onCreateMatch,
   onJoinMatch,
   onSpectateMatch,
+  onCancelMatch,
+  onClearAllMatches,
   createError,
   onClearError,
 }) => {
@@ -91,9 +95,24 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
       {/* Active Matches Feed */}
       <div className="space-y-3">
-        <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider px-1">
-          SFIDE ATTIVE NELL'ARENA ({matches.length})
-        </h3>
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider">
+            SFIDE ATTIVE NELL'ARENA ({matches.length})
+          </h3>
+          {matches.length > 0 && onClearAllMatches && (
+            <button
+              onClick={() => {
+                triggerImpact('medium');
+                onClearAllMatches();
+              }}
+              className="text-[11px] font-chakra text-slate-500 hover:text-cyber-pink transition-all flex items-center space-x-1"
+              title="Pulisci tutte le sfide dalla cache"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Pulisci tutto</span>
+            </button>
+          )}
+        </div>
 
         {matches.length === 0 ? (
           <div className="text-center py-10 bg-cyber-card border border-cyber-border rounded-2xl p-6">
@@ -190,6 +209,19 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
+
+                    {onCancelMatch && (
+                      <button
+                        onClick={() => {
+                          triggerImpact('medium');
+                          onCancelMatch(m.matchId);
+                        }}
+                        title="Rimuovi ed elimina sfida"
+                        className="p-2 bg-cyber-bg border border-cyber-border hover:border-cyber-pink text-slate-400 hover:text-cyber-pink active:scale-95 transition-all rounded-xl"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

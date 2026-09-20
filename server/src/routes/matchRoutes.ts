@@ -102,4 +102,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
       state: room.state,
     });
   });
+
+  // Delete / cancel match endpoint
+  fastify.delete('/api/matches/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const deleted = roomManager.removeRoom(id);
+    return reply.send({ success: true, deleted });
+  });
 }

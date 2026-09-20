@@ -176,6 +176,27 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   };
 
+  const handleCancelMatch = (matchId: string) => {
+    setMatches((prev) => {
+      const updated = prev.filter((m) => m.matchId !== matchId);
+      try {
+        localStorage.setItem('sfidabot_saved_matches', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    if (serverUrl) {
+      fetch(`${serverUrl}/api/matches/${matchId}`, { method: 'DELETE' }).catch(() => {});
+    }
+  };
+
+  const handleClearAllMatches = () => {
+    setMatches([]);
+    try {
+      localStorage.removeItem('sfidabot_saved_matches');
+    } catch {}
+  };
+
   return (
     <div className="w-full">
       {activeMatchId ? (
@@ -224,6 +245,8 @@ export const Arena: React.FC<ArenaProps> = ({
           onCreateMatch={handleCreateMatch}
           onJoinMatch={handleJoinMatch}
           onSpectateMatch={handleSpectateMatch}
+          onCancelMatch={handleCancelMatch}
+          onClearAllMatches={handleClearAllMatches}
           createError={createError}
           onClearError={() => setCreateError(null)}
         />
