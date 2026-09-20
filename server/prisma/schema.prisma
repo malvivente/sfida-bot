@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  telegramId       BigInt   @unique
+  username         String?
+  firstName        String?
+  walletAddress    String?  @unique
+  recruiterAddress String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdMatches   Match[]  @relation("PlayerAMatches")
+  joinedMatches    Match[]  @relation("PlayerBMatches")
+  wonMatches       Match[]  @relation("WonMatches")
+  bets             Bet[]
+}
+
+model Group {
+  id                 String   @id @default(uuid())
+  telegramChatId     BigInt   @unique
+  title              String
+  adminWalletAddress String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  matches            Match[]
+}
+
+enum MatchStatus {
+  PENDING
+  BETTING
+  ACTIVE
+  SETTLED
+  CANCELLED
+}
+
+model Match {
+  id               String      @id @default(uuid())
+  matchNum         BigInt      @unique
+  contractAddress  String?
+  wagerAmountNano  BigInt
+  status           MatchStatus @default(PENDING)
+
+  playerAId        String
+  playerA          User        @relation("PlayerAMatches", fields: [playerAId], references: [id])
+  playerAAddress   String
+  recruiterA       String?
+
+  playerBId        String?
+  playerB          User?       @relation("PlayerBMatches", fields: [playerBId], references: [id])
+  playerBAddress   String?
+  recruiterB       String?
+
+  winnerId         String?
+  winner           User?       @relation("WonMatches", fields: [winnerId], references: [id])
+  winnerAddress    String?
+
+  roundsWonA       Int         @default(0)
+  roundsWonB       Int         @default(0)
+
+  groupId          String?
+  group            Group?      @relation(fields: [groupId], references: [id])
+  groupAdminWallet String?
+
+  totalBetsANano   BigInt      @default(0)
+  totalBetsBNano   BigInt      @default(0)
+
+  createdAt        DateTime    @default(now())
+  settledAt        DateTime?
+
+  bets             Bet[]
+  affiliateEarnings AffiliateEarnings[]
+}
+
+model Bet {
+  id               String   @id @default(uuid())
+  matchId          String
+  match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  spectatorId      String?
+  spectator        User?    @relation(fields: [spectatorId], references: [id])
+  spectatorAddress String
+  targetPlayer     String   // "A" or "B"
+  amountNano       BigInt
+  claimed          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
+
+enum AffiliateRole {
+  RECRUITER
+  GROUP_ADMIN
+}
+
+model AffiliateEarnings {
+  id              String        @id @default(uuid())
+  matchId         String
+  match           Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  recipientWallet String
+  amountNano      BigInt
+  role            AffiliateRole
+  createdAt       DateTime      @default(now())
+}

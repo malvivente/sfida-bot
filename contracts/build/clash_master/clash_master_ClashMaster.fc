@@ -1,0 +1,629 @@
+#pragma version =0.4.6;
+#pragma allow-post-modification;
+#pragma compute-asm-ltr;
+
+;; clash_master_ClashMaster.headers.fc
+;;
+;; Header files for ClashMaster
+;; NOTE: declarations are sorted for optimal order
+;;
+
+;; __tact_store_address_opt
+builder __tact_store_address_opt(builder b, slice address) inline;
+
+;; __tact_context_get
+(int, slice, int, slice) __tact_context_get() inline;
+
+;; __tact_context_get_sender
+slice __tact_context_get_sender() inline;
+
+;; $EventMatchCreated$_store
+builder $EventMatchCreated$_store(builder build_0, (int, slice, int, int) v) inline;
+
+;; $EventMatchCreated$_store_cell
+cell $EventMatchCreated$_store_cell((int, slice, int, int) v, builder b) inline;
+
+;; $ClashMaster$_store
+builder $ClashMaster$_store(builder build_0, (slice, int, int) v) inline;
+
+;; $ClashMaster$_load
+(slice, ((slice, int, int))) $ClashMaster$_load(slice sc_0) inline;
+
+;; $MasterStats$_to_external
+(int, int, slice, int) $MasterStats$_to_external(((int, int, slice, int)) v) inline;
+
+;; $MatchEscrow$init$_store
+builder $MatchEscrow$init$_store(builder build_0, (slice, int, slice, int, int, slice, slice) v) inline;
+
+;; $ClashMaster$init$_load
+(slice, ((slice, int))) $ClashMaster$init$_load(slice sc_0) inline;
+
+;; $ClashMaster$_contract_init
+(slice, int, int) $ClashMaster$_contract_init(slice $owner, int $serverPublicKey) impure inline;
+
+;; $ClashMaster$_contract_load
+(slice, int, int) $ClashMaster$_contract_load() impure inline;
+
+;; $ClashMaster$_contract_store
+() $ClashMaster$_contract_store((slice, int, int) v) impure inline;
+
+;; $Cell$_fun_asSlice
+slice $Cell$_fun_asSlice(cell $self) impure inline;
+
+;; $global_newAddress
+slice $global_newAddress(int $chain, int $hash) impure inline;
+
+;; $global_contractAddressExt
+slice $global_contractAddressExt(int $chain, cell $code, cell $data) impure inline;
+
+;; $global_contractAddress
+slice $global_contractAddress((cell, cell) $s) impure inline;
+
+;; $global_emit
+() $global_emit(cell $body) impure inline;
+
+;; $MatchEscrow$_init_child
+(cell, cell) $MatchEscrow$_init_child(slice $clashMaster, int $matchId, slice $playerA, int $wagerAmount, int $serverPublicKey, slice $recruiterA, slice $groupAdminAddress) inline_ref;
+
+;; $SendParameters$_constructor_to_value_mode_bounce_body
+((int, cell, cell, cell, int, slice, int)) $SendParameters$_constructor_to_value_mode_bounce_body(slice $to, int $value, int $mode, int $bounce, cell $body) inline;
+
+;; $ClashMaster$_fun_getEscrowAddress
+((slice, int, int), slice) $ClashMaster$_fun_getEscrowAddress((slice, int, int) $self, int $matchId, slice $playerA, int $wagerAmount, slice $recruiterA, slice $groupAdminAddress) impure inline_ref;
+
+;; $MasterStats$_constructor_matchCount_serverPublicKey_owner_balance
+((int, int, slice, int)) $MasterStats$_constructor_matchCount_serverPublicKey_owner_balance(int $matchCount, int $serverPublicKey, slice $owner, int $balance) inline;
+
+;; $ClashMaster$_fun_getStats
+((slice, int, int), (int, int, slice, int)) $ClashMaster$_fun_getStats((slice, int, int) $self) impure inline_ref;
+
+;; $SendParameters$_constructor_to_value_mode_bounce_body_code_data
+((int, cell, cell, cell, int, slice, int)) $SendParameters$_constructor_to_value_mode_bounce_body_code_data(slice $to, int $value, int $mode, int $bounce, cell $body, cell $code, cell $data) inline;
+
+;; $EventMatchCreated$_constructor_matchId_playerA_wagerAmount_creationFee
+((int, slice, int, int)) $EventMatchCreated$_constructor_matchId_playerA_wagerAmount_creationFee(int $matchId, slice $playerA, int $wagerAmount, int $creationFee) inline;
+
+
+;; clash_master_ClashMaster.stdlib.fc
+global (int, slice, int, slice) __tact_context;
+global slice __tact_context_sender;
+global cell __tact_child_contract_codes;
+global int __tact_randomized;
+
+(slice, slice) __tact_load_address_opt(slice cs) asm """
+
+            b{00} SDBEGINSQ
+            IF:<{
+              PUSHNULL
+            }>ELSE<{
+              LDMSGADDR
+              SWAP
+            }>
+
+""";
+
+builder __tact_store_addr_none(builder b) asm "b{00} STSLICECONST";
+
+builder __tact_store_address_opt(builder b, slice address) inline {
+    if (null?(address)) {
+        return __tact_store_addr_none(b);
+    } else {
+        return b.store_slice(address);
+    }
+}
+
+(int, slice, int, slice) __tact_context_get() inline {
+    return __tact_context;
+}
+
+slice __tact_context_get_sender() inline {
+    return __tact_context_sender;
+}
+
+builder $global_beginCell() impure asm """
+    NEWC
+""";
+
+int $global_contractHash(cell $code, cell $data) impure asm """
+    s0 PUSH HASHCU // `data` hash
+    s2 PUSH HASHCU // `code` hash
+    SWAP2
+    CDEPTH         // `data` depth
+    SWAP
+    CDEPTH         // `code` depth
+    131380 INT     // (2 << 16) | (1 << 8) | 0x34
+
+    // Group 2: Composition of the Builder
+    NEWC
+    24 STU  // store refs_descriptor | bits_descriptor | data
+    16 STU  // store depth_descriptor for `code`
+    16 STU  // store depth_descriptor for `data`
+    256 STU // store `code` hash
+    256 STU // store `data` hash
+
+    // Group 3: SHA256 hash of the resulting Builder
+    ONE HASHEXT_SHA256
+""";
+
+slice $Slice$_fun_asAddressUnsafe(slice $self) impure asm "NOP";
+
+slice $Cell$_fun_beginParse(cell $self) impure asm """
+    CTOS
+""";
+
+slice $Cell$_fun_asSlice(cell $self) impure inline {
+    var ($self) = $self;
+    return $Cell$_fun_beginParse($self);
+}
+
+cell $Builder$_fun_endCell(builder $self) impure asm """
+    ENDC
+""";
+
+slice $global_newAddress(int $chain, int $hash) impure inline {
+    return $Slice$_fun_asAddressUnsafe($Cell$_fun_asSlice($Builder$_fun_endCell(store_uint(store_int(store_uint($global_beginCell(), 4, 3), $chain, 8), $hash, 256))));
+}
+
+slice $global_contractAddressExt(int $chain, cell $code, cell $data) impure inline {
+    int $hash = $global_contractHash($code, $data);
+    return $global_newAddress($chain, $hash);
+}
+
+slice $global_contractAddress((cell, cell) $s) impure inline {
+    var (($s'code, $s'data)) = $s;
+    return $global_contractAddressExt(0, $s'code, $s'data);
+}
+
+slice $global_myAddress() impure asm """
+    MYADDR
+""";
+
+int $global_myBalance() impure asm """
+    BALANCE FIRST
+""";
+
+() $global_send((int, cell, cell, cell, int, slice, int) $params) impure asm """
+    NEWC
+    b{01} STSLICECONST  // store tag = $0 and ihr_disabled = true
+    1 STI               // store `bounce`
+    b{000} STSLICECONST // store bounced = false and src = addr_none
+    STSLICE             // store `to`
+    SWAP
+    STGRAMS             // store `value`
+    105 PUSHINT         // 1 + 4 + 4 + 64 + 32
+    STZEROES            // store currency_collection, ihr_fee, fwd_fee, created_lt and created_at
+    // → Stack state
+    // s0: Builder
+    // s1: `data`
+    // s2: `code`
+    // s3: `body`
+    // s4: `mode`
+
+    // Group 2: Placing the Builder after code and data, then checking those for nullability
+    s2 XCHG0
+    DUP2
+    ISNULL
+    SWAP
+    ISNULL
+    AND
+    // → Stack state
+    // s0: -1 (true) if `data` and `code` are both null, 0 (false) otherwise
+    // s1: `code`
+    // s2: `data`
+    // s3: Builder
+    // s4: `body`
+    // s5: `mode`
+
+    // Group 3: Left branch of the IFELSE, executed if s0 is -1 (true)
+    <{
+        DROP2 // drop `data` and `code`, since either of those is null
+        b{0} STSLICECONST
+    }> PUSHCONT
+
+    // Group 3: Right branch of the IFELSE, executed if s0 is 0 (false)
+    <{
+        // _ split_depth:(Maybe (## 5))
+        //   special:(Maybe TickTock)
+        //   code:(Maybe ^Cell)
+        //   data:(Maybe ^Cell)
+        //   library:(Maybe ^Cell)
+        // = StateInit;
+        ROT                // place message Builder on top
+        b{10} STSLICECONST // store Maybe = true, Either = false
+        // Start composing inlined StateInit
+        b{00} STSLICECONST // store split_depth and special first
+        STDICT             // store code
+        STDICT             // store data
+        b{0} STSLICECONST  // store library
+    }> PUSHCONT
+
+    // Group 3: IFELSE that does the branching shown above
+    IFELSE
+    // → Stack state
+    // s0: Builder
+    // s1: null or StateInit
+    // s2: `body`
+    // s3: `mode`
+
+    // Group 4: Finalizing the message
+    STDICT // store `body` as ref with an extra Maybe bit, since `body` might be null
+    ENDC
+    // → Stack state
+    // s0: Cell
+    // s1: `mode`
+
+    // Group 5: Sending the message, with `mode` on top
+    SWAP
+    SENDRAWMSG // https://github.com/tact-lang/tact/issues/1558
+""";
+
+() $global_sendRawMessage(cell $msg, int $mode) impure asm """
+    SENDRAWMSG
+""";
+
+builder $Builder$_fun_storeRef(cell $cell, builder $self) impure asm """
+    STREF
+""";
+
+() $global_emit(cell $body) impure inline {
+    cell $c = $Builder$_fun_endCell($Builder$_fun_storeRef($body, store_uint($global_beginCell(), 15211807202738752817960438464513, 104)));
+    $global_sendRawMessage($c, 0);
+}
+
+;; clash_master_ClashMaster.constants.fc
+;; Cell ad/CnWNuiKnPwGsOeEAiTKTFtZPnCwimH4Airp1fDwM=
+cell __gen_cell_cell_69dfc29d636e88a9cfc06b0e7840224ca4c5b593e70b08a61f8022ae9d5f0f03() asm """
+    B{b5ee9c7241010101002100003e000000005366696461426f7420457363726f7720496e697469616c697a65641d96db3a} B>boc PUSHREF
+""";
+
+;; Cell CpsfoStjIPL318lxvslk0RvQ9fElKcJr/GClCmXsmUY=
+cell __gen_cell_cell_0a9b1fa12b6320f2f7d7c971bec964d11bd0f5f12529c26bfc60a50a65ec9946() asm """
+    B{b5ee9c7241010101002b000052000000005366696461426f7420506c6174666f726d205472656173757279205769746864726177616ca4465723} B>boc PUSHREF
+""";
+
+;; clash_master_ClashMaster.storage.fc
+;;
+;; Type: SendParameters
+;; TLB: _ mode:int257 body:Maybe ^cell code:Maybe ^cell data:Maybe ^cell value:int257 to:address bounce:bool = SendParameters
+;;
+
+((int, cell, cell, cell, int, slice, int)) $SendParameters$_constructor_to_value_mode_bounce_body(slice $to, int $value, int $mode, int $bounce, cell $body) inline {
+    return ($mode, $body, null(), null(), $value, $to, $bounce);
+}
+
+((int, cell, cell, cell, int, slice, int)) $SendParameters$_constructor_to_value_mode_bounce_body_code_data(slice $to, int $value, int $mode, int $bounce, cell $body, cell $code, cell $data) inline {
+    return ($mode, $body, $code, $data, $value, $to, $bounce);
+}
+
+;;
+;; Type: EventMatchCreated
+;; Header: 0x0b3af9c2
+;; TLB: event_match_created#0b3af9c2 matchId:uint64 playerA:address wagerAmount:coins creationFee:coins = EventMatchCreated
+;;
+
+builder $EventMatchCreated$_store(builder build_0, (int, slice, int, int) v) inline {
+    var (v'matchId, v'playerA, v'wagerAmount, v'creationFee) = v;
+    build_0 = store_uint(build_0, 188414402, 32);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'playerA);
+    build_0 = build_0.store_varuint16(v'wagerAmount);
+    build_0 = build_0.store_varuint16(v'creationFee);
+    return build_0;
+}
+
+cell $EventMatchCreated$_store_cell((int, slice, int, int) v, builder b) inline {
+    return $EventMatchCreated$_store(b, v).end_cell();
+}
+
+((int, slice, int, int)) $EventMatchCreated$_constructor_matchId_playerA_wagerAmount_creationFee(int $matchId, slice $playerA, int $wagerAmount, int $creationFee) inline {
+    return ($matchId, $playerA, $wagerAmount, $creationFee);
+}
+
+;;
+;; Type: MasterStats
+;; TLB: _ matchCount:uint64 serverPublicKey:uint256 owner:address balance:coins = MasterStats
+;;
+
+(int, int, slice, int) $MasterStats$_to_external(((int, int, slice, int)) v) inline {
+    var (v'matchCount, v'serverPublicKey, v'owner, v'balance) = v; 
+    return (v'matchCount, v'serverPublicKey, v'owner, v'balance);
+}
+
+((int, int, slice, int)) $MasterStats$_constructor_matchCount_serverPublicKey_owner_balance(int $matchCount, int $serverPublicKey, slice $owner, int $balance) inline {
+    return ($matchCount, $serverPublicKey, $owner, $balance);
+}
+
+;;
+;; Type: MatchEscrow
+;; TLB: _ clashMaster:address matchId:uint64 playerA:address playerB:address wagerAmount:coins totalBetsA:coins totalBetsB:coins state:uint8 recruiterA:address recruiterB:address groupAdminAddress:address serverPublicKey:uint256 winner:address creationFeePaid:coins spectatorBetsA:dict<address, coins> spectatorBetsB:dict<address, coins> spectatorClaimed:dict<address, bool> distributableSpectatorPool:coins remainingWinningBetsToClaim:coins totalWinningBets:coins = MatchEscrow
+;;
+
+builder $MatchEscrow$init$_store(builder build_0, (slice, int, slice, int, int, slice, slice) v) inline {
+    var (v'clashMaster, v'matchId, v'playerA, v'wagerAmount, v'serverPublicKey, v'recruiterA, v'groupAdminAddress) = v;
+    build_0 = build_0.store_slice(v'clashMaster);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'playerA);
+    build_0 = build_0.store_varuint16(v'wagerAmount);
+    build_0 = build_0.store_uint(v'serverPublicKey, 256);
+    var build_1 = begin_cell();
+    build_1 = __tact_store_address_opt(build_1, v'recruiterA);
+    build_1 = __tact_store_address_opt(build_1, v'groupAdminAddress);
+    build_0 = store_builder_ref(build_0, build_1);
+    return build_0;
+}
+
+cell $MatchEscrow$_child_get_code() impure asm """
+    B{b5ee9c7201023d01000fe2000262ff008e88f4a413f4bcf2c80bed53208e9c30eda2edfb01d072d721d200d200fa4021103450666f04f86102f862e1ed43d90102020271030403fced44d0d200018e5afa40d33ffa40fa00d3ffd401d0d72c01916d93fa4001e201d72c01916d93fa4001e2311027102610251024102307d155056d6d6d6d6d706d8209312d00547222530009111009109f104e103d107c104b108a1039103810671056e30d1115945f0f5f06e0705614d74920c21f925715e30d20c0005615101112020120050602d9bf78df6a268690000c72d7d20699ffd207d0069ffea00e86b9600c8b6c9fd2000f100eb9600c8b6c9fd2000f1188813881308128812081183e8aa82b6b6b6b6b6b836c1049896802a3911298004888804884f8827081e883e08258845081c881c0833882b7186ed9e365536554100f020120070802f1b8966ed44d0d200018e5afa40d33ffa40fa00d3ffd401d0d72c01916d93fa4001e201d72c01916d93fa4001e2311027102610251024102307d155056d6d6d6d6d706d8209312d00547222530009111009109f104e103d107c104b108a1039103810671056e30d1113111411131112111311121111111211118100d02f1b6691da89a1a400031cb5f481a67ff481f401a7ffa803a1ae580322db27f48003c403ae580322db27f48003c462204e204c204a204820460fa2aa0adadadadadae0db0412625a00a8e444a60012222012213e209c207a20f8209621142072207020ce20adc61a2226222822262224222622242222222422230100902f1b4657da89a1a400031cb5f481a67ff481f401a7ffa803a1ae580322db27f48003c403ae580322db27f48003c462204e204c204a204820460fa2aa0adadadadadae0db0412625a00a8e444a60012222012213e209c207a20f8209621142072207020ce20adc61a2226222822262224222622242222222422230100b01281110111111100f11100f550edb3c57105f0f6c410a003c81010b260259f40a6fa193fa003092306de2206eb395206ef2d080e0307001281110111111100f11100f550edb3c57105f0f6c410c003c81010b270259f40a6fa193fa003092306de2206eb395206ef2d080e0307001281110111111100f11100f550edb3c57105f0f6c410e004281010b2502714133f40a6fa19401d70030925b6de2206eb395206ef2d080e0307000225612561256125612561256125612547e9801f6fa40d33ffa40d72c01916d93fa4001e201fa00d401d0fa00fa00d307d72c01916d93fa4001e201d72c01916d93fa4001e201d430d0d72c01916d93fa4001e201d3ffd72c01916d93fa4001e201fa00f404f404f404d430d0fa00fa00fa00300f11140f0f11130f0f11120f0f11110f0f11100f5714111211131112130456311114d31f21821046024d54bae302218210c8998cb6bae3022182102d15922dbae302218210c1b57e3cba1415161702fec121b08eb13057131111111311111110111211100f11110f0e11100e10df551cc87f01ca001114111311121111111055e0db3cc9ed54e0c0008ebb1113c21f8eb01111111311111110111211100f11110f0e11100e10df551cc87f01ca001114111311121111111055e0db3cc9ed54db31e05f0f5f05945f0f5f06e2f2c0823a3a00241111111211111110111111100f11100f550e01fc313a3f571207d33fd72c01916d93fa4001e231f8416f2430328137a60dc0001df2f4811bcf035612ba13f2f48115952b5611c705b3f2f482008c0c512ebe12f2f4539f710cc8598209e248d95003cb1fcb3fcec9c88258c000000000000000000000000101cb67ccc970fb001111111311111110111211100f11110f11101803ca3157141113d33ffa4030f8416f243032810b4c2fc000917f932fc001e2f2f4811bcf045615ba14f2f4215613c70556126eb39f5612206ef2d0805230c70592307fdede8145a101f2f481620b21821005f5e100bef2f4215613c705e30f5613552054377fc8191a1b04fe385f035711571102d33ffa40d31fd430d08200e11d0bc0011bf2f4811bcf235611baf2f48122e42e6eb3f2f4531ec705917f9a2d206ef2d0805220c705e28200b5a401f2f454411a26db3c815d9e01f2f426722baa0020db3c66a153cba070547001c2008e925f0320db3c66a12c5612c705912e912de2599133e254702424331c1d1e04f68ff03157141113d33f30f8416f2410235f038121e32dc002f2f4816684286eb3f2f4811bcf025613ba12f2f4702381010b23714133f40a6fa19401d70030925b6de2206eb39631206ef2d0809130e2813f9401b3f2f47027206ef2d0805612c705e30f81508621c200f2f40381010b227f71e0218210a2cff8f8ba2a2b2c2d016010df10ce10bd10ac109b1a10791068105710461035401403c87f01ca001114111311121111111055e0db3cc9ed54db313a007e702781010b2559f40a6fa193fa003092306de2206eb39631206ef2d0809130e281010b5112a024103901206e953059f4593098c801fa024133f441e251f6a00088702681010b2559f40a6fa193fa003092306de2206eb39631206ef2d0809130e281010b5112a024103801206e953059f4593098c801fa024133f441e251e5a0106f0e050601f05550821068764a9f5007cb1f15cb3f13cece01fa0201fa0201fa02c9c88258c000000000000000000000000101cb67ccc970fb001111111311111110111211100f11110f0e11100e10df103e10bd10ac109b108a107910681057104610454034c87f01ca001114111311121111111055e0db3cc9ed54db313a000caa018064a904000ca7068064a90404d4a056105616c705912f912ee2206eb32f6eb31023db3c7170885616513d413310246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb0021c2008e88236eb3923330e30d923330e221c2001f202122005622a7468064a9045330a12391229170e29a6c223221ab005122a112e00393313270e00193327001e05b7020004a000000005366696461426f74204475656c2057696e6e6572205061796f757420283936252902f223206ef2d08071708825552010246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb0003206ef2d0808d04149958dc9d5a5d195c8814995dd85c9920561a5033c855308210ecc7afe05005cb1f13cb3fce01fa0201c8cecdc9232803f28e872e6eb39131e30d9131e22aa0717088561a553010246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb005615050411100410361027111016c8555082104a76f1b45007cb1f15cb3f13ce01fa0201fa0201fa0201fa02c9242526003a000000005366696461426f74205265637275697465722052657761726402f62e206ef2d08071708825552010246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb002e206ef2d0808d0451dc9bdd5c08121bdcdd0814995dd85c99205619035044c855308210ecc7afe05005cb1f13cb3fce01fa0201c8cecdc927280034000000005366696461426f742054726561737572792052616b6502f8c88258c000000000000000000000000101cb67ccc970fb002a8ed01111111311111110111211100f11110f0e11100e10df10ce10bd102c109b108a107910685e3310344130db3c04111304031112030411110403111003104f103e104d103c104b1a104918104716144330df1111111311111110111211100f11110f38290044000000005366696461426f7420486f737420436f6d6d756e697479205265776172640030c88258c000000000000000000000000101cb67ccc970fb0001640e11100e10df10ce10bd102c109b108a107910685e3310344130c87f01ca001114111311121111111055e0db3cc9ed54db313a003e2581010b2359f40a6fa193fa003092306de2206eb39631206ef2d0809130e2003e2481010b2359f40a6fa193fa003092306de2206eb39631206ef2d0809130e203fa216e955b59f4593098c801cf004133f441e25d5617db3c8169db21c200f2f40111150104a1717088245137413310246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb0056124004c8552082100b5d91985004cb1f12cb3fce01fa02c92e2f3003c0e302218210e167214aba8f523157141113d33f30f8416f245b8113fe325614c705f2f4811bcf015612baf2f41111111311111110111211100f11110f0e11100e10df551cdb3cc87f01ca001114111311121111111055e0db3cc9ed54db31e03032383a001620935f0370e159a801a904004e000000005366696461426f7420537065637461746f7220546f74616c697a6572205061796f757402f8c88258c000000000000000000000000101cb67ccc970fb0021c1018ece1111111311111110111211100f11110f0e11100e10df10ce10bd10ac109b108a10791068105710461035401403db3c1113031112031111031110030f103e0d103c0b103a09103807103605034414de1111111311111110111211100f11110f3831016a0e11100e10df10ce10bd10ac109b108a10791068105710461035401403c87f01ca001114111311121111111055e0db3cc9ed54db313a04fc3157141113d33fd431d430d0f8416f2410235f038200e79f2ec000917f932ec001e2f2f4811bcf235615baf2f45612c705930cc000923c70e293303a7f8e8901705611401d29db3ce281327801f2f4737170885612035611413310246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf818ae2333435360020c815cb3f5003cf16cb1fc9f90002f9100042000000005366696461426f74204475656c20526566756e6420506c617965722041001a58cf8680cf8480f400f400cf8103faf400c901fb002e6eb38ec42e206ef2d0807170885611552010246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb00de1111111311111110111211100f11110f0e11100e10df10ce10bd0c109b108a107910681057104610354403db3c3738390042000000005366696461426f74204475656c20526566756e6420506c6179657220420182708100a070885617553010246d50436d03c8cf8580ca00cf8440ce01fa028069cf40025c6e016eb0935bcf819d58cf8680cf8480f400f400cf81e2f400c901fb003b0130c87f01ca001114111311121111111055e0db3cc9ed54db313a01f6011113011114ce01111101cb3f1fce500d206e9430cf84809201cee2500bfa02c8500afa025008fa0216cb075004206e9430cf84809201cee258206e9430cf84809201cee2c858206e9430cf84809201cee212cbff58206e9430cf84809201cee258fa0213f40013f40013f400c85004fa025004fa025004fa02cd3c0050000000005366696461426f7420457363726f7720436c65616e757020262044757374205377656570000612cdcd} B>boc PUSHREF
+""";
+
+(cell, cell) $MatchEscrow$_init_child(slice $clashMaster, int $matchId, slice $playerA, int $wagerAmount, int $serverPublicKey, slice $recruiterA, slice $groupAdminAddress) inline_ref {
+    ;; Build init code cell
+
+    ;; Contract Code: MatchEscrow
+    cell init_code = $MatchEscrow$_child_get_code();
+
+
+    builder b = begin_cell();
+    b = b.store_int(false, 1);
+    b = $MatchEscrow$init$_store(b, ($clashMaster, $matchId, $playerA, $wagerAmount, $serverPublicKey, $recruiterA, $groupAdminAddress));
+    return (init_code, b.end_cell());
+}
+
+;;
+;; Type: ClashMaster
+;; TLB: _ owner:address serverPublicKey:uint256 matchCount:uint64 = ClashMaster
+;;
+
+builder $ClashMaster$_store(builder build_0, (slice, int, int) v) inline {
+    var (v'owner, v'serverPublicKey, v'matchCount) = v;
+    build_0 = build_0.store_slice(v'owner);
+    build_0 = build_0.store_uint(v'serverPublicKey, 256);
+    build_0 = build_0.store_uint(v'matchCount, 64);
+    return build_0;
+}
+
+(slice, ((slice, int, int))) $ClashMaster$_load(slice sc_0) inline {
+    var v'owner = sc_0~load_msg_addr();
+    var v'serverPublicKey = sc_0~load_uint(256);
+    var v'matchCount = sc_0~load_uint(64);
+    return (sc_0, (v'owner, v'serverPublicKey, v'matchCount));
+}
+
+(slice, ((slice, int))) $ClashMaster$init$_load(slice sc_0) inline {
+    var v'owner = sc_0~load_msg_addr();
+    var v'serverPublicKey = sc_0~load_uint(256);
+    return (sc_0, (v'owner, v'serverPublicKey));
+}
+
+(slice, int, int) $ClashMaster$_contract_load() impure inline {
+    slice $sc = get_data().begin_parse();
+    int $loaded = $sc~load_int(1);
+    if ($loaded) {
+        return $sc~$ClashMaster$_load();
+    }
+    else {
+        (slice $owner, int $serverPublicKey) = $sc~$ClashMaster$init$_load();
+        $sc.end_parse();
+        return $ClashMaster$_contract_init($owner, $serverPublicKey);
+    }
+}
+
+() $ClashMaster$_contract_store((slice, int, int) v) impure inline {
+    builder b = begin_cell();
+    b = b.store_int(true, 1);
+    b = $ClashMaster$_store(b, v);
+    set_data(b.end_cell());
+}
+
+;;
+;; Contract ClashMaster functions
+;;
+
+(slice, int, int) $ClashMaster$_contract_init(slice $owner, int $serverPublicKey) impure inline {
+    var (($self'owner, $self'serverPublicKey, $self'matchCount)) = (null(), null(), null());
+    $self'owner = $owner;
+    $self'serverPublicKey = $serverPublicKey;
+    $self'matchCount = 0;
+    return ($self'owner, $self'serverPublicKey, $self'matchCount);
+}
+
+((slice, int, int), slice) $ClashMaster$_fun_getEscrowAddress((slice, int, int) $self, int $matchId, slice $playerA, int $wagerAmount, slice $recruiterA, slice $groupAdminAddress) impure inline_ref {
+    var (($self'owner, $self'serverPublicKey, $self'matchCount)) = $self;
+    var ($escrowInit'code, $escrowInit'data) = $MatchEscrow$_init_child($global_myAddress(), $matchId, $playerA, $wagerAmount, $self'serverPublicKey, $recruiterA, $groupAdminAddress);
+    var $fresh$ret_16 = $global_contractAddress(($escrowInit'code, $escrowInit'data));
+    return (($self'owner, $self'serverPublicKey, $self'matchCount), $fresh$ret_16);
+}
+
+((slice, int, int), (int, int, slice, int)) $ClashMaster$_fun_getStats((slice, int, int) $self) impure inline_ref {
+    var (($self'owner, $self'serverPublicKey, $self'matchCount)) = $self;
+    var $fresh$ret_17 = $MasterStats$_constructor_matchCount_serverPublicKey_owner_balance($self'matchCount, $self'serverPublicKey, $self'owner, $global_myBalance());
+    return (($self'owner, $self'serverPublicKey, $self'matchCount), $fresh$ret_17);
+}
+
+;;
+;; Get methods of a Contract ClashMaster
+;;
+
+_ %getEscrowAddress(int $matchId, slice $playerA, int $wagerAmount, slice $recruiterA, slice $groupAdminAddress) method_id(120398) {
+    int $matchId = $matchId;
+    slice $playerA = $playerA;
+    int $wagerAmount = $wagerAmount;
+    slice $recruiterA = $recruiterA;
+    slice $groupAdminAddress = $groupAdminAddress;
+    var self = $ClashMaster$_contract_load();
+    var res = self~$ClashMaster$_fun_getEscrowAddress($matchId, $playerA, $wagerAmount, $recruiterA, $groupAdminAddress);
+    return res;
+}
+
+_ %getStats() method_id(104054) {
+    var self = $ClashMaster$_contract_load();
+    var res = self~$ClashMaster$_fun_getStats();
+    return $MasterStats$_to_external(res);
+}
+
+;;
+;; Routing of a Contract ClashMaster
+;;
+
+;; message opcode reader utility: only binary receivers
+;; Returns 32 bit message opcode, otherwise throws the "Invalid incoming message" exit code
+(slice, int) ~load_opcode_internal(slice s) asm( -> 1 0) "32 LDUQ 130 THROWIFNOT";
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+    
+    ;; Context
+    var cs = in_msg_cell.begin_parse();
+    cs~skip_bits(2);
+    var msg_bounceable = cs~load_int(1);
+    var msg_bounced = cs~load_int(1);
+    slice msg_sender_addr = cs~load_msg_addr();
+    __tact_context = (msg_bounceable, msg_sender_addr, msg_value, cs);
+    __tact_context_sender = msg_sender_addr;
+    
+    ;; Load contract data
+    var ($self'owner, $self'serverPublicKey, $self'matchCount) = $ClashMaster$_contract_load();
+    
+    ;; Handle bounced messages
+    if (msg_bounced) { return (); }
+    int op = 0;
+    int in_msg_length = slice_bits(in_msg);
+    if (in_msg_length >= 32) {
+        op = in_msg~load_uint(32);
+        ;; Receive DeployMatch message
+        if (op == 310075029) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var $msg'wagerAmount = in_msg~load_varuint16();
+            var $msg'recruiterA = in_msg~__tact_load_address_opt();
+            var $msg'groupAdminAddress = in_msg~__tact_load_address_opt();
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            int $totalRequired = (($msg'wagerAmount + 20000000) + 50000000);
+            throw_unless(26109, ($ctx'value >= $totalRequired));
+            $self'matchCount = ($self'matchCount + 1);
+            var ($escrowInit'code, $escrowInit'data) = $MatchEscrow$_init_child($global_myAddress(), $msg'matchId, $ctx'sender, $msg'wagerAmount, $self'serverPublicKey, $msg'recruiterA, $msg'groupAdminAddress);
+            slice $escrowAddress = $global_contractAddress(($escrowInit'code, $escrowInit'data));
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body_code_data($escrowAddress, ($msg'wagerAmount + 50000000), 2, false, __gen_cell_cell_69dfc29d636e88a9cfc06b0e7840224ca4c5b593e70b08a61f8022ae9d5f0f03(), $escrowInit'code, $escrowInit'data));
+            $global_emit($EventMatchCreated$_store_cell($EventMatchCreated$_constructor_matchId_playerA_wagerAmount_creationFee($msg'matchId, $ctx'sender, $msg'wagerAmount, 20000000), begin_cell()));
+            $ClashMaster$_contract_store(($self'owner, $self'serverPublicKey, $self'matchCount));
+            return ();
+        }
+        
+        ;; Receive SetServerPublicKey message
+        if (op == 3723581606) {
+            var $msg'newKey = in_msg~load_uint(256);
+            throw_unless(46817, ( equal_slices_bits(__tact_context_get_sender(), $self'owner) ));
+            $self'serverPublicKey = $msg'newKey;
+            $ClashMaster$_contract_store(($self'owner, $self'serverPublicKey, $self'matchCount));
+            return ();
+        }
+        
+        ;; Receive WithdrawTreasury message
+        if (op == 1116654954) {
+            var $msg'amount = in_msg~load_varuint16();
+            var $msg'recipient = in_msg~load_msg_addr();
+            throw_unless(42964, ( equal_slices_bits(__tact_context_get_sender(), $self'owner) ));
+            throw_unless(59759, ($global_myBalance() > ($msg'amount + 100000000)));
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body($msg'recipient, $msg'amount, 1, false, __gen_cell_cell_0a9b1fa12b6320f2f7d7c971bec964d11bd0f5f12529c26bfc60a50a65ec9946()));
+            $ClashMaster$_contract_store(($self'owner, $self'serverPublicKey, $self'matchCount));
+            return ();
+        }
+        
+    }
+    ;; Receive empty message
+    if ((op == 0) & (in_msg_length <= 32)) {
+        $ClashMaster$_contract_store(($self'owner, $self'serverPublicKey, $self'matchCount));
+        return ();
+    }
+    ;; Empty Receiver and Text Receivers
+    if (op == 0) {
+        ;; Fallback Text Receiver
+        if (in_msg_length >= 32) {
+            $ClashMaster$_contract_store(($self'owner, $self'serverPublicKey, $self'matchCount));
+            return ();
+        }
+    }
+    ;; Throw if not handled
+    throw(130);
+}
+
+
+() __tact_selector_hack_asm() impure asm """
+@atend @ 1 {
+        execute current@ context@ current!
+        {
+            // The core idea of this function is to save gas by avoiding unnecessary dict jump, when recv_internal/recv_external is called
+            // We want to extract recv_internal/recv_external from the dict and select needed function
+            // not by jumping to the needed function by it's index, but by using usual IF statements.
+
+            }END> b> // Close previous builder, now we have a cell of previous code on top of the stack
+
+            <{ // Start of the new code builder
+                SETCP0
+                // Swap the new code builder with the previous code, now we have previous code on top of the stack
+                swap
+                // Transform cell to slice and load first ref from the previous code, now we have the dict on top of the stack
+                <s ref@
+
+                // Extract the recv_internal from the dict
+                dup 0 swap @procdictkeylen idict@ { "internal shortcut error" abort } ifnot
+                swap
+
+                // Delete the recv_internal from the dict
+                0 swap @procdictkeylen idict- drop
+                // Delete the recv_external from the dict (it's okay if it's not there)
+                -1 swap @procdictkeylen idict- drop
+                // Delete the __tact_selector_hack from the dict
+                65535 swap @procdictkeylen idict- drop
+
+                // Bring the code builder from the bottom of the stack
+                // because if recv_external extraction is optional, and the number of elements on the stack is not fixed
+                depth 1- roll
+                // Swap with the dict from which we extracted recv_internal and (maybe) recv_external
+                swap
+
+                // Check if the dict is empty
+                dup null?
+                // Store a copy of this flag in the bottom of the stack
+                dup depth 1- -roll
+                {
+                    // If the dict is empty, just drop it (it will be null if it's empty)
+                    drop
+                }
+                {
+                    // If the dict is not empty, prepare continuation to be stored in c3
+                    <{
+                        // Save this dict as first ref in this continuation, it will be pushed in runtime by DICTPUSHCONST
+                        swap @procdictkeylen DICTPUSHCONST
+                        // Jump to the needed function by it's index
+                        DICTIGETJMPZ
+                        // If such key is not found, throw 11 along with the key as an argument
+                        11 THROWARG
+                    }> PUSHCONT
+                    // Store the continuation in c3
+                    c3 POP
+                } cond
+
+                // Function id is on top of the (runtime) stack
+                DUP IFNOTJMP:<{
+                    // place recv_internal here
+                    DROP swap @addop
+                }>
+
+                // Bring back the flag, indicating if the dict is empty or not from the bottom of the stack
+                depth 1- roll
+                {
+                    // If the dict is empty, throw 11
+                    11 THROWARG
+                }
+                {
+                    // If the dict is not empty, jump to continuation from c3
+                    c3 PUSH JMPX
+                } cond
+            }> b>
+        } : }END>c
+        current@ context! current!
+    } does @atend !
+""";
+
+() __tact_selector_hack() method_id(65535) {
+    return __tact_selector_hack_asm();
+}

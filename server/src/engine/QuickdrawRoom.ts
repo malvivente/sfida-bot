@@ -1,0 +1,576 @@
+import { WebSocket } from 'ws';
+
+export type RoomState =
+  | 'LOBBY'
+  | 'BETTING_WINDOW'
+  | 'ROUND_START'
+  | 'WAITING_FOR_SIGNAL'
+  | 'SIGNAL_FIRED'
+  | 'ROUND_END'
+  | 'MATCH_SETTLED'
+  | 'FORFEITED';
+
+export interface PlayerSession {
+  walletAddress: string;
+  telegramId: string;
+  username: string;
+  ws?: WebSocket;
+  connected: boolean;
+  ready: boolean;
+  score: number;
+  lastReactionTimeMs?: number;
+  disconnectTimer?: NodeJS.Timeout;
+}
+
+export interface SpectatorSession {
+  id: string;
+  ws: WebSocket;
+  betOn?: 'A' | 'B';
+  betAmount?: number;
+}
+
+export interface RoomConfig {
+  matchId: bigint;
+  wagerAmountNano: bigint;
+  playerAAddress: string;
+  playerBAddress?: string;
+  recruiterA?: string;
+  recruiterB?: string;
+  groupAdminAddress?: string;
+  bettingWindowSeconds?: number;
+}
+
+export class QuickdrawRoom {
+  public matchId: bigint;
+  public config: RoomConfig;
+  public state: RoomState = 'LOBBY';
+
+  public playerA: PlayerSession;
+  public playerB?: PlayerSession;
+  public spectators: Map<string, SpectatorSession> = new Map();
+
+  public currentRound: number = 1;
+  public maxRounds: number = 3;
+  public roundsToWin: number = 2; // Best of 3
+
+  private fireTimestamp: number = 0;
+  private signalTimer?: NodeJS.Timeout;
+  private decoyTimer?: NodeJS.Timeout;
+  private bettingTimer?: NodeJS.Timeout;
+  private roundTimeout?: NodeJS.Timeout;
+
+  public totalBetsA: bigint = 0n;
+  public totalBetsB: bigint = 0n;
+
+  public winnerAddress?: string;
+  public forfeitWinner?: string;
+
+  private onMatchSettledCallback?: (room: QuickdrawRoom, winnerAddress: string) => Promise<void>;
+
+  constructor(config: RoomConfig, onSettled?: (room: QuickdrawRoom, winner: string) => Promise<void>) {
+    this.matchId = config.matchId;
+    this.config = config;
+    this.onMatchSettledCallback = onSettled;
+
+    this.playerA = {
+      walletAddress: config.playerAAddress,
+      telegramId: '',
+      username: 'Player A',
+      connected: false,
+      ready: false,
+      score: 0,
+    };
+
+    if (config.playerBAddress) {
+      this.playerB = {
+        walletAddress: config.playerBAddress,
+        telegramId: '',
+        username: 'Player B',
+        connected: false,
+        ready: false,
+        score: 0,
+      };
+    }
+  }
+
+  // Bind WebSocket to Player A or B
+  public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket): boolean {
+    if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
+      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A');
+      return true;
+    }
+
+    if (this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()) {
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
+      return true;
+    }
+
+    // Assign Player B if spot is vacant
+    if (!this.playerB) {
+      this.playerB = {
+        walletAddress: wallet,
+        telegramId,
+        username,
+        ws,
+        connected: true,
+        ready: false,
+        score: 0,
+      };
+      this.config.playerBAddress = wallet;
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
+      return true;
+    }
+
+    return false;
+  }
+
+  private handlePlayerConnect(
+    player: PlayerSession,
+    telegramId: string,
+    username: string,
+    ws: WebSocket,
+    side: 'A' | 'B'
+  ) {
+    player.ws = ws;
+    player.telegramId = telegramId;
+    player.username = username;
+    player.connected = true;
+
+    // Clear 8-second disconnection grace timer if active
+    if (player.disconnectTimer) {
+      clearTimeout(player.disconnectTimer);
+      player.disconnectTimer = undefined;
+      this.broadcast({
+        type: 'PLAYER_RECONNECTED',
+        side,
+        message: `${player.username} reconnected in time! Resuming duel.`,
+      });
+    }
+
+    this.sendTo(ws, {
+      type: 'INIT_STATE',
+      matchId: this.matchId.toString(),
+      role: `PLAYER_${side}`,
+      state: this.state,
+      currentRound: this.currentRound,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB ? this.playerB.score : 0,
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+    });
+
+    this.broadcastRoomState();
+  }
+
+  // Spectator connection
+  public attachSpectator(id: string, ws: WebSocket) {
+    this.spectators.set(id, { id, ws });
+
+    this.sendTo(ws, {
+      type: 'INIT_STATE',
+      matchId: this.matchId.toString(),
+      role: 'SPECTATOR',
+      state: this.state,
+      currentRound: this.currentRound,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB ? this.playerB.score : 0,
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+    });
+  }
+
+  public removeSpectator(id: string) {
+    this.spectators.delete(id);
+  }
+
+  // Handle Player Disconnect with 8-Second Grace Period
+  public handleDisconnect(wallet: string) {
+    let disconnectedPlayer: PlayerSession | undefined;
+    let opponent: PlayerSession | undefined;
+    let side: 'A' | 'B' = 'A';
+
+    if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
+      disconnectedPlayer = this.playerA;
+      opponent = this.playerB;
+      side = 'A';
+    } else if (this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()) {
+      disconnectedPlayer = this.playerB;
+      opponent = this.playerA;
+      side = 'B';
+    }
+
+    if (!disconnectedPlayer) return;
+
+    disconnectedPlayer.connected = false;
+    disconnectedPlayer.ws = undefined;
+
+    // Only activate forfeit countdown if match is active
+    if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') {
+      this.broadcast({
+        type: 'PLAYER_DISCONNECTED',
+        side,
+        gracePeriodSeconds: 8,
+        message: `${disconnectedPlayer.username} disconnected. 8-second forfeit countdown initiated.`,
+      });
+
+      disconnectedPlayer.disconnectTimer = setTimeout(() => {
+        if (!disconnectedPlayer?.connected && opponent) {
+          this.triggerForfeit(opponent.walletAddress, disconnectedPlayer!.username);
+        }
+      }, 8000);
+    }
+  }
+
+  // Immediate forfeit when 8-second grace timer expires
+  private triggerForfeit(winnerWallet: string, forfeiterName: string) {
+    this.state = 'FORFEITED';
+    this.winnerAddress = winnerWallet;
+    this.cleanupTimers();
+
+    this.broadcast({
+      type: 'MATCH_FORFEITED',
+      winner: winnerWallet,
+      message: `${forfeiterName} failed to reconnect within 8 seconds. Automatic forfeit victory awarded!`,
+    });
+
+    if (this.onMatchSettledCallback) {
+      this.onMatchSettledCallback(this, winnerWallet);
+    }
+  }
+
+  // Player Ready Toggle
+  public setPlayerReady(wallet: string) {
+    if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
+      this.playerA.ready = true;
+    } else if (this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()) {
+      this.playerB.ready = true;
+    }
+
+    this.broadcastRoomState();
+
+    // When both players are ready, open 20s Betting Window
+    if (this.playerA.ready && this.playerB?.ready && this.state === 'LOBBY') {
+      this.startBettingWindow();
+    }
+  }
+
+  // 20-Second Spectator Pari-Mutuel Window
+  private startBettingWindow() {
+    this.state = 'BETTING_WINDOW';
+    const duration = this.config.bettingWindowSeconds || 20;
+    let countdown = duration;
+
+    this.broadcast({
+      type: 'BETTING_WINDOW_OPEN',
+      durationSeconds: duration,
+      message: 'Spectator Pari-Mutuel betting window is open! 20 seconds to place wagers.',
+    });
+
+    this.bettingTimer = setInterval(() => {
+      countdown -= 1;
+      this.broadcast({
+        type: 'BETTING_COUNTDOWN',
+        secondsLeft: countdown,
+        oddsA: this.calculateOdds('A'),
+        oddsB: this.calculateOdds('B'),
+      });
+
+      if (countdown <= 0) {
+        if (this.bettingTimer) clearInterval(this.bettingTimer);
+        this.startRound(1);
+      }
+    }, 1000);
+  }
+
+  // Start Quickdraw Round (Best of 3)
+  private startRound(roundNum: number) {
+    this.currentRound = roundNum;
+    this.state = 'ROUND_START';
+    this.fireTimestamp = 0;
+    this.cleanupRoundTimers();
+
+    this.broadcast({
+      type: 'ROUND_INITIALIZING',
+      round: this.currentRound,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB?.score || 0,
+      message: `Round ${this.currentRound} - Best of 3! Get ready...`,
+    });
+
+    // 2-second preparation before arming triggers
+    setTimeout(() => {
+      this.state = 'WAITING_FOR_SIGNAL';
+      this.broadcast({
+        type: 'ROUND_WAITING',
+        message: 'HOLD YOUR FIRE! Wait for the real signal.',
+      });
+
+      this.scheduleDecoyAndFireSignal();
+    }, 2000);
+  }
+
+  // Randomized Trigger (1,800ms - 4,200ms) with False-Start / Decoy "HOLD!" Protection
+  private scheduleDecoyAndFireSignal() {
+    // Generate random delay between 1,800ms and 4,200ms
+    const randomDelay = Math.floor(Math.random() * (4200 - 1800 + 1)) + 1800;
+
+    // 50% chance to emit a false decoy "HOLD!" signal halfway through
+    const shouldDecoy = Math.random() > 0.5;
+    if (shouldDecoy && randomDelay > 2400) {
+      const decoyDelay = Math.floor(randomDelay / 2);
+      this.decoyTimer = setTimeout(() => {
+        if (this.state === 'WAITING_FOR_SIGNAL') {
+          this.broadcast({
+            type: 'DECOY_SIGNAL',
+            signal: 'HOLD!',
+            message: 'HOLD! Do NOT tap!',
+          });
+        }
+      }, decoyDelay);
+    }
+
+    // Arm the genuine FIRE signal
+    this.signalTimer = setTimeout(() => {
+      this.state = 'SIGNAL_FIRED';
+      this.fireTimestamp = performance.now();
+
+      this.broadcast({
+        type: 'SIGNAL_FIRE',
+        signal: 'FIRE!',
+        serverTime: Date.now(),
+        message: '>>> FIRE NOW! <<<',
+      });
+
+      // If no player taps within 5 seconds after signal, declare draw for the round
+      this.roundTimeout = setTimeout(() => {
+        if (this.state === 'SIGNAL_FIRED') {
+          this.handleRoundDraw();
+        }
+      }, 5000);
+    }, randomDelay);
+  }
+
+  // Authoritative Tap Evaluation
+  public handleTap(wallet: string): { accepted: boolean; reason?: string } {
+    const isPlayerA = wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase();
+    const isPlayerB = this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase();
+
+    if (!isPlayerA && !isPlayerB) {
+      return { accepted: false, reason: 'Sender is not an active duelist' };
+    }
+
+    const tappingSide = isPlayerA ? 'A' : 'B';
+    const opponentSide = isPlayerA ? 'B' : 'A';
+    const tappingPlayer = isPlayerA ? this.playerA : this.playerB!;
+    const opponentPlayer = isPlayerA ? this.playerB! : this.playerA;
+
+    // 1. MISFIRE EVALUATION: Tapping during WAITING_FOR_SIGNAL triggers instant round loss!
+    if (this.state === 'WAITING_FOR_SIGNAL' || this.state === 'ROUND_START') {
+      this.cleanupRoundTimers();
+      this.state = 'ROUND_END';
+
+      // Opponent wins round automatically due to misfire
+      opponentPlayer.score += 1;
+
+      this.broadcast({
+        type: 'MISFIRE_PENALTY',
+        offender: tappingPlayer.walletAddress,
+        offenderName: tappingPlayer.username,
+        roundWinner: opponentPlayer.walletAddress,
+        scoreA: this.playerA.score,
+        scoreB: this.playerB?.score || 0,
+        message: `FALSE START! ${tappingPlayer.username} misfired! Round awarded to ${opponentPlayer.username}.`,
+      });
+
+      this.evaluateMatchProgression();
+      return { accepted: true };
+    }
+
+    // 2. VALID TAP EVALUATION: After genuine "FIRE!" signal
+    if (this.state === 'SIGNAL_FIRED') {
+      this.cleanupRoundTimers();
+      this.state = 'ROUND_END';
+
+      const now = performance.now();
+      const reactionTimeMs = parseFloat((now - this.fireTimestamp).toFixed(2));
+      tappingPlayer.lastReactionTimeMs = reactionTimeMs;
+      tappingPlayer.score += 1;
+
+      this.broadcast({
+        type: 'ROUND_WON',
+        winnerSide: tappingSide,
+        winnerAddress: tappingPlayer.walletAddress,
+        winnerName: tappingPlayer.username,
+        reactionTimeMs,
+        scoreA: this.playerA.score,
+        scoreB: this.playerB?.score || 0,
+        message: `${tappingPlayer.username} fired first with lightning reaction time: ${reactionTimeMs}ms!`,
+      });
+
+      this.evaluateMatchProgression();
+      return { accepted: true };
+    }
+
+    return { accepted: false, reason: 'Tap ignored in current state' };
+  }
+
+  private handleRoundDraw() {
+    this.state = 'ROUND_END';
+    this.broadcast({
+      type: 'ROUND_DRAW',
+      message: 'Both players failed to fire in time! Round is a draw.',
+    });
+    this.evaluateMatchProgression();
+  }
+
+  // Evaluate Best-of-3 status
+  private evaluateMatchProgression() {
+    // Check if either player reached 2 wins
+    if (this.playerA.score >= this.roundsToWin) {
+      this.settleMatch(this.playerA.walletAddress);
+      return;
+    }
+
+    if (this.playerB && this.playerB.score >= this.roundsToWin) {
+      this.settleMatch(this.playerB.walletAddress);
+      return;
+    }
+
+    // If max rounds reached or need next round
+    if (this.currentRound < this.maxRounds) {
+      setTimeout(() => {
+        this.startRound(this.currentRound + 1);
+      }, 3000);
+    } else {
+      // Tie breaker or decide by score
+      const winner =
+        this.playerA.score > (this.playerB?.score || 0)
+          ? this.playerA.walletAddress
+          : this.playerB!.walletAddress;
+      this.settleMatch(winner);
+    }
+  }
+
+  // Final Match Settlement
+  private settleMatch(winnerAddress: string) {
+    this.state = 'MATCH_SETTLED';
+    this.winnerAddress = winnerAddress;
+    this.cleanupTimers();
+
+    const winnerName =
+      winnerAddress.toLowerCase() === this.playerA.walletAddress.toLowerCase()
+        ? this.playerA.username
+        : this.playerB?.username || 'Opponent';
+
+    this.broadcast({
+      type: 'MATCH_SETTLED',
+      matchId: this.matchId.toString(),
+      winnerAddress,
+      winnerName,
+      finalScoreA: this.playerA.score,
+      finalScoreB: this.playerB?.score || 0,
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+      message: `DUEL COMPLETE! ${winnerName} reigns supreme in the Arena! Initiating TON blockchain settlement...`,
+    });
+
+    if (this.onMatchSettledCallback) {
+      this.onMatchSettledCallback(this, winnerAddress);
+    }
+  }
+
+  // Update spectator betting pool
+  public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint) {
+    if (target === 'A') {
+      this.totalBetsA += amountNano;
+    } else {
+      this.totalBetsB += amountNano;
+    }
+
+    this.broadcast({
+      type: 'ODDS_UPDATE',
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+    });
+  }
+
+  // Pari-Mutuel Odds Multiplier Calculator (Zero-Risk Totalizer)
+  // M_W = (0.94 * S_total) / S_winning_side
+  public calculateOdds(side: 'A' | 'B'): number {
+    const totalPool = Number(this.totalBetsA + this.totalBetsB);
+    if (totalPool === 0) return 2.0; // default 2.0x
+
+    const distributablePool = totalPool * 0.94;
+    const sideBets = side === 'A' ? Number(this.totalBetsA) : Number(this.totalBetsB);
+
+    if (sideBets === 0) return 2.0;
+    return parseFloat((distributablePool / sideBets).toFixed(2));
+  }
+
+  // Broadcast to all duelists and spectators
+  public broadcast(data: any) {
+    const payload = JSON.stringify(data);
+
+    if (this.playerA.ws && this.playerA.ws.readyState === WebSocket.OPEN) {
+      this.playerA.ws.send(payload);
+    }
+
+    if (this.playerB?.ws && this.playerB.ws.readyState === WebSocket.OPEN) {
+      this.playerB.ws.send(payload);
+    }
+
+    for (const spec of this.spectators.values()) {
+      if (spec.ws.readyState === WebSocket.OPEN) {
+        spec.ws.send(payload);
+      }
+    }
+  }
+
+  public broadcastRoomState() {
+    this.broadcast({
+      type: 'ROOM_UPDATE',
+      state: this.state,
+      playerA: {
+        wallet: this.playerA.walletAddress,
+        name: this.playerA.username,
+        ready: this.playerA.ready,
+        score: this.playerA.score,
+        connected: this.playerA.connected,
+      },
+      playerB: this.playerB
+        ? {
+            wallet: this.playerB.walletAddress,
+            name: this.playerB.username,
+            ready: this.playerB.ready,
+            score: this.playerB.score,
+            connected: this.playerB.connected,
+          }
+        : null,
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+    });
+  }
+
+  private sendTo(ws: WebSocket, data: any) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data));
+    }
+  }
+
+  private cleanupRoundTimers() {
+    if (this.signalTimer) clearTimeout(this.signalTimer);
+    if (this.decoyTimer) clearTimeout(this.decoyTimer);
+    if (this.roundTimeout) clearTimeout(this.roundTimeout);
+  }
+
+  private cleanupTimers() {
+    this.cleanupRoundTimers();
+    if (this.bettingTimer) clearInterval(this.bettingTimer);
+    if (this.playerA.disconnectTimer) clearTimeout(this.playerA.disconnectTimer);
+    if (this.playerB?.disconnectTimer) clearTimeout(this.playerB.disconnectTimer);
+  }
+}

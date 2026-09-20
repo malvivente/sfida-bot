@@ -1,0 +1,26 @@
+{
+  "name": "sfidabot",
+  "version": "1.0.0",
+  "description": "Production-ready 1v1 PvP Skill-Game Arena with Live Spectator Pari-Mutuel Betting on TON",
+  "scripts": {
+    "test:contracts": "npm --prefix contracts test",
+    "build:contracts": "npm --prefix contracts run build",
+    "test:server": "npm --prefix server test",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "test:all": "npm run test:contracts && npm run test:server"
+  },
+  "keywords": [
+    "ton",
+    "tact",
+    "pvp",
+    "telegram-mini-app",
+    "pari-mutuel",
+    "quickdraw",
+    "gamefi"
+  ],
+  "author": "SfidaBot Core Team",
+  "license": "MIT"
+}

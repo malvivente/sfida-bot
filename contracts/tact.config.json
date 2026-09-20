@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tact-lang/tact/main/src/config/configSchema.json",
+  "projects": [
+    {
+      "name": "clash_master",
+      "path": "./contracts/clash_master.tact",
+      "output": "./build/clash_master",
+      "options": {
+        "debug": true
+      }
+    },
+    {
+      "name": "match_escrow",
+      "path": "./contracts/match_escrow.tact",
+      "output": "./build/match_escrow",
+      "options": {
+        "debug": true
+      }
+    }
+  ]
+}

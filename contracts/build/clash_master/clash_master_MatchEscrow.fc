@@ -1,0 +1,1093 @@
+#pragma version =0.4.6;
+#pragma allow-post-modification;
+#pragma compute-asm-ltr;
+
+;; clash_master_MatchEscrow.headers.fc
+;;
+;; Header files for MatchEscrow
+;; NOTE: declarations are sorted for optimal order
+;;
+
+;; __tact_store_address_opt
+builder __tact_store_address_opt(builder b, slice address) inline;
+
+;; __tact_not_null
+forall X -> X __tact_not_null(X x) impure inline;
+
+;; __tact_context_get
+(int, slice, int, slice) __tact_context_get() inline;
+
+;; __tact_dict_get_slice_int
+int __tact_dict_get_slice_int(cell d, int kl, slice k, int vl) inline;
+
+;; __tact_dict_set_slice_int
+(cell, ()) __tact_dict_set_slice_int(cell d, int kl, slice k, int v, int vl) inline;
+
+;; __tact_dict_get_slice_coins
+int __tact_dict_get_slice_coins(cell d, int kl, slice k) inline;
+
+;; __tact_dict_set_slice_coins
+(cell, ()) __tact_dict_set_slice_coins(cell d, int kl, slice k, int v) inline;
+
+;; $EventPlayerJoined$_store
+builder $EventPlayerJoined$_store(builder build_0, (int, slice) v) inline;
+
+;; $EventPlayerJoined$_store_cell
+cell $EventPlayerJoined$_store_cell((int, slice) v, builder b) inline;
+
+;; $EventSpectatorBet$_store
+builder $EventSpectatorBet$_store(builder build_0, (int, slice, slice, int, int, int) v) inline;
+
+;; $EventSpectatorBet$_store_cell
+cell $EventSpectatorBet$_store_cell((int, slice, slice, int, int, int) v, builder b) inline;
+
+;; $EventMatchResolved$_store
+builder $EventMatchResolved$_store(builder build_0, (int, slice, int, int, int, int) v) inline;
+
+;; $EventMatchResolved$_store_cell
+cell $EventMatchResolved$_store_cell((int, slice, int, int, int, int) v, builder b) inline;
+
+;; $EventSpectatorClaim$_store
+builder $EventSpectatorClaim$_store(builder build_0, (int, slice, int) v) inline;
+
+;; $EventSpectatorClaim$_store_cell
+cell $EventSpectatorClaim$_store_cell((int, slice, int) v, builder b) inline;
+
+;; $EventAffiliatePayout$_store
+builder $EventAffiliatePayout$_store(builder build_0, (int, slice, int, slice) v) inline;
+
+;; $EventAffiliatePayout$_store_cell
+cell $EventAffiliatePayout$_store_cell((int, slice, int, slice) v, builder b) inline;
+
+;; $MatchEscrow$_store
+builder $MatchEscrow$_store(builder build_0, (slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) v) inline;
+
+;; $MatchEscrow$_load
+(slice, ((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int))) $MatchEscrow$_load(slice sc_0) inline;
+
+;; $MatchEscrowDetails$_to_external
+(int, slice, slice, int, int, int, int, slice, int, int) $MatchEscrowDetails$_to_external(((int, slice, slice, int, int, int, int, slice, int, int)) v) inline;
+
+;; $MatchEscrow$init$_load
+(slice, ((slice, int, slice, int, int, slice, slice))) $MatchEscrow$init$_load(slice sc_0) inline;
+
+;; $MatchEscrow$_contract_init
+(slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $MatchEscrow$_contract_init(slice $clashMaster, int $matchId, slice $playerA, int $wagerAmount, int $serverPublicKey, slice $recruiterA, slice $groupAdminAddress) impure inline;
+
+;; $MatchEscrow$_contract_load
+(slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $MatchEscrow$_contract_load() impure inline;
+
+;; $MatchEscrow$_contract_store
+() $MatchEscrow$_contract_store((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) v) impure inline;
+
+;; $global_emit
+() $global_emit(cell $body) impure inline;
+
+;; $global_calculatePlayerRake
+int $global_calculatePlayerRake(int $totalPot) impure inline_ref;
+
+;; $global_calculateSpectatorRake
+int $global_calculateSpectatorRake(int $totalSpectatorPool) impure inline_ref;
+
+;; $global_calculateSpectatorShare
+int $global_calculateSpectatorShare(int $betAmount, int $distributablePool, int $totalWinningBets) impure inline_ref;
+
+;; $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare
+((int, int, int)) $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare(int $treasuryShare, int $recruiterShare, int $groupAdminShare) inline;
+
+;; $global_splitRake
+(int, int, int) $global_splitRake(int $totalRake, int $hasRecruiter, int $hasGroupAdmin) impure inline_ref;
+
+;; $global_verifyResolutionSignature
+int $global_verifyResolutionSignature(int $matchId, slice $winner, int $timestamp, slice $signature, int $serverPublicKey) impure inline_ref;
+
+;; $SendParameters$_constructor_to_value_mode_bounce_body
+((int, cell, cell, cell, int, slice, int)) $SendParameters$_constructor_to_value_mode_bounce_body(slice $to, int $value, int $mode, int $bounce, cell $body) inline;
+
+;; $MatchEscrow$_fun_selfDestructToMaster
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), ()) $MatchEscrow$_fun_selfDestructToMaster((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self) impure inline_ref;
+
+;; $MatchEscrowDetails$_constructor_matchId_playerA_playerB_wagerAmount_totalBetsA_totalBetsB_state_winner_distributableSpectatorPool_remainingWinningBetsToClaim
+((int, slice, slice, int, int, int, int, slice, int, int)) $MatchEscrowDetails$_constructor_matchId_playerA_playerB_wagerAmount_totalBetsA_totalBetsB_state_winner_distributableSpectatorPool_remainingWinningBetsToClaim(int $matchId, slice $playerA, slice $playerB, int $wagerAmount, int $totalBetsA, int $totalBetsB, int $state, slice $winner, int $distributableSpectatorPool, int $remainingWinningBetsToClaim) inline;
+
+;; $MatchEscrow$_fun_getMatchDetails
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), (int, slice, slice, int, int, int, int, slice, int, int)) $MatchEscrow$_fun_getMatchDetails((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self) impure inline_ref;
+
+;; $MatchEscrow$_fun_getSpectatorBetA
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), int) $MatchEscrow$_fun_getSpectatorBetA((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self, slice $spectator) impure inline_ref;
+
+;; $MatchEscrow$_fun_getSpectatorBetB
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), int) $MatchEscrow$_fun_getSpectatorBetB((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self, slice $spectator) impure inline_ref;
+
+;; $MatchEscrow$_fun_hasSpectatorClaimed
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), int) $MatchEscrow$_fun_hasSpectatorClaimed((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self, slice $spectator) impure inline_ref;
+
+;; $EventPlayerJoined$_constructor_matchId_playerB
+((int, slice)) $EventPlayerJoined$_constructor_matchId_playerB(int $matchId, slice $playerB) inline;
+
+;; $EventSpectatorBet$_constructor_matchId_spectator_targetPlayer_amount_totalBetsA_totalBetsB
+((int, slice, slice, int, int, int)) $EventSpectatorBet$_constructor_matchId_spectator_targetPlayer_amount_totalBetsA_totalBetsB(int $matchId, slice $spectator, slice $targetPlayer, int $amount, int $totalBetsA, int $totalBetsB) inline;
+
+;; $EventAffiliatePayout$_constructor_matchId_recipient_amount_reason
+((int, slice, int, slice)) $EventAffiliatePayout$_constructor_matchId_recipient_amount_reason(int $matchId, slice $recipient, int $amount, slice $reason) inline;
+
+;; $EventMatchResolved$_constructor_matchId_winner_playerPotPayout_totalPlayerRake_distributableSpectatorPool_totalSpectatorRake
+((int, slice, int, int, int, int)) $EventMatchResolved$_constructor_matchId_winner_playerPotPayout_totalPlayerRake_distributableSpectatorPool_totalSpectatorRake(int $matchId, slice $winner, int $playerPotPayout, int $totalPlayerRake, int $distributableSpectatorPool, int $totalSpectatorRake) inline;
+
+;; $EventSpectatorClaim$_constructor_matchId_spectator_payout
+((int, slice, int)) $EventSpectatorClaim$_constructor_matchId_spectator_payout(int $matchId, slice $spectator, int $payout) inline;
+
+
+;; clash_master_MatchEscrow.stdlib.fc
+global (int, slice, int, slice) __tact_context;
+global slice __tact_context_sender;
+global cell __tact_child_contract_codes;
+global int __tact_randomized;
+
+(slice, slice) __tact_load_address_opt(slice cs) asm """
+
+            b{00} SDBEGINSQ
+            IF:<{
+              PUSHNULL
+            }>ELSE<{
+              LDMSGADDR
+              SWAP
+            }>
+
+""";
+
+builder __tact_store_addr_none(builder b) asm "b{00} STSLICECONST";
+
+builder __tact_store_address_opt(builder b, slice address) inline {
+    if (null?(address)) {
+        return __tact_store_addr_none(b);
+    } else {
+        return b.store_slice(address);
+    }
+}
+
+forall X -> X __tact_not_null(X x) impure inline {
+    throw_if(128, null?(x)); return x;
+}
+
+(cell, int) __tact_dict_delete(cell dict, int key_len, slice index) asm(index dict key_len) """
+    DICTDEL
+""";
+
+(slice, int) __tact_dict_get(cell dict, int key_len, slice index) asm(index dict key_len) """
+    DICTGET NULLSWAPIFNOT
+""";
+
+(int, slice, int, slice) __tact_context_get() inline {
+    return __tact_context;
+}
+
+int __tact_dict_get_slice_int(cell d, int kl, slice k, int vl) inline {
+    var (r, ok) = __tact_dict_get(d, kl, k);
+    if (ok) {
+        return r~load_int(vl);
+    } else {
+        return null();
+    }
+}
+
+(cell, ()) __tact_dict_set_slice_int(cell d, int kl, slice k, int v, int vl) inline {
+    if (null?(v)) {
+        var (r, ok) = __tact_dict_delete(d, kl, k);
+        return (r, ());
+    } else {
+        return (dict_set_builder(d, kl, k, begin_cell().store_int(v, vl)), ());
+    }
+}
+
+int __tact_dict_get_slice_coins(cell d, int kl, slice k) inline {
+    var (r, ok) = __tact_dict_get(d, kl, k);
+    if (ok) {
+        return r~load_coins();
+    } else {
+        return null();
+    }
+}
+
+(cell, ()) __tact_dict_set_slice_coins(cell d, int kl, slice k, int v) inline {
+    if (null?(v)) {
+        var (r, ok) = __tact_dict_delete(d, kl, k);
+        return (r, ());
+    } else {
+        return (dict_set_builder(d, kl, k, begin_cell().store_coins(v)), ());
+    }
+}
+
+builder $global_beginCell() impure asm """
+    NEWC
+""";
+
+int $global_checkSignature(int $hash, slice $signature, int $publicKey) impure asm """
+    CHKSIGNU
+""";
+
+() $global_send((int, cell, cell, cell, int, slice, int) $params) impure asm """
+    NEWC
+    b{01} STSLICECONST  // store tag = $0 and ihr_disabled = true
+    1 STI               // store `bounce`
+    b{000} STSLICECONST // store bounced = false and src = addr_none
+    STSLICE             // store `to`
+    SWAP
+    STGRAMS             // store `value`
+    105 PUSHINT         // 1 + 4 + 4 + 64 + 32
+    STZEROES            // store currency_collection, ihr_fee, fwd_fee, created_lt and created_at
+    // → Stack state
+    // s0: Builder
+    // s1: `data`
+    // s2: `code`
+    // s3: `body`
+    // s4: `mode`
+
+    // Group 2: Placing the Builder after code and data, then checking those for nullability
+    s2 XCHG0
+    DUP2
+    ISNULL
+    SWAP
+    ISNULL
+    AND
+    // → Stack state
+    // s0: -1 (true) if `data` and `code` are both null, 0 (false) otherwise
+    // s1: `code`
+    // s2: `data`
+    // s3: Builder
+    // s4: `body`
+    // s5: `mode`
+
+    // Group 3: Left branch of the IFELSE, executed if s0 is -1 (true)
+    <{
+        DROP2 // drop `data` and `code`, since either of those is null
+        b{0} STSLICECONST
+    }> PUSHCONT
+
+    // Group 3: Right branch of the IFELSE, executed if s0 is 0 (false)
+    <{
+        // _ split_depth:(Maybe (## 5))
+        //   special:(Maybe TickTock)
+        //   code:(Maybe ^Cell)
+        //   data:(Maybe ^Cell)
+        //   library:(Maybe ^Cell)
+        // = StateInit;
+        ROT                // place message Builder on top
+        b{10} STSLICECONST // store Maybe = true, Either = false
+        // Start composing inlined StateInit
+        b{00} STSLICECONST // store split_depth and special first
+        STDICT             // store code
+        STDICT             // store data
+        b{0} STSLICECONST  // store library
+    }> PUSHCONT
+
+    // Group 3: IFELSE that does the branching shown above
+    IFELSE
+    // → Stack state
+    // s0: Builder
+    // s1: null or StateInit
+    // s2: `body`
+    // s3: `mode`
+
+    // Group 4: Finalizing the message
+    STDICT // store `body` as ref with an extra Maybe bit, since `body` might be null
+    ENDC
+    // → Stack state
+    // s0: Cell
+    // s1: `mode`
+
+    // Group 5: Sending the message, with `mode` on top
+    SWAP
+    SENDRAWMSG // https://github.com/tact-lang/tact/issues/1558
+""";
+
+() $global_sendRawMessage(cell $msg, int $mode) impure asm """
+    SENDRAWMSG
+""";
+
+cell $Builder$_fun_endCell(builder $self) impure asm """
+    ENDC
+""";
+
+builder $Builder$_fun_storeRef(cell $cell, builder $self) impure asm """
+    STREF
+""";
+
+() $global_emit(cell $body) impure inline {
+    cell $c = $Builder$_fun_endCell($Builder$_fun_storeRef($body, store_uint($global_beginCell(), 15211807202738752817960438464513, 104)));
+    $global_sendRawMessage($c, 0);
+}
+
+int $Cell$_fun_hash(cell $self) impure asm """
+    HASHCU
+""";
+
+builder $Builder$_fun_storeAddress(builder $self, slice $address) impure asm """
+    STSLICER
+""";
+
+;; clash_master_MatchEscrow.constants.fc
+;; Cell TTbtA1xMiNxXRCtc9p4JGHp6bT7k2QUle6hD5LHttyI=
+cell __gen_cell_cell_4d36ed035c4c88dc57442b5cf69e09187a7a6d3ee4d905257ba843e4b1edb722() asm """
+    B{b5ee9c7241010101002a000050000000005366696461426f7420457363726f7720436c65616e757020262044757374205377656570621932b1} B>boc PUSHREF
+""";
+
+;; Cell BsIr49A/iBSkSTjFab8HafIY/yvuUukW0U/GtaJVBXs=
+cell __gen_cell_cell_06c22be3d03f8814a44938c569bf0769f218ff2bee52e916d14fc6b5a255057b() asm """
+    B{b5ee9c7241010101002700004a000000005366696461426f74204475656c2057696e6e6572205061796f75742028393625290936974f} B>boc PUSHREF
+""";
+
+;; Cell J5xiMwAenqYio606lNfGLL/NOi3inKF7ccaDkMzz/Ic=
+cell __gen_cell_cell_279c6233001e9ea622a3ad3a94d7c62cbfcd3a2de29ca17b71c68390ccf3fc87() asm """
+    B{b5ee9c7241010101001f00003a000000005366696461426f742052656372756974657220526577617264551546b4} B>boc PUSHREF
+""";
+
+;; String "Recruiter Reward"
+slice __gen_slice_string_696c4db705ea1b00b01c27a3be41b2c020fee23fee73a7f50256c2123e34553f() asm """
+    B{b5ee9c7241010101001200002052656372756974657220526577617264cfd10f07} B>boc <s PUSHSLICE
+""";
+
+;; Cell jvJaw2R1QDQ41BHZQLv+lRkzj2E4mHV+q46i9nGReyU=
+cell __gen_cell_cell_8ef25ac36475403438d411d940bbfe9519338f613898757eab8ea2f671917b25() asm """
+    B{b5ee9c72410101010024000044000000005366696461426f7420486f737420436f6d6d756e69747920526577617264f22c89e4} B>boc PUSHREF
+""";
+
+;; String "Group Host Reward"
+slice __gen_slice_string_8438a1a823efa3700e76c9edc464efdd398ebb2333665846f33806daf1df21e3() asm """
+    B{b5ee9c7241010101001300002247726f757020486f737420526577617264c16a8b0c} B>boc <s PUSHSLICE
+""";
+
+;; Cell IgK8ko+5nHUndJO3vAdxl79XTi83tsJMjLfm5r23bk4=
+cell __gen_cell_cell_2202bc928fb99c75277493b7bc077197bf574e2f37b6c24c8cb7e6e6bdb76e4e() asm """
+    B{b5ee9c7241010101001c000034000000005366696461426f742054726561737572792052616b656ff76a19} B>boc PUSHREF
+""";
+
+;; Cell BU+RIYl6cLi6tfOSm2mqOncg1zcYJK0NQVK2cROVbik=
+cell __gen_cell_cell_054f9121897a70b8bab5f3929b69aa3a7720d7371824ad0d4152b67113956e29() asm """
+    B{b5ee9c7241010101002900004e000000005366696461426f7420537065637461746f7220546f74616c697a6572205061796f7574045d7405} B>boc PUSHREF
+""";
+
+;; Cell /pEHsYt1rMAd8u9WSt1qYDAI/W/zA5mHpLwGBU87hQw=
+cell __gen_cell_cell_fe9107b18b75acc01df2ef564add6a603008fd6ff3039987a4bc06054f3b850c() asm """
+    B{b5ee9c72410101010023000042000000005366696461426f74204475656c20526566756e6420506c6179657220417e00160d} B>boc PUSHREF
+""";
+
+;; Cell TMPtjmwIgwVKdpXgK5hdHxvgxegrMFd+wxe/Pq7yXfo=
+cell __gen_cell_cell_4cc3ed8e6c0883054a7695e02b985d1f1be0c5e82b30577ec317bf3eaef25dfa() asm """
+    B{b5ee9c72410101010023000042000000005366696461426f74204475656c20526566756e6420506c6179657220428af3461e} B>boc PUSHREF
+""";
+
+;; clash_master_MatchEscrow.storage.fc
+;;
+;; Type: SendParameters
+;; TLB: _ mode:int257 body:Maybe ^cell code:Maybe ^cell data:Maybe ^cell value:int257 to:address bounce:bool = SendParameters
+;;
+
+((int, cell, cell, cell, int, slice, int)) $SendParameters$_constructor_to_value_mode_bounce_body(slice $to, int $value, int $mode, int $bounce, cell $body) inline {
+    return ($mode, $body, null(), null(), $value, $to, $bounce);
+}
+
+;;
+;; Type: EventPlayerJoined
+;; Header: 0x01e248d9
+;; TLB: event_player_joined#01e248d9 matchId:uint64 playerB:address = EventPlayerJoined
+;;
+
+builder $EventPlayerJoined$_store(builder build_0, (int, slice) v) inline {
+    var (v'matchId, v'playerB) = v;
+    build_0 = store_uint(build_0, 31607001, 32);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'playerB);
+    return build_0;
+}
+
+cell $EventPlayerJoined$_store_cell((int, slice) v, builder b) inline {
+    return $EventPlayerJoined$_store(b, v).end_cell();
+}
+
+((int, slice)) $EventPlayerJoined$_constructor_matchId_playerB(int $matchId, slice $playerB) inline {
+    return ($matchId, $playerB);
+}
+
+;;
+;; Type: EventSpectatorBet
+;; Header: 0x68764a9f
+;; TLB: event_spectator_bet#68764a9f matchId:uint64 spectator:address targetPlayer:address amount:coins totalBetsA:coins totalBetsB:coins = EventSpectatorBet
+;;
+
+builder $EventSpectatorBet$_store(builder build_0, (int, slice, slice, int, int, int) v) inline {
+    var (v'matchId, v'spectator, v'targetPlayer, v'amount, v'totalBetsA, v'totalBetsB) = v;
+    build_0 = store_uint(build_0, 1752582815, 32);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'spectator);
+    build_0 = build_0.store_slice(v'targetPlayer);
+    build_0 = build_0.store_varuint16(v'amount);
+    build_0 = build_0.store_varuint16(v'totalBetsA);
+    build_0 = build_0.store_varuint16(v'totalBetsB);
+    return build_0;
+}
+
+cell $EventSpectatorBet$_store_cell((int, slice, slice, int, int, int) v, builder b) inline {
+    return $EventSpectatorBet$_store(b, v).end_cell();
+}
+
+((int, slice, slice, int, int, int)) $EventSpectatorBet$_constructor_matchId_spectator_targetPlayer_amount_totalBetsA_totalBetsB(int $matchId, slice $spectator, slice $targetPlayer, int $amount, int $totalBetsA, int $totalBetsB) inline {
+    return ($matchId, $spectator, $targetPlayer, $amount, $totalBetsA, $totalBetsB);
+}
+
+;;
+;; Type: EventMatchResolved
+;; Header: 0x4a76f1b4
+;; TLB: event_match_resolved#4a76f1b4 matchId:uint64 winner:address playerPotPayout:coins totalPlayerRake:coins distributableSpectatorPool:coins totalSpectatorRake:coins = EventMatchResolved
+;;
+
+builder $EventMatchResolved$_store(builder build_0, (int, slice, int, int, int, int) v) inline {
+    var (v'matchId, v'winner, v'playerPotPayout, v'totalPlayerRake, v'distributableSpectatorPool, v'totalSpectatorRake) = v;
+    build_0 = store_uint(build_0, 1249309108, 32);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'winner);
+    build_0 = build_0.store_varuint16(v'playerPotPayout);
+    build_0 = build_0.store_varuint16(v'totalPlayerRake);
+    build_0 = build_0.store_varuint16(v'distributableSpectatorPool);
+    build_0 = build_0.store_varuint16(v'totalSpectatorRake);
+    return build_0;
+}
+
+cell $EventMatchResolved$_store_cell((int, slice, int, int, int, int) v, builder b) inline {
+    return $EventMatchResolved$_store(b, v).end_cell();
+}
+
+((int, slice, int, int, int, int)) $EventMatchResolved$_constructor_matchId_winner_playerPotPayout_totalPlayerRake_distributableSpectatorPool_totalSpectatorRake(int $matchId, slice $winner, int $playerPotPayout, int $totalPlayerRake, int $distributableSpectatorPool, int $totalSpectatorRake) inline {
+    return ($matchId, $winner, $playerPotPayout, $totalPlayerRake, $distributableSpectatorPool, $totalSpectatorRake);
+}
+
+;;
+;; Type: EventSpectatorClaim
+;; Header: 0x0b5d9198
+;; TLB: event_spectator_claim#0b5d9198 matchId:uint64 spectator:address payout:coins = EventSpectatorClaim
+;;
+
+builder $EventSpectatorClaim$_store(builder build_0, (int, slice, int) v) inline {
+    var (v'matchId, v'spectator, v'payout) = v;
+    build_0 = store_uint(build_0, 190681496, 32);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'spectator);
+    build_0 = build_0.store_varuint16(v'payout);
+    return build_0;
+}
+
+cell $EventSpectatorClaim$_store_cell((int, slice, int) v, builder b) inline {
+    return $EventSpectatorClaim$_store(b, v).end_cell();
+}
+
+((int, slice, int)) $EventSpectatorClaim$_constructor_matchId_spectator_payout(int $matchId, slice $spectator, int $payout) inline {
+    return ($matchId, $spectator, $payout);
+}
+
+;;
+;; Type: EventAffiliatePayout
+;; Header: 0xecc7afe0
+;; TLB: event_affiliate_payout#ecc7afe0 matchId:uint64 recipient:address amount:coins reason:^string = EventAffiliatePayout
+;;
+
+builder $EventAffiliatePayout$_store(builder build_0, (int, slice, int, slice) v) inline {
+    var (v'matchId, v'recipient, v'amount, v'reason) = v;
+    build_0 = store_uint(build_0, 3972509664, 32);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'recipient);
+    build_0 = build_0.store_varuint16(v'amount);
+    build_0 = build_0.store_builder_ref(begin_cell().store_slice(v'reason));
+    return build_0;
+}
+
+cell $EventAffiliatePayout$_store_cell((int, slice, int, slice) v, builder b) inline {
+    return $EventAffiliatePayout$_store(b, v).end_cell();
+}
+
+((int, slice, int, slice)) $EventAffiliatePayout$_constructor_matchId_recipient_amount_reason(int $matchId, slice $recipient, int $amount, slice $reason) inline {
+    return ($matchId, $recipient, $amount, $reason);
+}
+
+;;
+;; Type: MatchEscrowDetails
+;; TLB: _ matchId:uint64 playerA:address playerB:address wagerAmount:coins totalBetsA:coins totalBetsB:coins state:uint8 winner:address distributableSpectatorPool:coins remainingWinningBetsToClaim:coins = MatchEscrowDetails
+;;
+
+(int, slice, slice, int, int, int, int, slice, int, int) $MatchEscrowDetails$_to_external(((int, slice, slice, int, int, int, int, slice, int, int)) v) inline {
+    var (v'matchId, v'playerA, v'playerB, v'wagerAmount, v'totalBetsA, v'totalBetsB, v'state, v'winner, v'distributableSpectatorPool, v'remainingWinningBetsToClaim) = v; 
+    return (v'matchId, v'playerA, v'playerB, v'wagerAmount, v'totalBetsA, v'totalBetsB, v'state, v'winner, v'distributableSpectatorPool, v'remainingWinningBetsToClaim);
+}
+
+((int, slice, slice, int, int, int, int, slice, int, int)) $MatchEscrowDetails$_constructor_matchId_playerA_playerB_wagerAmount_totalBetsA_totalBetsB_state_winner_distributableSpectatorPool_remainingWinningBetsToClaim(int $matchId, slice $playerA, slice $playerB, int $wagerAmount, int $totalBetsA, int $totalBetsB, int $state, slice $winner, int $distributableSpectatorPool, int $remainingWinningBetsToClaim) inline {
+    return ($matchId, $playerA, $playerB, $wagerAmount, $totalBetsA, $totalBetsB, $state, $winner, $distributableSpectatorPool, $remainingWinningBetsToClaim);
+}
+
+;;
+;; Type: RakeDistribution
+;; TLB: _ treasuryShare:coins recruiterShare:coins groupAdminShare:coins = RakeDistribution
+;;
+
+((int, int, int)) $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare(int $treasuryShare, int $recruiterShare, int $groupAdminShare) inline {
+    return ($treasuryShare, $recruiterShare, $groupAdminShare);
+}
+
+;;
+;; Type: MatchEscrow
+;; TLB: _ clashMaster:address matchId:uint64 playerA:address playerB:address wagerAmount:coins totalBetsA:coins totalBetsB:coins state:uint8 recruiterA:address recruiterB:address groupAdminAddress:address serverPublicKey:uint256 winner:address creationFeePaid:coins spectatorBetsA:dict<address, coins> spectatorBetsB:dict<address, coins> spectatorClaimed:dict<address, bool> distributableSpectatorPool:coins remainingWinningBetsToClaim:coins totalWinningBets:coins = MatchEscrow
+;;
+
+builder $MatchEscrow$_store(builder build_0, (slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) v) inline {
+    var (v'clashMaster, v'matchId, v'playerA, v'playerB, v'wagerAmount, v'totalBetsA, v'totalBetsB, v'state, v'recruiterA, v'recruiterB, v'groupAdminAddress, v'serverPublicKey, v'winner, v'creationFeePaid, v'spectatorBetsA, v'spectatorBetsB, v'spectatorClaimed, v'distributableSpectatorPool, v'remainingWinningBetsToClaim, v'totalWinningBets) = v;
+    build_0 = build_0.store_slice(v'clashMaster);
+    build_0 = build_0.store_uint(v'matchId, 64);
+    build_0 = build_0.store_slice(v'playerA);
+    build_0 = __tact_store_address_opt(build_0, v'playerB);
+    build_0 = build_0.store_varuint16(v'wagerAmount);
+    var build_1 = begin_cell();
+    build_1 = build_1.store_varuint16(v'totalBetsA);
+    build_1 = build_1.store_varuint16(v'totalBetsB);
+    build_1 = build_1.store_uint(v'state, 8);
+    build_1 = __tact_store_address_opt(build_1, v'recruiterA);
+    build_1 = __tact_store_address_opt(build_1, v'recruiterB);
+    var build_2 = begin_cell();
+    build_2 = __tact_store_address_opt(build_2, v'groupAdminAddress);
+    build_2 = build_2.store_uint(v'serverPublicKey, 256);
+    build_2 = __tact_store_address_opt(build_2, v'winner);
+    build_2 = build_2.store_varuint16(v'creationFeePaid);
+    build_2 = build_2.store_dict(v'spectatorBetsA);
+    build_2 = build_2.store_dict(v'spectatorBetsB);
+    build_2 = build_2.store_dict(v'spectatorClaimed);
+    var build_3 = begin_cell();
+    build_3 = build_3.store_varuint16(v'distributableSpectatorPool);
+    build_3 = build_3.store_varuint16(v'remainingWinningBetsToClaim);
+    build_3 = build_3.store_varuint16(v'totalWinningBets);
+    build_2 = store_builder_ref(build_2, build_3);
+    build_1 = store_builder_ref(build_1, build_2);
+    build_0 = store_builder_ref(build_0, build_1);
+    return build_0;
+}
+
+(slice, ((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int))) $MatchEscrow$_load(slice sc_0) inline {
+    var v'clashMaster = sc_0~load_msg_addr();
+    var v'matchId = sc_0~load_uint(64);
+    var v'playerA = sc_0~load_msg_addr();
+    var v'playerB = sc_0~__tact_load_address_opt();
+    var v'wagerAmount = sc_0~load_varuint16();
+    slice sc_1 = sc_0~load_ref().begin_parse();
+    var v'totalBetsA = sc_1~load_varuint16();
+    var v'totalBetsB = sc_1~load_varuint16();
+    var v'state = sc_1~load_uint(8);
+    var v'recruiterA = sc_1~__tact_load_address_opt();
+    var v'recruiterB = sc_1~__tact_load_address_opt();
+    slice sc_2 = sc_1~load_ref().begin_parse();
+    var v'groupAdminAddress = sc_2~__tact_load_address_opt();
+    var v'serverPublicKey = sc_2~load_uint(256);
+    var v'winner = sc_2~__tact_load_address_opt();
+    var v'creationFeePaid = sc_2~load_varuint16();
+    var v'spectatorBetsA = sc_2~load_dict();
+    var v'spectatorBetsB = sc_2~load_dict();
+    var v'spectatorClaimed = sc_2~load_dict();
+    slice sc_3 = sc_2~load_ref().begin_parse();
+    var v'distributableSpectatorPool = sc_3~load_varuint16();
+    var v'remainingWinningBetsToClaim = sc_3~load_varuint16();
+    var v'totalWinningBets = sc_3~load_varuint16();
+    return (sc_0, (v'clashMaster, v'matchId, v'playerA, v'playerB, v'wagerAmount, v'totalBetsA, v'totalBetsB, v'state, v'recruiterA, v'recruiterB, v'groupAdminAddress, v'serverPublicKey, v'winner, v'creationFeePaid, v'spectatorBetsA, v'spectatorBetsB, v'spectatorClaimed, v'distributableSpectatorPool, v'remainingWinningBetsToClaim, v'totalWinningBets));
+}
+
+(slice, ((slice, int, slice, int, int, slice, slice))) $MatchEscrow$init$_load(slice sc_0) inline {
+    var v'clashMaster = sc_0~load_msg_addr();
+    var v'matchId = sc_0~load_uint(64);
+    var v'playerA = sc_0~load_msg_addr();
+    var v'wagerAmount = sc_0~load_varuint16();
+    var v'serverPublicKey = sc_0~load_uint(256);
+    slice sc_1 = sc_0~load_ref().begin_parse();
+    var v'recruiterA = sc_1~__tact_load_address_opt();
+    var v'groupAdminAddress = sc_1~__tact_load_address_opt();
+    return (sc_0, (v'clashMaster, v'matchId, v'playerA, v'wagerAmount, v'serverPublicKey, v'recruiterA, v'groupAdminAddress));
+}
+
+(slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $MatchEscrow$_contract_load() impure inline {
+    slice $sc = get_data().begin_parse();
+    int $loaded = $sc~load_int(1);
+    if ($loaded) {
+        return $sc~$MatchEscrow$_load();
+    }
+    else {
+        (slice $clashMaster, int $matchId, slice $playerA, int $wagerAmount, int $serverPublicKey, slice $recruiterA, slice $groupAdminAddress) = $sc~$MatchEscrow$init$_load();
+        $sc.end_parse();
+        return $MatchEscrow$_contract_init($clashMaster, $matchId, $playerA, $wagerAmount, $serverPublicKey, $recruiterA, $groupAdminAddress);
+    }
+}
+
+() $MatchEscrow$_contract_store((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) v) impure inline {
+    builder b = begin_cell();
+    b = b.store_int(true, 1);
+    b = $MatchEscrow$_store(b, v);
+    set_data(b.end_cell());
+}
+
+;;
+;; Contract MatchEscrow functions
+;;
+
+(slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $MatchEscrow$_contract_init(slice $clashMaster, int $matchId, slice $playerA, int $wagerAmount, int $serverPublicKey, slice $recruiterA, slice $groupAdminAddress) impure inline {
+    var (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)) = (null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null(), null());
+    $self'clashMaster = $clashMaster;
+    $self'matchId = $matchId;
+    $self'playerA = $playerA;
+    $self'playerB = null();
+    $self'wagerAmount = $wagerAmount;
+    $self'serverPublicKey = $serverPublicKey;
+    $self'recruiterA = $recruiterA;
+    $self'recruiterB = null();
+    $self'groupAdminAddress = $groupAdminAddress;
+    $self'state = 0;
+    $self'winner = null();
+    $self'creationFeePaid = 20000000;
+    $self'totalBetsA = 0;
+    $self'totalBetsB = 0;
+    $self'distributableSpectatorPool = 0;
+    $self'remainingWinningBetsToClaim = 0;
+    $self'totalWinningBets = 0;
+    return ($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets);
+}
+
+int $global_calculatePlayerRake(int $totalPot) impure inline_ref {
+    return (($totalPot * 4) / 100);
+}
+
+int $global_calculateSpectatorRake(int $totalSpectatorPool) impure inline_ref {
+    return (($totalSpectatorPool * 6) / 100);
+}
+
+int $global_calculateSpectatorShare(int $betAmount, int $distributablePool, int $totalWinningBets) impure inline_ref {
+    ifnot ($totalWinningBets) {
+        return 0;
+    }
+    return (($betAmount * $distributablePool) / $totalWinningBets);
+}
+
+(int, int, int) $global_splitRake(int $totalRake, int $hasRecruiter, int $hasGroupAdmin) impure inline_ref {
+    int $treasuryBaseline = (($totalRake * 70) / 100);
+    int $affiliatePool = ($totalRake - $treasuryBaseline);
+    if (( ($hasRecruiter) ? ($hasGroupAdmin) : (false) )) {
+        int $recruiterHalf = ($affiliatePool / 2);
+        int $groupAdminHalf = ($affiliatePool - $recruiterHalf);
+        return $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare($treasuryBaseline, $recruiterHalf, $groupAdminHalf);
+    }
+    if ($hasRecruiter) {
+        return $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare($treasuryBaseline, $affiliatePool, 0);
+    }
+    if ($hasGroupAdmin) {
+        return $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare($treasuryBaseline, 0, $affiliatePool);
+    }
+    return $RakeDistribution$_constructor_treasuryShare_recruiterShare_groupAdminShare($totalRake, 0, 0);
+}
+
+int $global_verifyResolutionSignature(int $matchId, slice $winner, int $timestamp, slice $signature, int $serverPublicKey) impure inline_ref {
+    int $payloadHash = $Cell$_fun_hash($Builder$_fun_endCell(store_uint($Builder$_fun_storeAddress(store_uint($global_beginCell(), $matchId, 64), $winner), $timestamp, 32)));
+    return $global_checkSignature($payloadHash, $signature, $serverPublicKey);
+}
+
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), ()) $MatchEscrow$_fun_selfDestructToMaster((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self) impure inline_ref {
+    var (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)) = $self;
+    $global_send($SendParameters$_constructor_to_value_mode_bounce_body($self'clashMaster, 0, 160, false, __gen_cell_cell_4d36ed035c4c88dc57442b5cf69e09187a7a6d3ee4d905257ba843e4b1edb722()));
+    return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), ());
+}
+
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), (int, slice, slice, int, int, int, int, slice, int, int)) $MatchEscrow$_fun_getMatchDetails((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self) impure inline_ref {
+    var (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)) = $self;
+    var $fresh$ret_0 = $MatchEscrowDetails$_constructor_matchId_playerA_playerB_wagerAmount_totalBetsA_totalBetsB_state_winner_distributableSpectatorPool_remainingWinningBetsToClaim($self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'winner, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim);
+    return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_0);
+}
+
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), int) $MatchEscrow$_fun_getSpectatorBetA((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self, slice $spectator) impure inline_ref {
+    var (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)) = $self;
+    int $val = __tact_dict_get_slice_coins($self'spectatorBetsA, 267, $spectator);
+    if ((~ null?($val))) {
+        var $fresh$ret_1 = __tact_not_null($val);
+        return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_1);
+    }
+    var $fresh$ret_2 = 0;
+    return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_2);
+}
+
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), int) $MatchEscrow$_fun_getSpectatorBetB((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self, slice $spectator) impure inline_ref {
+    var (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)) = $self;
+    int $val = __tact_dict_get_slice_coins($self'spectatorBetsB, 267, $spectator);
+    if ((~ null?($val))) {
+        var $fresh$ret_3 = __tact_not_null($val);
+        return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_3);
+    }
+    var $fresh$ret_4 = 0;
+    return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_4);
+}
+
+((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int), int) $MatchEscrow$_fun_hasSpectatorClaimed((slice, int, slice, slice, int, int, int, int, slice, slice, slice, int, slice, int, cell, cell, cell, int, int, int) $self, slice $spectator) impure inline_ref {
+    var (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)) = $self;
+    int $val = __tact_dict_get_slice_int($self'spectatorClaimed, 267, $spectator, 1);
+    if ((~ null?($val))) {
+        var $fresh$ret_5 = __tact_not_null($val);
+        return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_5);
+    }
+    var $fresh$ret_6 = false;
+    return (($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets), $fresh$ret_6);
+}
+
+;;
+;; Get methods of a Contract MatchEscrow
+;;
+
+_ %getMatchDetails() method_id(126747) {
+    var self = $MatchEscrow$_contract_load();
+    var res = self~$MatchEscrow$_fun_getMatchDetails();
+    return $MatchEscrowDetails$_to_external(res);
+}
+
+_ %getSpectatorBetA(slice $spectator) method_id(74539) {
+    slice $spectator = $spectator;
+    var self = $MatchEscrow$_contract_load();
+    var res = self~$MatchEscrow$_fun_getSpectatorBetA($spectator);
+    return res;
+}
+
+_ %getSpectatorBetB(slice $spectator) method_id(70472) {
+    slice $spectator = $spectator;
+    var self = $MatchEscrow$_contract_load();
+    var res = self~$MatchEscrow$_fun_getSpectatorBetB($spectator);
+    return res;
+}
+
+_ %hasSpectatorClaimed(slice $spectator) method_id(84326) {
+    slice $spectator = $spectator;
+    var self = $MatchEscrow$_contract_load();
+    var res = self~$MatchEscrow$_fun_hasSpectatorClaimed($spectator);
+    return res;
+}
+
+;;
+;; Routing of a Contract MatchEscrow
+;;
+
+;; message opcode reader utility: only binary receivers
+;; Returns 32 bit message opcode, otherwise throws the "Invalid incoming message" exit code
+(slice, int) ~load_opcode_internal(slice s) asm( -> 1 0) "32 LDUQ 130 THROWIFNOT";
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+    
+    ;; Context
+    var cs = in_msg_cell.begin_parse();
+    cs~skip_bits(2);
+    var msg_bounceable = cs~load_int(1);
+    var msg_bounced = cs~load_int(1);
+    slice msg_sender_addr = cs~load_msg_addr();
+    __tact_context = (msg_bounceable, msg_sender_addr, msg_value, cs);
+    __tact_context_sender = msg_sender_addr;
+    
+    ;; Load contract data
+    var ($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets) = $MatchEscrow$_contract_load();
+    
+    ;; Handle bounced messages
+    if (msg_bounced) { return (); }
+    int op = 0;
+    int in_msg_length = slice_bits(in_msg);
+    if (in_msg_length >= 32) {
+        op = in_msg~load_uint(32);
+        ;; Receive JoinMatch message
+        if (op == 1174555988) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var $msg'recruiterB = in_msg~__tact_load_address_opt();
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            throw_unless(14246, ($self'state == 0));
+            throw_unless(7119, ($msg'matchId == $self'matchId));
+            throw_unless(5525, ( ~ equal_slices_bits($ctx'sender, $self'playerA) ));
+            throw_unless(35852, ($ctx'value >= $self'wagerAmount));
+            $self'playerB = $ctx'sender;
+            $self'recruiterB = $msg'recruiterB;
+            $self'state = 1;
+            $global_emit($EventPlayerJoined$_store_cell($EventPlayerJoined$_constructor_matchId_playerB($self'matchId, $ctx'sender), begin_cell()));
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+        
+        ;; Receive BetSpectator message
+        if (op == 3365506230) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var $msg'targetPlayer = in_msg~load_msg_addr();
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            throw_unless(2892, ( (($self'state == 0)) ? (true) : (($self'state == 1)) ));
+            throw_unless(7119, ($msg'matchId == $self'matchId));
+            int $isValidTarget = ( equal_slices_bits($msg'targetPlayer, $self'playerA) );
+            if ((~ null?($self'playerB))) {
+                if (( equal_slices_bits($msg'targetPlayer, __tact_not_null($self'playerB)) )) {
+                    $isValidTarget = true;
+                }
+            }
+            throw_unless(17825, $isValidTarget);
+            throw_unless(25099, ($ctx'value >= 100000000));
+            int $betValue = $ctx'value;
+            if (( equal_slices_bits($msg'targetPlayer, $self'playerA) )) {
+                int $existing = 0;
+                int $currentVal = __tact_dict_get_slice_coins($self'spectatorBetsA, 267, $ctx'sender);
+                if ((~ null?($currentVal))) {
+                    $existing = __tact_not_null($currentVal);
+                }
+                $self'spectatorBetsA~__tact_dict_set_slice_coins(267, $ctx'sender, ($existing + $betValue));
+                $self'totalBetsA = ($self'totalBetsA + $betValue);
+            } else {
+                int $existing = 0;
+                int $currentVal = __tact_dict_get_slice_coins($self'spectatorBetsB, 267, $ctx'sender);
+                if ((~ null?($currentVal))) {
+                    $existing = __tact_not_null($currentVal);
+                }
+                $self'spectatorBetsB~__tact_dict_set_slice_coins(267, $ctx'sender, ($existing + $betValue));
+                $self'totalBetsB = ($self'totalBetsB + $betValue);
+            }
+            $global_emit($EventSpectatorBet$_store_cell($EventSpectatorBet$_constructor_matchId_spectator_targetPlayer_amount_totalBetsA_totalBetsB($self'matchId, $ctx'sender, $msg'targetPlayer, $betValue, $self'totalBetsA, $self'totalBetsB), begin_cell()));
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+        
+        ;; Receive ResolveMatch message
+        if (op == 756388397) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var $msg'winner = in_msg~load_msg_addr();
+            var $msg'timestamp = in_msg~load_uint(32);
+            var $msg'signature = in_msg~load_ref().begin_parse();
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            throw_unless(57629, ($self'state == 1));
+            throw_unless(7119, ($msg'matchId == $self'matchId));
+            throw_unless(8932, (~ null?($self'playerB)));
+            int $isValidWinner = ( (( equal_slices_bits($msg'winner, $self'playerA) )) ? (true) : (( equal_slices_bits($msg'winner, __tact_not_null($self'playerB)) )) );
+            throw_unless(46500, $isValidWinner);
+            int $isValidSig = $global_verifyResolutionSignature($msg'matchId, $msg'winner, $msg'timestamp, $msg'signature, $self'serverPublicKey);
+            throw_unless(23966, $isValidSig);
+            $self'winner = $msg'winner;
+            $self'state = 2;
+            int $totalPlayerPot = ($self'wagerAmount * 2);
+            int $playerRake = $global_calculatePlayerRake($totalPlayerPot);
+            int $winnerPayout = ($totalPlayerPot - $playerRake);
+            int $totalSpectatorPool = ($self'totalBetsA + $self'totalBetsB);
+            int $spectatorRake = 0;
+            int $distPool = 0;
+            int $winBets = 0;
+            if (($totalSpectatorPool > 0)) {
+                $spectatorRake = $global_calculateSpectatorRake($totalSpectatorPool);
+                $distPool = ($totalSpectatorPool - $spectatorRake);
+                if (( equal_slices_bits($msg'winner, $self'playerA) )) {
+                    $winBets = $self'totalBetsA;
+                } else {
+                    $winBets = $self'totalBetsB;
+                }
+            }
+            $self'distributableSpectatorPool = $distPool;
+            $self'totalWinningBets = $winBets;
+            $self'remainingWinningBetsToClaim = $winBets;
+            int $totalRake = ($playerRake + $spectatorRake);
+            slice $winnerRecruiter = null();
+            if (( equal_slices_bits($msg'winner, $self'playerA) )) {
+                $winnerRecruiter = $self'recruiterA;
+            } else {
+                $winnerRecruiter = $self'recruiterB;
+            }
+            int $hasRecruiter = (~ null?($winnerRecruiter));
+            int $hasGroupAdmin = (~ null?($self'groupAdminAddress));
+            var ($rakeSplit'treasuryShare, $rakeSplit'recruiterShare, $rakeSplit'groupAdminShare) = $global_splitRake($totalRake, $hasRecruiter, $hasGroupAdmin);
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body($msg'winner, $winnerPayout, 1, false, __gen_cell_cell_06c22be3d03f8814a44938c569bf0769f218ff2bee52e916d14fc6b5a255057b()));
+            if (($rakeSplit'recruiterShare > 0)) {
+                if ((~ null?($winnerRecruiter))) {
+                    $global_send($SendParameters$_constructor_to_value_mode_bounce_body(__tact_not_null($winnerRecruiter), $rakeSplit'recruiterShare, 1, false, __gen_cell_cell_279c6233001e9ea622a3ad3a94d7c62cbfcd3a2de29ca17b71c68390ccf3fc87()));
+                    $global_emit($EventAffiliatePayout$_store_cell($EventAffiliatePayout$_constructor_matchId_recipient_amount_reason($self'matchId, __tact_not_null($winnerRecruiter), $rakeSplit'recruiterShare, __gen_slice_string_696c4db705ea1b00b01c27a3be41b2c020fee23fee73a7f50256c2123e34553f()), begin_cell()));
+                }
+            }
+            if (($rakeSplit'groupAdminShare > 0)) {
+                if ((~ null?($self'groupAdminAddress))) {
+                    $global_send($SendParameters$_constructor_to_value_mode_bounce_body(__tact_not_null($self'groupAdminAddress), $rakeSplit'groupAdminShare, 1, false, __gen_cell_cell_8ef25ac36475403438d411d940bbfe9519338f613898757eab8ea2f671917b25()));
+                    $global_emit($EventAffiliatePayout$_store_cell($EventAffiliatePayout$_constructor_matchId_recipient_amount_reason($self'matchId, __tact_not_null($self'groupAdminAddress), $rakeSplit'groupAdminShare, __gen_slice_string_8438a1a823efa3700e76c9edc464efdd398ebb2333665846f33806daf1df21e3()), begin_cell()));
+                }
+            }
+            int $treasuryTotal = ($rakeSplit'treasuryShare + $self'creationFeePaid);
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body($self'clashMaster, $treasuryTotal, 1, false, __gen_cell_cell_2202bc928fb99c75277493b7bc077197bf574e2f37b6c24c8cb7e6e6bdb76e4e()));
+            $global_emit($EventMatchResolved$_store_cell($EventMatchResolved$_constructor_matchId_winner_playerPotPayout_totalPlayerRake_distributableSpectatorPool_totalSpectatorRake($self'matchId, $msg'winner, $winnerPayout, $playerRake, $distPool, $spectatorRake), begin_cell()));
+            ifnot ($self'remainingWinningBetsToClaim) {
+                ($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)~$MatchEscrow$_fun_selfDestructToMaster();
+            }
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+        
+        ;; Receive ClaimSpectatorReward message
+        if (op == 3249897020) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            throw_unless(8675, ($self'state == 2));
+            throw_unless(26244, (~ null?($self'winner)));
+            throw_unless(7119, ($msg'matchId == $self'matchId));
+            int $hasClaimed = false;
+            int $claimVal = __tact_dict_get_slice_int($self'spectatorClaimed, 267, $ctx'sender, 1);
+            if ((~ null?($claimVal))) {
+                $hasClaimed = __tact_not_null($claimVal);
+            }
+            throw_unless(16276, (~ $hasClaimed));
+            int $betAmount = 0;
+            if (( equal_slices_bits(__tact_not_null($self'winner), $self'playerA) )) {
+                int $betVal = __tact_dict_get_slice_coins($self'spectatorBetsA, 267, $ctx'sender);
+                if ((~ null?($betVal))) {
+                    $betAmount = __tact_not_null($betVal);
+                }
+            } else {
+                int $betVal = __tact_dict_get_slice_coins($self'spectatorBetsB, 267, $ctx'sender);
+                if ((~ null?($betVal))) {
+                    $betAmount = __tact_not_null($betVal);
+                }
+            }
+            throw_unless(20614, ($betAmount > 0));
+            $self'spectatorClaimed~__tact_dict_set_slice_int(267, $ctx'sender, true, 1);
+            int $payout = $global_calculateSpectatorShare($betAmount, $self'distributableSpectatorPool, $self'totalWinningBets);
+            throw_unless(27099, ($payout > 0));
+            $self'remainingWinningBetsToClaim = ($self'remainingWinningBetsToClaim - $betAmount);
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body($ctx'sender, $payout, 1, false, __gen_cell_cell_054f9121897a70b8bab5f3929b69aa3a7720d7371824ad0d4152b67113956e29()));
+            $global_emit($EventSpectatorClaim$_store_cell($EventSpectatorClaim$_constructor_matchId_spectator_payout($self'matchId, $ctx'sender, $payout), begin_cell()));
+            if (($self'remainingWinningBetsToClaim <= 0)) {
+                ($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)~$MatchEscrow$_fun_selfDestructToMaster();
+            }
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+        
+        ;; Receive CancelMatch message
+        if (op == 2731538680) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var $msg'reason = in_msg~load_ref().begin_parse();
+            var $msg'signature = in_msg~load_ref().begin_parse();
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            throw_unless(59295, ( (($self'state == 0)) ? (true) : (($self'state == 1)) ));
+            throw_unless(7119, ($msg'matchId == $self'matchId));
+            int $isAuthorized = false;
+            if (( (( equal_slices_bits($ctx'sender, $self'playerA) )) ? (($self'state == 0)) : (false) )) {
+                $isAuthorized = true;
+            } else {
+                $isAuthorized = $global_verifyResolutionSignature($msg'matchId, $self'playerA, 0, $msg'signature, $self'serverPublicKey);
+            }
+            throw_unless(12920, $isAuthorized);
+            $self'state = 3;
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body($self'playerA, $self'wagerAmount, 1, false, __gen_cell_cell_fe9107b18b75acc01df2ef564add6a603008fd6ff3039987a4bc06054f3b850c()));
+            if ((~ null?($self'playerB))) {
+                $global_send($SendParameters$_constructor_to_value_mode_bounce_body(__tact_not_null($self'playerB), $self'wagerAmount, 1, false, __gen_cell_cell_4cc3ed8e6c0883054a7695e02b985d1f1be0c5e82b30577ec317bf3eaef25dfa()));
+            }
+            ($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)~$MatchEscrow$_fun_selfDestructToMaster();
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+        
+        ;; Receive EmergencyRefund message
+        if (op == 3781632330) {
+            var $msg'matchId = in_msg~load_uint(64);
+            var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
+            throw_unless(5118, ( equal_slices_bits($ctx'sender, $self'clashMaster) ));
+            throw_unless(7119, ($msg'matchId == $self'matchId));
+            ($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets)~$MatchEscrow$_fun_selfDestructToMaster();
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+        
+    }
+    ;; Receive empty message
+    if ((op == 0) & (in_msg_length <= 32)) {
+        $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+        return ();
+    }
+    ;; Empty Receiver and Text Receivers
+    if (op == 0) {
+        ;; Fallback Text Receiver
+        if (in_msg_length >= 32) {
+            $MatchEscrow$_contract_store(($self'clashMaster, $self'matchId, $self'playerA, $self'playerB, $self'wagerAmount, $self'totalBetsA, $self'totalBetsB, $self'state, $self'recruiterA, $self'recruiterB, $self'groupAdminAddress, $self'serverPublicKey, $self'winner, $self'creationFeePaid, $self'spectatorBetsA, $self'spectatorBetsB, $self'spectatorClaimed, $self'distributableSpectatorPool, $self'remainingWinningBetsToClaim, $self'totalWinningBets));
+            return ();
+        }
+    }
+    ;; Throw if not handled
+    throw(130);
+}
+
+
+() __tact_selector_hack_asm() impure asm """
+@atend @ 1 {
+        execute current@ context@ current!
+        {
+            // The core idea of this function is to save gas by avoiding unnecessary dict jump, when recv_internal/recv_external is called
+            // We want to extract recv_internal/recv_external from the dict and select needed function
+            // not by jumping to the needed function by it's index, but by using usual IF statements.
+
+            }END> b> // Close previous builder, now we have a cell of previous code on top of the stack
+
+            <{ // Start of the new code builder
+                SETCP0
+                // Swap the new code builder with the previous code, now we have previous code on top of the stack
+                swap
+                // Transform cell to slice and load first ref from the previous code, now we have the dict on top of the stack
+                <s ref@
+
+                // Extract the recv_internal from the dict
+                dup 0 swap @procdictkeylen idict@ { "internal shortcut error" abort } ifnot
+                swap
+
+                // Delete the recv_internal from the dict
+                0 swap @procdictkeylen idict- drop
+                // Delete the recv_external from the dict (it's okay if it's not there)
+                -1 swap @procdictkeylen idict- drop
+                // Delete the __tact_selector_hack from the dict
+                65535 swap @procdictkeylen idict- drop
+
+                // Bring the code builder from the bottom of the stack
+                // because if recv_external extraction is optional, and the number of elements on the stack is not fixed
+                depth 1- roll
+                // Swap with the dict from which we extracted recv_internal and (maybe) recv_external
+                swap
+
+                // Check if the dict is empty
+                dup null?
+                // Store a copy of this flag in the bottom of the stack
+                dup depth 1- -roll
+                {
+                    // If the dict is empty, just drop it (it will be null if it's empty)
+                    drop
+                }
+                {
+                    // If the dict is not empty, prepare continuation to be stored in c3
+                    <{
+                        // Save this dict as first ref in this continuation, it will be pushed in runtime by DICTPUSHCONST
+                        swap @procdictkeylen DICTPUSHCONST
+                        // Jump to the needed function by it's index
+                        DICTIGETJMPZ
+                        // If such key is not found, throw 11 along with the key as an argument
+                        11 THROWARG
+                    }> PUSHCONT
+                    // Store the continuation in c3
+                    c3 POP
+                } cond
+
+                // Function id is on top of the (runtime) stack
+                DUP IFNOTJMP:<{
+                    // place recv_internal here
+                    DROP swap @addop
+                }>
+
+                // Bring back the flag, indicating if the dict is empty or not from the bottom of the stack
+                depth 1- roll
+                {
+                    // If the dict is empty, throw 11
+                    11 THROWARG
+                }
+                {
+                    // If the dict is not empty, jump to continuation from c3
+                    c3 PUSH JMPX
+                } cond
+            }> b>
+        } : }END>c
+        current@ context! current!
+    } does @atend !
+""";
+
+() __tact_selector_hack() method_id(65535) {
+    return __tact_selector_hack_asm();
+}
