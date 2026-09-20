@@ -45,8 +45,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     }
 
     const role = query.role || 'spectator';
-    const wallet = query.wallet || `spectator_${Date.now()}`;
-    const username = query.username || (role === 'player' ? 'Duelist' : 'Spectator');
+    const wallet = query.wallet || (role === 'player' ? (query.username ? `player_${query.username}` : `player_${Date.now()}`) : `spectator_${Date.now()}`);
+    const username = query.username || (role === 'player' ? 'Guerriero' : 'Spettatore');
     const telegramId = query.telegramId || '';
 
     if (role === 'player') {

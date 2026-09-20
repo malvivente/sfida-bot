@@ -18,6 +18,7 @@ interface DuelLobbyProps {
   createError?: string | null;
   onClearError?: () => void;
   userAddress?: string;
+  onOpenWallet?: () => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -31,6 +32,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   createError,
   onClearError,
   userAddress,
+  onOpenWallet,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName } = useTelegram();
@@ -44,6 +46,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const handleOpenModal = () => {
     onClearError?.();
+    if (!userAddress) {
+      triggerImpact('medium');
+      onOpenWallet?.();
+      return;
+    }
     triggerImpact('medium');
     setShowCreateModal(true);
   };
@@ -198,7 +205,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   <div className="flex items-center space-x-2">
                     {!m.playerB ? (
                       <button
-                        onClick={() => onJoinMatch(m.matchId, wagerGram)}
+                        onClick={() => {
+                          if (!userAddress) {
+                            triggerImpact('medium');
+                            onOpenWallet?.();
+                            return;
+                          }
+                          onJoinMatch(m.matchId, wagerGram);
+                        }}
                         className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
                       >
                         <Swords className="w-3.5 h-3.5" />

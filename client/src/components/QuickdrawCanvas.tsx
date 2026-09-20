@@ -16,6 +16,7 @@ interface QuickdrawCanvasProps {
   forfeitCountdown: number | null;
   roundWinner: string | null;
   matchWinner: string | null;
+  matchWinnerName?: string | null;
   role: 'player' | 'spectator';
   isReady: boolean;
   onReady: () => void;
@@ -34,6 +35,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   forfeitCountdown,
   roundWinner,
   matchWinner,
+  matchWinnerName,
   role,
   isReady,
   onReady,
@@ -237,8 +239,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             <span className="text-2xl font-orbitron font-extrabold text-cyber-cyan neon-text-cyan">
               VITTORIA!
             </span>
-            <span className="text-xs font-chakra text-slate-300 mt-2 max-w-xs break-all">
-              Vincitore: {matchWinner?.slice(0, 10)}...{matchWinner?.slice(-6)}
+            <span className="text-sm font-chakra text-slate-200 mt-2 max-w-xs break-all">
+              Vincitore: <span className="font-orbitron font-bold text-cyber-cyan">{matchWinnerName || (matchWinner && !matchWinner.startsWith('spectator_') && !matchWinner.startsWith('player_') ? `${matchWinner.slice(0, 6)}...${matchWinner.slice(-4)}` : (matchWinnerName || 'Giocatore'))}</span>
             </span>
           </motion.div>
         )}

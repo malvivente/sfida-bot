@@ -22,7 +22,7 @@ export const Arena: React.FC<ArenaProps> = ({
   const [isReady, setIsReady] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const { userAddress, createMatchOnChain, openWalletModal, placeSpectatorBetOnChain } = useTonClashContract();
+  const { userAddress, createMatchOnChain, joinMatchOnChain, openWalletModal, placeSpectatorBetOnChain } = useTonClashContract();
   const { userId, username, fullName } = useTelegram();
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
@@ -134,16 +134,20 @@ export const Arena: React.FC<ArenaProps> = ({
       }
 
       // 4. Se lo Smart Contract è configurato, invia la transazione on-chain (puntata + 0.02 fee)
-      if (clashMasterAddress) {
-        try {
-          await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
-        } catch (txErr: any) {
-          console.warn('Transazione on-chain annullata o fallita:', txErr);
-          // Rollback: elimina la partita dal server se l'utente ha rifiutato la firma nel wallet
-          await fetch(`${serverUrl}/api/matches/${data.matchId}`, { method: 'DELETE' }).catch(() => {});
-          setCreateError('Creazione annullata: transazione non confermata su Tonkeeper. Nessun fondo speso.');
-          return false;
-        }
+      if (!clashMasterAddress) {
+        setCreateError('⚠️ Smart Contract non configurato! Esegui prima "npm run deploy:contracts" sulla VPS e imposta CLASH_MASTER_ADDRESS nel .env per addebitare la puntata e la fee reale.');
+        return false;
+      }
+
+      try {
+        setCreateError('Conferma la transazione nel wallet (puntata + 0.02 fee)...');
+        await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
+      } catch (txErr: any) {
+        console.warn('Transazione on-chain annullata o fallita:', txErr);
+        // Rollback: elimina la partita dal server se l'utente ha rifiutato la firma nel wallet
+        await fetch(`${serverUrl}/api/matches/${data.matchId}`, { method: 'DELETE' }).catch(() => {});
+        setCreateError('Creazione annullata: transazione non confermata su Tonkeeper. Nessun fondo speso.');
+        return false;
       }
 
       const newMatch: MatchData = {
@@ -185,7 +189,30 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   };
 
-  const handleJoinMatch = (matchId: string, _wagerTon: string) => {
+  const handleJoinMatch = async (matchId: string, wagerTon: string) => {
+    // 1. Il giocatore B deve obbligatoriamente connettere il wallet
+    if (!userAddress) {
+      openWalletModal();
+      setCreateError('Devi connettere il tuo Wallet Tonkeeper per accettare la sfida e depositare la puntata.');
+      return;
+    }
+
+    // 2. Se lo Smart Contract è configurato, versa la puntata on-chain
+    if (clashMasterAddress) {
+      try {
+        setCreateError('Conferma la puntata su Tonkeeper per partecipare al duello...');
+        await joinMatchOnChain(clashMasterAddress, matchId, wagerTon);
+        setCreateError(null);
+      } catch (err: any) {
+        console.warn('Transazione di ingresso annullata dal wallet:', err);
+        setCreateError('Ingresso annullato: transazione non confermata su Tonkeeper. Nessun fondo speso.');
+        return;
+      }
+    } else {
+      setCreateError('⚠️ Smart Contract ClashMaster non configurato sul server! Esegui prima "npm run deploy:contracts" sulla VPS.');
+      return;
+    }
+
     setActiveMatchId(matchId);
     setRole('player');
     setIsReady(false);
@@ -202,13 +229,19 @@ export const Arena: React.FC<ArenaProps> = ({
   };
 
   const handleSpectatorBet = async (side: 'A' | 'B', amountTon: string) => {
+    if (!userAddress) {
+      openWalletModal();
+      setCreateError('Devi connettere il tuo Wallet Tonkeeper per piazzare una scommessa.');
+      return;
+    }
+
     const amountNano = (parseFloat(amountTon) * 1e9).toString();
     socketData.placeSpectatorBet(side, amountNano);
 
-    if (userAddress && activeMatchId) {
+    if (clashMasterAddress && activeMatchId) {
       try {
         await placeSpectatorBetOnChain(
-          'EQA_mock_match_escrow_address',
+          clashMasterAddress,
           activeMatchId,
           userAddress,
           amountTon
@@ -266,6 +299,7 @@ export const Arena: React.FC<ArenaProps> = ({
             forfeitCountdown={socketData.forfeitCountdown}
             roundWinner={socketData.roundWinner}
             matchWinner={socketData.matchWinner}
+            matchWinnerName={socketData.matchWinnerName}
             role={role}
             isReady={isReady}
             onReady={handleReady}
@@ -294,6 +328,7 @@ export const Arena: React.FC<ArenaProps> = ({
           createError={createError}
           onClearError={() => setCreateError(null)}
           userAddress={userAddress}
+          onOpenWallet={openWalletModal}
         />
       )}
     </div>

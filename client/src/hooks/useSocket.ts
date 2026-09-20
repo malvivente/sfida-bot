@@ -61,6 +61,7 @@ export function useSocket({
   const [forfeitCountdown, setForfeitCountdown] = useState<number | null>(null);
   const [roundWinner, setRoundWinner] = useState<string | null>(null);
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
+  const [matchWinnerName, setMatchWinnerName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!matchId) return;
@@ -174,6 +175,7 @@ export function useSocket({
           case 'MATCH_FORFEITED':
             setRoomState('MATCH_SETTLED');
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
+            if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
             break;
@@ -253,6 +255,7 @@ export function useSocket({
     forfeitCountdown,
     roundWinner,
     matchWinner,
+    matchWinnerName,
     sendReady,
     sendTap,
     placeSpectatorBet,
