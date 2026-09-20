@@ -18,7 +18,8 @@
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
-  "include": ["tests/**/*.ts", "wrappers/**/*.ts", "contracts/**/*.tact"]
+  "include": ["tests/**/*.ts", "wrappers/**/*.ts", "contracts/**/*.tact", "scripts/**/*.ts"]
 }

@@ -4,15 +4,15 @@ import { NetworkProvider } from '@ton/blueprint';
 import { keyPairFromSeed } from '@ton/crypto';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from root and server
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../server/.env') });
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Load .env from root, server, and current directories
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+if (typeof __dirname !== 'undefined') {
+    dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+    dotenv.config({ path: path.resolve(__dirname, '../../server/.env') });
+    dotenv.config({ path: path.resolve(__dirname, '../.env') });
+}
 
 export async function run(provider: NetworkProvider) {
     const deployer = provider.sender().address;
