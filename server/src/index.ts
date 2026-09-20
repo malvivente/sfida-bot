@@ -62,6 +62,7 @@ async function main() {
       timestamp: Date.now(),
       serverPublicKey: signerService.getPublicKeyHex(),
       serverPublicKeyBigInt: signerService.getPublicKeyBigInt().toString(),
+      clashMasterAddress: process.env.CLASH_MASTER_ADDRESS || null,
     };
   });
 

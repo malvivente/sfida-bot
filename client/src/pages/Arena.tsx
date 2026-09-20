@@ -22,10 +22,26 @@ export const Arena: React.FC<ArenaProps> = ({
   const [isReady, setIsReady] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const { userAddress, placeSpectatorBetOnChain } = useTonClashContract();
+  const { userAddress, createMatchOnChain, openWalletModal, placeSpectatorBetOnChain } = useTonClashContract();
   const { userId, username, fullName } = useTelegram();
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+  const [clashMasterAddress, setClashMasterAddress] = useState<string | null>(
+    (import.meta as any).env?.VITE_CLASH_MASTER_ADDRESS || null
+  );
+
+  // Fetch backend config & clash master address from server /health
+  useEffect(() => {
+    if (!serverUrl) return;
+    fetch(`${serverUrl}/health`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.clashMasterAddress) {
+          setClashMasterAddress(d.clashMasterAddress);
+        }
+      })
+      .catch(() => {});
+  }, [serverUrl]);
 
   // Persistent match feed: restored from localStorage and/or synced with backend API
   const [matches, setMatches] = useState<MatchData[]>(() => {
@@ -74,26 +90,35 @@ export const Arena: React.FC<ArenaProps> = ({
     role,
     telegramId: userId,
     username: fullName || (username ? `@${username}` : (userAddress ? `Warrior_${userAddress.slice(-4)}` : 'CyberDuelist')),
+    serverUrl,
   });
 
   const handleCreateMatch = async (wagerTon: string): Promise<boolean> => {
     setCreateError(null);
 
-    // Se il server backend non è ancora configurato o non è raggiungibile
+    // 1. Verificare che il wallet sia connesso
+    if (!userAddress) {
+      openWalletModal();
+      setCreateError('Connetti il tuo Wallet Tonkeeper per procedere con la puntata e creare la sfida.');
+      return false;
+    }
+
+    // 2. Se il server backend non è ancora configurato o non è raggiungibile
     if (!serverUrl) {
       setCreateError('Server di gioco non ancora configurato o non raggiungibile. Imposta il backend per creare sfide reali.');
       return false;
     }
 
     try {
-      const playerName = fullName || (username ? `@${username}` : (userAddress ? `Player_${userAddress.slice(-4)}` : 'Tu'));
+      const playerName = fullName || (username ? `@${username}` : `Player_${userAddress.slice(-4)}`);
 
+      // 3. Registra la partita sul server backend
       const res = await fetch(`${serverUrl}/api/matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wagerAmountNano: (parseFloat(wagerTon) * 1e9).toString(),
-          playerAAddress: userAddress || 'EQ_pending_wallet',
+          playerAAddress: userAddress,
           telegramUserId: userId,
           telegramUsername: username,
         }),
@@ -108,12 +133,25 @@ export const Arena: React.FC<ArenaProps> = ({
         throw new Error('ID partita mancante nella risposta del server.');
       }
 
+      // 4. Se lo Smart Contract è configurato, invia la transazione on-chain (puntata + 0.02 fee)
+      if (clashMasterAddress) {
+        try {
+          await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
+        } catch (txErr: any) {
+          console.warn('Transazione on-chain annullata o fallita:', txErr);
+          // Rollback: elimina la partita dal server se l'utente ha rifiutato la firma nel wallet
+          await fetch(`${serverUrl}/api/matches/${data.matchId}`, { method: 'DELETE' }).catch(() => {});
+          setCreateError('Creazione annullata: transazione non confermata su Tonkeeper. Nessun fondo speso.');
+          return false;
+        }
+      }
+
       const newMatch: MatchData = {
         matchId: data.matchId.toString(),
         state: 'LOBBY',
         currentRound: 1,
         playerA: {
-          wallet: userAddress || 'EQ_pending_wallet',
+          wallet: userAddress,
           name: playerName,
           ready: true,
           score: 0,
@@ -142,7 +180,7 @@ export const Arena: React.FC<ArenaProps> = ({
       return true;
     } catch (err: any) {
       console.warn('Match creation error:', err);
-      setCreateError('Errore di connessione con il server di gioco. Impossibile creare la stanza, riprova più tardi.');
+      setCreateError(err?.message || 'Errore di connessione con il server di gioco. Riprova più tardi.');
       return false;
     }
   };

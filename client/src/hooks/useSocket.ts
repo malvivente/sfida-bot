@@ -10,13 +10,39 @@ interface UseSocketProps {
   serverUrl?: string;
 }
 
+function resolveWsUrl(serverUrl?: string): string | null {
+  let endpoint = serverUrl || (import.meta as any).env?.VITE_WS_URL;
+  if (!endpoint) {
+    const httpUrl = (import.meta as any).env?.VITE_SERVER_URL;
+    if (httpUrl) {
+      endpoint = httpUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+    }
+  }
+
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
+  if (!endpoint) {
+    if (isHttps) return null;
+    return 'ws://localhost:3000';
+  }
+
+  if (isHttps) {
+    if (endpoint.includes('localhost') || endpoint.includes('127.0.0.1')) {
+      return null;
+    }
+    endpoint = endpoint.replace(/^ws:\/\//i, 'wss://').replace(/^http:\/\//i, 'https://');
+  }
+
+  return endpoint;
+}
+
 export function useSocket({
   matchId,
   wallet,
   role,
   telegramId,
   username,
-  serverUrl = (import.meta as any).env?.VITE_WS_URL || 'ws://localhost:3000',
+  serverUrl,
 }: UseSocketProps) {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -29,7 +55,7 @@ export function useSocket({
   const [totalBetsA, setTotalBetsA] = useState<string>('0');
   const [totalBetsB, setTotalBetsB] = useState<string>('0');
   const [lastSignal, setLastSignal] = useState<string | null>(null);
-  const [feedMessage, setFeedMessage] = useState<string>('Waiting in duel lobby...');
+  const [feedMessage, setFeedMessage] = useState<string>('In attesa nella lobby del duello...');
   const [lastReactionTimeMs, setLastReactionTimeMs] = useState<number | null>(null);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
   const [forfeitCountdown, setForfeitCountdown] = useState<number | null>(null);
@@ -39,14 +65,29 @@ export function useSocket({
   useEffect(() => {
     if (!matchId) return;
 
-    const url = `${serverUrl}/ws/duel?matchId=${matchId}&role=${role}&wallet=${wallet || ''}&telegramId=${telegramId || ''}&username=${encodeURIComponent(username || '')}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    const wsEndpoint = resolveWsUrl(serverUrl);
+    if (!wsEndpoint) {
+      setIsConnected(false);
+      setFeedMessage('Server di gioco in attesa di configurazione (VITE_WS_URL)...');
+      return;
+    }
 
-    ws.onopen = () => {
-      setIsConnected(true);
-      setFeedMessage('Connected to Cyber Arena Server.');
-    };
+    let ws: WebSocket | null = null;
+    try {
+      const url = `${wsEndpoint}/ws/duel?matchId=${matchId}&role=${role}&wallet=${wallet || ''}&telegramId=${telegramId || ''}&username=${encodeURIComponent(username || '')}`;
+      ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setIsConnected(true);
+        setFeedMessage('Connesso all\'Arena Cyber.');
+      };
+
+      ws.onerror = (e) => {
+        console.warn('[WebSocket] Warning/error on connection:', e);
+        setIsConnected(false);
+        setFeedMessage('Server di gioco temporaneamente non raggiungibile.');
+      };
 
     ws.onmessage = (event) => {
       try {
@@ -159,13 +200,20 @@ export function useSocket({
       }
     };
 
-    ws.onclose = () => {
+      ws.onclose = () => {
+        setIsConnected(false);
+        setFeedMessage('Disconnesso dal server.');
+      };
+    } catch (err) {
+      console.warn('[WebSocket] Safe catch on WebSocket init:', err);
       setIsConnected(false);
-      setFeedMessage('Disconnected from server.');
-    };
+      setFeedMessage('Impossibile connettersi al server WebSocket.');
+    }
 
     return () => {
-      ws.close();
+      try {
+        ws?.close();
+      } catch {}
     };
   }, [matchId, role, wallet, telegramId, username, serverUrl]);
 
