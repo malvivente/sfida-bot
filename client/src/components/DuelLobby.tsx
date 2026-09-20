@@ -5,6 +5,7 @@ import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { useTelegram } from '../hooks/useTelegram.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -20,6 +21,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onSpectateMatch,
 }) => {
   const { triggerImpact } = useHaptics();
+  const { botUsername } = useTelegram();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('5');
 
@@ -37,7 +39,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const handleShare = (matchId: string, wager: string) => {
     triggerImpact('light');
     const text = `⚔️ Ti sfido a Cyber Quickdraw per ${wager} GRAM! Premi più veloce su 3 round per vincere il piatto!`;
-    const url = `https://t.me/SfidaRobot?start=duel_${matchId}`;
+    const url = `https://t.me/${botUsername}?start=duel_${matchId}`;
     shareToTelegram(url, text);
   };
 

@@ -1,10 +1,12 @@
 import React from 'react';
-import { User, Zap, Trophy, TrendingUp, History, Swords } from 'lucide-react';
+import { User, Zap, Trophy, TrendingUp, History, Swords, Sparkles, Wallet } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
+import { useTelegram } from '../hooks/useTelegram.js';
 import { GramIcon } from '../components/GramIcon.js';
 
 export const Profile: React.FC = () => {
   const { userAddress } = useTonClashContract();
+  const { userId, username, fullName, photoUrl, isPremium } = useTelegram();
 
   // Production initial state: real user data starts clean
   const duelsWon = 0;
@@ -15,17 +17,46 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
-      {/* Profile Card */}
+      {/* Real Telegram Profile Card */}
       <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 shadow-xl">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-cyber-cyan/15 border border-cyber-cyan flex items-center justify-center shadow-neon-cyan">
-            <User className="w-6 h-6 text-cyber-cyan" />
+        <div className="flex items-center space-x-3.5 mb-4">
+          <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-cyber-bg border border-cyber-cyan shadow-neon-cyan shrink-0 flex items-center justify-center">
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt={fullName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-cyber-cyan/15 text-cyber-cyan font-orbitron font-bold text-lg">
+                {fullName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {isPremium && (
+              <div className="absolute top-0 right-0 bg-cyber-amber text-cyber-bg p-0.5 rounded-bl-md" title="Telegram Premium">
+                <Sparkles className="w-2.5 h-2.5" />
+              </div>
+            )}
           </div>
-          <div>
-            <h2 className="text-base font-orbitron font-bold text-white">CYBER DUELIST</h2>
-            <p className="text-xs font-chakra text-slate-400 truncate max-w-[200px]">
-              {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-6)}` : 'Wallet non collegato'}
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-1.5">
+              <h2 className="text-base font-orbitron font-bold text-white truncate">{fullName}</h2>
+              {isPremium && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-cyber-amber/20 text-cyber-amber border border-cyber-amber/40 rounded-full font-bold">
+                  ★ PREMIUM
+                </span>
+              )}
+            </div>
+            <div className="flex items-center space-x-2 text-xs font-chakra text-slate-400 mt-0.5">
+              {username && <span className="text-cyber-cyan font-bold">@{username}</span>}
+              {userId && <span className="text-slate-500 font-mono text-[11px]">ID: {userId}</span>}
+            </div>
+            <div className="flex items-center space-x-1 text-[11px] font-chakra text-slate-400 mt-1">
+              <Wallet className="w-3 h-3 text-slate-500 shrink-0" />
+              <span className="truncate">
+                {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-6)}` : 'Wallet non collegato'}
+              </span>
+            </div>
           </div>
         </div>
 

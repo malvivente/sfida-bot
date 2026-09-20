@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Users, Copy, Share2, DollarSign, Check, MessageSquare, Zap, ShieldCheck } from 'lucide-react';
+import { Users, Copy, Share2, DollarSign, Check, MessageSquare, Zap, ShieldCheck, UserCheck } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
+import { useTelegram } from '../hooks/useTelegram.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from '../components/GramIcon.js';
 
 export const ReferralDashboard: React.FC = () => {
   const { userAddress } = useTonClashContract();
+  const { userId, username, fullName, botUsername } = useTelegram();
   const { triggerImpact } = useHaptics();
   const [copied, setCopied] = useState(false);
 
-  // Link personale associato al wallet dell'utente che ha aperto la Mini App
-  const refLink = `https://t.me/SfidaRobot?start=ref_${userAddress || 'arena'}`;
+  // Link personale associato al vero Telegram User ID reale (es. ref_123456789)
+  const refCode = userId ? `ref_${userId}` : (userAddress ? `ref_${userAddress}` : 'ref_arena');
+  const refLink = `https://t.me/${botUsername}?start=${refCode}`;
 
   const copyRefLink = () => {
     triggerImpact('light');
@@ -105,10 +108,19 @@ export const ReferralDashboard: React.FC = () => {
               <span className="hidden sm:inline">INVITA</span>
             </button>
           </div>
+
+          <div className="flex items-center justify-between text-[11px] font-chakra text-slate-400 pt-0.5">
+            <span className="flex items-center space-x-1">
+              <UserCheck className="w-3.5 h-3.5 text-cyber-cyan" />
+              <span>Parametro Telegram: <strong className="text-cyber-cyan font-mono">{refCode}</strong></span>
+            </span>
+            {username && <span className="text-slate-500 font-mono">(@{username})</span>}
+          </div>
+
           <p className="text-[11px] text-slate-400">
             {userAddress
-              ? 'Il tuo wallet GRAM è collegato e riceverà i premi in automatico.'
-              : 'Connetti il tuo wallet GRAM in alto per riscattare le vincite affiliate.'}
+              ? 'Il tuo wallet GRAM è collegato e riceverà le quote affiliate in automatico.'
+              : 'Connetti il tuo wallet GRAM in alto per ricevere le rendite dallo smart contract.'}
           </p>
         </div>
       </div>
@@ -128,7 +140,7 @@ export const ReferralDashboard: React.FC = () => {
             <div>
               <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">1. Invita i tuoi Amici</span>
               <span className="text-slate-300 leading-relaxed">
-                Invia il tuo link a qualsiasi contatto su Telegram. Ogni volta che giocano una sfida o piazzano una scommessa, una parte della vincita viene accreditata a te.
+                Invia il tuo link con <code className="text-cyber-cyan font-mono text-[10px]">?start={refCode}</code> ai tuoi contatti. Ogni volta che giocano un duello o piazzano una scommessa, una quota della rake dello smart contract viene trasferita a te.
               </span>
             </div>
           </div>
@@ -140,7 +152,7 @@ export const ReferralDashboard: React.FC = () => {
             <div>
               <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">2. Aggiungi il Bot nei tuoi Gruppi</span>
               <span className="text-slate-300 leading-relaxed">
-                Aggiungi <strong>@SfidaRobot</strong> al tuo gruppo Telegram. Se i membri del gruppo si sfidano nella chat, l'admin del gruppo guadagna automaticamente su ogni duello.
+                Aggiungi <strong>@{botUsername}</strong> al tuo gruppo Telegram. Se i membri del gruppo si sfidano nella chat, l'admin del gruppo guadagna automaticamente su ogni duello.
               </span>
             </div>
           </div>
