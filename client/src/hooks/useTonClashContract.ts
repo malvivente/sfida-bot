@@ -12,12 +12,11 @@ export function useTonClashContract() {
   const joinMatchOnChain = async (escrowAddress: string, matchId: string, wagerTon: string) => {
     if (!wallet) throw new Error('Wallet not connected');
 
-    // Construct JoinMatch internal message cell
-    // Opcode: 0x47b56dc6 (JoinMatch)
+    // Opcode: 1174555988 (0x46026554) (JoinMatch)
     const bodyCell = beginCell()
-      .storeUint(0x47b56dc6, 32)
+      .storeUint(1174555988, 32)
       .storeUint(BigInt(matchId), 64)
-      .storeBit(0) // recruiterB null
+      .storeAddress(null) // recruiterB null
       .endCell();
 
     const transaction = {
@@ -43,9 +42,9 @@ export function useTonClashContract() {
   ) => {
     if (!wallet) throw new Error('Wallet not connected');
 
-    // Opcode: 0x6e73f4e1 (BetSpectator)
+    // Opcode: 3365506230 (0xc89954b6) (BetSpectator)
     const bodyCell = beginCell()
-      .storeUint(0x6e73f4e1, 32)
+      .storeUint(3365506230, 32)
       .storeUint(BigInt(matchId), 64)
       .storeAddress(Address.parse(targetPlayerAddress))
       .endCell();
@@ -90,8 +89,8 @@ export function useTonClashContract() {
       .storeUint(310075029, 32)
       .storeUint(BigInt(matchId), 64)
       .storeCoins(wagerNano)
-      .storeBit(0) // recruiterA: null
-      .storeBit(0) // groupAdminAddress: null
+      .storeAddress(null) // recruiterA: null (TL-B addr_none 00)
+      .storeAddress(null) // groupAdminAddress: null (TL-B addr_none 00)
       .endCell();
 
     const transaction = {

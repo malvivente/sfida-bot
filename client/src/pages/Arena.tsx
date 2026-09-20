@@ -21,6 +21,7 @@ export const Arena: React.FC<ArenaProps> = ({
   const [role, setRole] = useState<'player' | 'spectator'>(initialRole);
   const [isReady, setIsReady] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createStatus, setCreateStatus] = useState<string | null>(null);
 
   const { userAddress, createMatchOnChain, joinMatchOnChain, openWalletModal, placeSpectatorBetOnChain } = useTonClashContract();
   const { userId, username, fullName } = useTelegram();
@@ -140,9 +141,11 @@ export const Arena: React.FC<ArenaProps> = ({
       }
 
       try {
-        setCreateError('Conferma la transazione nel wallet (puntata + 0.02 fee)...');
+        setCreateStatus('Conferma la transazione in Tonkeeper (puntata + 0.02 fee)...');
         await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
+        setCreateStatus(null);
       } catch (txErr: any) {
+        setCreateStatus(null);
         console.warn('Transazione on-chain annullata o fallita:', txErr);
         // Rollback: elimina la partita dal server se l'utente ha rifiutato la firma nel wallet
         await fetch(`${serverUrl}/api/matches/${data.matchId}`, { method: 'DELETE' }).catch(() => {});
@@ -325,8 +328,12 @@ export const Arena: React.FC<ArenaProps> = ({
           onCancelMatch={handleCancelMatch}
           onRefreshMatches={fetchMatches}
           isRefreshing={isRefreshing}
+          createStatus={createStatus}
           createError={createError}
-          onClearError={() => setCreateError(null)}
+          onClearError={() => {
+            setCreateError(null);
+            setCreateStatus(null);
+          }}
           userAddress={userAddress}
           onOpenWallet={openWalletModal}
         />

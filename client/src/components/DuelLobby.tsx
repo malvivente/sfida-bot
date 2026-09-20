@@ -15,6 +15,7 @@ interface DuelLobbyProps {
   onCancelMatch?: (matchId: string) => void;
   onRefreshMatches?: () => void;
   isRefreshing?: boolean;
+  createStatus?: string | null;
   createError?: string | null;
   onClearError?: () => void;
   userAddress?: string;
@@ -29,6 +30,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onCancelMatch,
   onRefreshMatches,
   isRefreshing = false,
+  createStatus,
   createError,
   onClearError,
   userAddress,
@@ -273,12 +275,23 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               Seleziona la puntata in GRAM per il duello 1v1 Best of 3
             </p>
 
+            {/* Status / Loading Display */}
+            {createStatus && (
+              <div className="bg-cyber-cyan/15 border border-cyber-cyan/50 text-cyber-cyan rounded-xl p-3 text-xs font-chakra flex items-start space-x-2.5 mb-3 animate-pulse">
+                <Loader2 className="w-4 h-4 shrink-0 mt-0.5 animate-spin text-cyber-cyan" />
+                <div className="flex-1 text-[11px] leading-relaxed">
+                  <span className="font-bold block text-white mb-0.5">In attesa di firma su Tonkeeper</span>
+                  <span className="text-slate-200">{createStatus}</span>
+                </div>
+              </div>
+            )}
+
             {/* Error Message Display */}
             {createError && (
               <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2 mb-3">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1 text-[11px] leading-relaxed">
-                  <span className="font-bold block text-white mb-0.5">Impossibile creare la sfida</span>
+                  <span className="font-bold block text-white mb-0.5">Errore di creazione</span>
                   <span>{createError}</span>
                 </div>
               </div>
