@@ -1,5 +1,5 @@
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
-import { beginCell, toNano, Address } from '@ton/core';
+import { beginCell, toNano, Address, Cell } from '@ton/core';
 
 export function useTonClashContract() {
   const [tonConnectUI] = useTonConnectUI();
@@ -174,6 +174,45 @@ export function useTonClashContract() {
     return await tonConnectUI.sendTransaction(transaction);
   };
 
+  // Claim 1v1 Winner Payout on TON Blockchain (ResolveMatch)
+  const claimWinnerPayout = async (
+    escrowAddress: string,
+    matchId: string,
+    winnerAddress: string,
+    timestamp: number,
+    signatureCellBoc: string
+  ) => {
+    if (!wallet) {
+      tonConnectUI.openModal();
+      throw new Error('Wallet non connesso');
+    }
+    if (!escrowAddress) throw new Error('Indirizzo del contratto MatchEscrow mancante per il ritiro della vincita');
+
+    const sigCell = Cell.fromBase64(signatureCellBoc);
+
+    // Opcode for ResolveMatch: 756388397 (0x2d15922d)
+    const bodyCell = beginCell()
+      .storeUint(756388397, 32)
+      .storeUint(BigInt(matchId), 64)
+      .storeAddress(Address.parse(winnerAddress))
+      .storeUint(timestamp, 32)
+      .storeRef(sigCell)
+      .endCell();
+
+    const transaction = {
+      validUntil: Math.floor(Date.now() / 1000) + 360,
+      messages: [
+        {
+          address: escrowAddress,
+          amount: toNano('0.06').toString(), // 0.06 TON gas for escrow payout distribution
+          payload: bodyCell.toBoc().toString('base64'),
+        },
+      ],
+    };
+
+    return await tonConnectUI.sendTransaction(transaction);
+  };
+
   const openWalletModal = () => {
     tonConnectUI.openModal();
   };
@@ -184,6 +223,7 @@ export function useTonClashContract() {
     createMatchOnChain,
     joinMatchOnChain,
     cancelMatchOnChain,
+    claimWinnerPayout,
     placeSpectatorBetOnChain,
     claimSpectatorPayout,
     openWalletModal,

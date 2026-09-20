@@ -1,6 +1,6 @@
 import React from 'react';
 import { TonConnectButton } from '@tonconnect/ui-react';
-import { Swords, User, Users, HelpCircle } from 'lucide-react';
+import { Swords, User, Users } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 
 interface NavbarProps {
@@ -34,17 +34,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onOpenRu
         </div>
 
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => {
-              triggerImpact('light');
-              onOpenRules();
-            }}
-            title="Regole & ToS"
-            className="p-2 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-cyan text-slate-300 hover:text-white transition-all flex items-center space-x-1 text-xs"
-          >
-            <HelpCircle className="w-4 h-4 text-cyber-cyan" />
-            <span className="hidden sm:inline font-orbitron text-[11px] font-bold">REGOLE</span>
-          </button>
           <TonConnectButton />
         </div>
       </div>

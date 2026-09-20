@@ -44,12 +44,17 @@ export class MatchSignerService {
     console.log(`[SignerService] 🔗 Synced on-chain ClashMaster public key: 0x${key.toString(16)}`);
   }
 
-  // Create hash and Ed25519 signature for match resolution
   public signResolution(
     matchId: bigint,
     winnerAddress: string,
     timestamp: number
-  ): { hash: Buffer; signature: Buffer; signatureCell: Cell } {
+  ): {
+    hash: Buffer;
+    signature: Buffer;
+    signatureHex: string;
+    signatureCell: Cell;
+    signatureCellBoc: string;
+  } {
     this.ensureInitialized();
     const winner = Address.parse(winnerAddress);
 
@@ -62,8 +67,10 @@ export class MatchSignerService {
     const hash = payloadCell.hash();
     const signature = sign(hash, this.secretKey!);
     const signatureCell = beginCell().storeBuffer(signature).endCell();
+    const signatureHex = signature.toString('hex');
+    const signatureCellBoc = signatureCell.toBoc().toString('base64');
 
-    return { hash, signature, signatureCell };
+    return { hash, signature, signatureHex, signatureCell, signatureCellBoc };
   }
 
   public getPublicKeyHex(): string {

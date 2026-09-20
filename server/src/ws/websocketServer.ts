@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { WebSocket } from 'ws';
 import { RoomManager } from '../engine/RoomManager.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
+import { computeEscrowAddress } from '../utils/escrow.js';
+import { signerService } from '../services/signer.js';
 
 export function registerWebSocketRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
@@ -27,19 +29,45 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     if (!room) {
       // Auto-create room if not already running
       const wagerNano = 1000000000n; // default 1 TON
+      const playerA = query.wallet || 'EQA_playerA_fallback';
+      const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
+      let escrowAddress = '';
+      if (clashMasterAddr && playerA) {
+        escrowAddress = computeEscrowAddress(
+          clashMasterAddr,
+          BigInt(matchId),
+          playerA,
+          wagerNano,
+          signerService.getPublicKeyBigInt()
+        );
+      }
+
       room = roomManager.createRoom(
         {
           matchId: BigInt(matchId),
           wagerAmountNano: wagerNano,
-          playerAAddress: query.wallet || 'EQA_playerA_fallback',
+          playerAAddress: playerA,
+          escrowAddress,
         },
         async (settledRoom, winner) => {
           console.log(`[WS] Match #${settledRoom.matchId} settled with winner: ${winner}`);
-          await tonSettlementService.settleMatch(
-            settledRoom.config.playerAAddress,
-            settledRoom.matchId,
-            winner
-          );
+          let targetEscrow = settledRoom.escrowAddress;
+          if (!targetEscrow && clashMasterAddr) {
+            targetEscrow = computeEscrowAddress(
+              clashMasterAddr,
+              settledRoom.matchId,
+              settledRoom.config.playerAAddress,
+              settledRoom.config.wagerAmountNano,
+              signerService.getPublicKeyBigInt()
+            );
+          }
+          if (targetEscrow) {
+            await tonSettlementService.settleMatch(
+              targetEscrow,
+              settledRoom.matchId,
+              winner
+            );
+          }
         }
       );
     }

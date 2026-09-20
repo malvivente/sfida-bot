@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import { signerService } from '../services/signer.js';
 
 export type RoomState =
   | 'LOBBY'
@@ -9,6 +10,15 @@ export type RoomState =
   | 'ROUND_END'
   | 'MATCH_SETTLED'
   | 'FORFEITED';
+
+export interface MatchResolutionPayload {
+  matchId: string;
+  escrowAddress: string;
+  winner: string;
+  timestamp: number;
+  signatureHex: string;
+  signatureCellBoc: string;
+}
 
 export interface PlayerSession {
   walletAddress: string;
@@ -65,6 +75,8 @@ export class QuickdrawRoom {
   public totalBetsB: bigint = 0n;
 
   public winnerAddress?: string;
+  public winnerName?: string;
+  public resolution?: MatchResolutionPayload;
   public forfeitWinner?: string;
 
   private onMatchSettledCallback?: (room: QuickdrawRoom, winnerAddress: string) => Promise<void>;
@@ -160,6 +172,9 @@ export class QuickdrawRoom {
       scoreB: this.playerB ? this.playerB.score : 0,
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      winnerAddress: this.winnerAddress,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
     });
 
     this.broadcastRoomState();
@@ -181,6 +196,9 @@ export class QuickdrawRoom {
       oddsB: this.calculateOdds('B'),
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
+      winnerAddress: this.winnerAddress,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
     });
   }
 
@@ -228,19 +246,7 @@ export class QuickdrawRoom {
 
   // Immediate forfeit when 8-second grace timer expires
   private triggerForfeit(winnerWallet: string, forfeiterName: string) {
-    this.state = 'FORFEITED';
-    this.winnerAddress = winnerWallet;
-    this.cleanupTimers();
-
-    this.broadcast({
-      type: 'MATCH_FORFEITED',
-      winner: winnerWallet,
-      message: `${forfeiterName} failed to reconnect within 8 seconds. Automatic forfeit victory awarded!`,
-    });
-
-    if (this.onMatchSettledCallback) {
-      this.onMatchSettledCallback(this, winnerWallet);
-    }
+    this.settleMatch(winnerWallet);
   }
 
   // Player Ready Toggle
@@ -466,18 +472,49 @@ export class QuickdrawRoom {
       winnerAddress.toLowerCase() === this.playerA.walletAddress.toLowerCase()
         ? this.playerA.username
         : this.playerB?.username || 'Opponent';
+    this.winnerName = winnerName;
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const { signatureHex, signatureCellBoc } = signerService.signResolution(
+      this.matchId,
+      winnerAddress,
+      timestamp
+    );
+
+    this.resolution = {
+      matchId: this.matchId.toString(),
+      escrowAddress: this.escrowAddress || '',
+      winner: winnerAddress,
+      timestamp,
+      signatureHex,
+      signatureCellBoc,
+    };
+
+    console.log(`[QuickdrawRoom] Match #${this.matchId} settled. Winner: ${winnerName} (${winnerAddress})`);
 
     this.broadcast({
       type: 'MATCH_SETTLED',
       matchId: this.matchId.toString(),
       winnerAddress,
-      winnerName,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
       finalScoreA: this.playerA.score,
       finalScoreB: this.playerB?.score || 0,
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
-      message: `DUEL COMPLETE! ${winnerName} reigns supreme in the Arena! Initiating TON blockchain settlement...`,
+      message: `DUEL COMPLETE! ${winnerName} reigns supreme in the Arena!`,
     });
+
+    // Auto-cleanup room from RoomManager memory after 90 seconds
+    setTimeout(async () => {
+      try {
+        const { RoomManager } = await import('./RoomManager.js');
+        RoomManager.getInstance().removeRoom(this.matchId.toString());
+        console.log(`[QuickdrawRoom] Auto-cleaned settled match #${this.matchId} from RoomManager`);
+      } catch (e) {
+        console.warn('[QuickdrawRoom] Error during room cleanup:', e);
+      }
+    }, 90_000);
 
     if (this.onMatchSettledCallback) {
       this.onMatchSettledCallback(this, winnerAddress);
@@ -537,6 +574,9 @@ export class QuickdrawRoom {
     this.broadcast({
       type: 'ROOM_UPDATE',
       state: this.state,
+      winnerAddress: this.winnerAddress,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
       playerA: {
         wallet: this.playerA.walletAddress,
         name: this.playerA.username,

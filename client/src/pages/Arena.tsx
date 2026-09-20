@@ -33,10 +33,14 @@ export const Arena: React.FC<ArenaProps> = ({
     createMatchOnChain,
     joinMatchOnChain,
     cancelMatchOnChain,
+    claimWinnerPayout,
     openWalletModal,
     placeSpectatorBetOnChain,
   } = useTonClashContract();
   const { userId, username, fullName } = useTelegram();
+
+  const [isClaimingPayout, setIsClaimingPayout] = useState(false);
+  const [payoutClaimed, setPayoutClaimed] = useState(false);
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
   const [clashMasterAddress, setClashMasterAddress] = useState<string | null>(
@@ -368,6 +372,112 @@ export const Arena: React.FC<ArenaProps> = ({
     ? currentActiveMatch.playerA.wallet.toLowerCase() === userAddress.toLowerCase()
     : false;
 
+  const activeWagerTon = currentActiveMatch
+    ? (parseFloat(currentActiveMatch.wagerAmountNano) / 1e9).toFixed(2)
+    : '1.00';
+
+  const isUserWinner = userAddress && socketData.matchWinner
+    ? socketData.matchWinner.toLowerCase() === userAddress.toLowerCase()
+    : false;
+
+  // Salvataggio automatico del duello terminato nello storico locale per il profilo
+  useEffect(() => {
+    if (socketData.roomState !== 'MATCH_SETTLED' || !activeMatchId) return;
+
+    try {
+      const storageKey = 'sfidabot_duel_history';
+      const raw = localStorage.getItem(storageKey);
+      const history: any[] = raw ? JSON.parse(raw) : [];
+
+      if (history.some((h) => h.matchId === activeMatchId)) return;
+
+      const wagerTon = currentActiveMatch
+        ? (parseFloat(currentActiveMatch.wagerAmountNano) / 1e9).toFixed(2)
+        : '1.00';
+      const payoutTon = (parseFloat(wagerTon) * 2 * 0.96).toFixed(2);
+
+      let opponentName = 'Avversario';
+      let opponentWallet = '';
+      if (currentActiveMatch) {
+        if (userAddress && currentActiveMatch.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) {
+          opponentName = currentActiveMatch.playerB?.name || 'Player B';
+          opponentWallet = currentActiveMatch.playerB?.wallet || '';
+        } else {
+          opponentName = currentActiveMatch.playerA.name || 'Player A';
+          opponentWallet = currentActiveMatch.playerA.wallet;
+        }
+      }
+
+      const outcome: 'WIN' | 'LOSS' | 'DRAW' = isUserWinner ? 'WIN' : 'LOSS';
+
+      const newRecord = {
+        matchId: activeMatchId,
+        timestamp: Date.now(),
+        opponentName,
+        opponentWallet,
+        wagerTon,
+        payoutTon: isUserWinner ? payoutTon : '0.00',
+        outcome,
+        reactionTimeMs: socketData.lastReactionTimeMs || undefined,
+        score: `${socketData.scoreA} - ${socketData.scoreB}`,
+      };
+
+      history.unshift(newRecord);
+      localStorage.setItem(storageKey, JSON.stringify(history.slice(0, 50)));
+    } catch (err) {
+      console.warn('Errore salvataggio storico duelli:', err);
+    }
+  }, [socketData.roomState, activeMatchId, userAddress, socketData.matchWinner, isUserWinner, currentActiveMatch, socketData.lastReactionTimeMs, socketData.scoreA, socketData.scoreB]);
+
+  const handleClaimPayout = async () => {
+    if (!activeMatchId || !userAddress) return;
+    setIsClaimingPayout(true);
+    setCreateError(null);
+
+    try {
+      let res = socketData.resolution;
+      if (!res && serverUrl) {
+        const resp = await fetch(`${serverUrl}/api/matches/${activeMatchId}/resolution`);
+        if (resp.ok) {
+          const d = await resp.json();
+          if (d?.resolution) res = d.resolution;
+        }
+      }
+
+      if (!res) {
+        throw new Error('Firma di risoluzione della partita non ancora disponibile');
+      }
+
+      let escrow = res.escrowAddress || currentActiveMatch?.escrowAddress;
+      if (!escrow && clashMasterAddress && serverPublicKeyBigInt && currentActiveMatch) {
+        escrow = computeEscrowAddress(
+          clashMasterAddress,
+          activeMatchId,
+          currentActiveMatch.playerA.wallet,
+          currentActiveMatch.wagerAmountNano,
+          serverPublicKeyBigInt
+        );
+      }
+
+      if (!escrow) throw new Error('Indirizzo dello Smart Contract non trovato per il payout');
+
+      await claimWinnerPayout(
+        escrow,
+        activeMatchId,
+        userAddress,
+        res.timestamp,
+        res.signatureCellBoc
+      );
+
+      setPayoutClaimed(true);
+    } catch (err: any) {
+      console.error('Errore durante il ritiro della vincita:', err);
+      setCreateError(err?.message || 'Ritiro annullato o transazione non confermata su Tonkeeper.');
+    } finally {
+      setIsClaimingPayout(false);
+    }
+  };
+
   return (
     <div className="w-full">
       {/* Banner Successo Rimborso */}
@@ -503,6 +613,15 @@ export const Arena: React.FC<ArenaProps> = ({
             onTap={socketData.sendTap}
             isCreator={isCurrentCreator}
             onCancelMatch={currentActiveMatch && !currentActiveMatch.playerB ? () => handleCancelMatch(currentActiveMatch) : undefined}
+            wagerTon={activeWagerTon}
+            isWinner={isUserWinner}
+            onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
+            isClaimingPayout={isClaimingPayout}
+            payoutClaimed={payoutClaimed}
+            onReturnToLobby={() => {
+              setActiveMatchId(null);
+              setPayoutClaimed(false);
+            }}
           />
 
           {/* Spectator Totalizer Betting Bar */}

@@ -16,11 +16,23 @@ export interface PlayerInfo {
   connected?: boolean;
 }
 
+export interface MatchResolution {
+  matchId: string;
+  escrowAddress: string;
+  winner: string;
+  timestamp: number;
+  signatureHex: string;
+  signatureCellBoc: string;
+}
+
 export interface MatchData {
   matchId: string;
   escrowAddress?: string;
   state: RoomState;
   currentRound: number;
+  winnerAddress?: string;
+  winnerName?: string;
+  resolution?: MatchResolution;
   playerA: PlayerInfo;
   playerB: PlayerInfo | null;
   wagerAmountNano: string;
@@ -50,10 +62,23 @@ export interface WsMessage {
   winnerAddress?: string;
   winnerName?: string;
   winnerSide?: 'A' | 'B';
+  resolution?: MatchResolution;
   offender?: string;
   secondsLeft?: number;
   durationSeconds?: number;
   round?: number;
   gracePeriodSeconds?: number;
   side?: 'A' | 'B';
+}
+
+export interface DuelHistoryRecord {
+  matchId: string;
+  timestamp: number;
+  opponentName: string;
+  opponentWallet?: string;
+  wagerTon: string;
+  payoutTon: string;
+  outcome: 'WIN' | 'LOSS' | 'DRAW';
+  reactionTimeMs?: number;
+  score: string;
 }

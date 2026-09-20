@@ -1,19 +1,62 @@
-import React from 'react';
-import { User, Zap, Trophy, TrendingUp, History, Swords, Sparkles, Wallet } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, Trash2 } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { GramIcon } from '../components/GramIcon.js';
+import { DuelHistoryRecord } from '../types/index.js';
 
 export const Profile: React.FC = () => {
   const { userAddress } = useTonClashContract();
   const { userId, username, fullName, photoUrl, isPremium } = useTelegram();
 
-  // Production initial state: real user data starts clean
-  const duelsWon = 0;
-  const duelsPlayed = 0;
-  const bestReaction = '-';
-  const totalProfitsTon = '0.00';
-  const history: any[] = [];
+  const [history, setHistory] = useState<DuelHistoryRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_duel_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Re-sync history on mount or tab focus
+  useEffect(() => {
+    const loadHistory = () => {
+      try {
+        const saved = localStorage.getItem('sfidabot_duel_history');
+        if (saved) {
+          setHistory(JSON.parse(saved));
+        }
+      } catch {}
+    };
+
+    window.addEventListener('focus', loadHistory);
+    return () => window.removeEventListener('focus', loadHistory);
+  }, []);
+
+  const duelsPlayed = history.length;
+  const duelsWon = history.filter((h) => h.outcome === 'WIN').length;
+
+  const validReactions = history
+    .map((h) => h.reactionTimeMs)
+    .filter((ms): ms is number => typeof ms === 'number' && ms > 0);
+  const bestReaction = validReactions.length > 0 ? Math.min(...validReactions) : '-';
+
+  const totalProfitsTon = history
+    .reduce((acc, h) => {
+      if (h.outcome === 'WIN') {
+        const p = parseFloat(h.payoutTon);
+        return acc + (isNaN(p) ? 0 : p);
+      }
+      return acc;
+    }, 0)
+    .toFixed(2);
+
+  const clearHistory = () => {
+    if (window.confirm('Vuoi davvero cancellare la cronologia delle sfide salvata localmente?')) {
+      localStorage.removeItem('sfidabot_duel_history');
+      setHistory([]);
+    }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
@@ -106,10 +149,22 @@ export const Profile: React.FC = () => {
 
       {/* Match History */}
       <div className="bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl">
-        <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center space-x-1.5">
-          <History className="w-4 h-4 text-cyber-cyan" />
-          <span>STORICO DUELLI RECENTI</span>
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+            <History className="w-4 h-4 text-cyber-cyan" />
+            <span>STORICO DUELLI RECENTI</span>
+          </h3>
+
+          {history.length > 0 && (
+            <button
+              onClick={clearHistory}
+              title="Azzera cronologia"
+              className="text-slate-500 hover:text-cyber-pink transition-colors p-1"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
         {history.length === 0 ? (
           <div className="text-center py-8 bg-cyber-bg/40 border border-cyber-border/60 rounded-xl p-4">
@@ -121,29 +176,53 @@ export const Profile: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {history.map((item) => (
-              <div
-                key={item.id}
-                className="bg-cyber-bg/60 border border-cyber-border rounded-xl p-2.5 flex items-center justify-between text-xs font-chakra"
-              >
-                <div>
-                  <span className="text-white font-bold">{item.opp}</span>
-                  <span className="text-[10px] text-slate-500 block">
-                    Punteggio: {item.score} • {item.reaction}
-                  </span>
+            {history.map((item) => {
+              const isWin = item.outcome === 'WIN';
+              const dateStr = new Date(item.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: 'short',
+              });
+
+              return (
+                <div
+                  key={item.matchId}
+                  className={`bg-cyber-bg/60 border rounded-xl p-3 flex items-center justify-between text-xs font-chakra transition-all ${
+                    isWin ? 'border-cyber-green/40 hover:border-cyber-green' : 'border-cyber-pink/30 hover:border-cyber-pink'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-orbitron font-extrabold ${
+                          isWin ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-pink/20 text-cyber-pink'
+                        }`}
+                      >
+                        {item.outcome}
+                      </span>
+                      <span className="text-white font-bold tracking-wide">VS {item.opponentName}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 block font-rajdhani">
+                      Score: <strong className="text-slate-200">{item.score}</strong>
+                      {item.reactionTimeMs ? ` • Reazione: ${item.reactionTimeMs}ms` : ''} • {dateStr}
+                    </span>
+                  </div>
+
+                  <div className="text-right flex flex-col items-end">
+                    <span
+                      className={`font-extrabold font-chakra text-sm flex items-center space-x-1 ${
+                        isWin ? 'text-cyber-green' : 'text-cyber-pink'
+                      }`}
+                    >
+                      <span>{isWin ? `+${item.payoutTon}` : `-${item.wagerTon}`}</span>
+                      <GramIcon className={`w-3.5 h-3.5 ${isWin ? 'text-cyber-green' : 'text-cyber-pink'}`} />
+                    </span>
+                    <span className="text-[10px] text-slate-500 block font-mono">#{item.matchId}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span
-                    className={`font-extrabold ${
-                      item.result === 'WIN' ? 'text-cyber-green' : 'text-cyber-pink'
-                    }`}
-                  >
-                    {item.reward}
-                  </span>
-                  <span className="text-[10px] text-slate-500 block">Match #{item.id}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

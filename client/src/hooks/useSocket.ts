@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { RoomState, WsMessage } from '../types/index.js';
+import { RoomState, WsMessage, MatchResolution } from '../types/index.js';
 
 interface UseSocketProps {
   matchId: string;
@@ -62,6 +62,7 @@ export function useSocket({
   const [roundWinner, setRoundWinner] = useState<string | null>(null);
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
   const [matchWinnerName, setMatchWinnerName] = useState<string | null>(null);
+  const [resolution, setResolution] = useState<MatchResolution | null>(null);
 
   useEffect(() => {
     if (!matchId) return;
@@ -104,12 +105,18 @@ export function useSocket({
             if (msg.oddsB) setOddsB(msg.oddsB);
             if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
             if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
+            if (msg.winnerName) setMatchWinnerName(msg.winnerName);
+            if (msg.resolution) setResolution(msg.resolution);
             break;
 
           case 'ROOM_UPDATE':
             if (msg.state) setRoomState(msg.state);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
+            if (msg.winnerName) setMatchWinnerName(msg.winnerName);
+            if (msg.resolution) setResolution(msg.resolution);
             break;
 
           case 'BETTING_WINDOW_OPEN':
@@ -176,6 +183,7 @@ export function useSocket({
             setRoomState('MATCH_SETTLED');
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
+            if (msg.resolution) setResolution(msg.resolution);
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
             break;
@@ -256,6 +264,7 @@ export function useSocket({
     roundWinner,
     matchWinner,
     matchWinnerName,
+    resolution,
     sendReady,
     sendTap,
     placeSpectatorBet,

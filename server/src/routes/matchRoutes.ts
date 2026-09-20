@@ -3,6 +3,7 @@ import { RoomManager } from '../engine/RoomManager.js';
 import { computePariMutuelOdds } from '../services/oddsCalculator.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
+import { tonSettlementService } from '../services/tonSettlement.js';
 
 export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
@@ -29,6 +30,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
         matchId: r.matchId.toString(),
         escrowAddress,
         state: r.state,
+        winnerAddress: r.winnerAddress,
+        winnerName: r.winnerName,
+        resolution: r.resolution,
         playerA: {
           wallet: r.playerA.walletAddress,
           name: r.playerA.username,
@@ -79,6 +83,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
       matchId: room.matchId.toString(),
       escrowAddress,
       state: room.state,
+      winnerAddress: room.winnerAddress,
+      winnerName: room.winnerName,
+      resolution: room.resolution,
       currentRound: room.currentRound,
       playerA: {
         wallet: room.playerA.walletAddress,
@@ -101,6 +108,25 @@ export async function matchRoutes(fastify: FastifyInstance) {
       oddsB: odds.oddsB,
       distributablePoolNano: odds.distributablePoolNano.toString(),
       spectatorCount: room.spectators.size,
+    });
+  });
+
+  // Get resolution payload for settled match
+  fastify.get('/api/matches/:id/resolution', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const room = roomManager.getRoom(id);
+
+    if (!room) {
+      return reply.status(404).send({ error: 'Match not found' });
+    }
+
+    if (!room.resolution) {
+      return reply.status(400).send({ error: 'Match is not settled yet' });
+    }
+
+    return reply.send({
+      success: true,
+      resolution: room.resolution,
     });
   });
 
@@ -128,14 +154,32 @@ export async function matchRoutes(fastify: FastifyInstance) {
       );
     }
 
-    const room = roomManager.createRoom({
-      matchId,
-      wagerAmountNano: wagerNano,
-      playerAAddress: body.playerAAddress,
-      recruiterA: body.recruiterA,
-      groupAdminAddress: body.groupAdminAddress,
-      escrowAddress,
-    });
+    const room = roomManager.createRoom(
+      {
+        matchId,
+        wagerAmountNano: wagerNano,
+        playerAAddress: body.playerAAddress,
+        recruiterA: body.recruiterA,
+        groupAdminAddress: body.groupAdminAddress,
+        escrowAddress,
+      },
+      async (settledRoom, winner) => {
+        console.log(`[API] Match #${settledRoom.matchId} settled with winner: ${winner}`);
+        let targetEscrow = settledRoom.escrowAddress;
+        if (!targetEscrow && clashMasterAddr) {
+          targetEscrow = computeEscrowAddress(
+            clashMasterAddr,
+            settledRoom.matchId,
+            settledRoom.config.playerAAddress,
+            settledRoom.config.wagerAmountNano,
+            signerService.getPublicKeyBigInt()
+          );
+        }
+        if (targetEscrow) {
+          await tonSettlementService.settleMatch(targetEscrow, settledRoom.matchId, winner);
+        }
+      }
+    );
 
     return reply.send({
       success: true,
