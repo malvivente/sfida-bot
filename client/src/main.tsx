@@ -1,14 +1,15 @@
+import './polyfills.js';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import App from './App.js';
 import './index.css';
 
-// Dynamic manifest URL matching the current domain (e.g. Cloudflare tunnel or localhost)
+// Dynamic manifest URL matching the current domain (e.g. Vercel, Cloudflare tunnel, or localhost)
 const manifestUrl =
   typeof window !== 'undefined'
     ? `${window.location.origin}/tonconnect-manifest.json`
-    : 'https://flyer-humor-membrane-caroline.trycloudflare.com/tonconnect-manifest.json';
+    : 'https://sfida-bot.vercel.app/tonconnect-manifest.json';
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
