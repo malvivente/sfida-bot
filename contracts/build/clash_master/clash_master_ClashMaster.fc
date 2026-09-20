@@ -496,12 +496,12 @@ _ %getStats() method_id(104054) {
             var $msg'recruiterA = in_msg~__tact_load_address_opt();
             var $msg'groupAdminAddress = in_msg~__tact_load_address_opt();
             var ($ctx'bounceable, $ctx'sender, $ctx'value, $ctx'raw) = __tact_context_get();
-            int $totalRequired = (($msg'wagerAmount + 20000000) + 50000000);
+            int $totalRequired = (($msg'wagerAmount + 20000000) + 80000000);
             throw_unless(26109, ($ctx'value >= $totalRequired));
             $self'matchCount = ($self'matchCount + 1);
             var ($escrowInit'code, $escrowInit'data) = $MatchEscrow$_init_child($global_myAddress(), $msg'matchId, $ctx'sender, $msg'wagerAmount, $self'serverPublicKey, $msg'recruiterA, $msg'groupAdminAddress);
             slice $escrowAddress = $global_contractAddress(($escrowInit'code, $escrowInit'data));
-            $global_send($SendParameters$_constructor_to_value_mode_bounce_body_code_data($escrowAddress, ($msg'wagerAmount + 50000000), 2, false, __gen_cell_cell_69dfc29d636e88a9cfc06b0e7840224ca4c5b593e70b08a61f8022ae9d5f0f03(), $escrowInit'code, $escrowInit'data));
+            $global_send($SendParameters$_constructor_to_value_mode_bounce_body_code_data($escrowAddress, ($msg'wagerAmount + 50000000), 0, false, __gen_cell_cell_69dfc29d636e88a9cfc06b0e7840224ca4c5b593e70b08a61f8022ae9d5f0f03(), $escrowInit'code, $escrowInit'data));
             $global_emit($EventMatchCreated$_store_cell($EventMatchCreated$_constructor_matchId_playerA_wagerAmount_creationFee($msg'matchId, $ctx'sender, $msg'wagerAmount, 20000000), begin_cell()));
             $ClashMaster$_contract_store(($self'owner, $self'serverPublicKey, $self'matchCount));
             return ();

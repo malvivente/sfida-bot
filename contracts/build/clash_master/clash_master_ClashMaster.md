@@ -1,6 +1,6 @@
 # Tact compilation report
 Contract: ClashMaster
-BoC Size: 4994 bytes
+BoC Size: 4995 bytes
 
 ## Structures (Structs and Messages)
 Total structures: 30

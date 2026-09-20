@@ -27,7 +27,7 @@ contract ClashMaster {
     // Deploy new MatchEscrow instance
     receive(msg: DeployMatch) {
         let ctx: Context = context();
-        let totalRequired: Int = msg.wagerAmount + ton("0.02") + ton("0.05"); // Wager + 0.02 fee + deployment gas
+        let totalRequired: Int = msg.wagerAmount + ton("0.02") + ton("0.08"); // Wager + 0.02 fee + deployment gas
         require(ctx.value >= totalRequired, "Insufficient TON sent for deployment and initial wager");
 
         self.matchCount = self.matchCount + 1;
@@ -43,16 +43,18 @@ contract ClashMaster {
         );
         let escrowAddress: Address = contractAddress(escrowInit);
 
-        // Deploy the child escrow contract with initial balance (wager + storage buffer)
+        // Deploy child escrow contract. mode: 0 ensures that if funding/gas is insufficient,
+        // transaction aborts and bounces back to sender rather than failing silently with SendIgnoreErrors!
         send(SendParameters{
             to: escrowAddress,
             value: msg.wagerAmount + ton("0.05"),
-            mode: SendIgnoreErrors,
+            mode: 0,
             bounce: false,
             body: "SfidaBot Escrow Initialized".asComment(),
             code: escrowInit.code,
             data: escrowInit.data
         });
+
 
         emit(EventMatchCreated{
             matchId: msg.matchId,

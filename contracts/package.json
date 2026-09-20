@@ -5,7 +5,8 @@
   "scripts": {
     "build": "blueprint build --all",
     "test": "jest",
-    "deploy": "blueprint run deployClashMaster"
+    "deploy": "blueprint run deployClashMaster",
+    "withdraw": "blueprint run withdrawTreasury"
   },
   "dependencies": {
     "@tact-lang/compiler": "^1.6.5",

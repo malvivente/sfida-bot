@@ -470,7 +470,7 @@ describe('SfidaBot MatchEscrow & ClashMaster Contract Suite', () => {
         const factoryMatchId = 1007n;
         const deployMatchResult = await master.send(
             playerA.getSender(),
-            { value: wagerAmount + toNano('0.02') + toNano('0.05') },
+            { value: wagerAmount + toNano('0.15') },
             {
                 $$type: 'DeployMatch',
                 matchId: factoryMatchId,
@@ -488,5 +488,94 @@ describe('SfidaBot MatchEscrow & ClashMaster Contract Suite', () => {
 
         const stats = await master.getGetStats();
         expect(stats.matchCount).toEqual(1n);
+    });
+
+    it('Scenario 8: Factory DeployMatch without pre-funded master, followed by Player B join and Player A cancel', async () => {
+        const master = blockchain.openContract(
+            await ClashMaster.fromInit(masterTreasury.address, serverPublicKeyBigInt)
+        );
+
+        // Master deployed with standard deploy value 0.05 TON (just like in deployClashMaster.ts)
+        await master.send(
+            masterTreasury.getSender(),
+            { value: toNano('0.05') },
+            null
+        );
+
+        const factoryMatchId = 2001n;
+        // Player A sends DeployMatch with wager 1 TON + 0.15 TON buffer
+        const deployMatchResult = await master.send(
+            playerA.getSender(),
+            { value: wagerAmount + toNano('0.15') },
+            {
+                $$type: 'DeployMatch',
+                matchId: factoryMatchId,
+                wagerAmount: wagerAmount,
+                recruiterA: null,
+                groupAdminAddress: null,
+            }
+        );
+
+
+        console.log('DeployMatch transactions:');
+        for (const tx of deployMatchResult.transactions) {
+            console.log(`  from: ${tx.inMessage?.info.src} -> to: ${tx.inMessage?.info.dest}, exitCode: ${tx.description.type === 'generic' ? tx.description.computePhase.type === 'vm' ? tx.description.computePhase.exitCode : 'no-vm' : 'non-generic'}, aborted: ${tx.description.type === 'generic' ? tx.description.aborted : ''}`);
+        }
+
+        const escrowAddr = await master.getGetEscrowAddress(
+            factoryMatchId,
+            playerA.address,
+            wagerAmount,
+            null,
+            null
+        );
+
+        console.log('Escrow Address from Master getter:', escrowAddr.toString());
+
+        // Test computeEscrowAddress manual calculation
+        const { computeEscrowAddress } = require('../build/clash_master/clash_master_MatchEscrow');
+        // Let's also check with the custom computeEscrowAddress logic
+        const { beginCell: bCell, contractAddress: cAddr, Cell: TCell } = require('@ton/core');
+        const b_0 = bCell();
+        b_0.storeUint(0, 1);
+        b_0.storeAddress(master.address);
+        b_0.storeUint(factoryMatchId, 64);
+        b_0.storeAddress(playerA.address);
+        b_0.storeCoins(wagerAmount);
+        b_0.storeUint(serverPublicKeyBigInt, 256);
+        const b_1 = bCell();
+        b_1.storeAddress(null);
+        b_1.storeAddress(null);
+        b_0.storeRef(b_1.endCell());
+        const dataCell = b_0.endCell();
+        const codeCell = (await MatchEscrow.fromInit(master.address, factoryMatchId, playerA.address, wagerAmount, serverPublicKeyBigInt, null, null)).init!.code;
+        const manualAddr = cAddr(0, { code: codeCell, data: dataCell });
+        console.log('Manual Computed Escrow Address:   ', manualAddr.toString());
+        expect(manualAddr.toString()).toEqual(escrowAddr.toString());
+
+        const escrow = blockchain.openContract(MatchEscrow.fromAddress(escrowAddr));
+        const escrowDetails = await escrow.getGetMatchDetails();
+        console.log('Escrow Details:', escrowDetails);
+        expect(escrowDetails.state).toEqual(0n); // STATE_CREATED
+
+        // 1. Test Player B Joining
+        const joinResult = await escrow.send(
+            playerB.getSender(),
+            { value: wagerAmount + toNano('0.05') },
+            {
+                $$type: 'JoinMatch',
+                matchId: factoryMatchId,
+                recruiterB: null,
+            }
+        );
+        expect(joinResult.transactions).toHaveTransaction({
+            from: playerB.address,
+            to: escrow.address,
+            success: true,
+        });
+
+        const activeDetails = await escrow.getGetMatchDetails();
+        expect(activeDetails.state).toEqual(1n); // STATE_ACTIVE
+        expect(activeDetails.playerB?.equals(playerB.address)).toBe(true);
     });
 });

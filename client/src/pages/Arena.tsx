@@ -157,7 +157,7 @@ export const Arena: React.FC<ArenaProps> = ({
       }
 
       try {
-        setCreateStatus('Conferma la transazione in Tonkeeper (puntata + 0.02 fee)...');
+        setCreateStatus('Conferma la transazione in Tonkeeper (puntata + fee e gas di deploy)...');
         await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
         setCreateStatus(null);
       } catch (txErr: any) {
@@ -405,30 +405,55 @@ export const Arena: React.FC<ArenaProps> = ({
               Tonkeeper ti chiederà di firmare una transazione (0.05 TON di gas) e lo smart contract rimborserà immediatamente la tua puntata sul tuo wallet.
             </p>
 
-            <div className="flex items-center space-x-2.5 pt-1">
+            <div className="flex flex-col space-y-2 pt-1">
+              <div className="flex items-center space-x-2.5">
+                <button
+                  disabled={isCancelling}
+                  onClick={() => setMatchToCancel(null)}
+                  className="flex-1 py-2.5 bg-cyber-border text-slate-300 rounded-xl font-chakra font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  INDIETRO
+                </button>
+                <button
+                  disabled={isCancelling}
+                  onClick={confirmCancelMatch}
+                  className="flex-1 py-2.5 bg-cyber-pink hover:bg-cyber-pink/90 text-white rounded-xl font-orbitron font-bold text-xs uppercase shadow-[0_0_15px_rgba(255,0,85,0.4)] transition-all active:scale-95 flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>RIMBORSO...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>CONFERMA ON-CHAIN</span>
+                    </>
+                  )}
+                </button>
+              </div>
               <button
                 disabled={isCancelling}
-                onClick={() => setMatchToCancel(null)}
-                className="flex-1 py-2.5 bg-cyber-border text-slate-300 rounded-xl font-chakra font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                onClick={async () => {
+                  if (!matchToCancel) return;
+                  if (serverUrl) {
+                    await fetch(`${serverUrl}/api/matches/${matchToCancel.matchId}`, { method: 'DELETE' }).catch(() => {});
+                  }
+                  setMatches((prev) => {
+                    const updated = prev.filter((m) => m.matchId !== matchToCancel.matchId);
+                    try {
+                      localStorage.setItem('sfidabot_saved_matches', JSON.stringify(updated));
+                    } catch {}
+                    return updated;
+                  });
+                  if (activeMatchId === matchToCancel.matchId) {
+                    setActiveMatchId(null);
+                  }
+                  setMatchToCancel(null);
+                }}
+                className="w-full py-1.5 text-[10px] text-slate-400 hover:text-slate-200 font-chakra transition-all"
               >
-                INDIETRO
-              </button>
-              <button
-                disabled={isCancelling}
-                onClick={confirmCancelMatch}
-                className="flex-1 py-2.5 bg-cyber-pink hover:bg-cyber-pink/90 text-white rounded-xl font-orbitron font-bold text-xs uppercase shadow-[0_0_15px_rgba(255,0,85,0.4)] transition-all active:scale-95 flex items-center justify-center space-x-1.5 disabled:opacity-50"
-              >
-                {isCancelling ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>RIMBORSO...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>CONFERMA</span>
-                  </>
-                )}
+                Rimuovi solo dalla lista (per stanze non deployate)
               </button>
             </div>
           </div>

@@ -86,8 +86,13 @@ export function useTonClashContract() {
     }
 
     const wagerNano = toNano(wagerTon);
-    // Tact contract requirement: msg.wagerAmount + ton("0.02") creation fee + ton("0.05") deployment gas
-    const totalRequired = wagerNano + toNano('0.07');
+    // Tact contract requirement:
+    // - msg.wagerAmount: initial wager deposited into child escrow
+    // - ton("0.02"): platform creation fee
+    // - ton("0.05"): child contract initial balance & storage reserve
+    // - ton("0.08"): gas & network forwarding buffer for deploying the 2KB StateInit BOC
+    // Total buffer = 0.15 TON
+    const totalRequired = wagerNano + toNano('0.15');
 
     // Opcode for DeployMatch: 310075029 (0x127b5095)
     const bodyCell = beginCell()
