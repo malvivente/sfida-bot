@@ -1,25 +1,16 @@
+import './config.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import dotenv from 'dotenv';
-import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { TonClient, Address } from '@ton/ton';
 import { registerWebSocketRoutes } from './ws/websocketServer.js';
 import { matchRoutes } from './routes/matchRoutes.js';
 import { profileRoutes } from './routes/profileRoutes.js';
 import { affiliateRoutes } from './routes/affiliateRoutes.js';
 import { createTelegramBot } from './bot/index.js';
 import { signerService } from './services/signer.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from server dir, root dir, and process.cwd()
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const cjsRequire = createRequire(import.meta.url);
 let hasPinoPretty = false;
@@ -54,6 +45,26 @@ async function main() {
       maxPayload: 1048576, // 1MB
     },
   });
+
+  // Sync on-chain ClashMaster public key if configured
+  const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS;
+  const tonEndpoint = process.env.TON_RPC_ENDPOINT || 'https://testnet.toncenter.com/api/v2/jsonRPC';
+  if (clashMasterAddr) {
+    try {
+      const tonClient = new TonClient({
+        endpoint: tonEndpoint,
+        apiKey: process.env.TON_API_KEY,
+      });
+      const res = await tonClient.runMethod(Address.parse(clashMasterAddr), 'getStats');
+      const matchCount = res.stack.readBigNumber();
+      const onChainPubKey = res.stack.readBigNumber();
+      console.log(`[TonSync] ✅ Connected to ClashMaster at ${clashMasterAddr}`);
+      console.log(`[TonSync] On-chain Match Count: ${matchCount}, Server Public Key: 0x${onChainPubKey.toString(16)}`);
+      signerService.setOnChainPublicKey(onChainPubKey);
+    } catch (err: any) {
+      console.warn(`[TonSync] Could not fetch on-chain ClashMaster stats (${err?.message || err}). Using local signer key.`);
+    }
+  }
 
   // Health check & Server Status
   fastify.get('/health', async () => {
