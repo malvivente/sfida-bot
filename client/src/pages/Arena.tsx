@@ -20,6 +20,7 @@ export const Arena: React.FC<ArenaProps> = ({
   const [activeMatchId, setActiveMatchId] = useState<string | null>(initialMatchId || null);
   const [role, setRole] = useState<'player' | 'spectator'>(initialRole);
   const [isReady, setIsReady] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const { userAddress, placeSpectatorBetOnChain } = useTonClashContract();
   const { userId, username, fullName } = useTelegram();
@@ -70,59 +71,75 @@ export const Arena: React.FC<ArenaProps> = ({
     username: fullName || (username ? `@${username}` : (userAddress ? `Warrior_${userAddress.slice(-4)}` : 'CyberDuelist')),
   });
 
-  const handleCreateMatch = async (wagerTon: string) => {
-    const newId = (Date.now() % 1000000).toString();
-    const playerName = fullName || (username ? `@${username}` : (userAddress ? `Player_${userAddress.slice(-4)}` : 'Tu'));
+  const handleCreateMatch = async (wagerTon: string): Promise<boolean> => {
+    setCreateError(null);
 
-    const newMatch: MatchData = {
-      matchId: newId,
-      state: 'LOBBY',
-      currentRound: 1,
-      playerA: {
-        wallet: userAddress || 'EQ_pending_wallet',
-        name: playerName,
-        ready: true,
-        score: 0,
-      },
-      playerB: null,
-      wagerAmountNano: (parseFloat(wagerTon) * 1e9).toString(),
-      totalBetsA: '0',
-      totalBetsB: '0',
-      oddsA: 1.0,
-      oddsB: 1.0,
-      spectatorCount: 0,
-    };
-
-    // Update local state and persist to localStorage so it doesn't vanish on app exit
-    setMatches((prev) => {
-      const updated = [newMatch, ...prev.filter((m) => m.matchId !== newId)];
-      try {
-        localStorage.setItem('sfidabot_saved_matches', JSON.stringify(updated.slice(0, 30)));
-      } catch {}
-      return updated;
-    });
-
-    // Notify backend server if available
-    if (serverUrl) {
-      try {
-        await fetch(`${serverUrl}/api/matches`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wagerAmountNano: (parseFloat(wagerTon) * 1e9).toString(),
-            playerAAddress: userAddress || 'EQ_pending_wallet',
-            telegramUserId: userId,
-            telegramUsername: username,
-          }),
-        });
-      } catch (err) {
-        console.warn('Could not post match to server (offline):', err);
-      }
+    // Se il server backend non è ancora configurato o non è raggiungibile
+    if (!serverUrl) {
+      setCreateError('Server di gioco non ancora configurato o non raggiungibile. Imposta il backend per creare sfide reali.');
+      return false;
     }
 
-    setActiveMatchId(newId);
-    setRole('player');
-    setIsReady(false);
+    try {
+      const playerName = fullName || (username ? `@${username}` : (userAddress ? `Player_${userAddress.slice(-4)}` : 'Tu'));
+
+      const res = await fetch(`${serverUrl}/api/matches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wagerAmountNano: (parseFloat(wagerTon) * 1e9).toString(),
+          playerAAddress: userAddress || 'EQ_pending_wallet',
+          telegramUserId: userId,
+          telegramUsername: username,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data?.matchId) {
+        throw new Error('ID partita mancante nella risposta del server.');
+      }
+
+      const newMatch: MatchData = {
+        matchId: data.matchId.toString(),
+        state: 'LOBBY',
+        currentRound: 1,
+        playerA: {
+          wallet: userAddress || 'EQ_pending_wallet',
+          name: playerName,
+          ready: true,
+          score: 0,
+        },
+        playerB: null,
+        wagerAmountNano: (parseFloat(wagerTon) * 1e9).toString(),
+        totalBetsA: '0',
+        totalBetsB: '0',
+        oddsA: 1.0,
+        oddsB: 1.0,
+        spectatorCount: 0,
+      };
+
+      // Aggiorna stato e salva in localStorage
+      setMatches((prev) => {
+        const updated = [newMatch, ...prev.filter((m) => m.matchId !== newMatch.matchId)];
+        try {
+          localStorage.setItem('sfidabot_saved_matches', JSON.stringify(updated.slice(0, 30)));
+        } catch {}
+        return updated;
+      });
+
+      setActiveMatchId(data.matchId.toString());
+      setRole('player');
+      setIsReady(false);
+      return true;
+    } catch (err: any) {
+      console.warn('Match creation error:', err);
+      setCreateError('Errore di connessione con il server di gioco. Impossibile creare la stanza, riprova più tardi.');
+      return false;
+    }
   };
 
   const handleJoinMatch = (matchId: string, _wagerTon: string) => {
@@ -207,6 +224,8 @@ export const Arena: React.FC<ArenaProps> = ({
           onCreateMatch={handleCreateMatch}
           onJoinMatch={handleJoinMatch}
           onSpectateMatch={handleSpectateMatch}
+          createError={createError}
+          onClearError={() => setCreateError(null)}
         />
       )}
     </div>
