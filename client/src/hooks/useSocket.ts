@@ -16,7 +16,7 @@ export function useSocket({
   role,
   telegramId,
   username,
-  serverUrl = 'ws://localhost:3000',
+  serverUrl = (import.meta as any).env?.VITE_WS_URL || 'ws://localhost:3000',
 }: UseSocketProps) {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
