@@ -38,11 +38,13 @@ export interface RoomConfig {
   recruiterB?: string;
   groupAdminAddress?: string;
   bettingWindowSeconds?: number;
+  escrowAddress?: string;
 }
 
 export class QuickdrawRoom {
   public matchId: bigint;
   public config: RoomConfig;
+  public escrowAddress?: string;
   public state: RoomState = 'LOBBY';
 
   public playerA: PlayerSession;
@@ -70,6 +72,7 @@ export class QuickdrawRoom {
   constructor(config: RoomConfig, onSettled?: (room: QuickdrawRoom, winner: string) => Promise<void>) {
     this.matchId = config.matchId;
     this.config = config;
+    this.escrowAddress = config.escrowAddress;
     this.onMatchSettledCallback = onSettled;
 
     this.playerA = {

@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { RoomManager } from '../engine/RoomManager.js';
 import { computePariMutuelOdds } from '../services/oddsCalculator.js';
+import { computeEscrowAddress } from '../utils/escrow.js';
+import { signerService } from '../services/signer.js';
 
 export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
@@ -8,10 +10,24 @@ export async function matchRoutes(fastify: FastifyInstance) {
   // List all active matches
   fastify.get('/api/matches', async (_req, reply) => {
     const rooms = roomManager.getAllRooms();
+    const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
+
     const matches = rooms.map((r) => {
       const odds = computePariMutuelOdds(r.totalBetsA, r.totalBetsB);
+      let escrowAddress = r.escrowAddress;
+      if (!escrowAddress && clashMasterAddr) {
+        escrowAddress = computeEscrowAddress(
+          clashMasterAddr,
+          r.matchId,
+          r.playerA.walletAddress,
+          r.config.wagerAmountNano,
+          signerService.getPublicKeyBigInt()
+        );
+      }
+
       return {
         matchId: r.matchId.toString(),
+        escrowAddress,
         state: r.state,
         playerA: {
           wallet: r.playerA.walletAddress,
@@ -47,9 +63,21 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     const odds = computePariMutuelOdds(room.totalBetsA, room.totalBetsB);
+    const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
+    let escrowAddress = room.escrowAddress;
+    if (!escrowAddress && clashMasterAddr) {
+      escrowAddress = computeEscrowAddress(
+        clashMasterAddr,
+        room.matchId,
+        room.playerA.walletAddress,
+        room.config.wagerAmountNano,
+        signerService.getPublicKeyBigInt()
+      );
+    }
 
     return reply.send({
       matchId: room.matchId.toString(),
+      escrowAddress,
       state: room.state,
       currentRound: room.currentRound,
       playerA: {
@@ -87,6 +115,18 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     const matchId = BigInt(Date.now() % 1000000000);
     const wagerNano = body.wagerAmountNano ? BigInt(body.wagerAmountNano) : 1000000000n;
+    const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
+
+    let escrowAddress = '';
+    if (clashMasterAddr && body.playerAAddress) {
+      escrowAddress = computeEscrowAddress(
+        clashMasterAddr,
+        matchId,
+        body.playerAAddress,
+        wagerNano,
+        signerService.getPublicKeyBigInt()
+      );
+    }
 
     const room = roomManager.createRoom({
       matchId,
@@ -94,11 +134,13 @@ export async function matchRoutes(fastify: FastifyInstance) {
       playerAAddress: body.playerAAddress,
       recruiterA: body.recruiterA,
       groupAdminAddress: body.groupAdminAddress,
+      escrowAddress,
     });
 
     return reply.send({
       success: true,
       matchId: matchId.toString(),
+      escrowAddress,
       state: room.state,
     });
   });

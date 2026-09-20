@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff } from 'lucide-react';
+import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff, Trash2 } from 'lucide-react';
 import { RoomState } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 
@@ -21,6 +21,8 @@ interface QuickdrawCanvasProps {
   isReady: boolean;
   onReady: () => void;
   onTap: () => void;
+  isCreator?: boolean;
+  onCancelMatch?: () => void;
 }
 
 export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
@@ -40,6 +42,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   isReady,
   onReady,
   onTap,
+  isCreator,
+  onCancelMatch,
 }) => {
   const { triggerImpact, triggerNotification } = useHaptics();
 
@@ -253,17 +257,29 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
       <div className="w-full z-10 pt-3 border-t border-cyber-border/60 flex flex-col items-center">
         {role === 'player' ? (
           roomState === 'LOBBY' ? (
-            <button
-              onClick={onReady}
-              disabled={isReady}
-              className={`w-full py-4 rounded-xl font-orbitron font-bold tracking-wider text-base uppercase transition-all duration-200 ${
-                isReady
-                  ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
-                  : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
-              }`}
-            >
-              {isReady ? 'PRONTO • IN ATTESA AVVERSARIO' : '⚔️ PRONTO AL DUELLO'}
-            </button>
+            <div className="w-full flex flex-col space-y-2">
+              <button
+                onClick={onReady}
+                disabled={isReady}
+                className={`w-full py-4 rounded-xl font-orbitron font-bold tracking-wider text-base uppercase transition-all duration-200 ${
+                  isReady
+                    ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
+                    : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
+                }`}
+              >
+                {isReady ? 'PRONTO • IN ATTESA AVVERSARIO' : '⚔️ PRONTO AL DUELLO'}
+              </button>
+
+              {isCreator && onCancelMatch && (
+                <button
+                  onClick={onCancelMatch}
+                  className="w-full py-2.5 rounded-xl font-orbitron font-bold tracking-wider text-xs uppercase bg-cyber-pink/15 hover:bg-cyber-pink/25 border border-cyber-pink/40 text-cyber-pink transition-all active:scale-95 flex items-center justify-center space-x-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>ANNULLA SFIDA E RIMBORSA</span>
+                </button>
+              )}
+            </div>
           ) : (
             <button
               onPointerDown={handleTap}

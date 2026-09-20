@@ -21,10 +21,10 @@ dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const require = createRequire(import.meta.url);
+const cjsRequire = createRequire(import.meta.url);
 let hasPinoPretty = false;
 try {
-  require.resolve('pino-pretty');
+  cjsRequire.resolve('pino-pretty');
   hasPinoPretty = true;
 } catch {
   hasPinoPretty = false;

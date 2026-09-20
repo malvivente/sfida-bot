@@ -18,6 +18,7 @@ export interface PlayerInfo {
 
 export interface MatchData {
   matchId: string;
+  escrowAddress?: string;
   state: RoomState;
   currentRound: number;
   playerA: PlayerInfo;

@@ -1,6 +1,7 @@
 {
   "name": "sfidabot-server",
   "version": "1.0.0",
+  "type": "module",
   "description": "Authoritative Quickdraw Game Engine, Telegram Bot, and Settlement Server for SfidaBot",
   "main": "src/index.ts",
   "scripts": {

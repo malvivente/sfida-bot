@@ -8,9 +8,10 @@ export function useTonClashContract() {
   const isConnected = !!wallet;
   const userAddress = wallet?.account.address;
 
-  // Deposit Wager into MatchEscrow
+  // Deposit Wager into MatchEscrow (Player B)
   const joinMatchOnChain = async (escrowAddress: string, matchId: string, wagerTon: string) => {
-    if (!wallet) throw new Error('Wallet not connected');
+    if (!wallet) throw new Error('Wallet non connesso');
+    if (!escrowAddress) throw new Error('Indirizzo del contratto MatchEscrow non trovato');
 
     // Opcode: 1174555988 (0x46026554) (JoinMatch)
     const bodyCell = beginCell()
@@ -19,12 +20,15 @@ export function useTonClashContract() {
       .storeAddress(null) // recruiterB null
       .endCell();
 
+    // Wager + 0.05 TON gas buffer so ctx.value in Tact is strictly >= self.wagerAmount
+    const totalAmount = toNano(wagerTon) + toNano('0.05');
+
     const transaction = {
       validUntil: Math.floor(Date.now() / 1000) + 360,
       messages: [
         {
           address: escrowAddress,
-          amount: toNano(wagerTon).toString(),
+          amount: totalAmount.toString(),
           payload: bodyCell.toBoc().toString('base64'),
         },
       ],
@@ -40,7 +44,8 @@ export function useTonClashContract() {
     targetPlayerAddress: string,
     betAmountTon: string
   ) => {
-    if (!wallet) throw new Error('Wallet not connected');
+    if (!wallet) throw new Error('Wallet non connesso');
+    if (!escrowAddress) throw new Error('Indirizzo del contratto MatchEscrow non trovato per piazzare la scommessa');
 
     // Opcode: 3365506230 (0xc89954b6) (BetSpectator)
     const bodyCell = beginCell()
@@ -113,6 +118,7 @@ export function useTonClashContract() {
     matchId: string
   ) => {
     if (!wallet) throw new Error('Wallet non connesso');
+    if (!matchEscrowAddress) throw new Error('Indirizzo del contratto MatchEscrow mancante per il rimborso');
 
     // Opcode for CancelMatch: 2731538680 (0xa2cf00f8)
     const reasonCell = beginCell().storeStringTail('Player A Cancellation').endCell();
@@ -130,7 +136,7 @@ export function useTonClashContract() {
       messages: [
         {
           address: matchEscrowAddress,
-          amount: toNano('0.03').toString(), // gas fee
+          amount: toNano('0.05').toString(), // gas fee for processing refund and sweeping dust
           payload: bodyCell.toBoc().toString('base64'),
         },
       ],

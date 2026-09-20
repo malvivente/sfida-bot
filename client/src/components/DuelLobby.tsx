@@ -10,9 +10,9 @@ import { useTelegram } from '../hooks/useTelegram.js';
 interface DuelLobbyProps {
   matches: MatchData[];
   onCreateMatch: (wagerGram: string) => Promise<boolean | void> | void;
-  onJoinMatch: (matchId: string, wagerGram: string) => void;
+  onJoinMatch: (match: MatchData) => void;
   onSpectateMatch: (matchId: string) => void;
-  onCancelMatch?: (matchId: string) => void;
+  onCancelMatch?: (match: MatchData) => void;
   onRefreshMatches?: () => void;
   isRefreshing?: boolean;
   createStatus?: string | null;
@@ -213,7 +213,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             onOpenWallet?.();
                             return;
                           }
-                          onJoinMatch(m.matchId, wagerGram);
+                          onJoinMatch(m);
                         }}
                         className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
                       >
@@ -247,9 +247,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       <button
                         onClick={() => {
                           triggerImpact('medium');
-                          onCancelMatch(m.matchId);
+                          onCancelMatch(m);
                         }}
-                        title="Annulla la tua sfida"
+                        title="Annulla la tua sfida e richiedi rimborso"
                         className="p-2 bg-cyber-bg border border-cyber-border hover:border-cyber-pink text-slate-400 hover:text-cyber-pink active:scale-95 transition-all rounded-xl"
                       >
                         <Trash2 className="w-4 h-4" />
