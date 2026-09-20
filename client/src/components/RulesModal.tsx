@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Swords, TrendingUp, Users, X, FileText, CheckCircle2 } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
+import { GramIcon } from './GramIcon.js';
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -138,19 +139,28 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 </p>
               </div>
 
-              <div className="bg-cyber-bg/50 border border-cyber-border rounded-xl p-3 text-xs space-y-1.5">
-                <div className="text-white font-bold mb-1">Esempio Pratico:</div>
-                <div className="flex justify-between">
+              <div className="bg-cyber-bg/50 border border-cyber-border rounded-xl p-3 text-xs space-y-1.5 font-chakra">
+                <div className="text-white font-bold mb-1 font-orbitron">Esempio Pratico:</div>
+                <div className="flex justify-between items-center">
                   <span>Puntata di ciascun giocatore:</span>
-                  <span className="font-bold text-white">1.00 TON</span>
+                  <span className="font-bold text-white flex items-center space-x-1">
+                    <span>1.00</span>
+                    <GramIcon className="w-3 h-3 text-white" />
+                  </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>Montepremi totale generato:</span>
-                  <span className="font-bold text-white">2.00 TON</span>
+                  <span className="font-bold text-white flex items-center space-x-1">
+                    <span>2.00</span>
+                    <GramIcon className="w-3 h-3 text-white" />
+                  </span>
                 </div>
-                <div className="flex justify-between border-t border-cyber-border pt-1 text-cyber-green font-bold">
+                <div className="flex justify-between items-center border-t border-cyber-border pt-1 text-cyber-green font-bold">
                   <span>Vincita netta al vincitore:</span>
-                  <span>+1.92 TON</span>
+                  <span className="flex items-center space-x-1">
+                    <span>+1.92</span>
+                    <GramIcon className="w-3 h-3 text-cyber-green" />
+                  </span>
                 </div>
               </div>
 

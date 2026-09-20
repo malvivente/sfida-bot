@@ -57,10 +57,10 @@ export const App: React.FC = () => {
       </main>
 
       {/* Subtle Footer with ToS Link */}
-      <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-between text-[11px] text-slate-500">
+      <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-between text-[11px] text-slate-500 font-chakra">
         <div className="flex items-center space-x-1.5">
           <ShieldCheck className="w-3.5 h-3.5 text-cyber-cyan" />
-          <span>TON Smart Contract Escrow</span>
+          <span>GRAM Smart Contract Escrow</span>
         </div>
         <button
           onClick={() => setShowRulesModal(true)}

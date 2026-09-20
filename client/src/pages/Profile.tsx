@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Zap, Trophy, TrendingUp, History, Swords } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
+import { GramIcon } from '../components/GramIcon.js';
 
 export const Profile: React.FC = () => {
   const { userAddress } = useTonClashContract();
@@ -63,8 +64,9 @@ export const Profile: React.FC = () => {
             </div>
             <div>
               <span className="text-xs font-chakra text-slate-400 block">VINCITE TOTALI ACCREDITATE</span>
-              <div className="text-base font-chakra font-extrabold text-cyber-cyan">
-                +{totalProfitsTon} TON
+              <div className="text-base font-chakra font-extrabold text-cyber-cyan flex items-center space-x-1">
+                <span>+{totalProfitsTon}</span>
+                <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
               </div>
             </div>
           </div>

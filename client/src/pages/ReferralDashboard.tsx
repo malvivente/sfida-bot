@@ -3,6 +3,7 @@ import { Users, Copy, Share2, DollarSign, Check, MessageSquare, Zap, ShieldCheck
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
+import { GramIcon } from '../components/GramIcon.js';
 
 export const ReferralDashboard: React.FC = () => {
   const { userAddress } = useTonClashContract();
@@ -21,7 +22,7 @@ export const ReferralDashboard: React.FC = () => {
 
   const handleShare = () => {
     triggerImpact('medium');
-    const text = '⚔️ Unisciti a Sfida Arena su Telegram: duelli di riflessi 1v1 e scommesse live su blockchain TON!';
+    const text = '⚔️ Unisciti a Sfida Arena su Telegram: duelli di riflessi 1v1 e scommesse live in GRAM!';
     shareToTelegram(refLink, text);
   };
 
@@ -35,7 +36,7 @@ export const ReferralDashboard: React.FC = () => {
           </div>
           <div>
             <h2 className="text-base font-orbitron font-bold text-white">IL TUO PROGRAMMA AFFILIATI</h2>
-            <p className="text-xs text-slate-400">Guadagna rendite in TON dalle sfide dei tuoi amici</p>
+            <p className="text-xs text-slate-400">Guadagna rendite in GRAM dalle sfide dei tuoi amici</p>
           </div>
         </div>
 
@@ -46,7 +47,10 @@ export const ReferralDashboard: React.FC = () => {
               <DollarSign className="w-3.5 h-3.5 text-cyber-cyan" />
               <span>GUADAGNO TOTALE</span>
             </div>
-            <div className="text-xl font-chakra font-extrabold text-cyber-cyan">0.00 TON</div>
+            <div className="text-xl font-chakra font-extrabold text-cyber-cyan flex items-center space-x-1">
+              <span>0.00</span>
+              <GramIcon className="w-4 h-4 text-cyber-cyan" />
+            </div>
             <div className="text-[11px] text-slate-500 font-chakra mt-0.5">Accredito istantaneo</div>
           </div>
 
@@ -103,8 +107,8 @@ export const ReferralDashboard: React.FC = () => {
           </div>
           <p className="text-[11px] text-slate-400">
             {userAddress
-              ? 'Il tuo wallet TON è collegato e riceverà i premi in automatico.'
-              : 'Connetti il tuo wallet TON in alto per riscattare le vincite affiliate.'}
+              ? 'Il tuo wallet GRAM è collegato e riceverà i premi in automatico.'
+              : 'Connetti il tuo wallet GRAM in alto per riscattare le vincite affiliate.'}
           </p>
         </div>
       </div>
