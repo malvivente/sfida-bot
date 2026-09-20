@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2 } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import { MatchData } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
@@ -13,9 +13,11 @@ interface DuelLobbyProps {
   onJoinMatch: (matchId: string, wagerGram: string) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (matchId: string) => void;
-  onClearAllMatches?: () => void;
+  onRefreshMatches?: () => void;
+  isRefreshing?: boolean;
   createError?: string | null;
   onClearError?: () => void;
+  userAddress?: string;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -24,12 +26,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onJoinMatch,
   onSpectateMatch,
   onCancelMatch,
-  onClearAllMatches,
+  onRefreshMatches,
+  isRefreshing = false,
   createError,
   onClearError,
+  userAddress,
 }) => {
   const { triggerImpact } = useHaptics();
-  const { botUsername } = useTelegram();
+  const { botUsername, userId, username, fullName } = useTelegram();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('5');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,17 +103,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider">
             SFIDE ATTIVE NELL'ARENA ({matches.length})
           </h3>
-          {matches.length > 0 && onClearAllMatches && (
+          {onRefreshMatches && (
             <button
               onClick={() => {
-                triggerImpact('medium');
-                onClearAllMatches();
+                triggerImpact('light');
+                onRefreshMatches();
               }}
-              className="text-[11px] font-chakra text-slate-500 hover:text-cyber-pink transition-all flex items-center space-x-1"
-              title="Pulisci tutte le sfide dalla cache"
+              className="text-[11px] font-chakra text-slate-400 hover:text-cyber-cyan transition-all flex items-center space-x-1.5 py-1 px-2.5 rounded-lg bg-cyber-bg/60 border border-cyber-border/80 hover:border-cyber-cyan/50"
+              title="Aggiorna lista sfide"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Pulisci tutto</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyber-cyan' : ''}`} />
+              <span>Aggiorna</span>
             </button>
           )}
         </div>
@@ -135,6 +139,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               const wagerGram = (parseFloat(m.wagerAmountNano) / 1e9).toString();
               const totalPotGram = (parseFloat(m.wagerAmountNano) * 2 / 1e9).toString();
 
+              // La cancellazione è autorizzata SOLO per chi ha creato la sfida
+              const isCreator = Boolean(
+                (userAddress && m.playerA.wallet && m.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
+                (userId && (m.playerA as any).telegramUserId === userId) ||
+                (fullName && m.playerA.name === fullName) ||
+                (username && m.playerA.name === `@${username}`) ||
+                m.playerA.name === 'Tu' ||
+                m.playerA.wallet === 'EQ_you' ||
+                m.playerA.wallet === 'EQ_pending_wallet'
+              );
+
               return (
                 <div
                   key={m.matchId}
@@ -158,6 +173,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       </div>
                       <p className="text-xs text-slate-400 font-chakra mt-0.5">
                         Creato da <span className="text-slate-200 font-semibold">{m.playerA.name}</span>
+                        {isCreator && <span className="text-[10px] text-cyber-cyan ml-1.5 font-bold font-chakra">(TUA SFIDA)</span>}
                       </p>
                     </div>
 
@@ -210,13 +226,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       <Share2 className="w-4 h-4" />
                     </button>
 
-                    {onCancelMatch && (
+                    {/* Il pulsante di cancellazione compare ESCLUSIVAMENTE a chi ha creato la sfida prima che entri l'avversario */}
+                    {onCancelMatch && isCreator && !m.playerB && (
                       <button
                         onClick={() => {
                           triggerImpact('medium');
                           onCancelMatch(m.matchId);
                         }}
-                        title="Rimuovi ed elimina sfida"
+                        title="Annulla la tua sfida"
                         className="p-2 bg-cyber-bg border border-cyber-border hover:border-cyber-pink text-slate-400 hover:text-cyber-pink active:scale-95 transition-all rounded-xl"
                       >
                         <Trash2 className="w-4 h-4" />

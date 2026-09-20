@@ -37,27 +37,32 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   });
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchMatches = async () => {
+    if (!serverUrl) return;
+    setIsRefreshing(true);
+    try {
+      const res = await fetch(`${serverUrl}/api/matches`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.matches && Array.isArray(data.matches)) {
+          setMatches(data.matches);
+          try {
+            localStorage.setItem('sfidabot_saved_matches', JSON.stringify(data.matches.slice(0, 30)));
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn('Backend match polling failed (offline or pending):', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Fetch live matches from server if available
   useEffect(() => {
     if (!serverUrl) return;
-
-    const fetchMatches = async () => {
-      try {
-        const res = await fetch(`${serverUrl}/api/matches`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.matches && Array.isArray(data.matches)) {
-            setMatches(data.matches);
-            try {
-              localStorage.setItem('sfidabot_saved_matches', JSON.stringify(data.matches.slice(0, 30)));
-            } catch {}
-          }
-        }
-      } catch (err) {
-        console.warn('Backend match polling failed (offline or pending):', err);
-      }
-    };
-
     fetchMatches();
     const interval = setInterval(fetchMatches, 8000);
     return () => clearInterval(interval);
@@ -246,9 +251,11 @@ export const Arena: React.FC<ArenaProps> = ({
           onJoinMatch={handleJoinMatch}
           onSpectateMatch={handleSpectateMatch}
           onCancelMatch={handleCancelMatch}
-          onClearAllMatches={handleClearAllMatches}
+          onRefreshMatches={fetchMatches}
+          isRefreshing={isRefreshing}
           createError={createError}
           onClearError={() => setCreateError(null)}
+          userAddress={userAddress}
         />
       )}
     </div>
