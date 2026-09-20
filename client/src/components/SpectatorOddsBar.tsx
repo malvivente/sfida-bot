@@ -30,6 +30,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   const pctA = total > 0 ? Math.round((betsANum / total) * 100) : 50;
   const pctB = 100 - pctA;
 
+  const currentOdds = selectedSide === 'A' ? oddsA : oddsB;
+  const estimatedPayout = (parseFloat(betAmount || '0') * currentOdds).toFixed(2);
+
   const handleQuickAmount = (val: string) => {
     triggerImpact('light');
     setBetAmount(val);
@@ -41,17 +44,17 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl mt-4">
+    <div className="w-full max-w-md mx-auto bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl mt-4 font-rajdhani">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
           <TrendingUp className="w-4 h-4 text-cyber-cyan" />
-          <span className="text-xs font-mono font-bold text-slate-200 tracking-wider">
-            LIVE PARI-MUTUEL TOTALIZER
+          <span className="text-xs font-orbitron font-bold text-slate-200 tracking-wider">
+            SCOMMESSE SPETTATORI
           </span>
         </div>
-        <span className="text-[10px] font-mono text-cyber-muted bg-cyber-bg px-2 py-0.5 rounded border border-cyber-border">
-          6% TOTAL RAKE
+        <span className="text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
+          Vincita stimata: ~+{estimatedPayout} TON
         </span>
       </div>
 
@@ -70,10 +73,10 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           }`}
         >
           <div className="flex justify-between items-center">
-            <span className="text-xs font-mono text-cyber-cyan">PLAYER A</span>
-            <span className="text-[10px] text-slate-400 font-mono">{betsANum.toFixed(1)} TON</span>
+            <span className="text-xs font-chakra font-bold text-cyber-cyan">GIOCATORE A</span>
+            <span className="text-[10px] text-slate-400 font-chakra">{betsANum.toFixed(1)} TON</span>
           </div>
-          <div className="text-xl font-mono font-extrabold text-white mt-1">
+          <div className="text-xl font-orbitron font-extrabold text-white mt-1">
             {oddsA.toFixed(2)}x
           </div>
         </button>
@@ -91,10 +94,10 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           }`}
         >
           <div className="flex justify-between items-center">
-            <span className="text-xs font-mono text-cyber-pink">PLAYER B</span>
-            <span className="text-[10px] text-slate-400 font-mono">{betsBNum.toFixed(1)} TON</span>
+            <span className="text-xs font-chakra font-bold text-cyber-pink">GIOCATORE B</span>
+            <span className="text-[10px] text-slate-400 font-chakra">{betsBNum.toFixed(1)} TON</span>
           </div>
-          <div className="text-xl font-mono font-extrabold text-white mt-1">
+          <div className="text-xl font-orbitron font-extrabold text-white mt-1">
             {oddsB.toFixed(2)}x
           </div>
         </button>
@@ -118,9 +121,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           <button
             key={amt}
             onClick={() => handleQuickAmount(amt)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-mono font-semibold border transition-all ${
+            className={`flex-1 py-1.5 rounded-lg text-xs font-chakra font-bold border transition-all ${
               betAmount === amt
-                ? 'bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan'
+                ? 'bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan shadow-sm'
                 : 'bg-cyber-bg border-cyber-border text-slate-400 hover:text-white'
             }`}
           >
@@ -133,7 +136,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       <button
         onClick={handlePlaceBet}
         disabled={disabled}
-        className={`w-full py-3 rounded-xl font-bold uppercase tracking-wider text-xs flex items-center justify-center space-x-2 transition-all ${
+        className={`w-full py-3 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs flex items-center justify-center space-x-2 transition-all ${
           disabled
             ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
             : selectedSide === 'A'
@@ -143,7 +146,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       >
         <Coins className="w-4 h-4" />
         <span>
-          WAGER {betAmount} TON ON PLAYER {selectedSide} ({selectedSide === 'A' ? oddsA : oddsB}x)
+          PUNTA {betAmount} TON SU GIOCATORE {selectedSide} (Vincita: ~+{estimatedPayout} TON)
         </span>
       </button>
     </div>

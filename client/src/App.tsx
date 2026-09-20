@@ -4,11 +4,14 @@ import { Navbar } from './components/Navbar.js';
 import { Arena } from './pages/Arena.js';
 import { ReferralDashboard } from './pages/ReferralDashboard.js';
 import { Profile } from './pages/Profile.js';
+import { RulesModal } from './components/RulesModal.js';
+import { ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'arena' | 'profile' | 'referrals'>('arena');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   useEffect(() => {
     try {
@@ -38,8 +41,12 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start p-3 sm:p-6 select-none">
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+    <div className="min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start p-3 sm:p-6 select-none font-rajdhani">
+      <Navbar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onOpenRules={() => setShowRulesModal(true)}
+      />
 
       <main className="w-full max-w-md">
         {activeTab === 'arena' && (
@@ -48,6 +55,26 @@ export const App: React.FC = () => {
         {activeTab === 'referrals' && <ReferralDashboard />}
         {activeTab === 'profile' && <Profile />}
       </main>
+
+      {/* Subtle Footer with ToS Link */}
+      <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-between text-[11px] text-slate-500">
+        <div className="flex items-center space-x-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-cyber-cyan" />
+          <span>TON Smart Contract Escrow</span>
+        </div>
+        <button
+          onClick={() => setShowRulesModal(true)}
+          className="hover:text-cyber-cyan underline transition-all"
+        >
+          Regole & Termini (ToS)
+        </button>
+      </footer>
+
+      {/* Rules & ToS Modal */}
+      <RulesModal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+      />
     </div>
   );
 };

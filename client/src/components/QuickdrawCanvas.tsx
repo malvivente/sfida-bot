@@ -65,7 +65,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
       <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 pb-3">
         {/* Player A Score */}
         <div className="flex flex-col items-start">
-          <span className="text-xs text-cyber-cyan uppercase font-mono tracking-wider">Player A</span>
+          <span className="text-xs text-cyber-cyan uppercase font-chakra font-bold tracking-wider">Player A</span>
           <div className="flex items-center space-x-1 mt-1">
             {[0, 1].map((idx) => (
               <div
@@ -82,15 +82,15 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
         {/* Round Badge */}
         <div className="flex flex-col items-center">
-          <span className="text-xs text-cyber-muted uppercase font-mono">Cyber Duel</span>
-          <span className="text-sm font-bold tracking-widest text-slate-200">
+          <span className="text-[10px] text-cyber-muted uppercase font-chakra tracking-widest">Cyber Duel</span>
+          <span className="text-sm font-orbitron font-bold tracking-widest text-slate-200">
             ROUND {currentRound} / 3
           </span>
         </div>
 
         {/* Player B Score */}
         <div className="flex flex-col items-end">
-          <span className="text-xs text-cyber-pink uppercase font-mono tracking-wider">Player B</span>
+          <span className="text-xs text-cyber-pink uppercase font-chakra font-bold tracking-wider">Player B</span>
           <div className="flex items-center space-x-1 mt-1">
             {[0, 1].map((idx) => (
               <div
@@ -151,11 +151,11 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             className="flex flex-col items-center justify-center"
           >
             <AlertTriangle className="w-12 h-12 text-cyber-amber mb-2" />
-            <span className="text-4xl font-extrabold text-cyber-amber neon-text-amber tracking-widest">
+            <span className="text-4xl font-orbitron font-extrabold text-cyber-amber neon-text-amber tracking-widest">
               HOLD!
             </span>
-            <span className="text-xs text-cyber-amber/80 font-mono mt-1">
-              DECOY SIGNAL • DO NOT TAP!
+            <span className="text-xs text-cyber-amber/80 font-chakra mt-1">
+              TRABOCCHETTO • NON PREMERE!
             </span>
           </motion.div>
         )}
@@ -169,11 +169,11 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             className="flex flex-col items-center justify-center"
           >
             <Zap className="w-16 h-16 text-cyber-cyan mb-2" />
-            <span className="text-5xl font-extrabold text-cyber-cyan neon-text-cyan tracking-wider">
-              FIRE!
+            <span className="text-5xl font-orbitron font-black text-cyber-cyan neon-text-cyan tracking-wider">
+              FUOCO!
             </span>
-            <span className="text-xs text-white font-mono mt-1 uppercase tracking-widest">
-              TAP AS FAST AS YOU CAN!
+            <span className="text-xs text-white font-chakra font-bold mt-1 uppercase tracking-widest animate-pulse">
+              PREMI PIÙ VELOCE CHE PUOI!
             </span>
           </motion.div>
         )}
@@ -186,11 +186,11 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             className="flex flex-col items-center"
           >
             <ShieldAlert className="w-14 h-14 text-cyber-pink mb-2" />
-            <span className="text-3xl font-extrabold text-cyber-pink neon-text-pink">
-              MISFIRE!
+            <span className="text-3xl font-orbitron font-extrabold text-cyber-pink neon-text-pink">
+              FALSA PARTENZA!
             </span>
-            <span className="text-xs text-slate-300 font-mono mt-1">
-              Premature tap detected. Round forfeited!
+            <span className="text-xs text-slate-300 font-chakra mt-1">
+              Premuto troppo presto. Round perso!
             </span>
           </motion.div>
         )}
@@ -199,10 +199,10 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
         {roomState === 'WAITING_FOR_SIGNAL' && !isDecoyHold && (
           <div className="flex flex-col items-center">
             <div className="w-10 h-10 border-2 border-cyber-cyan/40 border-t-cyber-cyan rounded-full animate-spin mb-3" />
-            <span className="text-sm font-mono text-cyber-cyan tracking-widest uppercase">
-              HOLD YOUR FIRE...
+            <span className="text-sm font-orbitron font-bold text-cyber-cyan tracking-widest uppercase">
+              ATTENDI IL VIA...
             </span>
-            <span className="text-xs text-slate-400 mt-1">Randomized Trigger Armed</span>
+            <span className="text-xs text-slate-400 mt-1 font-rajdhani">Grilletto casuale armato</span>
           </div>
         )}
 
@@ -214,11 +214,11 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             className="flex flex-col items-center"
           >
             <Trophy className="w-10 h-10 text-cyber-amber mb-2" />
-            <span className="text-lg font-bold text-slate-100">{roundWinner || 'Round Finished'}</span>
+            <span className="text-lg font-orbitron font-bold text-slate-100">{roundWinner || 'Round Concluso'}</span>
             {lastReactionTimeMs !== null && (
               <div className="mt-2 bg-cyber-bg/80 border border-cyber-cyan/40 px-3 py-1.5 rounded-lg flex items-center space-x-2">
-                <span className="text-xs text-cyber-muted font-mono">Reaction Time:</span>
-                <span className="text-sm font-mono font-bold text-cyber-cyan">
+                <span className="text-xs text-slate-400 font-chakra">Tempo di Reazione:</span>
+                <span className="text-sm font-chakra font-bold text-cyber-cyan">
                   {lastReactionTimeMs}ms
                 </span>
               </div>
@@ -234,17 +234,17 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             className="flex flex-col items-center"
           >
             <Trophy className="w-16 h-16 text-cyber-amber mb-3 animate-bounce" />
-            <span className="text-2xl font-extrabold text-cyber-cyan neon-text-cyan">
-              VICTORY REIGNS!
+            <span className="text-2xl font-orbitron font-extrabold text-cyber-cyan neon-text-cyan">
+              VITTORIA!
             </span>
-            <span className="text-xs font-mono text-slate-300 mt-2 max-w-xs break-all">
-              Winner: {matchWinner?.slice(0, 10)}...{matchWinner?.slice(-6)}
+            <span className="text-xs font-chakra text-slate-300 mt-2 max-w-xs break-all">
+              Vincitore: {matchWinner?.slice(0, 10)}...{matchWinner?.slice(-6)}
             </span>
           </motion.div>
         )}
 
         {/* Feed Message */}
-        <p className="text-xs text-slate-400 font-mono mt-4 max-w-xs">{feedMessage}</p>
+        <p className="text-xs text-slate-400 font-rajdhani mt-4 max-w-xs">{feedMessage}</p>
       </div>
 
       {/* Bottom Controls: Big Mobile Quickdraw Trigger Button */}
@@ -254,19 +254,19 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             <button
               onClick={onReady}
               disabled={isReady}
-              className={`w-full py-4 rounded-xl font-bold tracking-wider text-base uppercase transition-all duration-200 ${
+              className={`w-full py-4 rounded-xl font-orbitron font-bold tracking-wider text-base uppercase transition-all duration-200 ${
                 isReady
                   ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
                   : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
               }`}
             >
-              {isReady ? 'READY • WAITING FOR OPPONENT' : '⚔️ READY FOR DUEL'}
+              {isReady ? 'PRONTO • IN ATTESA AVVERSARIO' : '⚔️ PRONTO AL DUELLO'}
             </button>
           ) : (
             <button
               onPointerDown={handleTap}
               disabled={roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED'}
-              className={`w-full h-24 rounded-2xl font-extrabold text-xl uppercase tracking-widest flex items-center justify-center space-x-3 transition-all duration-75 active:scale-95 select-none ${
+              className={`w-full h-24 rounded-2xl font-orbitron font-extrabold text-xl uppercase tracking-widest flex items-center justify-center space-x-3 transition-all duration-75 active:scale-95 select-none ${
                 isFireSignal
                   ? 'bg-cyber-cyan text-cyber-bg shadow-neon-cyan animate-pulse'
                   : isDecoyHold
@@ -275,13 +275,13 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
               }`}
             >
               <Zap className="w-7 h-7" />
-              <span>{isFireSignal ? 'FIRE NOW!' : 'TRIGGER TAP'}</span>
+              <span>{isFireSignal ? 'FUOCO ORA!' : 'PREMI QUI'}</span>
             </button>
           )
         ) : (
           <div className="w-full py-3 bg-cyber-bg/50 border border-cyber-border rounded-xl text-center">
-            <span className="text-xs font-mono text-cyber-cyan">
-              👁️ SPECTATOR MODE ACTIVE • PLACE BETS BELOW
+            <span className="text-xs font-chakra font-bold text-cyber-cyan">
+              👁️ MODALITÀ SPETTATORE ATTIVA • PIAZZA LE SCOMMESSE IN BASSO
             </span>
           </div>
         )}

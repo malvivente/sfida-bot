@@ -22,35 +22,8 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const { userAddress, placeSpectatorBetOnChain } = useTonClashContract();
 
-  // Mock initial matches for the lobby feed
-  const [matches] = useState<MatchData[]>([
-    {
-      matchId: '1001',
-      state: 'LOBBY',
-      currentRound: 1,
-      playerA: { wallet: 'EQD...a1', name: 'CyberNeo', ready: true, score: 0 },
-      playerB: null,
-      wagerAmountNano: '1000000000',
-      totalBetsA: '2000000000',
-      totalBetsB: '1500000000',
-      oddsA: 1.64,
-      oddsB: 2.19,
-      spectatorCount: 4,
-    },
-    {
-      matchId: '1002',
-      state: 'BETTING_WINDOW',
-      currentRound: 1,
-      playerA: { wallet: 'EQD...b2', name: 'GlitchMaster', ready: true, score: 0 },
-      playerB: { wallet: 'EQD...c3', name: 'VaporBlade', ready: true, score: 0 },
-      wagerAmountNano: '5000000000',
-      totalBetsA: '8000000000',
-      totalBetsB: '12000000000',
-      oddsA: 2.35,
-      oddsB: 1.57,
-      spectatorCount: 16,
-    },
-  ]);
+  // Production clean match feed: starts empty until matches are created/joined
+  const [matches, setMatches] = useState<MatchData[]>([]);
 
   const socketData = useSocket({
     matchId: activeMatchId || '',
@@ -61,17 +34,34 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const handleCreateMatch = (wagerTon: string) => {
     const newId = (Date.now() % 1000000).toString();
+    const newMatch: MatchData = {
+      matchId: newId,
+      state: 'LOBBY',
+      currentRound: 1,
+      playerA: {
+        wallet: userAddress || 'EQ_you',
+        name: userAddress ? `Player_${userAddress.slice(-4)}` : 'Tu',
+        ready: true,
+        score: 0,
+      },
+      playerB: null,
+      wagerAmountNano: (parseFloat(wagerTon) * 1e9).toString(),
+      totalBetsA: '0',
+      totalBetsB: '0',
+      oddsA: 1.0,
+      oddsB: 1.0,
+      spectatorCount: 0,
+    };
+    setMatches((prev) => [newMatch, ...prev]);
     setActiveMatchId(newId);
     setRole('player');
     setIsReady(false);
-    console.log(`Created match #${newId} with stake: ${wagerTon} TON`);
   };
 
-  const handleJoinMatch = (matchId: string, wagerTon: string) => {
+  const handleJoinMatch = (matchId: string, _wagerTon: string) => {
     setActiveMatchId(matchId);
     setRole('player');
     setIsReady(false);
-    console.log(`Joined match #${matchId} with stake: ${wagerTon} TON`);
   };
 
   const handleSpectateMatch = (matchId: string) => {
@@ -109,10 +99,10 @@ export const Arena: React.FC<ArenaProps> = ({
           {/* Back to Lobby */}
           <button
             onClick={() => setActiveMatchId(null)}
-            className="flex items-center space-x-1 text-xs font-mono text-slate-400 hover:text-cyber-cyan transition-all mb-2"
+            className="flex items-center space-x-1.5 text-xs font-orbitron font-bold text-slate-400 hover:text-cyber-cyan transition-all mb-2 px-1"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>EXIT TO LOBBY</span>
+            <span>TORNA ALLA LOBBY</span>
           </button>
 
           {/* Quickdraw Dueling Arena */}
