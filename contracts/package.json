@@ -4,7 +4,8 @@
   "description": "Tact Smart Contracts for SfidaBot 1v1 PvP & Spectator Pari-Mutuel Arena",
   "scripts": {
     "build": "blueprint build --all",
-    "test": "jest"
+    "test": "jest",
+    "deploy": "blueprint run deployClashMaster"
   },
   "dependencies": {
     "@tact-lang/compiler": "^1.6.5",
