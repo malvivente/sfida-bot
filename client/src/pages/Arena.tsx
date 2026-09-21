@@ -31,7 +31,14 @@ export const Arena: React.FC<ArenaProps> = ({
   const [isCancelling, setIsCancelling] = useState(false);
 
   // In-bot balance & fee configuration
-  const [userBalance, setUserBalance] = useState<UserBalance | null>(null);
+  const [userBalance, setUserBalance] = useState<UserBalance | null>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_user_balance');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [feeConfigData, setFeeConfigData] = useState<FeeConfig | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('1.0');
@@ -67,6 +74,9 @@ export const Arena: React.FC<ArenaProps> = ({
         const data = await res.json();
         if (data?.account) {
           setUserBalance(data.account);
+          try {
+            localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
+          } catch {}
         }
       }
     } catch {}
@@ -206,6 +216,9 @@ export const Arena: React.FC<ArenaProps> = ({
       const data = await res.json();
       if (res.ok && data?.account) {
         setUserBalance(data.account);
+        try {
+          localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
+        } catch {}
         setDepositMsg({ type: 'success', text: `Deposit confirmed! +${depositAmount} GRAM added to your balance!` });
         setTimeout(() => {
           setShowDepositModal(false);

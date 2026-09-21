@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "withdraw:fees": "tsx src/scripts/withdrawFees.ts",
+    "set:balance": "tsx src/scripts/setBalance.ts",
     "test": "jest"
   },
   "dependencies": {

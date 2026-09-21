@@ -391,6 +391,53 @@ export class DatabaseService {
     return account;
   }
 
+  public async setUserBalanceDirect(
+    identifier: string,
+    amountGram: string
+  ): Promise<UserAccount | null> {
+    const normId = identifier.trim().toLowerCase();
+    let account: UserAccount | undefined;
+
+    // Search by telegramId, walletAddress, or username
+    for (const [key, u] of this.users.entries()) {
+      if (
+        u.telegramId === normId ||
+        key === this.normalizeAddress(identifier) ||
+        key === normId ||
+        u.walletAddress.toLowerCase() === normId ||
+        (u.username && u.username.toLowerCase() === normId.replace('@', ''))
+      ) {
+        account = u;
+        break;
+      }
+    }
+
+    if (!account) return null;
+
+    const amtNum = parseFloat(amountGram);
+    const validAmt = isNaN(amtNum) || amtNum < 0 ? '0.00' : amtNum.toFixed(2);
+
+    account.balanceGram = validAmt;
+    account.balanceTon = validAmt;
+    account.balanceNano = BigInt(Math.round(parseFloat(validAmt) * 1e9)).toString();
+    account.updatedAt = Date.now();
+
+    this.transactions.push({
+      id: `tx_${Date.now()}_adj`,
+      walletAddress: account.walletAddress,
+      type: 'REFUND',
+      amountNano: account.balanceNano,
+      amountTon: validAmt,
+      amountGram: validAmt,
+      timestamp: Date.now(),
+      details: `Admin balance adjustment to ${validAmt} GRAM`,
+    });
+
+    this.persistData();
+    console.log(`[DatabaseService] Admin set balance for ${account.walletAddress} (ID: ${account.telegramId}) to ${validAmt} GRAM`);
+    return account;
+  }
+
   public async creditUserBalance(
     walletAddress: string,
     amountGram: string,

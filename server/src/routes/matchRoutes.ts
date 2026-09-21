@@ -647,4 +647,18 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const deleted = roomManager.removeRoom(id);
     return reply.send({ success: true, deleted });
   });
+
+  // Admin manual balance adjustment endpoint
+  fastify.post('/api/admin/set-balance', async (req, reply) => {
+    const body = req.body as { identifier?: string; amountGram?: string };
+    if (!body?.identifier) {
+      return reply.status(400).send({ error: 'identifier is required' });
+    }
+    const amount = body.amountGram !== undefined ? body.amountGram : '0.00';
+    const account = await dbService.setUserBalanceDirect(body.identifier, amount);
+    if (!account) {
+      return reply.status(404).send({ error: 'USER_NOT_FOUND', message: `User not found: ${body.identifier}` });
+    }
+    return reply.send({ success: true, account });
+  });
 }

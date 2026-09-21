@@ -27,7 +27,14 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
 
   const [serverStats, setServerStats] = useState<UserStats | null>(null);
   const [activeMatches, setActiveMatches] = useState<MatchData[]>([]);
-  const [userBalance, setUserBalance] = useState<UserBalance | null>(null);
+  const [userBalance, setUserBalance] = useState<UserBalance | null>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_user_balance');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Deposit / Withdraw modals
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -66,6 +73,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
         const data = await balRes.json();
         if (data?.account) {
           setUserBalance(data.account);
+          try {
+            localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
+          } catch {}
         }
       }
 
@@ -144,6 +154,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
       const data = await res.json();
       if (res.ok && data?.account) {
         setUserBalance(data.account);
+        try {
+          localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
+        } catch {}
         setBalanceMsg({ type: 'success', text: `Deposit confirmed! +${depositAmount} GRAM added to your balance!` });
         setTimeout(() => {
           setShowDepositModal(false);
@@ -182,6 +195,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
       const data = await res.json();
       if (res.ok && data?.account) {
         setUserBalance(data.account);
+        try {
+          localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
+        } catch {}
         const txNote = data.txHash ? ' (sent on-chain)' : '';
         setBalanceMsg({ type: 'success', text: `Successfully withdrew ${withdrawAmount} GRAM${txNote} to your wallet!` });
         setTimeout(() => {
