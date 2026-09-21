@@ -8,6 +8,7 @@ import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { MatchData, UserBalance, FeeConfig } from '../types/index.js';
 import { Address } from '@ton/ton';
+import { areAddressesEqual } from '../utils/ton.js';
 import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle } from 'lucide-react';
 
 interface ArenaProps {
@@ -53,18 +54,9 @@ export const Arena: React.FC<ArenaProps> = ({
   } = useTonClashContract();
   const { userId, username, fullName, displayName } = useTelegram();
 
-  // Sync initialMatchId when navigation passes a match to open
-  useEffect(() => {
-    if (initialMatchId) {
-      setActiveMatchId(initialMatchId);
-      setRole(initialRole);
-    }
-  }, [initialMatchId, initialRole]);
-
+  const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
   const [isClaimingPayout, setIsClaimingPayout] = useState(false);
   const [payoutClaimed, setPayoutClaimed] = useState(false);
-
-  const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
 
   const fetchUserBalance = async () => {
     if (!userAddress || !serverUrl) return;
@@ -320,12 +312,24 @@ export const Arena: React.FC<ArenaProps> = ({
       return;
     }
 
-    const isAlreadyPlayer = Boolean(
-      userAddress && (
-        (match.playerA?.wallet && match.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
-        (match.playerB?.wallet && match.playerB.wallet.toLowerCase() === userAddress.toLowerCase())
+    const isPlayerA = Boolean(
+      (userAddress && areAddressesEqual(match.playerA?.wallet, userAddress)) ||
+      (userId && (match.playerA as any)?.telegramUserId === userId) ||
+      (fullName && match.playerA?.name === fullName) ||
+      (username && (match.playerA?.name === `@${username}` || match.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
+    );
+
+    const isPlayerB = Boolean(
+      match.playerB && (
+        (userAddress && areAddressesEqual(match.playerB?.wallet, userAddress)) ||
+        (userId && (match.playerB as any)?.telegramUserId === userId) ||
+        (fullName && match.playerB?.name === fullName) ||
+        (username && (match.playerB?.name === `@${username}` || match.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
+        (displayName && match.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
       )
     );
+
+    const isAlreadyPlayer = isPlayerA || isPlayerB;
 
     if (isAlreadyPlayer) {
       setActiveMatchId(match.matchId);
@@ -367,6 +371,62 @@ export const Arena: React.FC<ArenaProps> = ({
       setCreateError(err?.message || 'Error joining match.');
     }
   };
+
+  // Sync initialMatchId when navigation passes a match to open
+  useEffect(() => {
+    if (!initialMatchId) return;
+
+    const resolveDeepMatch = async () => {
+      let m = matches.find((x) => x.matchId === initialMatchId);
+      if (!m && serverUrl) {
+        try {
+          const res = await fetch(`${serverUrl}/api/matches/${initialMatchId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.matchId) m = data;
+          }
+        } catch {}
+      }
+
+      if (!m) {
+        setActiveMatchId(initialMatchId);
+        setRole(initialRole);
+        return;
+      }
+
+      const isPlayerA = Boolean(
+        (userAddress && areAddressesEqual(m.playerA?.wallet, userAddress)) ||
+        (userId && (m.playerA as any)?.telegramUserId === userId) ||
+        (fullName && m.playerA?.name === fullName) ||
+        (username && (m.playerA?.name === `@${username}` || m.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
+      );
+
+      const isPlayerB = Boolean(
+        m.playerB && (
+          (userAddress && areAddressesEqual(m.playerB?.wallet, userAddress)) ||
+          (userId && (m.playerB as any)?.telegramUserId === userId) ||
+          (fullName && m.playerB?.name === fullName) ||
+          (username && (m.playerB?.name === `@${username}` || m.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
+          (displayName && m.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
+        )
+      );
+
+      if (isPlayerA || isPlayerB) {
+        // Participant resuming duel
+        setActiveMatchId(initialMatchId);
+        setRole('player');
+      } else if (!m.playerB && initialRole === 'player') {
+        // Open match invitation: join via balance
+        handleJoinMatch(m);
+      } else {
+        // Duel is full or spectator requested
+        setActiveMatchId(initialMatchId);
+        setRole('spectator');
+      }
+    };
+
+    resolveDeepMatch();
+  }, [initialMatchId, initialRole, userAddress, userId, serverUrl]);
 
   const handleSpectateMatch = (matchId: string) => {
     setActiveMatchId(matchId);
@@ -451,20 +511,26 @@ export const Arena: React.FC<ArenaProps> = ({
     socketData.roomState === 'MATCH_SETTLED' &&
     userAddress &&
     socketData.matchWinner &&
-    socketData.matchWinner.toLowerCase() === userAddress.toLowerCase()
+    areAddressesEqual(socketData.matchWinner, userAddress)
   );
 
   const isCurrentCreator = Boolean(
     currentActiveMatch &&
-    userAddress &&
-    currentActiveMatch.playerA.wallet.toLowerCase() === userAddress.toLowerCase()
+    (
+      (userAddress && areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress)) ||
+      (userId && (currentActiveMatch.playerA as any)?.telegramUserId === userId) ||
+      (fullName && currentActiveMatch.playerA.name === fullName) ||
+      (username && (currentActiveMatch.playerA.name === `@${username}` || currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase())))
+    )
   );
 
   const isMatchPlayer = Boolean(
     currentActiveMatch &&
-    userAddress &&
-    (currentActiveMatch.playerA.wallet.toLowerCase() === userAddress.toLowerCase() ||
-      (currentActiveMatch.playerB && currentActiveMatch.playerB.wallet.toLowerCase() === userAddress.toLowerCase()))
+    (
+      (userAddress && (areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress) || areAddressesEqual(currentActiveMatch.playerB?.wallet, userAddress))) ||
+      (userId && ((currentActiveMatch.playerA as any)?.telegramUserId === userId || (currentActiveMatch.playerB as any)?.telegramUserId === userId)) ||
+      (username && (currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) || currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())))
+    )
   );
 
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';

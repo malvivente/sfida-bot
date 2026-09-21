@@ -39,8 +39,17 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     const telegramId = query.telegramId || '';
 
     if (role === 'player') {
-      room.attachPlayer(wallet, telegramId, username, ws);
-      console.log(`[WS] Player ${username} (${wallet}) connected to Match #${matchId}`);
+      const attached = room.attachPlayer(wallet, telegramId, username, ws);
+      if (attached) {
+        console.log(`[WS] Player ${username} (${wallet}) connected to Match #${matchId}`);
+      } else {
+        console.log(`[WS] User ${username} (${wallet}) requested player role but is not an authorized participant in Match #${matchId}. Attaching as spectator.`);
+        const spectatorId = `spec_${wallet || Date.now()}`;
+        room.attachSpectator(spectatorId, ws);
+        ws.on('close', () => {
+          room?.removeSpectator(spectatorId);
+        });
+      }
     } else {
       const spectatorId = `spec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       room.attachSpectator(spectatorId, ws);

@@ -9,6 +9,10 @@ module.exports = {
       'ts-jest',
       {
         useESM: true,
+        tsconfig: {
+          module: 'NodeNext',
+          isolatedModules: true,
+        },
       },
     ],
   },

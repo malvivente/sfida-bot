@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { QuickdrawRoom } from '../src/engine/QuickdrawRoom.js';
 import { computePariMutuelOdds } from '../src/services/oddsCalculator.js';
 
@@ -101,6 +102,41 @@ describe('Authoritative Cyber Quickdraw Engine Suite', () => {
 
     // Advance timer past 8-second grace period
     jest.advanceTimersByTime(8100);
+  });
+
+  it('Ensures Disconnecting in LOBBY state does NOT trigger forfeit', () => {
+    jest.useFakeTimers();
+
+    let settled = false;
+    const room = new QuickdrawRoom(
+      {
+        matchId: 5002n,
+        wagerAmountNano: 1000000000n,
+        playerAAddress: playerAWallet,
+        playerBAddress: playerBWallet,
+      },
+      async () => {
+        settled = true;
+      }
+    );
+
+    room.state = 'LOBBY';
+    room.playerA.connected = true;
+    if (room.playerB) room.playerB.connected = true;
+
+    // Player B disconnects in LOBBY (e.g. stepping back to lobby or closing app before readying up)
+    room.handleDisconnect(playerBWallet);
+    expect(room.playerB?.connected).toBe(false);
+
+    // Advance 10 seconds
+    jest.advanceTimersByTime(10000);
+
+    // Match MUST still be in LOBBY and NOT forfeited/settled!
+    expect(room.state).toBe('LOBBY');
+    expect(settled).toBe(false);
+    expect(room.winnerAddress).toBeUndefined();
+
+    jest.useRealTimers();
   });
 
   it('Evaluates Zero-Risk Pari-Mutuel Odds Calculation', () => {

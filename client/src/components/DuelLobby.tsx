@@ -6,6 +6,7 @@ import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { useTelegram } from '../hooks/useTelegram.js';
+import { areAddressesEqual } from '../utils/ton.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -43,7 +44,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onOpenDeposit,
 }) => {
   const { triggerImpact } = useHaptics();
-  const { botUsername, userId, username, fullName } = useTelegram();
+  const { botUsername, userId, username, fullName, displayName } = useTelegram();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,24 +197,30 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               const wagerGram = (parseFloat(m.wagerAmountNano) / 1e9).toString();
               const totalPotGram = (parseFloat(m.wagerAmountNano) * 2 / 1e9).toString();
 
-              // Check if the current user is already in this match
-              const isAlreadyPlayer = Boolean(
-                userAddress && (
-                  (m.playerA.wallet && m.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
-                  (m.playerB?.wallet && m.playerB.wallet.toLowerCase() === userAddress.toLowerCase())
-                )
-              );
-
-              // Cancellation is authorized exclusively for match creator before Player B joins
-              const isCreator = Boolean(
-                (userAddress && m.playerA.wallet && m.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
+              // Check if current user is Player A (creator)
+              const isPlayerA = Boolean(
+                (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) ||
                 (userId && (m.playerA as any).telegramUserId === userId) ||
                 (fullName && m.playerA.name === fullName) ||
-                (username && m.playerA.name === `@${username}`) ||
+                (username && (m.playerA.name === `@${username}` || m.playerA.name?.toLowerCase().includes(username.toLowerCase()))) ||
                 m.playerA.name === 'Tu' ||
                 m.playerA.wallet === 'EQ_you' ||
                 m.playerA.wallet === 'EQ_pending_wallet'
               );
+
+              // Check if current user is Player B (joined duelist)
+              const isPlayerB = Boolean(
+                m.playerB && (
+                  (userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) ||
+                  (userId && (m.playerB as any).telegramUserId === userId) ||
+                  (fullName && m.playerB.name === fullName) ||
+                  (username && (m.playerB.name === `@${username}` || m.playerB.name?.toLowerCase().includes(username.toLowerCase()))) ||
+                  (displayName && m.playerB.name?.toLowerCase().includes(displayName.toLowerCase()))
+                )
+              );
+
+              const isAlreadyPlayer = isPlayerA || isPlayerB;
+              const isCreator = isPlayerA;
 
               return (
                 <div

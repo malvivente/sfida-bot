@@ -11,7 +11,7 @@
     "prisma:generate": "prisma generate",
     "withdraw:fees": "tsx src/scripts/withdrawFees.ts",
     "set:balance": "tsx src/scripts/setBalance.ts",
-    "test": "jest"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

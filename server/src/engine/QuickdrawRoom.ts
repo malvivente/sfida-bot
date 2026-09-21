@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import { Address } from '@ton/core';
 import { signerService } from '../services/signer.js';
 import { dbService } from '../services/db.js';
 import { feeConfig } from '../config/feeConfig.js';
@@ -112,20 +113,37 @@ export class QuickdrawRoom {
     }
   }
 
+  public isSameWallet(a?: string, b?: string): boolean {
+    if (!a || !b) return false;
+    if (a.toLowerCase() === b.toLowerCase()) return true;
+    try {
+      return Address.parse(a).equals(Address.parse(b));
+    } catch {
+      return false;
+    }
+  }
+
   // Bind WebSocket to Player A or B
   public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket): boolean {
-    if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
+    if (
+      this.isSameWallet(wallet, this.playerA.walletAddress) ||
+      (telegramId && this.playerA.telegramId && this.playerA.telegramId === telegramId)
+    ) {
       this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A');
       return true;
     }
 
-    if (this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()) {
+    if (
+      this.playerB &&
+      (this.isSameWallet(wallet, this.playerB.walletAddress) ||
+        (telegramId && this.playerB.telegramId && this.playerB.telegramId === telegramId))
+    ) {
       this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
       return true;
     }
 
-    // Assign Player B if spot is vacant
-    if (!this.playerB) {
+    // Only assign Player B if specifically invited in match config
+    if (!this.playerB && this.config.playerBAddress && this.isSameWallet(wallet, this.config.playerBAddress)) {
       this.playerB = {
         walletAddress: wallet,
         telegramId,
@@ -135,7 +153,6 @@ export class QuickdrawRoom {
         ready: false,
         score: 0,
       };
-      this.config.playerBAddress = wallet;
       this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
       return true;
     }
@@ -222,11 +239,11 @@ export class QuickdrawRoom {
     let opponent: PlayerSession | undefined;
     let side: 'A' | 'B' = 'A';
 
-    if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
+    if (this.isSameWallet(wallet, this.playerA.walletAddress)) {
       disconnectedPlayer = this.playerA;
       opponent = this.playerB;
       side = 'A';
-    } else if (this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()) {
+    } else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) {
       disconnectedPlayer = this.playerB;
       opponent = this.playerA;
       side = 'B';
@@ -237,8 +254,22 @@ export class QuickdrawRoom {
     disconnectedPlayer.connected = false;
     disconnectedPlayer.ws = undefined;
 
-    // Only activate forfeit countdown if match is active
-    if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') {
+    // Clear any existing timer
+    if (disconnectedPlayer.disconnectTimer) {
+      clearTimeout(disconnectedPlayer.disconnectTimer);
+      disconnectedPlayer.disconnectTimer = undefined;
+    }
+
+    // ONLY activate forfeit countdown if an actual match/combat round is active!
+    // In 'LOBBY' or 'WAITING_FOR_DEPLOY', the duel has NOT begun; disconnection must NEVER trigger a forfeit.
+    const isCombatActive = [
+      'ROUND_START',
+      'WAITING_FOR_SIGNAL',
+      'SIGNAL_FIRED',
+      'ROUND_END',
+    ].includes(this.state);
+
+    if (isCombatActive && opponent) {
       this.broadcast({
         type: 'PLAYER_DISCONNECTED',
         side,
@@ -251,11 +282,21 @@ export class QuickdrawRoom {
           this.triggerForfeit(opponent.walletAddress, disconnectedPlayer!.username);
         }
       }, 8000);
+    } else {
+      // In LOBBY, simply inform that the player stepped away without any forfeit penalty
+      this.broadcast({
+        type: 'PLAYER_DISCONNECTED',
+        side,
+        message: `${disconnectedPlayer.username} stepped away from the room.`,
+      });
+      this.broadcastRoomState();
     }
   }
 
   // Immediate forfeit when 8-second grace timer expires
   private triggerForfeit(winnerWallet: string, forfeiterName: string) {
+    this.state = 'FORFEITED';
+    this.forfeitWinner = winnerWallet;
     this.settleMatch(winnerWallet);
   }
 
@@ -272,9 +313,9 @@ export class QuickdrawRoom {
 
   // Player Ready Toggle
   public setPlayerReady(wallet: string) {
-    if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
+    if (this.isSameWallet(wallet, this.playerA.walletAddress)) {
       this.playerA.ready = true;
-    } else if (this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()) {
+    } else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) {
       this.playerB.ready = true;
     }
 
@@ -384,8 +425,8 @@ export class QuickdrawRoom {
 
   // Authoritative Tap Evaluation
   public handleTap(wallet: string): { accepted: boolean; reason?: string } {
-    const isPlayerA = wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase();
-    const isPlayerB = this.playerB && wallet.toLowerCase() === this.playerB.walletAddress.toLowerCase();
+    const isPlayerA = this.isSameWallet(wallet, this.playerA.walletAddress);
+    const isPlayerB = Boolean(this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress));
 
     if (!isPlayerA && !isPlayerB) {
       return { accepted: false, reason: 'Sender is not an active duelist' };
@@ -488,12 +529,14 @@ export class QuickdrawRoom {
 
   // Final Match Settlement
   private settleMatch(winnerAddress: string) {
-    this.state = 'MATCH_SETTLED';
+    if (this.state !== 'FORFEITED') {
+      this.state = 'MATCH_SETTLED';
+    }
     this.winnerAddress = winnerAddress;
     this.cleanupTimers();
 
     const winnerName =
-      winnerAddress.toLowerCase() === this.playerA.walletAddress.toLowerCase()
+      this.isSameWallet(winnerAddress, this.playerA.walletAddress)
         ? this.playerA.username
         : this.playerB?.username || 'Opponent';
     this.winnerName = winnerName;
@@ -595,8 +638,8 @@ export class QuickdrawRoom {
   public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint, bettorWallet?: string) {
     if (
       bettorWallet &&
-      (bettorWallet.toLowerCase() === this.playerA.walletAddress.toLowerCase() ||
-        (this.playerB && bettorWallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()))
+      (this.isSameWallet(bettorWallet, this.playerA.walletAddress) ||
+        (this.playerB && this.isSameWallet(bettorWallet, this.playerB.walletAddress)))
     ) {
       console.warn(`[QuickdrawRoom] Duelist ${bettorWallet} attempted to place a spectator bet. Denied.`);
       return;
