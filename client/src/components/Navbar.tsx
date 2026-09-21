@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onOpenRu
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>AFFILIATI</span>
+          <span>AFFILIATES</span>
         </button>
 
         <button
@@ -73,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onOpenRu
           }`}
         >
           <User className="w-3.5 h-3.5" />
-          <span>PROFILO</span>
+          <span>PROFILE</span>
         </button>
       </nav>
     </header>

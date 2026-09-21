@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff, Trash2, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff, Trash2, ArrowLeft, Loader2, CheckCircle2, RotateCcw } from 'lucide-react';
 import { RoomState } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
@@ -18,6 +18,8 @@ interface QuickdrawCanvasProps {
   roundWinner: string | null;
   matchWinner: string | null;
   matchWinnerName?: string | null;
+  playerAName?: string;
+  playerBName?: string | null;
   role: 'player' | 'spectator';
   isReady: boolean;
   onReady: () => void;
@@ -30,6 +32,10 @@ interface QuickdrawCanvasProps {
   isClaimingPayout?: boolean;
   payoutClaimed?: boolean;
   onReturnToLobby?: () => void;
+  rematchOffer?: { proposerWallet: string; proposerName: string; newWagerTon: string } | null;
+  onRequestRematch?: () => void;
+  onAcceptRematch?: () => void;
+  onDeclineRematch?: () => void;
 }
 
 export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
@@ -45,6 +51,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   roundWinner,
   matchWinner,
   matchWinnerName,
+  playerAName = 'Player A',
+  playerBName = 'Player B',
   role,
   isReady,
   onReady,
@@ -57,34 +65,65 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   isClaimingPayout = false,
   payoutClaimed = false,
   onReturnToLobby,
+  rematchOffer,
+  onRequestRematch,
+  onAcceptRematch,
+  onDeclineRematch,
 }) => {
   const { triggerImpact, triggerNotification } = useHaptics();
+  const isHoldingPrematurely = useRef(false);
 
-  const handleTap = () => {
-    if (roomState === 'WAITING_FOR_SIGNAL' || roomState === 'ROUND_START') {
-      triggerNotification('error');
-    } else if (roomState === 'SIGNAL_FIRED') {
-      triggerImpact('heavy');
-    } else {
-      triggerImpact('light');
+  // Reset premature hold flag whenever round state transitions
+  useEffect(() => {
+    if (
+      roomState === 'ROUND_START' ||
+      roomState === 'WAITING_FOR_SIGNAL' ||
+      roomState === 'ROUND_END' ||
+      roomState === 'LOBBY'
+    ) {
+      isHoldingPrematurely.current = false;
     }
+  }, [roomState]);
+
+  // Anti-Hold exploit tap handler:
+  // Must touch down strictly AFTER 'SIGNAL_FIRED'. Holding down through signals is flagged and rejected.
+  const handlePointerDown = () => {
+    if (roomState !== 'SIGNAL_FIRED') {
+      isHoldingPrematurely.current = true;
+      if (roomState === 'WAITING_FOR_SIGNAL' || roomState === 'ROUND_START') {
+        triggerNotification('error');
+      }
+      onTap(); // Triggers server-side misfire penalty
+      return;
+    }
+
+    if (isHoldingPrematurely.current) {
+      // Finger was already held down from before signal; ignore until finger is lifted
+      return;
+    }
+
+    triggerImpact('heavy');
     onTap();
+  };
+
+  const handlePointerUp = () => {
+    isHoldingPrematurely.current = false;
   };
 
   const isRoundEnd = roomState === 'ROUND_END';
   const isFireSignal = lastSignal === 'FIRE!' && roomState === 'SIGNAL_FIRED';
-  const isDecoyHold = lastSignal === 'HOLD!' && (roomState === 'WAITING_FOR_SIGNAL' || roomState === 'ROUND_START');
-  const isMisfire = (lastSignal === 'MISFIRE!' || feedMessage.includes('Falsa partenza')) && (isRoundEnd || roomState === 'FORFEITED');
+  const isDecoyWait = (lastSignal === 'WAIT!' || lastSignal === 'HOLD!') && (roomState === 'WAITING_FOR_SIGNAL' || roomState === 'ROUND_START');
+  const isMisfire = (lastSignal === 'MISFIRE!' || feedMessage.toLowerCase().includes('false start') || feedMessage.toLowerCase().includes('misfire')) && (isRoundEnd || roomState === 'FORFEITED');
 
   const wagerNum = parseFloat(wagerTon) || 1.0;
   const winnerPayoutTon = (wagerNum * 2 * 0.96).toFixed(2);
 
   const winnerDisplayName =
-    matchWinnerName && matchWinnerName !== 'Giocatore' && matchWinnerName !== 'Opponent'
+    matchWinnerName && matchWinnerName !== 'Giocatore' && matchWinnerName !== 'Opponent' && matchWinnerName !== 'Player'
       ? matchWinnerName
       : matchWinner && !matchWinner.startsWith('player_') && !matchWinner.startsWith('spectator_')
       ? `${matchWinner.slice(0, 6)}...${matchWinner.slice(-4)}`
-      : matchWinnerName || 'Campione dell\'Arena';
+      : matchWinnerName || 'Arena Champion';
 
   return (
     <div className="relative w-full max-w-md mx-auto flex flex-col items-center justify-between p-4 bg-cyber-card border border-cyber-border rounded-2xl shadow-2xl overflow-hidden min-h-[460px]">
@@ -93,9 +132,11 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
       {/* Top Header: Scoreboard & Round Tracker */}
       <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 pb-3">
-        {/* Player A Score */}
-        <div className="flex flex-col items-start">
-          <span className="text-xs text-cyber-cyan uppercase font-chakra font-bold tracking-wider">Player A</span>
+        {/* Player A Score & Name */}
+        <div className="flex flex-col items-start max-w-[38%]">
+          <span className="text-xs text-cyber-cyan font-chakra font-bold tracking-wider truncate w-full" title={playerAName}>
+            {playerAName}
+          </span>
           <div className="flex items-center space-x-1 mt-1">
             {[0, 1].map((idx) => (
               <div
@@ -111,16 +152,18 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
         </div>
 
         {/* Round Badge */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center shrink-0">
           <span className="text-[10px] text-cyber-muted uppercase font-chakra tracking-widest">Cyber Duel</span>
           <span className="text-sm font-orbitron font-bold tracking-widest text-slate-200">
-            {roomState === 'MATCH_SETTLED' ? 'FINALE' : `ROUND ${currentRound} / 3`}
+            {roomState === 'MATCH_SETTLED' ? 'FINAL' : `ROUND ${currentRound} / 3`}
           </span>
         </div>
 
-        {/* Player B Score */}
-        <div className="flex flex-col items-end">
-          <span className="text-xs text-cyber-pink uppercase font-chakra font-bold tracking-wider">Player B</span>
+        {/* Player B Score & Name */}
+        <div className="flex flex-col items-end max-w-[38%]">
+          <span className="text-xs text-cyber-pink font-chakra font-bold tracking-wider truncate w-full text-right" title={playerBName || 'Player B'}>
+            {playerBName || 'Player B'}
+          </span>
           <div className="flex items-center space-x-1 mt-1">
             {[0, 1].map((idx) => (
               <div
@@ -173,8 +216,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             </motion.div>
           )}
 
-          {/* Decoy HOLD Signal */}
-          {!isRoundEnd && isDecoyHold && (
+          {/* Decoy WAIT Signal */}
+          {!isRoundEnd && isDecoyWait && (
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: [1, 1.1, 1] }}
@@ -183,10 +226,10 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             >
               <AlertTriangle className="w-12 h-12 text-cyber-amber mb-2" />
               <span className="text-4xl font-orbitron font-extrabold text-cyber-amber neon-text-amber tracking-widest">
-                HOLD!
+                WAIT!
               </span>
-              <span className="text-xs text-cyber-amber/80 font-chakra mt-1">
-                TRABOCCHETTO • NON PREMERE!
+              <span className="text-xs text-cyber-amber/90 font-chakra font-bold mt-1">
+                TRAP • DO NOT TAP!
               </span>
             </motion.div>
           )}
@@ -201,26 +244,26 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             >
               <Zap className="w-16 h-16 text-cyber-cyan mb-2" />
               <span className="text-5xl font-orbitron font-black text-cyber-cyan neon-text-cyan tracking-wider">
-                FUOCO!
+                FIRE!
               </span>
               <span className="text-xs text-white font-chakra font-bold mt-1 uppercase tracking-widest animate-pulse">
-                PREMI PIÙ VELOCE CHE PUOI!
+                TAP AS FAST AS YOU CAN!
               </span>
             </motion.div>
           )}
 
           {/* Waiting in round */}
-          {!isRoundEnd && roomState === 'WAITING_FOR_SIGNAL' && !isDecoyHold && (
+          {!isRoundEnd && roomState === 'WAITING_FOR_SIGNAL' && !isDecoyWait && (
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 border-2 border-cyber-cyan/40 border-t-cyber-cyan rounded-full animate-spin mb-3" />
               <span className="text-sm font-orbitron font-bold text-cyber-cyan tracking-widest uppercase">
-                ATTENDI IL VIA...
+                WAIT FOR THE SIGNAL...
               </span>
-              <span className="text-xs text-slate-400 mt-1 font-rajdhani">Grilletto casuale armato</span>
+              <span className="text-xs text-slate-400 mt-1 font-rajdhani">Random trigger armed</span>
             </div>
           )}
 
-          {/* Dedicated Round Result Overlay Banner (Clean, centered, no overlap) */}
+          {/* Dedicated Round Result Overlay Banner */}
           {isRoundEnd && (
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -231,24 +274,24 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                 <>
                   <ShieldAlert className="w-10 h-10 text-cyber-pink mb-1.5 animate-pulse" />
                   <span className="text-sm font-orbitron font-extrabold text-cyber-pink uppercase tracking-wider">
-                    FALSA PARTENZA!
+                    FALSE START!
                   </span>
                   <span className="text-xs text-slate-300 font-chakra mt-1">
-                    {feedMessage || 'Grilletto premuto prima del segnale.'}
+                    {feedMessage || 'Trigger pressed before signal.'}
                   </span>
                 </>
               ) : (
                 <>
                   <Trophy className="w-9 h-9 text-cyber-amber mb-1.5 animate-bounce" />
                   <span className="text-[11px] font-chakra uppercase tracking-widest text-slate-400">
-                    ROUND {currentRound} ASSEGNATO
+                    ROUND {currentRound} AWARDED
                   </span>
                   <span className="text-base font-orbitron font-black text-white mt-0.5">
-                    {roundWinner || 'Round Concluso'}
+                    {roundWinner || 'Round Finished'}
                   </span>
                   {lastReactionTimeMs !== null && (
                     <div className="mt-2.5 bg-cyber-card border border-cyber-cyan/30 px-3 py-1 rounded-xl flex items-center space-x-2">
-                      <span className="text-[11px] text-slate-400 font-chakra">Riflesso:</span>
+                      <span className="text-[11px] text-slate-400 font-chakra">Reaction:</span>
                       <span className="text-xs font-chakra font-black text-cyber-cyan">
                         {lastReactionTimeMs} ms
                       </span>
@@ -260,19 +303,19 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
               {/* Intermission status */}
               <div className="mt-3 flex items-center space-x-1.5 text-[11px] text-slate-400 font-rajdhani">
                 <Loader2 className="w-3 h-3 animate-spin text-cyber-cyan" />
-                <span>Prossimo round tra pochi istanti...</span>
+                <span>Next round starting shortly...</span>
               </div>
             </motion.div>
           )}
 
-          {/* Feed Message (only if not round end to avoid clutter) */}
+          {/* Feed Message */}
           {!isRoundEnd && (
             <p className="text-xs text-slate-400 font-rajdhani mt-4 max-w-xs">{feedMessage}</p>
           )}
         </div>
       )}
 
-      {/* Cyberpunk Victory Overlay Modal (Full-Screen Blurred Overlay on Settlement) */}
+      {/* Cyberpunk Victory Overlay Modal */}
       <AnimatePresence>
         {roomState === 'MATCH_SETTLED' && (
           <motion.div
@@ -291,34 +334,72 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
             {/* Victory Titles */}
             <h3 className="text-2xl font-orbitron font-black text-transparent bg-clip-text bg-gradient-to-r from-cyber-cyan via-white to-cyber-cyan tracking-wider">
-              {isWinner ? '🎉 VITTORIA EPICA!' : '🏆 DUELLO CONCLUSO'}
+              {isWinner ? '🎉 EPIC VICTORY!' : '🏆 DUEL CONCLUDED'}
             </h3>
 
             <p className="text-sm text-slate-300 font-chakra mt-1.5">
-              Campione dell'Arena:{' '}
+              Arena Champion:{' '}
               <strong className="font-orbitron text-cyber-cyan text-base font-bold">
                 {winnerDisplayName}
               </strong>
             </p>
 
             {/* Pot Breakdown Box */}
-            <div className="my-4 px-4 py-2.5 rounded-xl bg-cyber-bg/90 border border-cyber-cyan/40 flex items-center justify-between w-full max-w-xs shadow-inner">
-              <span className="text-xs text-slate-400 font-chakra">Premio Vincitore (96%):</span>
+            <div className="my-3 px-4 py-2.5 rounded-xl bg-cyber-bg/90 border border-cyber-cyan/40 flex items-center justify-between w-full max-w-xs shadow-inner">
+              <span className="text-xs text-slate-400 font-chakra">Winner Prize (96%):</span>
               <span className="text-base font-chakra font-black text-cyber-cyan flex items-center space-x-1.5">
                 <span>{winnerPayoutTon}</span>
                 <GramIcon className="w-4 h-4 text-cyber-cyan inline" />
               </span>
             </div>
 
+            {/* Rematch Offer Received Modal / Banner */}
+            {rematchOffer && (
+              <div className="w-full max-w-xs p-3 rounded-2xl bg-cyber-pink/25 border border-cyber-pink/70 flex flex-col items-center space-y-2 mb-3 shadow-[0_0_25px_rgba(255,0,85,0.4)] animate-pulse">
+                <span className="text-xs font-orbitron font-extrabold text-white">
+                  🔥 REMATCH CHALLENGE!
+                </span>
+                <span className="text-xs text-slate-200 font-chakra text-center">
+                  <strong>{rematchOffer.proposerName}</strong> challenged you to a 2X Rematch for{' '}
+                  <strong className="text-cyber-cyan">{rematchOffer.newWagerTon} TON</strong>!
+                </span>
+                <div className="flex space-x-2 w-full pt-1">
+                  <button
+                    onClick={onDeclineRematch}
+                    className="flex-1 py-2 rounded-xl bg-cyber-bg/80 border border-cyber-border text-xs font-chakra font-bold text-slate-300 hover:text-white"
+                  >
+                    DECLINE
+                  </button>
+                  <button
+                    onClick={onAcceptRematch}
+                    className="flex-1 py-2 rounded-xl bg-cyber-pink text-white text-xs font-orbitron font-bold hover:brightness-110 shadow-neon-pink active:scale-95"
+                  >
+                    ACCEPT 2X
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Rematch Button for Both Players (if no incoming offer currently pending) */}
+            {!rematchOffer && onRequestRematch && role === 'player' && (
+              <button
+                onClick={onRequestRematch}
+                className="w-full max-w-xs py-3 rounded-xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-cyber-pink via-purple-600 to-cyber-cyan text-white shadow-[0_0_20px_rgba(255,0,85,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2 mb-2"
+              >
+                <RotateCcw className="w-4 h-4 text-white" />
+                <span>REMATCH (2X BET)</span>
+              </button>
+            )}
+
             {/* Winner Actions: Claim Button or Status */}
             {isWinner ? (
               payoutClaimed ? (
                 <div className="w-full max-w-xs py-3 rounded-xl bg-cyber-green/15 border border-cyber-green/50 text-cyber-green font-orbitron font-bold text-xs flex items-center justify-center space-x-2 animate-pulse">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>VINCITA ACCREDITATA SUL WALLET!</span>
+                  <span>PRIZE CREDITED TO WALLET!</span>
                 </div>
               ) : (
-                <div className="w-full max-w-xs flex flex-col items-center space-y-1">
+                <div className="w-full max-w-xs flex flex-col items-center space-y-1 mb-1">
                   <button
                     onClick={onClaimPayout}
                     disabled={isClaimingPayout || !onClaimPayout}
@@ -327,23 +408,23 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                     {isClaimingPayout ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-cyber-bg" />
-                        <span>RITIRO IN CORSO...</span>
+                        <span>WITHDRAWING...</span>
                       </>
                     ) : (
                       <>
                         <Trophy className="w-4 h-4 text-cyber-bg" />
-                        <span>RITIRA VINCITA ({winnerPayoutTon} GRAM)</span>
+                        <span>CLAIM PRIZE ({winnerPayoutTon} TON)</span>
                       </>
                     )}
                   </button>
                   <span className="text-[10px] text-slate-400 font-rajdhani">
-                    Conferma su Tonkeeper per ricevere i {winnerPayoutTon} GRAM sul tuo wallet
+                    Confirm in Tonkeeper to receive {winnerPayoutTon} TON in your wallet
                   </span>
                 </div>
               )
             ) : (
-              <p className="text-xs text-slate-400 font-rajdhani max-w-xs">
-                Sfida conclusa. Il montepremi è stato assegnato on-chain dallo smart contract.
+              <p className="text-xs text-slate-400 font-rajdhani max-w-xs mb-1">
+                Duel concluded. Prize settled on-chain by smart contract.
               </p>
             )}
 
@@ -351,10 +432,10 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             {onReturnToLobby && (
               <button
                 onClick={onReturnToLobby}
-                className="w-full max-w-xs py-2.5 rounded-xl bg-cyber-border/80 hover:bg-cyber-border text-slate-300 hover:text-white font-chakra font-bold text-xs uppercase transition-all active:scale-95 flex items-center justify-center space-x-1.5 mt-3"
+                className="w-full max-w-xs py-2.5 rounded-xl bg-cyber-border/80 hover:bg-cyber-border text-slate-300 hover:text-white font-chakra font-bold text-xs uppercase transition-all active:scale-95 flex items-center justify-center space-x-1.5 mt-2"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>TORNA ALLA LOBBY</span>
+                <span>BACK TO LOBBY</span>
               </button>
             )}
           </motion.div>
@@ -376,7 +457,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                       : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
                   }`}
                 >
-                  {isReady ? 'PRONTO • IN ATTESA AVVERSARIO' : '⚔️ PRONTO AL DUELLO'}
+                  {isReady ? 'READY • WAITING FOR OPPONENT' : '⚔️ READY TO DUEL'}
                 </button>
 
                 {isCreator && onCancelMatch && (
@@ -385,7 +466,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                     className="w-full py-2.5 rounded-xl font-orbitron font-bold tracking-wider text-xs uppercase bg-cyber-pink/15 hover:bg-cyber-pink/25 border border-cyber-pink/40 text-cyber-pink transition-all active:scale-95 flex items-center justify-center space-x-2"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>ANNULLA SFIDA E RIMBORSA</span>
+                    <span>CANCEL DUEL & REFUND</span>
                   </button>
                 )}
               </div>
@@ -395,28 +476,29 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                 className="w-full h-24 rounded-2xl font-orbitron font-bold text-xs uppercase tracking-widest bg-cyber-bg/70 border border-cyber-border/80 text-slate-400 flex items-center justify-center space-x-2 cursor-not-allowed opacity-90 select-none shadow-inner"
               >
                 <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
-                <span>ATTENDI IL PROSSIMO ROUND...</span>
+                <span>WAITING FOR NEXT ROUND...</span>
               </button>
             ) : (
               <button
-                onPointerDown={handleTap}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
                 disabled={roomState === 'FORFEITED'}
                 className={`w-full h-24 rounded-2xl font-orbitron font-extrabold text-xl uppercase tracking-widest flex items-center justify-center space-x-3 transition-all duration-75 active:scale-95 select-none ${
                   isFireSignal
                     ? 'bg-cyber-cyan text-cyber-bg shadow-neon-cyan animate-pulse'
-                    : isDecoyHold
+                    : isDecoyWait
                     ? 'bg-cyber-amber text-cyber-bg shadow-neon-amber'
                     : 'bg-cyber-border/80 text-slate-200 border border-cyber-cyan/30 hover:border-cyber-cyan'
                 }`}
               >
                 <Zap className="w-7 h-7" />
-                <span>{isFireSignal ? 'FUOCO ORA!' : 'PREMI QUI'}</span>
+                <span>{isFireSignal ? 'FIRE NOW!' : 'TAP HERE'}</span>
               </button>
             )
           ) : (
             <div className="w-full py-3 bg-cyber-bg/50 border border-cyber-border rounded-xl text-center">
               <span className="text-xs font-chakra font-bold text-cyber-cyan">
-                👁️ MODALITÀ SPETTATORE ATTIVA • PIAZZA LE SCOMMESSE IN BASSO
+                👁️ SPECTATOR MODE ACTIVE • PLACE BETS BELOW
               </span>
             </div>
           )}

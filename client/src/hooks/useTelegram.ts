@@ -35,12 +35,33 @@ export function useTelegram() {
   const photoUrl = user?.photo_url;
   const isPremium = !!user?.is_premium;
 
+  // Dynamic display name according to user specification:
+  // First name (with username in parenthesis if available), fallback to Telegram ID, fallback to Warrior
+  const displayName = (() => {
+    if (firstName) {
+      return username ? `${firstName} (@${username})` : firstName;
+    }
+    if (username) {
+      return `@${username}`;
+    }
+    if (userId) {
+      return `User #${userId}`;
+    }
+    return 'Warrior';
+  })();
+
+  const shortDisplayName = firstName || (username ? `@${username}` : (userId ? `ID:${userId}` : 'Warrior'));
+
   return {
     WebApp,
     user,
     userId,
     username,
+    firstName,
+    lastName,
     fullName,
+    displayName,
+    shortDisplayName,
     photoUrl,
     isPremium,
     isTma,

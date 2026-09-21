@@ -9,9 +9,11 @@ interface SpectatorOddsBarProps {
   oddsB: number;
   totalBetsA: string;
   totalBetsB: string;
-  onBet: (side: 'A' | 'B', amountGram: string) => void;
+  onBet: (side: 'A' | 'B', amountTon: string) => void;
   disabled?: boolean;
   isPlayer?: boolean;
+  playerAName?: string;
+  playerBName?: string;
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -22,10 +24,12 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   onBet,
   disabled = false,
   isPlayer = false,
+  playerAName = 'PLAYER A',
+  playerBName = 'PLAYER B',
 }) => {
   const { triggerImpact } = useHaptics();
   const [selectedSide, setSelectedSide] = useState<'A' | 'B'>('A');
-  const [betAmount, setBetAmount] = useState<string>('5');
+  const [betAmount, setBetAmount] = useState<string>('1');
 
   const betsANum = Number(BigInt(totalBetsA || '0')) / 1e9;
   const betsBNum = Number(BigInt(totalBetsB || '0')) / 1e9;
@@ -62,17 +66,17 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         <div className="flex items-center space-x-2">
           <TrendingUp className="w-4 h-4 text-cyber-cyan" />
           <span className="text-xs font-orbitron font-bold text-slate-200 tracking-wider">
-            {isPlayer ? 'QUOTE TOTALIZZATORE (SPETTATORI)' : 'SCOMMESSE SPETTATORI'}
+            {isPlayer ? 'PARI-MUTUEL ODDS (SPECTATORS)' : 'SPECTATOR TOTALIZER BETTING'}
           </span>
         </div>
         {!isPlayer ? (
           <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-            <span>Vincita stimata: ~+{estimatedPayout}</span>
+            <span>Est. payout: ~+{estimatedPayout}</span>
             <GramIcon className="w-3 h-3 text-cyber-green" />
           </div>
         ) : (
           <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-cyan bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-            <span>Pool Live</span>
+            <span>Live Pool</span>
           </div>
         )}
       </div>
@@ -83,7 +87,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         {isPlayer ? (
           <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-cyan">GIOCATORE A</span>
+              <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
+                {playerAName}
+              </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
                 <span>{betsANum.toFixed(1)}</span>
                 <GramIcon className="w-2.5 h-2.5 text-slate-400" />
@@ -106,7 +112,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             }`}
           >
             <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-cyan">GIOCATORE A</span>
+              <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
+                {playerAName}
+              </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
                 <span>{betsANum.toFixed(1)}</span>
                 <GramIcon className="w-2.5 h-2.5 text-slate-400" />
@@ -122,7 +130,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         {isPlayer ? (
           <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-pink">GIOCATORE B</span>
+              <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
+                {playerBName}
+              </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
                 <span>{betsBNum.toFixed(1)}</span>
                 <GramIcon className="w-2.5 h-2.5 text-slate-400" />
@@ -145,7 +155,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             }`}
           >
             <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-pink">GIOCATORE B</span>
+              <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
+                {playerBName}
+              </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
                 <span>{betsBNum.toFixed(1)}</span>
                 <GramIcon className="w-2.5 h-2.5 text-slate-400" />
@@ -170,22 +182,22 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         />
       </div>
 
-      {/* Scommesse Section: Notice for Duelists or Bet Controls for Spectators */}
+      {/* Notice for Duelists or Bet Controls for Spectators */}
       {isPlayer ? (
         <div className="p-3.5 rounded-xl bg-cyber-bg/70 border border-cyber-cyan/30 text-center flex items-center justify-center space-x-2.5">
           <Swords className="w-4 h-4 text-cyber-cyan shrink-0" />
           <span className="text-xs font-chakra text-slate-300">
-            Sei un combattente in questa arena: le scommesse da spettatore sono disabilitate per i duellanti.
+            You are a duelist in this match: spectator betting is disabled for combatants.
           </span>
         </div>
       ) : (
         <>
-          {/* Quick Stake Buttons Grid (Includes up to 100 GRAM) */}
+          {/* Quick Stake Buttons Grid */}
           <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra">
-              <span>Seleziona o digita importo:</span>
+              <span>Select or enter amount:</span>
               <span className="flex items-center space-x-1">
-                <span>Limite max: {GAME_CONFIG.MAX_WAGER}</span>
+                <span>Max limit: {GAME_CONFIG.MAX_WAGER}</span>
                 <GramIcon className="w-3 h-3 text-slate-400" />
               </span>
             </div>
@@ -209,7 +221,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
 
             {/* Custom Input Field */}
             <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5">
-              <span className="text-xs text-slate-400 font-chakra">Altro importo:</span>
+              <span className="text-xs text-slate-400 font-chakra">Custom amount:</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -222,12 +234,12 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             </div>
             {isOverMax && (
               <p className="text-[11px] text-cyber-pink font-chakra">
-                Attenzione: L'importo massimo consentito è {GAME_CONFIG.MAX_WAGER} GRAM.
+                Warning: Maximum allowed bet is {GAME_CONFIG.MAX_WAGER} TON.
               </p>
             )}
           </div>
 
-          {/* Place Bet Action Button - Clean, balanced, centered, no squeezed icon */}
+          {/* Place Bet Action Button */}
           <button
             onClick={handlePlaceBet}
             disabled={disabled || !betAmount || parsedBet <= 0 || isOverMax}
@@ -241,15 +253,15 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           >
             <div className="flex items-center justify-center space-x-2">
               <Coins className="w-4 h-4 shrink-0" />
-              <span>PUNTA</span>
+              <span>BET</span>
               <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
                 <span>{betAmount || '0'}</span>
                 <GramIcon className="w-3.5 h-3.5" />
               </span>
-              <span>SU GIOCATORE {selectedSide}</span>
+              <span>ON {selectedSide === 'A' ? playerAName : playerBName}</span>
             </div>
             <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-              <span>Vincita stimata:</span>
+              <span>Est. payout:</span>
               <span className="font-extrabold text-xs">+{estimatedPayout}</span>
               <GramIcon className="w-3 h-3" />
             </div>

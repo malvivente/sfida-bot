@@ -53,20 +53,28 @@ export const App: React.FC = () => {
           <Arena initialMatchId={deepMatchId} role={deepRole} />
         )}
         {activeTab === 'referrals' && <ReferralDashboard />}
-        {activeTab === 'profile' && <Profile />}
+        {activeTab === 'profile' && (
+          <Profile
+            onResumeDuel={(matchId) => {
+              setDeepMatchId(matchId);
+              setDeepRole('player');
+              setActiveTab('arena');
+            }}
+          />
+        )}
       </main>
 
       {/* Subtle Footer */}
       <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-center text-[11px] text-slate-500 font-chakra space-x-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-cyber-cyan" />
-        <span>GRAM Smart Contract Escrow • Fair Play Zero House Risk</span>
+        <span>TON Smart Contract Escrow • Fair Play Zero House Risk</span>
       </footer>
 
       {/* Floating Action Button with ? (HelpCircle) - Fixed in bottom-right corner */}
       <button
         onClick={() => setShowRulesModal(true)}
-        title="Regole del Gioco & ToS (?)"
-        aria-label="Regole e Termini"
+        title="Game Rules & ToS (?)"
+        aria-label="Game Rules & ToS"
         className="fixed bottom-5 right-4 z-40 w-11 h-11 rounded-2xl bg-cyber-card/90 hover:bg-cyber-cyan text-cyber-cyan hover:text-cyber-bg border border-cyber-cyan/50 hover:border-cyber-cyan shadow-neon-cyan backdrop-blur-md flex items-center justify-center transition-all active:scale-95 group"
       >
         <HelpCircle className="w-5 h-5 text-cyber-cyan group-hover:text-cyber-bg transition-colors" />

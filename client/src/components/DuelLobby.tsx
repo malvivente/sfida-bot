@@ -9,7 +9,7 @@ import { useTelegram } from '../hooks/useTelegram.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
-  onCreateMatch: (wagerGram: string) => Promise<boolean | void> | void;
+  onCreateMatch: (wagerTon: string) => Promise<boolean | void> | void;
   onJoinMatch: (match: MatchData) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (match: MatchData) => void;
@@ -39,7 +39,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName } = useTelegram();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [wagerChoice, setWagerChoice] = useState<string>('5');
+  const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const parsedWager = parseFloat(wagerChoice || '0');
@@ -73,7 +73,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const handleShare = (matchId: string, wager: string) => {
     triggerImpact('light');
-    const text = `⚔️ Ti sfido a Cyber Quickdraw per ${wager} GRAM! Premi più veloce su 3 round per vincere il piatto!`;
+    const text = `⚔️ I challenge you to a Cyber Quickdraw duel for ${wager} TON! Tap faster across 3 rounds to win the pot!`;
     const url = `https://t.me/${botUsername}?start=duel_${matchId}`;
     shareToTelegram(url, text);
   };
@@ -90,10 +90,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         <div>
           <h2 className="text-base font-orbitron font-bold text-white flex items-center space-x-2">
             <Flame className="w-5 h-5 text-cyber-cyan animate-pulse" />
-            <span>SFIDE 1V1 LIVE</span>
+            <span>1V1 LIVE DUELS</span>
           </h2>
           <p className="text-xs text-slate-300 mt-0.5">
-            Best of 3 • Payout Istantaneo al Vincitore
+            Best of 3 • Instant Winner Payout
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           className="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5"
         >
           <Plus className="w-4 h-4" />
-          <span>CREA</span>
+          <span>CREATE</span>
         </button>
       </div>
 
@@ -110,7 +110,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider">
-            SFIDE ATTIVE NELL'ARENA ({matches.length})
+            ACTIVE ARENA DUELS ({matches.length})
           </h3>
           {onRefreshMatches && (
             <button
@@ -124,10 +124,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   ? 'bg-cyber-cyan/10 border-cyber-cyan text-cyber-cyan cursor-wait'
                   : 'text-slate-400 hover:text-cyber-cyan bg-cyber-bg/60 border-cyber-border/80 hover:border-cyber-cyan/50'
               }`}
-              title="Aggiorna lista sfide"
+              title="Refresh duels list"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyber-cyan' : ''}`} />
-              <span>{isRefreshing ? 'Aggiornamento...' : 'Aggiorna'}</span>
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           )}
         </div>
@@ -135,25 +135,33 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         {matches.length === 0 ? (
           <div className="text-center py-10 bg-cyber-card border border-cyber-border rounded-2xl p-6">
             <Swords className="w-12 h-12 text-cyber-cyan/40 mx-auto mb-3 animate-pulse" />
-            <p className="text-sm text-slate-200 font-bold font-orbitron">Nessun duello attivo nella lobby</p>
+            <p className="text-sm text-slate-200 font-bold font-orbitron">No active duels in lobby</p>
             <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-              Crea la prima sfida per invitare i tuoi amici o attendi che un avversario crei un duello!
+              Create the first duel to challenge your friends or wait for an opponent to join!
             </p>
             <button
               onClick={handleOpenModal}
               className="mt-4 px-5 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all inline-flex items-center space-x-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>CREA LA PRIMA SFIDA</span>
+              <span>CREATE FIRST DUEL</span>
             </button>
           </div>
         ) : (
           <div className="space-y-3">
             {matches.map((m) => {
-              const wagerGram = (parseFloat(m.wagerAmountNano) / 1e9).toString();
-              const totalPotGram = (parseFloat(m.wagerAmountNano) * 2 / 1e9).toString();
+              const wagerTon = (parseFloat(m.wagerAmountNano) / 1e9).toString();
+              const totalPotTon = (parseFloat(m.wagerAmountNano) * 2 / 1e9).toString();
 
-              // La cancellazione è autorizzata SOLO per chi ha creato la sfida
+              // Check if the current user is already in this match
+              const isAlreadyPlayer = Boolean(
+                userAddress && (
+                  (m.playerA.wallet && m.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
+                  (m.playerB?.wallet && m.playerB.wallet.toLowerCase() === userAddress.toLowerCase())
+                )
+              );
+
+              // Cancellation is authorized exclusively for match creator before Player B joins
               const isCreator = Boolean(
                 (userAddress && m.playerA.wallet && m.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
                 (userId && (m.playerA as any).telegramUserId === userId) ||
@@ -186,31 +194,45 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 font-chakra mt-0.5">
-                        Creato da <span className="text-slate-200 font-semibold">{m.playerA.name}</span>
-                        {isCreator && <span className="text-[10px] text-cyber-cyan ml-1.5 font-bold font-chakra">(TUA SFIDA)</span>}
+                        Created by <span className="text-slate-200 font-semibold">{m.playerA.name}</span>
+                        {isCreator && <span className="text-[10px] text-cyber-cyan ml-1.5 font-bold font-chakra">(YOUR DUEL)</span>}
+                        {m.playerB && (
+                          <span className="block text-[11px] text-slate-400 mt-0.5">
+                            vs <span className="text-cyber-pink font-semibold">{m.playerB.name}</span>
+                          </span>
+                        )}
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[11px] text-slate-400 font-chakra block">Piatto Totale</span>
+                      <span className="text-[11px] text-slate-400 font-chakra block">Total Pot</span>
                       <span className="text-sm font-chakra font-extrabold text-cyber-cyan flex items-center justify-end space-x-1">
-                        <span>{totalPotGram}</span>
+                        <span>{totalPotTon}</span>
                         <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between bg-cyber-bg/60 border border-cyber-border rounded-xl p-2.5 mb-3 text-xs font-chakra">
-                    <span className="text-slate-400">Quota Singolo Giocatore:</span>
+                    <span className="text-slate-400">Single Player Stake:</span>
                     <span className="text-white font-bold flex items-center space-x-1">
-                      <span>{wagerGram}</span>
+                      <span>{wagerTon}</span>
                       <GramIcon className="w-3 h-3 text-white" />
-                      <span className="text-slate-400 text-[10px]">cad.</span>
+                      <span className="text-slate-400 text-[10px]">each</span>
                     </span>
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {!m.playerB ? (
+                    {/* If user is already a participant, provide direct RESUME DUEL button */}
+                    {isAlreadyPlayer ? (
+                      <button
+                        onClick={() => onJoinMatch(m)}
+                        className="flex-1 py-2 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                      >
+                        <Swords className="w-3.5 h-3.5" />
+                        <span>RESUME DUEL</span>
+                      </button>
+                    ) : !m.playerB ? (
                       <button
                         onClick={() => {
                           if (!userAddress) {
@@ -224,7 +246,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       >
                         <Swords className="w-3.5 h-3.5" />
                         <span className="flex items-center space-x-1">
-                          <span>ACCETTA ({wagerGram}</span>
+                          <span>ACCEPT ({wagerTon}</span>
                           <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
                           <span>)</span>
                         </span>
@@ -235,26 +257,26 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         className="flex-1 py-2 bg-cyber-border text-slate-200 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:border-cyber-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyber-cyan" />
-                        <span>SPETTATORE</span>
+                        <span>SPECTATE</span>
                       </button>
                     )}
 
                     <button
-                      onClick={() => handleShare(m.matchId, wagerGram)}
-                      title="Condividi su Telegram"
+                      onClick={() => handleShare(m.matchId, wagerTon)}
+                      title="Share to Telegram"
                       className="p-2 bg-cyber-bg border border-cyber-border rounded-xl text-slate-300 hover:text-cyber-cyan active:scale-95 transition-all"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
 
-                    {/* Il pulsante di cancellazione compare ESCLUSIVAMENTE a chi ha creato la sfida prima che entri l'avversario */}
+                    {/* Cancellation button shown exclusively to creator before Player B joins */}
                     {onCancelMatch && isCreator && !m.playerB && (
                       <button
                         onClick={() => {
                           triggerImpact('medium');
                           onCancelMatch(m);
                         }}
-                        title="Annulla la tua sfida e richiedi rimborso"
+                        title="Cancel duel and claim refund"
                         className="p-2 bg-cyber-bg border border-cyber-border hover:border-cyber-pink text-slate-400 hover:text-cyber-pink active:scale-95 transition-all rounded-xl"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -274,10 +296,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 max-w-sm w-full shadow-2xl">
             <h3 className="text-base font-orbitron font-bold text-white mb-1 flex items-center space-x-2">
               <Flame className="w-5 h-5 text-cyber-cyan" />
-              <span>IMPOSTA LA TUA SFIDA</span>
+              <span>SET UP YOUR DUEL</span>
             </h3>
             <p className="text-xs text-slate-400 font-chakra mb-4">
-              Seleziona la puntata in GRAM per il duello 1v1 Best of 3
+              Select wager in TON for the 1v1 Best of 3 duel
             </p>
 
             {/* Status / Loading Display */}
@@ -285,7 +307,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div className="bg-cyber-cyan/15 border border-cyber-cyan/50 text-cyber-cyan rounded-xl p-3 text-xs font-chakra flex items-start space-x-2.5 mb-3 animate-pulse">
                 <Loader2 className="w-4 h-4 shrink-0 mt-0.5 animate-spin text-cyber-cyan" />
                 <div className="flex-1 text-[11px] leading-relaxed">
-                  <span className="font-bold block text-white mb-0.5">In attesa di firma su Tonkeeper</span>
+                  <span className="font-bold block text-white mb-0.5">Awaiting signature on Tonkeeper</span>
                   <span className="text-slate-200">{createStatus}</span>
                 </div>
               </div>
@@ -296,21 +318,21 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2 mb-3">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1 text-[11px] leading-relaxed">
-                  <span className="font-bold block text-white mb-0.5">Errore di creazione</span>
+                  <span className="font-bold block text-white mb-0.5">Creation Error</span>
                   <span>{createError}</span>
                 </div>
               </div>
             )}
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra mb-1.5">
-              <span>Importo predefinito:</span>
+              <span>Preset amount:</span>
               <span className="flex items-center space-x-1">
                 <span>Max: {GAME_CONFIG.MAX_WAGER}</span>
                 <GramIcon className="w-3 h-3 text-slate-400" />
               </span>
             </div>
 
-            {/* Presets Grid (up to 100 GRAM) */}
+            {/* Presets Grid */}
             <div className="grid grid-cols-4 gap-1.5 mb-3">
               {GAME_CONFIG.PRESET_DUEL_WAGERS.map((amt) => (
                 <button
@@ -333,7 +355,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
             {/* Custom Input */}
             <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5 mb-3">
-              <span className="text-xs text-slate-400 font-chakra">Altro importo:</span>
+              <span className="text-xs text-slate-400 font-chakra">Custom amount:</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -347,28 +369,28 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
             {isOverMax && (
               <p className="text-[11px] text-cyber-pink font-chakra mb-3">
-                Attenzione: L'importo massimo consentito è {GAME_CONFIG.MAX_WAGER} GRAM.
+                Warning: Maximum allowed wager is {GAME_CONFIG.MAX_WAGER} TON.
               </p>
             )}
 
             {/* Stake Breakdown */}
             <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3 mb-4 text-xs font-chakra text-slate-300 space-y-1.5">
               <div className="flex justify-between items-center">
-                <span>La tua puntata:</span>
+                <span>Your wager:</span>
                 <span className="text-white font-bold flex items-center space-x-1">
                   <span>{wagerChoice || '0'}</span>
                   <GramIcon className="w-3 h-3 text-white" />
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span>Contributo gas contratto:</span>
+                <span>Contract gas contribution:</span>
                 <span className="text-cyber-amber flex items-center space-x-1">
                   <span>+0.02</span>
                   <GramIcon className="w-3 h-3 text-cyber-amber" />
                 </span>
               </div>
               <div className="flex justify-between items-center border-t border-cyber-border pt-1.5 text-cyber-cyan">
-                <span className="font-bold">Vincita Netta:</span>
+                <span className="font-bold">Net Winner Prize:</span>
                 <span className="font-extrabold text-sm text-cyber-cyan flex items-center space-x-1">
                   <span>+{netWinnerPayout}</span>
                   <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
@@ -381,7 +403,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 onClick={() => setShowCreateModal(false)}
                 className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border rounded-xl text-xs font-orbitron font-semibold text-slate-400 hover:text-white"
               >
-                ANNULLA
+                CANCEL
               </button>
               <button
                 onClick={handleCreate}
@@ -395,10 +417,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>CREAZIONE...</span>
+                    <span>CREATING...</span>
                   </>
                 ) : (
-                  <span>CREA SFIDA</span>
+                  <span>CREATE DUEL</span>
                 )}
               </button>
             </div>

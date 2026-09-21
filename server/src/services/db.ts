@@ -44,16 +44,43 @@ export interface UserStats {
   totalProfitsTon: string;
 }
 
+export interface UserAccount {
+  walletAddress: string;
+  telegramId?: string;
+  username?: string;
+  balanceNano: string;
+  balanceTon: string;
+  depositedTotalTon: string;
+  withdrawnTotalTon: string;
+  updatedAt: number;
+}
+
+export interface BalanceTransaction {
+  id: string;
+  walletAddress: string;
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET';
+  amountNano: string;
+  amountTon: string;
+  timestamp: number;
+  details?: string;
+}
+
 export class DatabaseService {
   private static instance: DatabaseService;
   private matches: Map<string, StoredMatch> = new Map();
+  private users: Map<string, UserAccount> = new Map();
+  private transactions: BalanceTransaction[] = [];
   private dataDir: string;
   private filePath: string;
+  private usersFilePath: string;
+  private txFilePath: string;
   private initialized: boolean = false;
 
   private constructor() {
     this.dataDir = path.resolve(__dirname, '../../data');
     this.filePath = path.join(this.dataDir, 'matches.json');
+    this.usersFilePath = path.join(this.dataDir, 'users.json');
+    this.txFilePath = path.join(this.dataDir, 'transactions.json');
     this.loadData();
   }
 
@@ -80,6 +107,24 @@ export class DatabaseService {
       } else {
         fs.writeFileSync(this.filePath, JSON.stringify([], null, 2), 'utf-8');
       }
+
+      if (fs.existsSync(this.usersFilePath)) {
+        const rawUsers = fs.readFileSync(this.usersFilePath, 'utf-8');
+        const userList: UserAccount[] = JSON.parse(rawUsers);
+        for (const u of userList) {
+          this.users.set(u.walletAddress.toLowerCase(), u);
+        }
+      } else {
+        fs.writeFileSync(this.usersFilePath, JSON.stringify([], null, 2), 'utf-8');
+      }
+
+      if (fs.existsSync(this.txFilePath)) {
+        const rawTx = fs.readFileSync(this.txFilePath, 'utf-8');
+        this.transactions = JSON.parse(rawTx);
+      } else {
+        fs.writeFileSync(this.txFilePath, JSON.stringify([], null, 2), 'utf-8');
+      }
+
       this.initialized = true;
     } catch (err) {
       console.warn('[DatabaseService] Warning loading database file:', err);
@@ -93,9 +138,117 @@ export class DatabaseService {
       }
       const list = Array.from(this.matches.values());
       fs.writeFileSync(this.filePath, JSON.stringify(list, null, 2), 'utf-8');
+
+      const userList = Array.from(this.users.values());
+      fs.writeFileSync(this.usersFilePath, JSON.stringify(userList, null, 2), 'utf-8');
+
+      fs.writeFileSync(this.txFilePath, JSON.stringify(this.transactions.slice(-200), null, 2), 'utf-8');
     } catch (err) {
-      console.error('[DatabaseService] Failed to persist matches to file:', err);
+      console.error('[DatabaseService] Failed to persist data to file:', err);
     }
+  }
+
+  public async getUserAccount(walletAddress: string, telegramId?: string, username?: string): Promise<UserAccount> {
+    const key = walletAddress.toLowerCase();
+    let account = this.users.get(key);
+    if (!account) {
+      account = {
+        walletAddress,
+        telegramId: telegramId || '',
+        username: username || '',
+        balanceNano: '0',
+        balanceTon: '0.00',
+        depositedTotalTon: '0.00',
+        withdrawnTotalTon: '0.00',
+        updatedAt: Date.now(),
+      };
+      this.users.set(key, account);
+      this.persistData();
+    } else {
+      if (telegramId && !account.telegramId) account.telegramId = telegramId;
+      if (username) account.username = username;
+    }
+    return account;
+  }
+
+  public async creditUserBalance(
+    walletAddress: string,
+    amountTon: string,
+    type: 'DEPOSIT' | 'MATCH_WIN',
+    details?: string
+  ): Promise<UserAccount> {
+    const account = await this.getUserAccount(walletAddress);
+    const amountNum = parseFloat(amountTon) || 0;
+    const currentNum = parseFloat(account.balanceTon) || 0;
+    const newBal = (currentNum + amountNum).toFixed(2);
+    const newNano = (BigInt(Math.round(parseFloat(newBal) * 1e9))).toString();
+
+    account.balanceTon = newBal;
+    account.balanceNano = newNano;
+    account.updatedAt = Date.now();
+
+    if (type === 'DEPOSIT') {
+      const depTotal = (parseFloat(account.depositedTotalTon || '0') + amountNum).toFixed(2);
+      account.depositedTotalTon = depTotal;
+    }
+
+    this.transactions.push({
+      id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      walletAddress,
+      type,
+      amountNano: (BigInt(Math.round(amountNum * 1e9))).toString(),
+      amountTon,
+      timestamp: Date.now(),
+      details,
+    });
+
+    this.persistData();
+    return account;
+  }
+
+  public async debitUserBalance(
+    walletAddress: string,
+    amountTon: string,
+    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET',
+    details?: string
+  ): Promise<{ success: boolean; account?: UserAccount; error?: string }> {
+    const account = await this.getUserAccount(walletAddress);
+    const amountNum = parseFloat(amountTon) || 0;
+    const currentNum = parseFloat(account.balanceTon) || 0;
+
+    if (currentNum < amountNum) {
+      return { success: false, error: 'Insufficient balance' };
+    }
+
+    const newBal = (currentNum - amountNum).toFixed(2);
+    const newNano = (BigInt(Math.round(parseFloat(newBal) * 1e9))).toString();
+
+    account.balanceTon = newBal;
+    account.balanceNano = newNano;
+    account.updatedAt = Date.now();
+
+    if (type === 'WITHDRAW') {
+      const wTotal = (parseFloat(account.withdrawnTotalTon || '0') + amountNum).toFixed(2);
+      account.withdrawnTotalTon = wTotal;
+    }
+
+    this.transactions.push({
+      id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      walletAddress,
+      type,
+      amountNano: (BigInt(Math.round(amountNum * 1e9))).toString(),
+      amountTon,
+      timestamp: Date.now(),
+      details,
+    });
+
+    this.persistData();
+    return { success: true, account };
+  }
+
+  public async getUserTransactions(walletAddress: string): Promise<BalanceTransaction[]> {
+    const key = walletAddress.toLowerCase();
+    return this.transactions.filter((tx) => tx.walletAddress.toLowerCase() === key);
   }
 
   public async saveMatch(record: StoredMatch): Promise<void> {

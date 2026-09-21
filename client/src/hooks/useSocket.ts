@@ -64,6 +64,10 @@ export function useSocket({
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
   const [matchWinnerName, setMatchWinnerName] = useState<string | null>(null);
   const [resolution, setResolution] = useState<MatchResolution | null>(null);
+  const [playerAName, setPlayerAName] = useState<string>('Player A');
+  const [playerBName, setPlayerBName] = useState<string | null>(null);
+  const [rematchOffer, setRematchOffer] = useState<{ proposerWallet: string; proposerName: string; newWagerTon: string } | null>(null);
+  const [activeWagerTon, setActiveWagerTon] = useState<string>('1.00');
 
   useEffect(() => {
     if (!matchId) return;
@@ -109,6 +113,9 @@ export function useSocket({
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.resolution) setResolution(msg.resolution);
+            if (msg.playerAName) setPlayerAName(msg.playerAName);
+            if (msg.playerBName) setPlayerBName(msg.playerBName);
+            if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             break;
 
           case 'ROOM_UPDATE':
@@ -118,6 +125,11 @@ export function useSocket({
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.resolution) setResolution(msg.resolution);
+            if (msg.playerAName) setPlayerAName(msg.playerAName);
+            if (msg.playerBName) setPlayerBName(msg.playerBName);
+            if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
+            if (msg.playerA?.name) setPlayerAName(msg.playerA.name);
+            if (msg.playerB?.name) setPlayerBName(msg.playerB.name);
             break;
 
           case 'BETTING_WINDOW_OPEN':
@@ -147,7 +159,7 @@ export function useSocket({
             break;
 
           case 'DECOY_SIGNAL':
-            setLastSignal('HOLD!');
+            setLastSignal('WAIT!');
             if (msg.message) setFeedMessage(msg.message);
             break;
 
@@ -210,6 +222,35 @@ export function useSocket({
             if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
             if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
             break;
+
+          case 'REMATCH_OFFERED':
+            if (msg.proposerWallet && msg.proposerName && msg.newWagerTon) {
+              setRematchOffer({
+                proposerWallet: msg.proposerWallet,
+                proposerName: msg.proposerName,
+                newWagerTon: msg.newWagerTon,
+              });
+            }
+            if (msg.message) setFeedMessage(msg.message);
+            break;
+
+          case 'REMATCH_ACCEPTED':
+            setRematchOffer(null);
+            setMatchWinner(null);
+            setMatchWinnerName(null);
+            setResolution(null);
+            setRoomState('LOBBY');
+            setCurrentRound(1);
+            setScoreA(0);
+            setScoreB(0);
+            if (msg.newWagerTon) setActiveWagerTon(msg.newWagerTon);
+            if (msg.message) setFeedMessage(msg.message);
+            break;
+
+          case 'REMATCH_DECLINED':
+            setRematchOffer(null);
+            if (msg.message) setFeedMessage(msg.message);
+            break;
         }
       } catch (err) {
         console.error('Error handling ws message:', err);
@@ -252,6 +293,24 @@ export function useSocket({
     }
   }, []);
 
+  const requestRematch = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
+    }
+  }, []);
+
+  const acceptRematch = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'REMATCH_ACCEPT' }));
+    }
+  }, []);
+
+  const declineRematch = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'REMATCH_DECLINE' }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -272,8 +331,15 @@ export function useSocket({
     matchWinner,
     matchWinnerName,
     resolution,
+    playerAName,
+    playerBName,
+    rematchOffer,
+    activeWagerTon,
     sendReady,
     sendTap,
     placeSpectatorBet,
+    requestRematch,
+    acceptRematch,
+    declineRematch,
   };
 }

@@ -72,6 +72,28 @@ export interface WsMessage {
   round?: number;
   gracePeriodSeconds?: number;
   side?: 'A' | 'B';
+  playerAName?: string;
+  playerBName?: string;
+  playerA?: any;
+  playerB?: any;
+  wagerTon?: string;
+  proposerWallet?: string;
+  proposerName?: string;
+  newWagerTon?: string;
+}
+
+export interface RematchOffer {
+  proposerWallet: string;
+  proposerName: string;
+  newWagerTon: string;
+}
+
+export interface UserBalance {
+  walletAddress: string;
+  balanceNano: string;
+  balanceTon: string;
+  depositedTotalTon: string;
+  withdrawnTotalTon: string;
 }
 
 export interface DuelHistoryRecord {
@@ -93,3 +115,4 @@ export interface UserStats {
   bestReaction: string;
   totalProfitsTon: string;
 }
+

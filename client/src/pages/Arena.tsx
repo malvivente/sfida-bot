@@ -37,7 +37,15 @@ export const Arena: React.FC<ArenaProps> = ({
     openWalletModal,
     placeSpectatorBetOnChain,
   } = useTonClashContract();
-  const { userId, username, fullName } = useTelegram();
+  const { userId, username, fullName, displayName } = useTelegram();
+
+  // Sync initialMatchId when navigation passes a match to open
+  useEffect(() => {
+    if (initialMatchId) {
+      setActiveMatchId(initialMatchId);
+      setRole(initialRole);
+    }
+  }, [initialMatchId, initialRole]);
 
   const [isClaimingPayout, setIsClaimingPayout] = useState(false);
   const [payoutClaimed, setPayoutClaimed] = useState(false);
@@ -111,30 +119,30 @@ export const Arena: React.FC<ArenaProps> = ({
     wallet: userAddress,
     role,
     telegramId: userId,
-    username: fullName || (username ? `@${username}` : (userAddress ? `Warrior_${userAddress.slice(-4)}` : 'CyberDuelist')),
+    username: displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior'),
     serverUrl,
   });
 
   const handleCreateMatch = async (wagerTon: string): Promise<boolean> => {
     setCreateError(null);
 
-    // 1. Verificare che il wallet sia connesso
+    // 1. Verify wallet is connected
     if (!userAddress) {
       openWalletModal();
-      setCreateError('Connetti il tuo Wallet Tonkeeper per procedere con la puntata e creare la sfida.');
+      setCreateError('Connect your Tonkeeper Wallet to proceed with the wager and create a duel.');
       return false;
     }
 
-    // 2. Se il server backend non è ancora configurato o non è raggiungibile
+    // 2. Check server URL
     if (!serverUrl) {
-      setCreateError('Server di gioco non ancora configurato o non raggiungibile. Imposta il backend per creare sfide reali.');
+      setCreateError('Game server not configured or unreachable. Set backend to create real duels.');
       return false;
     }
 
     try {
-      const playerName = fullName || (username ? `@${username}` : `Player_${userAddress.slice(-4)}`);
+      const playerName = displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior');
 
-      // 3. Registra la partita sul server backend
+      // 3. Register match on backend server
       const res = await fetch(`${serverUrl}/api/matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -152,30 +160,30 @@ export const Arena: React.FC<ArenaProps> = ({
 
       const data = await res.json();
       if (!data?.matchId) {
-        throw new Error('ID partita mancante nella risposta del server.');
+        throw new Error('Match ID missing in server response.');
       }
 
-      // 4. Se lo Smart Contract è configurato, invia la transazione on-chain (puntata + 0.02 fee)
+      // 4. If Smart Contract is configured, send on-chain transaction (wager + 0.02 fee)
       if (!clashMasterAddress) {
-        setCreateError('⚠️ Smart Contract non configurato! Esegui prima "npm run deploy:contracts" sulla VPS e imposta CLASH_MASTER_ADDRESS nel .env per addebitare la puntata e la fee reale.');
+        setCreateError('⚠️ Smart Contract not configured! Run "npm run deploy:contracts" on VPS and set CLASH_MASTER_ADDRESS in .env.');
         return false;
       }
 
       try {
-        setCreateStatus('Conferma la transazione in Tonkeeper (puntata + fee e gas di deploy)...');
+        setCreateStatus('Confirm transaction in Tonkeeper (wager + fee and deploy gas)...');
         await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
-        setCreateStatus('Transazione inviata! Attivazione della stanza nell\'Arena...');
-        // Conferma il deploy al backend per rendere la stanza visibile in stato LOBBY
+        setCreateStatus('Transaction broadcast! Activating Arena duel...');
+        // Confirm deploy to backend to transition room to LOBBY
         await fetch(`${serverUrl}/api/matches/${data.matchId}/confirm-deploy`, {
           method: 'POST',
         }).catch(() => {});
         setCreateStatus(null);
       } catch (txErr: any) {
         setCreateStatus(null);
-        console.warn('Transazione on-chain annullata o fallita:', txErr);
-        // Rollback: elimina la partita dal server se l'utente ha rifiutato la firma nel wallet
+        console.warn('On-chain transaction cancelled or failed:', txErr);
+        // Rollback: delete room from server if user cancelled wallet signature
         await fetch(`${serverUrl}/api/matches/${data.matchId}`, { method: 'DELETE' }).catch(() => {});
-        setCreateError('Creazione annullata: transazione non confermata su Tonkeeper. Nessun fondo speso.');
+        setCreateError('Creation cancelled: transaction not confirmed on Tonkeeper. No funds spent.');
         return false;
       }
 
@@ -199,7 +207,7 @@ export const Arena: React.FC<ArenaProps> = ({
         spectatorCount: 0,
       };
 
-      // Aggiorna stato e salva in localStorage
+      // Update state and save in localStorage
       setMatches((prev) => {
         const updated = [newMatch, ...prev.filter((m) => m.matchId !== newMatch.matchId)];
         try {
@@ -214,27 +222,43 @@ export const Arena: React.FC<ArenaProps> = ({
       return true;
     } catch (err: any) {
       console.warn('Match creation error:', err);
-      setCreateError(err?.message || 'Errore di connessione con il server di gioco. Riprova più tardi.');
+      setCreateError(err?.message || 'Connection error with game server. Please try again.');
       return false;
     }
   };
 
   const handleJoinMatch = async (match: MatchData) => {
-    // 1. Il giocatore B deve obbligatoriamente connettere il wallet
+    // 1. Verify wallet is connected
     if (!userAddress) {
       openWalletModal();
-      setCreateError('Devi connettere il tuo Wallet Tonkeeper per accettare la sfida e depositare la puntata.');
+      setCreateError('You must connect your Tonkeeper Wallet to enter this duel.');
+      return;
+    }
+
+    // 2. RECONNECTION BYPASS: If user is already Player A or Player B, re-enter immediately without duplicate payment!
+    const isAlreadyPlayer = Boolean(
+      userAddress && (
+        (match.playerA?.wallet && match.playerA.wallet.toLowerCase() === userAddress.toLowerCase()) ||
+        (match.playerB?.wallet && match.playerB.wallet.toLowerCase() === userAddress.toLowerCase())
+      )
+    );
+
+    if (isAlreadyPlayer) {
+      setActiveMatchId(match.matchId);
+      setRole('player');
+      setIsReady(false);
+      setCreateError(null);
       return;
     }
 
     if (match.state === 'WAITING_FOR_DEPLOY') {
-      setCreateError('La stanza è ancora in attesa della conferma del deploy da parte del creatore. Riprova tra qualche secondo.');
+      setCreateError('Room is still awaiting creator deploy confirmation. Please wait a moment.');
       return;
     }
 
     const wagerTon = (parseFloat(match.wagerAmountNano) / 1e9).toFixed(2);
 
-    // 2. Risolvi l'indirizzo deterministico dell'escrow
+    // 3. Resolve deterministic escrow contract address
     let escrow = match.escrowAddress;
     if (!escrow && clashMasterAddress && serverPublicKeyBigInt) {
       escrow = computeEscrowAddress(
@@ -247,20 +271,20 @@ export const Arena: React.FC<ArenaProps> = ({
     }
 
     if (!escrow) {
-      setCreateError('⚠️ Impossibile determinare il contratto Escrow della sfida. Verifica che il backend sia attivo.');
+      setCreateError('⚠️ Unable to resolve duel Escrow contract. Verify backend connection.');
       return;
     }
 
-    // 3. Esegui la transazione on-chain verso MatchEscrow (con buffer gas 0.05 TON)
+    // 4. Execute on-chain join transaction
     try {
-      setCreateStatus('Conferma la puntata su Tonkeeper per partecipare al duello...');
+      setCreateStatus('Confirm wager in Tonkeeper to enter the duel...');
       await joinMatchOnChain(escrow, match.matchId, wagerTon);
       setCreateStatus(null);
       setCreateError(null);
     } catch (err: any) {
       setCreateStatus(null);
-      console.warn('Transazione di ingresso annullata dal wallet:', err);
-      setCreateError('Ingresso annullato: transazione non confermata su Tonkeeper. Nessun fondo speso.');
+      console.warn('Join transaction cancelled by wallet:', err);
+      setCreateError('Entry cancelled: transaction not confirmed on Tonkeeper. No funds spent.');
       return;
     }
 
@@ -293,13 +317,13 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const handleSpectatorBet = async (side: 'A' | 'B', amountTon: string) => {
     if (isMatchPlayer) {
-      setCreateError('I duellanti non possono piazzare scommesse da spettatore su questo duello.');
+      setCreateError('Duelists cannot place spectator bets on their own match.');
       return;
     }
 
     if (!userAddress) {
       openWalletModal();
-      setCreateError('Devi connettere il tuo Wallet Tonkeeper per piazzare una scommessa.');
+      setCreateError('You must connect your Tonkeeper Wallet to place a spectator bet.');
       return;
     }
 
@@ -360,17 +384,17 @@ export const Arena: React.FC<ArenaProps> = ({
 
     try {
       if (escrow) {
-        setCreateStatus(`Conferma l'annullamento su Tonkeeper per ricevere il rimborso di ${wagerTon} GRAM...`);
+        setCreateStatus(`Confirm cancellation in Tonkeeper to receive your refund of ${wagerTon} TON...`);
         await cancelMatchOnChain(escrow, match.matchId);
         setCreateStatus(null);
       }
 
-      // Elimina la partita dal server
+      // Delete room from server
       if (serverUrl) {
         await fetch(`${serverUrl}/api/matches/${match.matchId}`, { method: 'DELETE' }).catch(() => {});
       }
 
-      // Rimuovi dai match salvati e dallo stato
+      // Remove from saved matches
       setMatches((prev) => {
         const updated = prev.filter((m) => m.matchId !== match.matchId);
         try {
@@ -384,12 +408,12 @@ export const Arena: React.FC<ArenaProps> = ({
       }
 
       setMatchToCancel(null);
-      setCancelSuccessMsg(`✅ Sfida #${match.matchId} annullata! Il rimborso di ${wagerTon} GRAM è stato accreditato sul tuo wallet.`);
+      setCancelSuccessMsg(`✅ Duel #${match.matchId} cancelled! Refund of ${wagerTon} TON credited to your wallet.`);
       setTimeout(() => setCancelSuccessMsg(null), 7000);
     } catch (err: any) {
       setCreateStatus(null);
-      console.warn('Errore cancellazione on-chain:', err);
-      setCreateError('Annullamento interrotto: transazione non confermata su Tonkeeper.');
+      console.warn('On-chain cancellation error:', err);
+      setCreateError('Cancellation aborted: transaction not confirmed on Tonkeeper.');
     } finally {
       setIsCancelling(false);
     }
@@ -518,16 +542,16 @@ export const Arena: React.FC<ArenaProps> = ({
             <div className="flex items-center space-x-2.5 text-cyber-pink">
               <AlertTriangle className="w-5 h-5 animate-pulse shrink-0" />
               <h3 className="font-orbitron font-extrabold text-sm tracking-wider text-white">
-                ANNULLARE LA SFIDA?
+                CANCEL DUEL?
               </h3>
             </div>
 
             <p className="text-xs text-slate-300 font-chakra leading-relaxed">
-              Sei sicuro di voler annullare la stanza <strong className="text-white font-orbitron">#{matchToCancel.matchId}</strong>?
+              Are you sure you want to cancel room <strong className="text-white font-orbitron">#{matchToCancel.matchId}</strong>?
             </p>
 
             <div className="p-3 bg-cyber-bg/80 border border-cyber-border rounded-xl flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-chakra">Importo da Rimborsare:</span>
+              <span className="text-xs text-slate-400 font-chakra">Amount to Refund:</span>
               <span className="text-sm font-chakra font-black text-cyber-cyan flex items-center space-x-1">
                 <span>{(parseFloat(matchToCancel.wagerAmountNano) / 1e9).toFixed(2)}</span>
                 <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
@@ -535,7 +559,7 @@ export const Arena: React.FC<ArenaProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-400 font-rajdhani">
-              Tonkeeper ti chiederà di firmare una transazione (0.05 TON di gas) e lo smart contract rimborserà immediatamente la tua puntata sul tuo wallet.
+              Tonkeeper will prompt you to sign a transaction (0.05 TON gas buffer) and the smart contract will immediately refund your wager to your wallet.
             </p>
 
             <div className="flex flex-col space-y-2 pt-1">
@@ -545,7 +569,7 @@ export const Arena: React.FC<ArenaProps> = ({
                   onClick={() => setMatchToCancel(null)}
                   className="flex-1 py-2.5 bg-cyber-border text-slate-300 rounded-xl font-chakra font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50"
                 >
-                  INDIETRO
+                  BACK
                 </button>
                 <button
                   disabled={isCancelling}
@@ -555,12 +579,12 @@ export const Arena: React.FC<ArenaProps> = ({
                   {isCancelling ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>RIMBORSO...</span>
+                      <span>REFUNDING...</span>
                     </>
                   ) : (
                     <>
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>CONFERMA ON-CHAIN</span>
+                      <span>CONFIRM ON-CHAIN</span>
                     </>
                   )}
                 </button>
@@ -586,7 +610,7 @@ export const Arena: React.FC<ArenaProps> = ({
                 }}
                 className="w-full py-1.5 text-[10px] text-slate-400 hover:text-slate-200 font-chakra transition-all"
               >
-                Rimuovi solo dalla lista (per stanze non deployate)
+                Remove from list only (for undeployed rooms)
               </button>
             </div>
           </div>
@@ -595,14 +619,14 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {activeMatchId ? (
         <div className="space-y-4">
-          {/* Top Header Controls: Torna alla Lobby + Annulla Sfida se Creatore */}
+          {/* Top Header Controls: Back to Lobby + Cancel Duel if Creator */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button
               onClick={() => setActiveMatchId(null)}
               className="flex items-center space-x-1.5 text-xs font-orbitron font-bold text-slate-400 hover:text-cyber-cyan transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>TORNA ALLA LOBBY</span>
+              <span>BACK TO LOBBY</span>
             </button>
 
             {role === 'player' && isCurrentCreator && currentActiveMatch && !currentActiveMatch.playerB && (
@@ -611,7 +635,7 @@ export const Arena: React.FC<ArenaProps> = ({
                 className="flex items-center space-x-1 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95"
               >
                 <Trash2 className="w-3.5 h-3.5 text-cyber-pink" />
-                <span>ANNULLA E RIMBORSA</span>
+                <span>CANCEL & REFUND</span>
               </button>
             )}
           </div>
@@ -630,13 +654,15 @@ export const Arena: React.FC<ArenaProps> = ({
             roundWinner={socketData.roundWinner}
             matchWinner={socketData.matchWinner}
             matchWinnerName={socketData.matchWinnerName}
+            playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
+            playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Waiting for opponent...')}
             role={role}
             isReady={isReady}
             onReady={handleReady}
             onTap={socketData.sendTap}
             isCreator={isCurrentCreator}
             onCancelMatch={currentActiveMatch && !currentActiveMatch.playerB ? () => handleCancelMatch(currentActiveMatch) : undefined}
-            wagerTon={activeWagerTon}
+            wagerTon={socketData.activeWagerTon || activeWagerTon}
             isWinner={isUserWinner}
             onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
             isClaimingPayout={isClaimingPayout}
@@ -645,6 +671,10 @@ export const Arena: React.FC<ArenaProps> = ({
               setActiveMatchId(null);
               setPayoutClaimed(false);
             }}
+            rematchOffer={socketData.rematchOffer}
+            onRequestRematch={socketData.requestRematch}
+            onAcceptRematch={socketData.acceptRematch}
+            onDeclineRematch={socketData.declineRematch}
           />
 
           {/* Spectator Totalizer Betting Bar */}
@@ -653,6 +683,8 @@ export const Arena: React.FC<ArenaProps> = ({
             oddsB={socketData.oddsB}
             totalBetsA={socketData.totalBetsA}
             totalBetsB={socketData.totalBetsB}
+            playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
+            playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Player B')}
             onBet={handleSpectatorBet}
             disabled={socketData.roomState === 'MATCH_SETTLED'}
             isPlayer={isMatchPlayer}

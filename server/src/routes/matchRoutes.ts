@@ -234,6 +234,106 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({ success: true, stats });
   });
 
+  // User internal balance
+  fastify.get('/api/users/:wallet/balance', async (req, reply) => {
+    const { wallet } = req.params as { wallet: string };
+    const query = req.query as { telegramId?: string; username?: string };
+    const account = await dbService.getUserAccount(wallet, query.telegramId, query.username);
+    const transactions = await dbService.getUserTransactions(wallet);
+    return reply.send({ success: true, account, transactions });
+  });
+
+  // User deposit to internal balance
+  fastify.post('/api/users/:wallet/deposit', async (req, reply) => {
+    const { wallet } = req.params as { wallet: string };
+    const body = req.body as { amountTon: string; txHash?: string };
+    if (!body.amountTon || parseFloat(body.amountTon) <= 0) {
+      return reply.status(400).send({ error: 'Invalid deposit amount' });
+    }
+    const account = await dbService.creditUserBalance(
+      wallet,
+      body.amountTon,
+      'DEPOSIT',
+      body.txHash ? `Tx: ${body.txHash}` : undefined
+    );
+    return reply.send({ success: true, account });
+  });
+
+  // User withdraw from internal balance
+  fastify.post('/api/users/:wallet/withdraw', async (req, reply) => {
+    const { wallet } = req.params as { wallet: string };
+    const body = req.body as { amountTon: string };
+    if (!body.amountTon || parseFloat(body.amountTon) <= 0) {
+      return reply.status(400).send({ error: 'Invalid withdrawal amount' });
+    }
+    const result = await dbService.debitUserBalance(
+      wallet,
+      body.amountTon,
+      'WITHDRAW',
+      `Payout to ${wallet}`
+    );
+    if (!result.success) {
+      return reply.status(400).send({ error: result.error || 'Withdrawal failed' });
+    }
+    return reply.send({ success: true, account: result.account });
+  });
+
+  // User active matches (where user is Player A or Player B)
+  fastify.get('/api/users/:wallet/active-matches', async (req, reply) => {
+    const { wallet } = req.params as { wallet: string };
+    const target = wallet.toLowerCase();
+    const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
+
+    const userRooms = roomManager.getAllRooms().filter((r) => {
+      if (r.state === 'MATCH_SETTLED' || r.state === 'FORFEITED') return false;
+      const isA = r.playerA.walletAddress.toLowerCase() === target;
+      const isB = r.playerB && r.playerB.walletAddress.toLowerCase() === target;
+      return isA || isB;
+    });
+
+    const matches = userRooms.map((r) => {
+      const odds = computePariMutuelOdds(r.totalBetsA, r.totalBetsB);
+      let escrowAddress = r.escrowAddress;
+      if (!escrowAddress && clashMasterAddr) {
+        escrowAddress = computeEscrowAddress(
+          clashMasterAddr,
+          r.matchId,
+          r.playerA.walletAddress,
+          r.config.wagerAmountNano,
+          signerService.getPublicKeyBigInt()
+        );
+      }
+
+      return {
+        matchId: r.matchId.toString(),
+        escrowAddress,
+        state: r.state,
+        currentRound: r.currentRound,
+        playerA: {
+          wallet: r.playerA.walletAddress,
+          name: r.playerA.username,
+          score: r.playerA.score,
+        },
+        playerB: r.playerB
+          ? {
+              wallet: r.playerB.walletAddress,
+              name: r.playerB.username,
+              score: r.playerB.score,
+            }
+          : null,
+        wagerAmountNano: r.config.wagerAmountNano.toString(),
+        wagerTon: (Number(r.config.wagerAmountNano) / 1e9).toFixed(2),
+        totalBetsA: r.totalBetsA.toString(),
+        totalBetsB: r.totalBetsB.toString(),
+        oddsA: odds.oddsA,
+        oddsB: odds.oddsB,
+        spectatorCount: r.spectators.size,
+      };
+    });
+
+    return reply.send({ success: true, matches });
+  });
+
   // Delete / cancel match endpoint
   fastify.delete('/api/matches/:id', async (req, reply) => {
     const { id } = req.params as { id: string };

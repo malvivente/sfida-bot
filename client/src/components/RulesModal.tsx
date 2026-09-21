@@ -23,7 +23,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center space-x-2">
             <FileText className="w-5 h-5 text-cyber-cyan" />
             <h2 className="text-base font-orbitron font-bold text-white tracking-wide">
-              REGOLE & TERMINI (ToS)
+              RULES & TERMS (ToS)
             </h2>
           </div>
           <button
@@ -41,9 +41,9 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         <div className="flex border-b border-cyber-border bg-cyber-bg/40 p-1 space-x-1 text-xs">
           {[
             { id: 'fairplay', label: 'FAIR PLAY', icon: ShieldCheck },
-            { id: 'duels', label: 'DUELLI 1V1', icon: Swords },
-            { id: 'fees', label: 'VINCITE & FEE', icon: TrendingUp },
-            { id: 'affiliates', label: 'AFFILIATI', icon: Users },
+            { id: 'duels', label: '1V1 DUELS', icon: Swords },
+            { id: 'fees', label: 'FEES & PRIZES', icon: TrendingUp },
+            { id: 'affiliates', label: 'AFFILIATES', icon: Users },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
@@ -78,21 +78,21 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   <span>SMART CONTRACT ESCROW (ZERO-HOUSE RISK)</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Tutte le puntate delle sfide 1v1 e le scommesse degli spettatori sono custodite in modo sicuro da smart contract dedicati scritti in Tact su blockchain <strong>TON</strong>.
+                  All 1v1 duel wagers and spectator bets are securely held by dedicated smart contracts written in Tact on the <strong>TON</strong> blockchain.
                 </p>
                 <p className="text-xs text-slate-400">
-                  Nessun intermediario o server può appropriarsi dei fondi: l'esito è validato crittograficamente con firme autoritative Ed25519 e liquidato automaticamente al vincitore al termine della partita.
+                  No intermediary or server can seize user funds: outcomes are cryptographically signed with authoritative Ed25519 signatures and settled automatically to the winner at the conclusion of each duel.
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="flex items-start space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-cyber-green shrink-0 mt-0.5" />
-                  <span><strong>Trasparenza Totale:</strong> Ogni transazione è verificabile pubblicamente sul TON Explorer.</span>
+                  <span><strong>Total Transparency:</strong> Every transaction and resolution is publicly verifiable on the TON Explorer.</span>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-cyber-green shrink-0 mt-0.5" />
-                  <span><strong>Rimborso Automatico:</strong> Se crei una sfida e nessun avversario si unisce, puoi ritirare l'intero importo scommesso.</span>
+                  <span><strong>Automatic Refund:</strong> If you create a duel and no opponent joins, you can cancel and refund the full wager at any time.</span>
                 </div>
               </div>
             </div>
@@ -103,25 +103,29 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-pink font-bold font-orbitron text-xs">
                   <Swords className="w-4 h-4" />
-                  <span>REGOLE DI COMBATTIMENTO QUICKDRAW</span>
+                  <span>CYBER QUICKDRAW COMBAT RULES</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  I duelli si svolgono al meglio dei 3 round (vince chi conquista per primo 2 round).
+                  Duels are played in a Best-of-3 round format (first player to secure 2 rounds wins the match).
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-cyber-cyan block mb-0.5">1. Segnale "FIRE!"</strong>
-                  <span>Compare a sorpresa tra 1.8 e 4.2 secondi. Il giocatore che tocca il pulsante più velocemente (con minor tempo di reazione in millisecondi) vince il round.</span>
+                  <strong className="text-cyber-cyan block mb-0.5">1. "FIRE!" Signal</strong>
+                  <span>Fires randomly between 1.8 and 4.2 seconds. The player with the fastest reaction time (measured in milliseconds) wins the round.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-cyber-amber block mb-0.5">2. Trabocchetto "HOLD!" (Decoy)</strong>
-                  <span>Un segnale di finta a luce ambra. Se premi durante il decoy o prima del via, incorri in una penalità di falsa partenza ("MISFIRE") con perdita istantanea del round.</span>
+                  <strong className="text-cyber-amber block mb-0.5">2. "WAIT!" Decoy Signal</strong>
+                  <span>An amber decoy light designed to test trigger discipline. Pressing during decoy or before the FIRE signal triggers an instant false start ("MISFIRE") penalty and awards the round to your opponent.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-slate-300 block mb-0.5">3. Disconnessioni & Forfait</strong>
-                  <span>Se un giocatore si disconnette, si attiva un timer di sicurezza di 8 secondi. Se non rientra in tempo, viene dichiarato il forfait a favore dell'avversario.</span>
+                  <strong className="text-slate-300 block mb-0.5">3. Disconnection & Forfeit</strong>
+                  <span>If a player disconnects, an 8-second grace countdown initiates. If they fail to reconnect in time, a forfeit victory is awarded to the opponent.</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
+                  <strong className="text-cyber-pink block mb-0.5">4. Double or Nothing (Rematch 2X)</strong>
+                  <span>At the end of a match, either duelist can propose an immediate rematch with 2X the stake! If accepted, both players enter the lobby for doubled stakes.</span>
                 </div>
               </div>
             </div>
@@ -132,31 +136,31 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-amber font-bold font-orbitron text-xs">
                   <TrendingUp className="w-4 h-4" />
-                  <span>COME FUNZIONANO LE VINCITE</span>
+                  <span>HOW WINNINGS & FEES WORK</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Non ci sono percentuali nascoste. Il vincitore del duello 1v1 riscuote l'intero montepremi generato dalle quote dei due giocatori (2x la puntata), al netto di una commissione di piattaforma del <strong>4%</strong> trattenuta dallo smart contract.
+                  Zero hidden rake. The 1v1 winner collects the total prize pool generated by both players' wagers (2x the stake), minus a standard <strong>4%</strong> platform fee retained by the smart contract.
                 </p>
               </div>
 
               <div className="bg-cyber-bg/50 border border-cyber-border rounded-xl p-3 text-xs space-y-1.5 font-chakra">
-                <div className="text-white font-bold mb-1 font-orbitron">Esempio Pratico:</div>
+                <div className="text-white font-bold mb-1 font-orbitron">Practical Example:</div>
                 <div className="flex justify-between items-center">
-                  <span>Puntata di ciascun giocatore:</span>
+                  <span>Wager per player:</span>
                   <span className="font-bold text-white flex items-center space-x-1">
                     <span>1.00</span>
                     <GramIcon className="w-3 h-3 text-white" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Montepremi totale generato:</span>
+                  <span>Total prize pool generated:</span>
                   <span className="font-bold text-white flex items-center space-x-1">
                     <span>2.00</span>
                     <GramIcon className="w-3 h-3 text-white" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center border-t border-cyber-border pt-1 text-cyber-green font-bold">
-                  <span>Vincita netta al vincitore:</span>
+                  <span>Net prize to winner (96%):</span>
                   <span className="flex items-center space-x-1">
                     <span>+1.92</span>
                     <GramIcon className="w-3 h-3 text-cyber-green" />
@@ -165,7 +169,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               <p className="text-[11px] text-slate-400">
-                Per le scommesse degli spettatori (Pari-Mutuel), le quote sono dinamiche e calcolate in base al volume delle scommesse su ciascun contendente, con una commissione del 6% reinvestita nel programma premi e affiliati.
+                For spectator Pari-Mutuel betting, multipliers are dynamic and calculated based on proportional pool volume, with a 6% fee supporting platform liquidity and the affiliate program.
               </p>
             </div>
           )}
@@ -175,25 +179,25 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-cyan font-bold font-orbitron text-xs">
                   <Users className="w-4 h-4" />
-                  <span>GUADAGNARE CON GLI AFFILIATI</span>
+                  <span>EARNING WITH AFFILIATES</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Ogni giocatore dispone di un link di invito univoco. Condividendolo con amici o aggiungendo il bot ai tuoi gruppi Telegram, ricevi automaticamente una percentuale sui duelli giocati:
+                  Every duelist has a unique invite link. By sharing it with friends or adding the bot to your Telegram groups, you automatically earn a share of every duel played:
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-white block mb-0.5">Invito Diretto di Giocatori</strong>
-                  <span className="text-slate-300">Ricevi fino al 30% della commissione generata da ogni partita giocata dai tuoi amici invitati.</span>
+                  <strong className="text-white block mb-0.5">Direct Player Referrals</strong>
+                  <span className="text-slate-300">Earn up to 30% of platform fees generated from all duels played by friends you invited.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-white block mb-0.5">Admin di Gruppi Telegram</strong>
-                  <span className="text-slate-300">Aggiungi il bot al tuo gruppo Telegram: se i membri del gruppo si sfidano all'interno della chat, l'admin del gruppo guadagna automaticamente una rendita su ogni sfida.</span>
+                  <strong className="text-white block mb-0.5">Telegram Group Admins</strong>
+                  <span className="text-slate-300">Add the bot to your Telegram community: when members duel within the group, the group admin automatically earns recurring rewards on every match.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-white block mb-0.5">Accredito Istantaneo</strong>
-                  <span className="text-slate-300">I guadagni affiliate vengono erogati direttamente dallo smart contract al tuo indirizzo TON collegato.</span>
+                  <strong className="text-white block mb-0.5">Instant On-Chain Payouts</strong>
+                  <span className="text-slate-300">Affiliate commissions are credited directly from the smart contract to your linked TON wallet address.</span>
                 </div>
               </div>
             </div>
@@ -209,7 +213,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
             }}
             className="w-full py-2.5 bg-cyber-cyan text-cyber-bg font-bold font-orbitron text-xs uppercase tracking-wider rounded-xl shadow-neon-cyan active:scale-95 transition-all"
           >
-            HO CAPITO
+            UNDERSTOOD
           </button>
         </div>
 

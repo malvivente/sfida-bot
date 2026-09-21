@@ -76,12 +76,12 @@ export function useTonClashContract() {
   ) => {
     if (!wallet) {
       tonConnectUI.openModal();
-      throw new Error('Connetti prima il tuo wallet per creare la sfida on-chain');
+      throw new Error('Connect your wallet first to create the duel on-chain');
     }
 
     const masterAddr = clashMasterAddress || (import.meta as any).env?.VITE_CLASH_MASTER_ADDRESS;
     if (!masterAddr) {
-      console.warn('[useTonClashContract] CLASH_MASTER_ADDRESS non configurato.');
+      console.warn('[useTonClashContract] CLASH_MASTER_ADDRESS not configured.');
       return null;
     }
 
@@ -122,8 +122,8 @@ export function useTonClashContract() {
     matchEscrowAddress: string,
     matchId: string
   ) => {
-    if (!wallet) throw new Error('Wallet non connesso');
-    if (!matchEscrowAddress) throw new Error('Indirizzo del contratto MatchEscrow mancante per il rimborso');
+    if (!wallet) throw new Error('Wallet not connected');
+    if (!matchEscrowAddress) throw new Error('Missing MatchEscrow address for refund');
 
     // Opcode for CancelMatch: 2731538680 (0xa2cf00f8)
     const reasonCell = beginCell().storeStringTail('Player A Cancellation').endCell();
@@ -184,9 +184,9 @@ export function useTonClashContract() {
   ) => {
     if (!wallet) {
       tonConnectUI.openModal();
-      throw new Error('Wallet non connesso');
+      throw new Error('Wallet not connected');
     }
-    if (!escrowAddress) throw new Error('Indirizzo del contratto MatchEscrow mancante per il ritiro della vincita');
+    if (!escrowAddress) throw new Error('Missing MatchEscrow address for prize claim');
 
     const sigCell = Cell.fromBase64(signatureCellBoc);
 

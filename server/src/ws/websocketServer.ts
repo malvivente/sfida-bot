@@ -115,6 +115,18 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             }
             break;
 
+          case 'REMATCH_REQUEST':
+            room?.requestRematch(wallet, username);
+            break;
+
+          case 'REMATCH_ACCEPT':
+            room?.acceptRematch(wallet);
+            break;
+
+          case 'REMATCH_DECLINE':
+            room?.declineRematch(wallet);
+            break;
+
           case 'PING':
             ws.send(JSON.stringify({ type: 'PONG', time: Date.now() }));
             break;

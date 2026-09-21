@@ -173,6 +173,9 @@ export class QuickdrawRoom {
       currentRound: this.currentRound,
       scoreA: this.playerA.score,
       scoreB: this.playerB ? this.playerB.score : 0,
+      playerAName: this.playerA.username,
+      playerBName: this.playerB ? this.playerB.username : undefined,
+      wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
       winnerAddress: this.winnerAddress,
@@ -195,6 +198,9 @@ export class QuickdrawRoom {
       currentRound: this.currentRound,
       scoreA: this.playerA.score,
       scoreB: this.playerB ? this.playerB.score : 0,
+      playerAName: this.playerA.username,
+      playerBName: this.playerB ? this.playerB.username : undefined,
+      wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
       totalBetsA: this.totalBetsA.toString(),
@@ -334,12 +340,12 @@ export class QuickdrawRoom {
     }, 2000);
   }
 
-  // Randomized Trigger (1,800ms - 4,200ms) with False-Start / Decoy "HOLD!" Protection
+  // Randomized Trigger (1,800ms - 4,200ms) with False-Start / Decoy "WAIT!" Protection
   private scheduleDecoyAndFireSignal() {
     // Generate random delay between 1,800ms and 4,200ms
     const randomDelay = Math.floor(Math.random() * (4200 - 1800 + 1)) + 1800;
 
-    // 50% chance to emit a false decoy "HOLD!" signal halfway through
+    // 50% chance to emit a false decoy "WAIT!" signal halfway through
     const shouldDecoy = Math.random() > 0.5;
     if (shouldDecoy && randomDelay > 2400) {
       const decoyDelay = Math.floor(randomDelay / 2);
@@ -347,8 +353,8 @@ export class QuickdrawRoom {
         if (this.state === 'WAITING_FOR_SIGNAL') {
           this.broadcast({
             type: 'DECOY_SIGNAL',
-            signal: 'HOLD!',
-            message: 'HOLD! Do NOT tap!',
+            signal: 'WAIT!',
+            message: 'WAIT! Do NOT tap!',
           });
         }
       }, decoyDelay);
@@ -623,6 +629,66 @@ export class QuickdrawRoom {
     }
   }
 
+  public requestRematch(proposerWallet: string, proposerName: string) {
+    if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') {
+      console.warn(`[QuickdrawRoom] Rematch requested for match #${this.matchId} while not settled.`);
+      return;
+    }
+
+    const newWagerNano = this.config.wagerAmountNano * 2n;
+    const newWagerTon = (Number(newWagerNano) / 1e9).toFixed(2);
+
+    console.log(`[QuickdrawRoom] Rematch 2X requested by ${proposerName} (${proposerWallet}) for ${newWagerTon} TON`);
+
+    this.broadcast({
+      type: 'REMATCH_OFFERED',
+      proposerWallet,
+      proposerName,
+      newWagerTon,
+      newWagerNano: newWagerNano.toString(),
+      message: `${proposerName} challenged you to a REMATCH with 2X Wager (${newWagerTon} TON)!`,
+    });
+  }
+
+  public acceptRematch(acceptorWallet: string) {
+    if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') return;
+
+    this.config.wagerAmountNano = this.config.wagerAmountNano * 2n;
+    const newWagerTon = (Number(this.config.wagerAmountNano) / 1e9).toFixed(2);
+
+    this.state = 'LOBBY';
+    this.currentRound = 1;
+    this.playerA.score = 0;
+    this.playerA.ready = false;
+    if (this.playerB) {
+      this.playerB.score = 0;
+      this.playerB.ready = false;
+    }
+    this.winnerAddress = undefined;
+    this.winnerName = undefined;
+    this.resolution = undefined;
+    this.forfeitWinner = undefined;
+    this.cleanupTimers();
+
+    console.log(`[QuickdrawRoom] Rematch accepted by ${acceptorWallet}. Match #${this.matchId} wager doubled to ${newWagerTon} TON`);
+
+    this.broadcast({
+      type: 'REMATCH_ACCEPTED',
+      newWagerTon,
+      message: `Rematch accepted! Wager doubled to ${newWagerTon} TON. Both players ready up!`,
+    });
+
+    this.broadcastRoomState();
+  }
+
+  public declineRematch(declinerWallet: string) {
+    this.broadcast({
+      type: 'REMATCH_DECLINED',
+      declinerWallet,
+      message: 'Rematch offer was declined.',
+    });
+  }
+
   public broadcastRoomState() {
     this.broadcast({
       type: 'ROOM_UPDATE',
@@ -630,6 +696,9 @@ export class QuickdrawRoom {
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
       resolution: this.resolution,
+      playerAName: this.playerA.username,
+      playerBName: this.playerB ? this.playerB.username : undefined,
+      wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       playerA: {
         wallet: this.playerA.walletAddress,
         name: this.playerA.username,
