@@ -4,13 +4,14 @@ import { computePariMutuelOdds } from '../services/oddsCalculator.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
+import { dbService } from '../services/db.js';
 
 export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
 
-  // List all active matches
+  // List all active matches (exclude WAITING_FOR_DEPLOY)
   fastify.get('/api/matches', async (_req, reply) => {
-    const rooms = roomManager.getAllRooms();
+    const rooms = roomManager.getAllRooms().filter((r) => r.state !== 'WAITING_FOR_DEPLOY');
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
 
     const matches = rooms.map((r) => {
@@ -130,7 +131,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // Create match endpoint
+  // Create match endpoint (begins in WAITING_FOR_DEPLOY state until Player 1 confirms on-chain)
   fastify.post('/api/matches', async (req, reply) => {
     const body = req.body as {
       wagerAmountNano?: string;
@@ -181,12 +182,56 @@ export async function matchRoutes(fastify: FastifyInstance) {
       }
     );
 
+    // Two-Phase deploy: room is WAITING_FOR_DEPLOY until on-chain confirmation
+    room.state = 'WAITING_FOR_DEPLOY';
+
+    // Auto-cleanup if deploy transaction is never signed/sent within 120s
+    setTimeout(() => {
+      const current = roomManager.getRoom(matchId);
+      if (current && current.state === 'WAITING_FOR_DEPLOY') {
+        console.log(`[matchRoutes] Match #${matchId} deploy timed out after 120s. Removing room.`);
+        roomManager.removeRoom(matchId.toString());
+      }
+    }, 120_000);
+
     return reply.send({
       success: true,
       matchId: matchId.toString(),
       escrowAddress,
       state: room.state,
     });
+  });
+
+  // Confirm deploy endpoint: transitions room from WAITING_FOR_DEPLOY to LOBBY
+  fastify.post('/api/matches/:id/confirm-deploy', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const room = roomManager.getRoom(id);
+
+    if (!room) {
+      return reply.status(404).send({ error: 'Match not found' });
+    }
+
+    const confirmed = room.confirmDeploy();
+    return reply.send({
+      success: true,
+      matchId: id,
+      state: room.state,
+      confirmed,
+    });
+  });
+
+  // User match history from persistent database
+  fastify.get('/api/users/:wallet/history', async (req, reply) => {
+    const { wallet } = req.params as { wallet: string };
+    const history = await dbService.getUserHistory(wallet);
+    return reply.send({ success: true, history });
+  });
+
+  // User statistics from persistent database
+  fastify.get('/api/users/:wallet/stats', async (req, reply) => {
+    const { wallet } = req.params as { wallet: string };
+    const stats = await dbService.getUserStats(wallet);
+    return reply.send({ success: true, stats });
   });
 
   // Delete / cancel match endpoint

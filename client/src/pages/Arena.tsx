@@ -163,6 +163,11 @@ export const Arena: React.FC<ArenaProps> = ({
       try {
         setCreateStatus('Conferma la transazione in Tonkeeper (puntata + fee e gas di deploy)...');
         await createMatchOnChain(data.matchId.toString(), wagerTon, clashMasterAddress);
+        setCreateStatus('Transazione inviata! Attivazione della stanza nell\'Arena...');
+        // Conferma il deploy al backend per rendere la stanza visibile in stato LOBBY
+        await fetch(`${serverUrl}/api/matches/${data.matchId}/confirm-deploy`, {
+          method: 'POST',
+        }).catch(() => {});
         setCreateStatus(null);
       } catch (txErr: any) {
         setCreateStatus(null);
@@ -218,6 +223,11 @@ export const Arena: React.FC<ArenaProps> = ({
     if (!userAddress) {
       openWalletModal();
       setCreateError('Devi connettere il tuo Wallet Tonkeeper per accettare la sfida e depositare la puntata.');
+      return;
+    }
+
+    if (match.state === 'WAITING_FOR_DEPLOY') {
+      setCreateError('La stanza è ancora in attesa della conferma del deploy da parte del creatore. Riprova tra qualche secondo.');
       return;
     }
 
@@ -418,7 +428,7 @@ export const Arena: React.FC<ArenaProps> = ({
         wagerTon,
         payoutTon: isUserWinner ? payoutTon : '0.00',
         outcome,
-        reactionTimeMs: socketData.lastReactionTimeMs || undefined,
+        reactionTimeMs: socketData.personalReactionTimeMs || undefined,
         score: `${socketData.scoreA} - ${socketData.scoreB}`,
       };
 
@@ -427,7 +437,7 @@ export const Arena: React.FC<ArenaProps> = ({
     } catch (err) {
       console.warn('Errore salvataggio storico duelli:', err);
     }
-  }, [socketData.roomState, activeMatchId, userAddress, socketData.matchWinner, isUserWinner, currentActiveMatch, socketData.lastReactionTimeMs, socketData.scoreA, socketData.scoreB]);
+  }, [socketData.roomState, activeMatchId, userAddress, socketData.matchWinner, isUserWinner, currentActiveMatch, socketData.personalReactionTimeMs, socketData.scoreA, socketData.scoreB]);
 
   const handleClaimPayout = async () => {
     if (!activeMatchId || !userAddress) return;

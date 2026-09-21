@@ -1,7 +1,9 @@
 import { WebSocket } from 'ws';
 import { signerService } from '../services/signer.js';
+import { dbService } from '../services/db.js';
 
 export type RoomState =
+  | 'WAITING_FOR_DEPLOY'
   | 'LOBBY'
   | 'BETTING_WINDOW'
   | 'ROUND_START'
@@ -29,6 +31,7 @@ export interface PlayerSession {
   ready: boolean;
   score: number;
   lastReactionTimeMs?: number;
+  bestReactionTimeMs?: number;
   disconnectTimer?: NodeJS.Timeout;
 }
 
@@ -249,6 +252,17 @@ export class QuickdrawRoom {
     this.settleMatch(winnerWallet);
   }
 
+  // Confirm deployment of MatchEscrow on TON blockchain by Player 1
+  public confirmDeploy(): boolean {
+    if (this.state === 'WAITING_FOR_DEPLOY') {
+      this.state = 'LOBBY';
+      this.broadcastRoomState();
+      console.log(`[QuickdrawRoom] Match #${this.matchId} transitioned from WAITING_FOR_DEPLOY to LOBBY.`);
+      return true;
+    }
+    return false;
+  }
+
   // Player Ready Toggle
   public setPlayerReady(wallet: string) {
     if (wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase()) {
@@ -405,6 +419,9 @@ export class QuickdrawRoom {
       const now = performance.now();
       const reactionTimeMs = parseFloat((now - this.fireTimestamp).toFixed(2));
       tappingPlayer.lastReactionTimeMs = reactionTimeMs;
+      if (!tappingPlayer.bestReactionTimeMs || reactionTimeMs < tappingPlayer.bestReactionTimeMs) {
+        tappingPlayer.bestReactionTimeMs = reactionTimeMs;
+      }
       tappingPlayer.score += 1;
 
       this.broadcast({
@@ -500,10 +517,37 @@ export class QuickdrawRoom {
       resolution: this.resolution,
       finalScoreA: this.playerA.score,
       finalScoreB: this.playerB?.score || 0,
+      bestReactionPlayerA: this.playerA.bestReactionTimeMs,
+      bestReactionPlayerB: this.playerB?.bestReactionTimeMs,
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
       message: `DUEL COMPLETE! ${winnerName} reigns supreme in the Arena!`,
     });
+
+    // Save match permanently in DatabaseService
+    const wagerTon = (parseFloat(this.config.wagerAmountNano.toString()) / 1e9).toFixed(2);
+    dbService
+      .saveMatch({
+        matchId: this.matchId.toString(),
+        escrowAddress: this.escrowAddress,
+        wagerAmountNano: this.config.wagerAmountNano.toString(),
+        wagerTon,
+        playerAAddress: this.playerA.walletAddress,
+        playerAName: this.playerA.username,
+        playerBAddress: this.playerB?.walletAddress,
+        playerBName: this.playerB?.username,
+        winnerAddress,
+        winnerName: this.winnerName,
+        scoreA: this.playerA.score,
+        scoreB: this.playerB?.score || 0,
+        bestReactionPlayerA: this.playerA.bestReactionTimeMs,
+        bestReactionPlayerB: this.playerB?.bestReactionTimeMs,
+        settledAt: Date.now(),
+        createdAt: Number(this.matchId) || Date.now(),
+      })
+      .catch((err) => {
+        console.error('[QuickdrawRoom] Error saving match to dbService:', err);
+      });
 
     // Auto-cleanup room from RoomManager memory after 90 seconds
     setTimeout(async () => {

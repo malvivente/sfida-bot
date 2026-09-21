@@ -57,6 +57,7 @@ export function useSocket({
   const [lastSignal, setLastSignal] = useState<string | null>(null);
   const [feedMessage, setFeedMessage] = useState<string>('In attesa nella lobby del duello...');
   const [lastReactionTimeMs, setLastReactionTimeMs] = useState<number | null>(null);
+  const [personalReactionTimeMs, setPersonalReactionTimeMs] = useState<number | null>(null);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
   const [forfeitCountdown, setForfeitCountdown] = useState<number | null>(null);
   const [roundWinner, setRoundWinner] = useState<string | null>(null);
@@ -159,6 +160,11 @@ export function useSocket({
           case 'ROUND_WON':
             setRoomState('ROUND_END');
             if (msg.reactionTimeMs !== undefined) setLastReactionTimeMs(msg.reactionTimeMs);
+            if (msg.winnerAddress && wallet && msg.winnerAddress.toLowerCase() === wallet.toLowerCase()) {
+              if (msg.reactionTimeMs !== undefined) {
+                setPersonalReactionTimeMs((prev) => (!prev || msg.reactionTimeMs! < prev ? msg.reactionTimeMs! : prev));
+              }
+            }
             if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.winnerName) setRoundWinner(msg.winnerName);
@@ -259,6 +265,7 @@ export function useSocket({
     lastSignal,
     feedMessage,
     lastReactionTimeMs,
+    personalReactionTimeMs,
     countdownSeconds,
     forfeitCountdown,
     roundWinner,

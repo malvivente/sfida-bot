@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, Trash2 } from 'lucide-react';
+import { Zap, Trophy, TrendingUp, History, Swords, Sparkles, Wallet } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { GramIcon } from '../components/GramIcon.js';
-import { DuelHistoryRecord } from '../types/index.js';
+import { DuelHistoryRecord, UserStats } from '../types/index.js';
 
 export const Profile: React.FC = () => {
   const { userAddress } = useTonClashContract();
   const { userId, username, fullName, photoUrl, isPremium } = useTelegram();
+
+  const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
 
   const [history, setHistory] = useState<DuelHistoryRecord[]>(() => {
     try {
@@ -18,30 +20,58 @@ export const Profile: React.FC = () => {
     }
   });
 
-  // Re-sync history on mount or tab focus
+  const [serverStats, setServerStats] = useState<UserStats | null>(null);
+
+  // Caricamento dati permanenti dal Database del Backend Server
   useEffect(() => {
-    const loadHistory = () => {
-      try {
-        const saved = localStorage.getItem('sfidabot_duel_history');
-        if (saved) {
-          setHistory(JSON.parse(saved));
+    if (!userAddress) return;
+
+    const fetchDatabaseData = async () => {
+      if (serverUrl) {
+        try {
+          // 1. Fetch storico permanente dal DB del server
+          const historyRes = await fetch(`${serverUrl}/api/users/${userAddress}/history`);
+          if (historyRes.ok) {
+            const hData = await historyRes.json();
+            if (hData?.history && Array.isArray(hData.history)) {
+              setHistory(hData.history);
+              try {
+                localStorage.setItem('sfidabot_duel_history', JSON.stringify(hData.history));
+              } catch {}
+            }
+          }
+
+          // 2. Fetch statistiche certificate dal DB del server
+          const statsRes = await fetch(`${serverUrl}/api/users/${userAddress}/stats`);
+          if (statsRes.ok) {
+            const sData = await statsRes.json();
+            if (sData?.stats) {
+              setServerStats(sData.stats);
+            }
+          }
+        } catch (err) {
+          console.warn('[Profile] Connessione al database server in attesa, uso cache locale:', err);
         }
-      } catch {}
+      }
     };
 
-    window.addEventListener('focus', loadHistory);
-    return () => window.removeEventListener('focus', loadHistory);
-  }, []);
+    fetchDatabaseData();
+    window.addEventListener('focus', fetchDatabaseData);
+    return () => window.removeEventListener('focus', fetchDatabaseData);
+  }, [userAddress, serverUrl]);
 
-  const duelsPlayed = history.length;
-  const duelsWon = history.filter((h) => h.outcome === 'WIN').length;
+  // Calcolo statistiche con fallback locale se server non ha ancora risposto
+  const duelsPlayed = serverStats ? serverStats.duelsPlayed : history.length;
+  const duelsWon = serverStats ? serverStats.duelsWon : history.filter((h) => h.outcome === 'WIN').length;
 
   const validReactions = history
     .map((h) => h.reactionTimeMs)
     .filter((ms): ms is number => typeof ms === 'number' && ms > 0);
-  const bestReaction = validReactions.length > 0 ? Math.min(...validReactions) : '-';
+  const bestReaction = serverStats?.bestReaction && serverStats.bestReaction !== '-'
+    ? serverStats.bestReaction
+    : (validReactions.length > 0 ? `${Math.min(...validReactions)}` : '-');
 
-  const totalProfitsTon = history
+  const totalProfitsTon = serverStats ? serverStats.totalProfitsTon : history
     .reduce((acc, h) => {
       if (h.outcome === 'WIN') {
         const p = parseFloat(h.payoutTon);
@@ -50,13 +80,6 @@ export const Profile: React.FC = () => {
       return acc;
     }, 0)
     .toFixed(2);
-
-  const clearHistory = () => {
-    if (window.confirm('Vuoi davvero cancellare la cronologia delle sfide salvata localmente?')) {
-      localStorage.removeItem('sfidabot_duel_history');
-      setHistory([]);
-    }
-  };
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
@@ -126,7 +149,7 @@ export const Profile: React.FC = () => {
             <div className="text-xl font-chakra font-extrabold text-cyber-cyan">
               {bestReaction === '-' ? '- ms' : `${bestReaction}ms`}
             </div>
-            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">Tempo di reazione</div>
+            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">Tempo di reazione personale</div>
           </div>
         </div>
 
@@ -147,23 +170,13 @@ export const Profile: React.FC = () => {
         </div>
       </div>
 
-      {/* Match History */}
+      {/* Match History (Permanent Server Database Record) */}
       <div className="bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
             <History className="w-4 h-4 text-cyber-cyan" />
-            <span>STORICO DUELLI RECENTI</span>
+            <span>STORICO DUELLI PERMANENTE (DATABASE)</span>
           </h3>
-
-          {history.length > 0 && (
-            <button
-              onClick={clearHistory}
-              title="Azzera cronologia"
-              className="text-slate-500 hover:text-cyber-pink transition-colors p-1"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
 
         {history.length === 0 ? (
@@ -171,7 +184,7 @@ export const Profile: React.FC = () => {
             <Swords className="w-8 h-8 text-slate-600 mx-auto mb-2 opacity-60" />
             <p className="text-xs text-slate-300 font-semibold font-rajdhani">Nessun duello completato ancora</p>
             <p className="text-[11px] text-slate-500 font-rajdhani mt-0.5">
-              Entra nell'Arena per sfidare avversari e registrare le tue prime vincite!
+              Entra nell'Arena per sfidare avversari e registrare le tue vincite sul database!
             </p>
           </div>
         ) : (
@@ -205,7 +218,7 @@ export const Profile: React.FC = () => {
                     </div>
                     <span className="text-[11px] text-slate-400 block font-rajdhani">
                       Score: <strong className="text-slate-200">{item.score}</strong>
-                      {item.reactionTimeMs ? ` • Reazione: ${item.reactionTimeMs}ms` : ''} • {dateStr}
+                      {item.reactionTimeMs ? ` • Tuo Riflesso: ${item.reactionTimeMs}ms` : ''} • {dateStr}
                     </span>
                   </div>
 

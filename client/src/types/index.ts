@@ -1,4 +1,5 @@
 export type RoomState =
+  | 'WAITING_FOR_DEPLOY'
   | 'LOBBY'
   | 'BETTING_WINDOW'
   | 'ROUND_START'
@@ -62,6 +63,8 @@ export interface WsMessage {
   winnerAddress?: string;
   winnerName?: string;
   winnerSide?: 'A' | 'B';
+  bestReactionPlayerA?: number;
+  bestReactionPlayerB?: number;
   resolution?: MatchResolution;
   offender?: string;
   secondsLeft?: number;
@@ -81,4 +84,12 @@ export interface DuelHistoryRecord {
   outcome: 'WIN' | 'LOSS' | 'DRAW';
   reactionTimeMs?: number;
   score: string;
+}
+
+export interface UserStats {
+  duelsPlayed: number;
+  duelsWon: number;
+  winRate: number;
+  bestReaction: string;
+  totalProfitsTon: string;
 }
