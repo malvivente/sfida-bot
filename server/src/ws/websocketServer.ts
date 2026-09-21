@@ -104,7 +104,14 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
 
           case 'SPECTATOR_BET':
             if (data.target && data.amountNano) {
-              room?.registerSpectatorBet(data.target, BigInt(data.amountNano));
+              const isPlayerInRoom = role === 'player' ||
+                (room && (wallet.toLowerCase() === room.playerA?.walletAddress.toLowerCase() ||
+                  (room.playerB && wallet.toLowerCase() === room.playerB.walletAddress.toLowerCase())));
+              if (isPlayerInRoom) {
+                console.warn(`[WS] Spectator bet rejected: ${wallet} is a duelist in match ${matchId}`);
+                break;
+              }
+              room?.registerSpectatorBet(data.target, BigInt(data.amountNano), wallet);
             }
             break;
 

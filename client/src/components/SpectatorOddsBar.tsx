@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, TrendingUp } from 'lucide-react';
+import { Coins, TrendingUp, Swords } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
@@ -11,6 +11,7 @@ interface SpectatorOddsBarProps {
   totalBetsB: string;
   onBet: (side: 'A' | 'B', amountGram: string) => void;
   disabled?: boolean;
+  isPlayer?: boolean;
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -20,6 +21,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   totalBetsB,
   onBet,
   disabled = false,
+  isPlayer = false,
 }) => {
   const { triggerImpact } = useHaptics();
   const [selectedSide, setSelectedSide] = useState<'A' | 'B'>('A');
@@ -60,64 +62,100 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         <div className="flex items-center space-x-2">
           <TrendingUp className="w-4 h-4 text-cyber-cyan" />
           <span className="text-xs font-orbitron font-bold text-slate-200 tracking-wider">
-            SCOMMESSE SPETTATORI
+            {isPlayer ? 'QUOTE TOTALIZZATORE (SPETTATORI)' : 'SCOMMESSE SPETTATORI'}
           </span>
         </div>
-        <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-          <span>Vincita stimata: ~+{estimatedPayout}</span>
-          <GramIcon className="w-3 h-3 text-cyber-green" />
-        </div>
+        {!isPlayer ? (
+          <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
+            <span>Vincita stimata: ~+{estimatedPayout}</span>
+            <GramIcon className="w-3 h-3 text-cyber-green" />
+          </div>
+        ) : (
+          <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-cyan bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
+            <span>Pool Live</span>
+          </div>
+        )}
       </div>
 
       {/* Dynamic Odds Cards */}
       <div className="grid grid-cols-2 gap-3 mb-3">
         {/* Side A */}
-        <button
-          onClick={() => {
-            triggerImpact('light');
-            setSelectedSide('A');
-          }}
-          className={`p-3 rounded-xl border text-left transition-all duration-200 ${
-            selectedSide === 'A'
-              ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
-              : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-cyan/50'
-          }`}
-        >
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-chakra font-bold text-cyber-cyan">GIOCATORE A</span>
-            <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-              <span>{betsANum.toFixed(1)}</span>
-              <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-            </span>
+        {isPlayer ? (
+          <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-chakra font-bold text-cyber-cyan">GIOCATORE A</span>
+              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                <span>{betsANum.toFixed(1)}</span>
+                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+              </span>
+            </div>
+            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+              {oddsA.toFixed(2)}x
+            </div>
           </div>
-          <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-            {oddsA.toFixed(2)}x
-          </div>
-        </button>
+        ) : (
+          <button
+            onClick={() => {
+              triggerImpact('light');
+              setSelectedSide('A');
+            }}
+            className={`p-3 rounded-xl border text-left transition-all duration-200 ${
+              selectedSide === 'A'
+                ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-cyan/50'
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-chakra font-bold text-cyber-cyan">GIOCATORE A</span>
+              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                <span>{betsANum.toFixed(1)}</span>
+                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+              </span>
+            </div>
+            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+              {oddsA.toFixed(2)}x
+            </div>
+          </button>
+        )}
 
         {/* Side B */}
-        <button
-          onClick={() => {
-            triggerImpact('light');
-            setSelectedSide('B');
-          }}
-          className={`p-3 rounded-xl border text-left transition-all duration-200 ${
-            selectedSide === 'B'
-              ? 'bg-cyber-pink/15 border-cyber-pink shadow-[0_0_12px_rgba(255,0,85,0.25)]'
-              : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-pink/50'
-          }`}
-        >
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-chakra font-bold text-cyber-pink">GIOCATORE B</span>
-            <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-              <span>{betsBNum.toFixed(1)}</span>
-              <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-            </span>
+        {isPlayer ? (
+          <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-chakra font-bold text-cyber-pink">GIOCATORE B</span>
+              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                <span>{betsBNum.toFixed(1)}</span>
+                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+              </span>
+            </div>
+            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+              {oddsB.toFixed(2)}x
+            </div>
           </div>
-          <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-            {oddsB.toFixed(2)}x
-          </div>
-        </button>
+        ) : (
+          <button
+            onClick={() => {
+              triggerImpact('light');
+              setSelectedSide('B');
+            }}
+            className={`p-3 rounded-xl border text-left transition-all duration-200 ${
+              selectedSide === 'B'
+                ? 'bg-cyber-pink/15 border-cyber-pink shadow-[0_0_12px_rgba(255,0,85,0.25)]'
+                : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-pink/50'
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-chakra font-bold text-cyber-pink">GIOCATORE B</span>
+              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                <span>{betsBNum.toFixed(1)}</span>
+                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+              </span>
+            </div>
+            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+              {oddsB.toFixed(2)}x
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Pool Distribution Bar */}
@@ -132,80 +170,92 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         />
       </div>
 
-      {/* Quick Stake Buttons Grid (Includes up to 100 GRAM) */}
-      <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra">
-          <span>Seleziona o digita importo:</span>
-          <span className="flex items-center space-x-1">
-            <span>Limite max: {GAME_CONFIG.MAX_WAGER}</span>
-            <GramIcon className="w-3 h-3 text-slate-400" />
+      {/* Scommesse Section: Notice for Duelists or Bet Controls for Spectators */}
+      {isPlayer ? (
+        <div className="p-3.5 rounded-xl bg-cyber-bg/70 border border-cyber-cyan/30 text-center flex items-center justify-center space-x-2.5">
+          <Swords className="w-4 h-4 text-cyber-cyan shrink-0" />
+          <span className="text-xs font-chakra text-slate-300">
+            Sei un combattente in questa arena: le scommesse da spettatore sono disabilitate per i duellanti.
           </span>
         </div>
+      ) : (
+        <>
+          {/* Quick Stake Buttons Grid (Includes up to 100 GRAM) */}
+          <div className="space-y-2 mb-3">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra">
+              <span>Seleziona o digita importo:</span>
+              <span className="flex items-center space-x-1">
+                <span>Limite max: {GAME_CONFIG.MAX_WAGER}</span>
+                <GramIcon className="w-3 h-3 text-slate-400" />
+              </span>
+            </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-          {GAME_CONFIG.PRESET_SPECTATOR_BETS.map((amt) => (
-            <button
-              key={amt}
-              onClick={() => handleQuickAmount(amt)}
-              className={`py-1.5 px-1 rounded-lg text-xs font-chakra font-bold border transition-all flex items-center justify-center space-x-0.5 ${
-                betAmount === amt
-                  ? 'bg-cyber-cyan/25 border-cyber-cyan text-cyber-cyan shadow-sm'
-                  : 'bg-cyber-bg border-cyber-border text-slate-300 hover:text-white hover:border-cyber-border/80'
-              }`}
-            >
-              <span>+{amt}</span>
-              <GramIcon className="w-2.5 h-2.5" />
-            </button>
-          ))}
-        </div>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+              {GAME_CONFIG.PRESET_SPECTATOR_BETS.map((amt) => (
+                <button
+                  key={amt}
+                  onClick={() => handleQuickAmount(amt)}
+                  className={`py-1.5 px-1 rounded-lg text-xs font-chakra font-bold border transition-all flex items-center justify-center space-x-0.5 ${
+                    betAmount === amt
+                      ? 'bg-cyber-cyan/25 border-cyber-cyan text-cyber-cyan shadow-sm'
+                      : 'bg-cyber-bg border-cyber-border text-slate-300 hover:text-white hover:border-cyber-border/80'
+                  }`}
+                >
+                  <span>+{amt}</span>
+                  <GramIcon className="w-2.5 h-2.5" />
+                </button>
+              ))}
+            </div>
 
-        {/* Custom Input Field */}
-        <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5">
-          <span className="text-xs text-slate-400 font-chakra">Altro importo:</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={betAmount}
-            onChange={handleCustomInput}
-            placeholder={`1 - ${GAME_CONFIG.MAX_WAGER}`}
-            className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
-          />
-          <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
-        </div>
-        {isOverMax && (
-          <p className="text-[11px] text-cyber-pink font-chakra">
-            Attenzione: L'importo massimo consentito è {GAME_CONFIG.MAX_WAGER} GRAM.
-          </p>
-        )}
-      </div>
+            {/* Custom Input Field */}
+            <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5">
+              <span className="text-xs text-slate-400 font-chakra">Altro importo:</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={betAmount}
+                onChange={handleCustomInput}
+                placeholder={`1 - ${GAME_CONFIG.MAX_WAGER}`}
+                className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
+              />
+              <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
+            </div>
+            {isOverMax && (
+              <p className="text-[11px] text-cyber-pink font-chakra">
+                Attenzione: L'importo massimo consentito è {GAME_CONFIG.MAX_WAGER} GRAM.
+              </p>
+            )}
+          </div>
 
-      {/* Place Bet Action Button - Clean, balanced, centered, no squeezed icon */}
-      <button
-        onClick={handlePlaceBet}
-        disabled={disabled || !betAmount || parsedBet <= 0 || isOverMax}
-        className={`w-full py-3 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
-          disabled || !betAmount || parsedBet <= 0 || isOverMax
-            ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
-            : selectedSide === 'A'
-            ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan'
-            : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink'
-        }`}
-      >
-        <div className="flex items-center justify-center space-x-2">
-          <Coins className="w-4 h-4 shrink-0" />
-          <span>PUNTA</span>
-          <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
-            <span>{betAmount || '0'}</span>
-            <GramIcon className="w-3.5 h-3.5" />
-          </span>
-          <span>SU GIOCATORE {selectedSide}</span>
-        </div>
-        <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-          <span>Vincita stimata:</span>
-          <span className="font-extrabold text-xs">+{estimatedPayout}</span>
-          <GramIcon className="w-3 h-3" />
-        </div>
-      </button>
+          {/* Place Bet Action Button - Clean, balanced, centered, no squeezed icon */}
+          <button
+            onClick={handlePlaceBet}
+            disabled={disabled || !betAmount || parsedBet <= 0 || isOverMax}
+            className={`w-full py-3 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
+              disabled || !betAmount || parsedBet <= 0 || isOverMax
+                ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
+                : selectedSide === 'A'
+                ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan'
+                : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <Coins className="w-4 h-4 shrink-0" />
+              <span>PUNTA</span>
+              <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
+                <span>{betAmount || '0'}</span>
+                <GramIcon className="w-3.5 h-3.5" />
+              </span>
+              <span>SU GIOCATORE {selectedSide}</span>
+            </div>
+            <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
+              <span>Vincita stimata:</span>
+              <span className="font-extrabold text-xs">+{estimatedPayout}</span>
+              <GramIcon className="w-3 h-3" />
+            </div>
+          </button>
+        </>
+      )}
     </div>
   );
 };

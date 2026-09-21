@@ -77,10 +77,11 @@ export const Arena: React.FC<ArenaProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchMatches = async () => {
-    if (!serverUrl) return;
     setIsRefreshing(true);
+    const minSpinPromise = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      const res = await fetch(`${serverUrl}/api/matches`);
+      const url = serverUrl ? `${serverUrl}/api/matches?_t=${Date.now()}` : `/api/matches?_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (data?.matches && Array.isArray(data.matches)) {
@@ -93,13 +94,13 @@ export const Arena: React.FC<ArenaProps> = ({
     } catch (err) {
       console.warn('Backend match polling failed (offline or pending):', err);
     } finally {
+      await minSpinPromise;
       setIsRefreshing(false);
     }
   };
 
   // Fetch live matches from server if available
   useEffect(() => {
-    if (!serverUrl) return;
     fetchMatches();
     const interval = setInterval(fetchMatches, 8000);
     return () => clearInterval(interval);
@@ -273,12 +274,29 @@ export const Arena: React.FC<ArenaProps> = ({
     setRole('spectator');
   };
 
+  const currentActiveMatch = matches.find((m) => m.matchId === activeMatchId);
+  const isCurrentCreator = currentActiveMatch && userAddress
+    ? currentActiveMatch.playerA.wallet.toLowerCase() === userAddress.toLowerCase()
+    : false;
+  const isMatchPlayer = role === 'player' ||
+    Boolean(
+      userAddress &&
+      currentActiveMatch &&
+      (userAddress.toLowerCase() === currentActiveMatch.playerA.wallet.toLowerCase() ||
+        (currentActiveMatch.playerB && userAddress.toLowerCase() === currentActiveMatch.playerB.wallet.toLowerCase()))
+    );
+
   const handleReady = () => {
     setIsReady(true);
     socketData.sendReady();
   };
 
   const handleSpectatorBet = async (side: 'A' | 'B', amountTon: string) => {
+    if (isMatchPlayer) {
+      setCreateError('I duellanti non possono piazzare scommesse da spettatore su questo duello.');
+      return;
+    }
+
     if (!userAddress) {
       openWalletModal();
       setCreateError('Devi connettere il tuo Wallet Tonkeeper per piazzare una scommessa.');
@@ -376,11 +394,6 @@ export const Arena: React.FC<ArenaProps> = ({
       setIsCancelling(false);
     }
   };
-
-  const currentActiveMatch = matches.find((m) => m.matchId === activeMatchId);
-  const isCurrentCreator = currentActiveMatch && userAddress
-    ? currentActiveMatch.playerA.wallet.toLowerCase() === userAddress.toLowerCase()
-    : false;
 
   const activeWagerTon = currentActiveMatch
     ? (parseFloat(currentActiveMatch.wagerAmountNano) / 1e9).toFixed(2)
@@ -642,6 +655,7 @@ export const Arena: React.FC<ArenaProps> = ({
             totalBetsB={socketData.totalBetsB}
             onBet={handleSpectatorBet}
             disabled={socketData.roomState === 'MATCH_SETTLED'}
+            isPlayer={isMatchPlayer}
           />
         </div>
       ) : (

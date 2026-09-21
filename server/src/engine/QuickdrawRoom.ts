@@ -566,7 +566,16 @@ export class QuickdrawRoom {
   }
 
   // Update spectator betting pool
-  public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint) {
+  public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint, bettorWallet?: string) {
+    if (
+      bettorWallet &&
+      (bettorWallet.toLowerCase() === this.playerA.walletAddress.toLowerCase() ||
+        (this.playerB && bettorWallet.toLowerCase() === this.playerB.walletAddress.toLowerCase()))
+    ) {
+      console.warn(`[QuickdrawRoom] Duelist ${bettorWallet} attempted to place a spectator bet. Denied.`);
+      return;
+    }
+
     if (target === 'A') {
       this.totalBetsA += amountNano;
     } else {

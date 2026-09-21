@@ -118,11 +118,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 triggerImpact('light');
                 onRefreshMatches();
               }}
-              className="text-[11px] font-chakra text-slate-400 hover:text-cyber-cyan transition-all flex items-center space-x-1.5 py-1 px-2.5 rounded-lg bg-cyber-bg/60 border border-cyber-border/80 hover:border-cyber-cyan/50"
+              disabled={isRefreshing}
+              className={`text-[11px] font-chakra transition-all flex items-center space-x-1.5 py-1 px-2.5 rounded-lg border active:scale-95 ${
+                isRefreshing
+                  ? 'bg-cyber-cyan/10 border-cyber-cyan text-cyber-cyan cursor-wait'
+                  : 'text-slate-400 hover:text-cyber-cyan bg-cyber-bg/60 border-cyber-border/80 hover:border-cyber-cyan/50'
+              }`}
               title="Aggiorna lista sfide"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyber-cyan' : ''}`} />
-              <span>Aggiorna</span>
+              <span>{isRefreshing ? 'Aggiornamento...' : 'Aggiorna'}</span>
             </button>
           )}
         </div>

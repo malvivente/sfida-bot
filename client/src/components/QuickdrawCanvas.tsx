@@ -71,9 +71,10 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
     onTap();
   };
 
-  const isFireSignal = lastSignal === 'FIRE!' && roomState !== 'MATCH_SETTLED';
-  const isDecoyHold = lastSignal === 'HOLD!' && roomState !== 'MATCH_SETTLED';
-  const isMisfire = lastSignal === 'MISFIRE!' && roomState !== 'MATCH_SETTLED';
+  const isRoundEnd = roomState === 'ROUND_END';
+  const isFireSignal = lastSignal === 'FIRE!' && roomState === 'SIGNAL_FIRED';
+  const isDecoyHold = lastSignal === 'HOLD!' && (roomState === 'WAITING_FOR_SIGNAL' || roomState === 'ROUND_START');
+  const isMisfire = (lastSignal === 'MISFIRE!' || feedMessage.includes('Falsa partenza')) && (isRoundEnd || roomState === 'FORFEITED');
 
   const wagerNum = parseFloat(wagerTon) || 1.0;
   const winnerPayoutTon = (wagerNum * 2 * 0.96).toFixed(2);
@@ -173,7 +174,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
           )}
 
           {/* Decoy HOLD Signal */}
-          {isDecoyHold && (
+          {!isRoundEnd && isDecoyHold && (
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: [1, 1.1, 1] }}
@@ -191,7 +192,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
           )}
 
           {/* Real FIRE Signal */}
-          {isFireSignal && (
+          {!isRoundEnd && isFireSignal && (
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: [1, 1.15, 1], opacity: 1 }}
@@ -208,25 +209,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             </motion.div>
           )}
 
-          {/* Misfire Warning */}
-          {isMisfire && (
-            <motion.div
-              initial={{ x: 0 }}
-              animate={{ x: [-10, 10, -10, 10, 0] }}
-              className="flex flex-col items-center"
-            >
-              <ShieldAlert className="w-14 h-14 text-cyber-pink mb-2" />
-              <span className="text-3xl font-orbitron font-extrabold text-cyber-pink neon-text-pink">
-                FALSA PARTENZA!
-              </span>
-              <span className="text-xs text-slate-300 font-chakra mt-1">
-                Premuto troppo presto. Round perso!
-              </span>
-            </motion.div>
-          )}
-
           {/* Waiting in round */}
-          {roomState === 'WAITING_FOR_SIGNAL' && !isDecoyHold && (
+          {!isRoundEnd && roomState === 'WAITING_FOR_SIGNAL' && !isDecoyHold && (
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 border-2 border-cyber-cyan/40 border-t-cyber-cyan rounded-full animate-spin mb-3" />
               <span className="text-sm font-orbitron font-bold text-cyber-cyan tracking-widest uppercase">
@@ -236,28 +220,55 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             </div>
           )}
 
-          {/* Round Winner & Reaction Time Readout */}
-          {roomState === 'ROUND_END' && !isMisfire && (
+          {/* Dedicated Round Result Overlay Banner (Clean, centered, no overlap) */}
+          {isRoundEnd && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-full max-w-xs mx-auto p-4 rounded-2xl bg-cyber-bg/95 border border-cyber-cyan/40 shadow-[0_0_25px_rgba(0,240,255,0.15)] flex flex-col items-center text-center"
             >
-              <Trophy className="w-10 h-10 text-cyber-amber mb-2" />
-              <span className="text-lg font-orbitron font-bold text-slate-100">{roundWinner || 'Round Concluso'}</span>
-              {lastReactionTimeMs !== null && (
-                <div className="mt-2 bg-cyber-bg/80 border border-cyber-cyan/40 px-3 py-1.5 rounded-lg flex items-center space-x-2">
-                  <span className="text-xs text-slate-400 font-chakra">Tempo di Reazione:</span>
-                  <span className="text-sm font-chakra font-bold text-cyber-cyan">
-                    {lastReactionTimeMs}ms
+              {isMisfire ? (
+                <>
+                  <ShieldAlert className="w-10 h-10 text-cyber-pink mb-1.5 animate-pulse" />
+                  <span className="text-sm font-orbitron font-extrabold text-cyber-pink uppercase tracking-wider">
+                    FALSA PARTENZA!
                   </span>
-                </div>
+                  <span className="text-xs text-slate-300 font-chakra mt-1">
+                    {feedMessage || 'Grilletto premuto prima del segnale.'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Trophy className="w-9 h-9 text-cyber-amber mb-1.5 animate-bounce" />
+                  <span className="text-[11px] font-chakra uppercase tracking-widest text-slate-400">
+                    ROUND {currentRound} ASSEGNATO
+                  </span>
+                  <span className="text-base font-orbitron font-black text-white mt-0.5">
+                    {roundWinner || 'Round Concluso'}
+                  </span>
+                  {lastReactionTimeMs !== null && (
+                    <div className="mt-2.5 bg-cyber-card border border-cyber-cyan/30 px-3 py-1 rounded-xl flex items-center space-x-2">
+                      <span className="text-[11px] text-slate-400 font-chakra">Riflesso:</span>
+                      <span className="text-xs font-chakra font-black text-cyber-cyan">
+                        {lastReactionTimeMs} ms
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
+
+              {/* Intermission status */}
+              <div className="mt-3 flex items-center space-x-1.5 text-[11px] text-slate-400 font-rajdhani">
+                <Loader2 className="w-3 h-3 animate-spin text-cyber-cyan" />
+                <span>Prossimo round tra pochi istanti...</span>
+              </div>
             </motion.div>
           )}
 
-          {/* Feed Message */}
-          <p className="text-xs text-slate-400 font-rajdhani mt-4 max-w-xs">{feedMessage}</p>
+          {/* Feed Message (only if not round end to avoid clutter) */}
+          {!isRoundEnd && (
+            <p className="text-xs text-slate-400 font-rajdhani mt-4 max-w-xs">{feedMessage}</p>
+          )}
         </div>
       )}
 
@@ -378,6 +389,14 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                   </button>
                 )}
               </div>
+            ) : isRoundEnd ? (
+              <button
+                disabled
+                className="w-full h-24 rounded-2xl font-orbitron font-bold text-xs uppercase tracking-widest bg-cyber-bg/70 border border-cyber-border/80 text-slate-400 flex items-center justify-center space-x-2 cursor-not-allowed opacity-90 select-none shadow-inner"
+              >
+                <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
+                <span>ATTENDI IL PROSSIMO ROUND...</span>
+              </button>
             ) : (
               <button
                 onPointerDown={handleTap}
