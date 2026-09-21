@@ -396,7 +396,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       const isPlayerA = Boolean(
         (userAddress && areAddressesEqual(m.playerA?.wallet, userAddress)) ||
-        (userId && (m.playerA as any)?.telegramUserId === userId) ||
+        (userId && String((m.playerA as any)?.telegramUserId) === String(userId)) ||
         (fullName && m.playerA?.name === fullName) ||
         (username && (m.playerA?.name === `@${username}` || m.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
       );
@@ -404,7 +404,7 @@ export const Arena: React.FC<ArenaProps> = ({
       const isPlayerB = Boolean(
         m.playerB && (
           (userAddress && areAddressesEqual(m.playerB?.wallet, userAddress)) ||
-          (userId && (m.playerB as any)?.telegramUserId === userId) ||
+          (userId && String((m.playerB as any)?.telegramUserId) === String(userId)) ||
           (fullName && m.playerB?.name === fullName) ||
           (username && (m.playerB?.name === `@${username}` || m.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
           (displayName && m.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
@@ -481,7 +481,11 @@ export const Arena: React.FC<ArenaProps> = ({
         }
       }
       fetchUserBalance();
-      setCancelSuccessMsg(`Match #${matchIdToCancel} cancelled. Wager and fee refunded to your balance!`);
+      if (matchToCancel.playerB) {
+        setCancelSuccessMsg(`Match #${matchIdToCancel} cancelled. Wagers refunded to both players!`);
+      } else {
+        setCancelSuccessMsg(`Match #${matchIdToCancel} cancelled. Wager and fee refunded to your balance!`);
+      }
       setMatches((prev) => {
         const updated = prev.filter((m) => m.matchId !== matchIdToCancel);
         try {
@@ -518,7 +522,7 @@ export const Arena: React.FC<ArenaProps> = ({
     currentActiveMatch &&
     (
       (userAddress && areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress)) ||
-      (userId && (currentActiveMatch.playerA as any)?.telegramUserId === userId) ||
+      (userId && String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId)) ||
       (fullName && currentActiveMatch.playerA.name === fullName) ||
       (username && (currentActiveMatch.playerA.name === `@${username}` || currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase())))
     )
@@ -528,8 +532,20 @@ export const Arena: React.FC<ArenaProps> = ({
     currentActiveMatch &&
     (
       (userAddress && (areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress) || areAddressesEqual(currentActiveMatch.playerB?.wallet, userAddress))) ||
-      (userId && ((currentActiveMatch.playerA as any)?.telegramUserId === userId || (currentActiveMatch.playerB as any)?.telegramUserId === userId)) ||
+      (userId && (String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId) || String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId))) ||
       (username && (currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) || currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())))
+    )
+  );
+
+  const canCancelCurrentMatch = Boolean(
+    role === 'player' &&
+    isCurrentCreator &&
+    currentActiveMatch &&
+    (
+      socketData.roomState === 'LOBBY' ||
+      socketData.roomState === 'BETTING_WINDOW' ||
+      currentActiveMatch.state === 'LOBBY' ||
+      currentActiveMatch.state === 'BETTING_WINDOW'
     )
   );
 
@@ -568,6 +584,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
             <p className="text-[11px] text-slate-400 font-rajdhani">
               The wager and creation fee will be refunded immediately back to your in-bot balance (0 gas).
+              {matchToCancel.playerB && ' Since an opponent joined, their wager will also be refunded.'}
             </p>
 
             <div className="flex space-x-2.5 pt-1">
@@ -673,7 +690,7 @@ export const Arena: React.FC<ArenaProps> = ({
               <span>BACK TO LOBBY</span>
             </button>
 
-            {role === 'player' && isCurrentCreator && currentActiveMatch && !currentActiveMatch.playerB && (
+            {canCancelCurrentMatch && currentActiveMatch && (
               <button
                 onClick={() => handleCancelMatch(currentActiveMatch)}
                 className="flex items-center space-x-1 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95"
@@ -705,7 +722,7 @@ export const Arena: React.FC<ArenaProps> = ({
             onReady={handleReady}
             onTap={socketData.sendTap}
             isCreator={isCurrentCreator}
-            onCancelMatch={currentActiveMatch && !currentActiveMatch.playerB ? () => handleCancelMatch(currentActiveMatch) : undefined}
+            onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
             wagerTon={socketData.activeWagerTon || activeWagerTon}
             isWinner={isUserWinner}
             onClaimPayout={isUserWinner ? handleClaimPayout : undefined}

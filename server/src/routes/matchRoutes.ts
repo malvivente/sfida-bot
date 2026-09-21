@@ -44,12 +44,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
           wallet: r.playerA.walletAddress,
           name: r.playerA.username,
           score: r.playerA.score,
+          telegramUserId: r.playerA.telegramId,
         },
         playerB: r.playerB
           ? {
               wallet: r.playerB.walletAddress,
               name: r.playerB.username,
               score: r.playerB.score,
+              telegramUserId: r.playerB.telegramId,
             }
           : null,
         wagerAmountNano: r.config.wagerAmountNano.toString(),
@@ -103,6 +105,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         name: room.playerA.username,
         score: room.playerA.score,
         ready: room.playerA.ready,
+        telegramUserId: room.playerA.telegramId,
       },
       playerB: room.playerB
         ? {
@@ -110,6 +113,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
             name: room.playerB.username,
             score: room.playerB.score,
             ready: room.playerB.ready,
+            telegramUserId: room.playerB.telegramId,
           }
         : null,
       wagerAmountNano: room.config.wagerAmountNano.toString(),
@@ -243,6 +247,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     // Instant Room Creation: Room enters LOBBY immediately
     room.state = 'LOBBY';
+    room.playerA.telegramId = body.telegramUserId || '';
+    room.playerA.username = body.telegramUsername || 'Player A';
 
     return reply.send({
       success: true,
@@ -306,7 +312,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       `Wager for match #${id}`
     );
 
-    // Assign Player B and transition room
+    // Assign Player B and keep room in LOBBY until both ready up
     room.playerB = {
       walletAddress: body.playerBAddress,
       telegramId: body.telegramUserId || '',
@@ -316,7 +322,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       score: 0,
     };
     room.config.playerBAddress = body.playerBAddress;
-    room.state = 'BETTING_WINDOW';
+    room.state = 'LOBBY';
 
     room.broadcast({
       type: 'ROOM_UPDATE',
@@ -325,8 +331,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
         wallet: room.playerB.walletAddress,
         name: room.playerB.username,
         score: 0,
+        telegramUserId: room.playerB.telegramId,
       },
-      message: `${room.playerB.username} has joined the Arena! Prepare to duel!`,
+      message: `${room.playerB.username} has joined the Arena! Ready up to duel!`,
     });
 
     return reply.send({
@@ -614,38 +621,65 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({ success: true, depositAddress, treasuryOwner });
   });
 
-  // Delete / cancel match endpoint (refunds wager + creation fee if no opponent joined)
+  // Delete / cancel match endpoint (refunds players if match has not started active combat)
   fastify.delete('/api/matches/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
 
     if (refundedMatchIds.has(id)) {
       roomManager.removeRoom(id);
-      return reply.status(400).send({ error: 'ALREADY_REFUNDED', message: 'Match was already cancelled and refunded.' });
+      return reply.send({ success: true, message: 'Match was already cancelled and refunded.' });
     }
 
     const room = roomManager.getRoom(id);
     if (!room) {
-      return reply.status(404).send({ error: 'MATCH_NOT_FOUND', message: 'Match does not exist or was already closed.' });
+      refundedMatchIds.add(id);
+      return reply.send({ success: true, message: 'Match removed from memory.' });
     }
 
-    if (room.state === 'LOBBY' && !room.playerB) {
-      refundedMatchIds.add(id);
-      const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
-      const { creationFeeGram } = feeConfig.getConfig();
-      const refundTotal = (wagerGram + creationFeeGram).toFixed(2);
+    const canCancel = room.state === 'LOBBY' || room.state === 'WAITING_FOR_DEPLOY' || room.state === 'BETTING_WINDOW';
+    if (!canCancel) {
+      return reply.status(400).send({
+        error: 'CANNOT_CANCEL',
+        message: 'Match cannot be cancelled once active combat rounds have begun.',
+      });
+    }
+
+    refundedMatchIds.add(id);
+    const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
+    const { creationFeeGram } = feeConfig.getConfig();
+
+    // 1. Refund Player A: wager + creation fee
+    const refundPlayerATotal = (wagerGram + creationFeeGram).toFixed(2);
+    await dbService.refundUserBalance(
+      room.playerA.walletAddress,
+      refundPlayerATotal,
+      `Refund for cancelled match #${id}`
+    );
+    console.log(`[matchRoutes] Refunded ${refundPlayerATotal} GRAM to Player A (${room.playerA.walletAddress}) for cancelled match #${id}`);
+
+    // 2. If Player B has joined, refund Player B: wager
+    let refundPlayerBTotal = '0.00';
+    if (room.playerB?.walletAddress) {
+      refundPlayerBTotal = wagerGram.toFixed(2);
       await dbService.refundUserBalance(
-        room.playerA.walletAddress,
-        refundTotal,
+        room.playerB.walletAddress,
+        refundPlayerBTotal,
         `Refund for cancelled match #${id}`
       );
-      console.log(`[matchRoutes] Refunded ${refundTotal} GRAM to ${room.playerA.walletAddress} for cancelled match #${id}`);
-      room.state = 'FORFEITED';
-    } else {
-      return reply.status(400).send({ error: 'CANNOT_CANCEL', message: 'Match cannot be cancelled once an opponent has joined or match started.' });
+      console.log(`[matchRoutes] Refunded ${refundPlayerBTotal} GRAM to Player B (${room.playerB.walletAddress}) for cancelled match #${id}`);
     }
 
+    // 3. Abort room, clean up all timers and broadcast cancellation
+    room.abortRoom(`Match #${id} was cancelled. Wagers have been refunded.`);
+
+    // 4. Remove room from RoomManager
     const deleted = roomManager.removeRoom(id);
-    return reply.send({ success: true, deleted });
+    return reply.send({
+      success: true,
+      deleted,
+      refundedPlayerA: refundPlayerATotal,
+      refundedPlayerB: refundPlayerBTotal,
+    });
   });
 
   // Admin manual balance adjustment endpoint

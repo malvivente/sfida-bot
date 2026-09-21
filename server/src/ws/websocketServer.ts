@@ -65,7 +65,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
         const data = JSON.parse(raw.toString());
         switch (data.type) {
           case 'READY':
-            room?.setPlayerReady(wallet);
+            room?.setPlayerReady(wallet, telegramId);
             break;
 
           case 'TAP':

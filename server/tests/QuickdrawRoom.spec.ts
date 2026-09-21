@@ -154,4 +154,86 @@ describe('Authoritative Cyber Quickdraw Engine Suite', () => {
     expect(odds.spectatorRakeNano).toBe(900000000n);
     expect(odds.distributablePoolNano).toBe(14100000000n);
   });
+
+  it('Evaluates Betting Window Countdown: Both players ready opens betting window and transitions to round 1', () => {
+    jest.useFakeTimers();
+
+    const room = new QuickdrawRoom({
+      matchId,
+      wagerAmountNano: 1000000000n,
+      playerAAddress: playerAWallet,
+      playerBAddress: playerBWallet,
+      bettingWindowSeconds: 5,
+    });
+
+    expect(room.state).toBe('LOBBY');
+
+    // Player A readies up
+    room.setPlayerReady(playerAWallet);
+    expect(room.playerA.ready).toBe(true);
+    expect(room.state).toBe('LOBBY');
+
+    // Player B readies up
+    room.setPlayerReady(playerBWallet);
+    expect(room.playerB?.ready).toBe(true);
+    expect(room.state).toBe('BETTING_WINDOW');
+
+    // Advance 5 seconds
+    jest.advanceTimersByTime(5000);
+
+    // After countdown reaches 0, round 1 starts
+    expect(room.state).toBe('ROUND_START');
+    expect(room.currentRound).toBe(1);
+
+    room.cleanupTimers();
+    jest.useRealTimers();
+  });
+
+  it('Evaluates Room Abort: abortRoom cleans up timers and transitions to FORFEITED', () => {
+    const room = new QuickdrawRoom({
+      matchId,
+      wagerAmountNano: 1000000000n,
+      playerAAddress: playerAWallet,
+      playerBAddress: playerBWallet,
+    });
+
+    room.state = 'BETTING_WINDOW';
+    room.abortRoom('Match cancelled by creator');
+    expect(room.state).toBe('FORFEITED');
+  });
+
+  it('Ensures Disconnecting in BETTING_WINDOW state does NOT trigger forfeit', () => {
+    jest.useFakeTimers();
+
+    let settled = false;
+    const room = new QuickdrawRoom(
+      {
+        matchId,
+        wagerAmountNano: 1000000000n,
+        playerAAddress: playerAWallet,
+        playerBAddress: playerBWallet,
+      },
+      async () => {
+        settled = true;
+      }
+    );
+
+    room.state = 'BETTING_WINDOW';
+    room.playerA.connected = true;
+    if (room.playerB) room.playerB.connected = true;
+
+    // Player B disconnects in BETTING_WINDOW
+    room.handleDisconnect(playerBWallet);
+    expect(room.playerB?.connected).toBe(false);
+
+    // Advance 10 seconds
+    jest.advanceTimersByTime(10000);
+
+    // Match MUST NOT be forfeited/settled due to disconnect in BETTING_WINDOW!
+    expect(settled).toBe(false);
+    expect(room.winnerAddress).toBeUndefined();
+
+    room.cleanupTimers();
+    jest.useRealTimers();
+  });
 });

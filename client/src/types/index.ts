@@ -15,6 +15,7 @@ export interface PlayerInfo {
   ready: boolean;
   score: number;
   connected?: boolean;
+  telegramUserId?: string;
 }
 
 export interface MatchResolution {

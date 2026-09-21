@@ -127,7 +127,7 @@ export class QuickdrawRoom {
   public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket): boolean {
     if (
       this.isSameWallet(wallet, this.playerA.walletAddress) ||
-      (telegramId && this.playerA.telegramId && this.playerA.telegramId === telegramId)
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
     ) {
       this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A');
       return true;
@@ -136,7 +136,7 @@ export class QuickdrawRoom {
     if (
       this.playerB &&
       (this.isSameWallet(wallet, this.playerB.walletAddress) ||
-        (telegramId && this.playerB.telegramId && this.playerB.telegramId === telegramId))
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
     ) {
       this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
       return true;
@@ -312,31 +312,45 @@ export class QuickdrawRoom {
   }
 
   // Player Ready Toggle
-  public setPlayerReady(wallet: string) {
-    if (this.isSameWallet(wallet, this.playerA.walletAddress)) {
+  public setPlayerReady(wallet: string, telegramId?: string) {
+    if (
+      this.isSameWallet(wallet, this.playerA.walletAddress) ||
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
+    ) {
       this.playerA.ready = true;
-    } else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) {
+    } else if (
+      this.playerB &&
+      (this.isSameWallet(wallet, this.playerB.walletAddress) ||
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
+    ) {
       this.playerB.ready = true;
     }
 
     this.broadcastRoomState();
 
-    // When both players are ready, open 20s Betting Window
+    // When both players are ready, open Betting Window
     if (this.playerA.ready && this.playerB?.ready && this.state === 'LOBBY') {
       this.startBettingWindow();
     }
   }
 
-  // 20-Second Spectator Pari-Mutuel Window
-  private startBettingWindow() {
+  // Spectator Pari-Mutuel Window (20s with spectators, 5s without)
+  public startBettingWindow() {
+    if (this.bettingTimer) {
+      clearInterval(this.bettingTimer);
+      this.bettingTimer = undefined;
+    }
+
     this.state = 'BETTING_WINDOW';
-    const duration = this.config.bettingWindowSeconds || 20;
+    const duration = this.config.bettingWindowSeconds || (this.spectators.size > 0 ? 20 : 5);
     let countdown = duration;
 
     this.broadcast({
       type: 'BETTING_WINDOW_OPEN',
       durationSeconds: duration,
-      message: 'Spectator Pari-Mutuel betting window is open! 20 seconds to place wagers.',
+      message: this.spectators.size > 0
+        ? 'Spectator Pari-Mutuel betting window is open! 20 seconds to place wagers.'
+        : 'Both fighters ready! Duel starts in 5 seconds...',
     });
 
     this.bettingTimer = setInterval(() => {
@@ -349,7 +363,10 @@ export class QuickdrawRoom {
       });
 
       if (countdown <= 0) {
-        if (this.bettingTimer) clearInterval(this.bettingTimer);
+        if (this.bettingTimer) {
+          clearInterval(this.bettingTimer);
+          this.bettingTimer = undefined;
+        }
         this.startRound(1);
       }
     }, 1000);
@@ -795,10 +812,29 @@ export class QuickdrawRoom {
     if (this.roundTimeout) clearTimeout(this.roundTimeout);
   }
 
-  private cleanupTimers() {
+  public abortRoom(reason: string = 'Match was cancelled.') {
+    this.cleanupTimers();
+    this.state = 'FORFEITED';
+    this.broadcast({
+      type: 'ROOM_CANCELLED',
+      state: 'CANCELLED',
+      message: reason,
+    });
+  }
+
+  public cleanupTimers() {
     this.cleanupRoundTimers();
-    if (this.bettingTimer) clearInterval(this.bettingTimer);
-    if (this.playerA.disconnectTimer) clearTimeout(this.playerA.disconnectTimer);
-    if (this.playerB?.disconnectTimer) clearTimeout(this.playerB.disconnectTimer);
+    if (this.bettingTimer) {
+      clearInterval(this.bettingTimer);
+      this.bettingTimer = undefined;
+    }
+    if (this.playerA.disconnectTimer) {
+      clearTimeout(this.playerA.disconnectTimer);
+      this.playerA.disconnectTimer = undefined;
+    }
+    if (this.playerB?.disconnectTimer) {
+      clearTimeout(this.playerB.disconnectTimer);
+      this.playerB.disconnectTimer = undefined;
+    }
   }
 }

@@ -206,6 +206,12 @@ export function useSocket({
             setForfeitCountdown(null);
             break;
 
+          case 'ROOM_CANCELLED':
+            setRoomState('FORFEITED');
+            if (msg.message) setFeedMessage(msg.message);
+            setForfeitCountdown(null);
+            break;
+
           case 'PLAYER_DISCONNECTED':
             if (msg.gracePeriodSeconds) setForfeitCountdown(msg.gracePeriodSeconds);
             if (msg.message) setFeedMessage(msg.message);

@@ -211,8 +211,18 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                 PARI-MUTUEL BETTING OPEN
               </span>
               <span className="text-3xl font-mono font-extrabold text-white mt-1">
-                00:{countdownSeconds !== null ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '20'}
+                00:{countdownSeconds !== null ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '05'}
               </span>
+
+              {isCreator && onCancelMatch && (
+                <button
+                  onClick={onCancelMatch}
+                  className="mt-3 px-3.5 py-1.5 rounded-lg text-xs font-orbitron font-bold text-cyber-pink bg-cyber-pink/15 hover:bg-cyber-pink/25 border border-cyber-pink/40 transition-all active:scale-95 flex items-center space-x-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>CANCEL & REFUND</span>
+                </button>
+              )}
             </motion.div>
           )}
 
@@ -458,6 +468,26 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                   }`}
                 >
                   {isReady ? 'READY • WAITING FOR OPPONENT' : '⚔️ READY TO DUEL'}
+                </button>
+
+                {isCreator && onCancelMatch && (
+                  <button
+                    onClick={onCancelMatch}
+                    className="w-full py-2.5 rounded-xl font-orbitron font-bold tracking-wider text-xs uppercase bg-cyber-pink/15 hover:bg-cyber-pink/25 border border-cyber-pink/40 text-cyber-pink transition-all active:scale-95 flex items-center justify-center space-x-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>CANCEL DUEL & REFUND</span>
+                  </button>
+                )}
+              </div>
+            ) : roomState === 'BETTING_WINDOW' ? (
+              <div className="w-full flex flex-col space-y-2">
+                <button
+                  disabled
+                  className="w-full h-20 rounded-2xl font-orbitron font-bold text-xs uppercase tracking-widest bg-cyber-bg/70 border border-cyber-amber/50 text-cyber-amber flex items-center justify-center space-x-2 select-none shadow-inner"
+                >
+                  <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
+                  <span>PREPARING ARENA • ROUND 1 STARTING SOON</span>
                 </button>
 
                 {isCreator && onCancelMatch && (
