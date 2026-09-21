@@ -10,7 +10,7 @@ interface ProfileProps {
 }
 
 export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
-  const { userAddress, openWalletModal } = useTonClashContract();
+  const { userAddress, openWalletModal, sendDepositTransaction } = useTonClashContract();
   const { userId, username, fullName, displayName, photoUrl, isPremium } = useTelegram();
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
@@ -39,44 +39,41 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
   // Fetch permanent database data, active matches, and internal balance
   const fetchUserData = async () => {
     if (!userAddress || !serverUrl) return;
-
     try {
-      // 1. Fetch match history from server DB
+      // 1. Fetch user history
       const historyRes = await fetch(`${serverUrl}/api/users/${userAddress}/history`);
       if (historyRes.ok) {
-        const hData = await historyRes.json();
-        if (hData?.history && Array.isArray(hData.history)) {
-          setHistory(hData.history);
-          try {
-            localStorage.setItem('sfidabot_duel_history', JSON.stringify(hData.history));
-          } catch {}
+        const data = await historyRes.json();
+        if (data?.history) {
+          setHistory(data.history);
+          localStorage.setItem('sfidabot_duel_history', JSON.stringify(data.history));
         }
       }
 
-      // 2. Fetch stats from server DB
+      // 2. Fetch server user stats
       const statsRes = await fetch(`${serverUrl}/api/users/${userAddress}/stats`);
       if (statsRes.ok) {
-        const sData = await statsRes.json();
-        if (sData?.stats) {
-          setServerStats(sData.stats);
+        const data = await statsRes.json();
+        if (data?.stats) {
+          setServerStats(data.stats);
         }
       }
 
-      // 3. Fetch active matches for user
+      // 3. Fetch user internal balance
+      const balRes = await fetch(`${serverUrl}/api/users/${userAddress}/balance?telegramId=${userId || ''}&username=${username || ''}`);
+      if (balRes.ok) {
+        const data = await balRes.json();
+        if (data?.account) {
+          setUserBalance(data.account);
+        }
+      }
+
+      // 4. Fetch user active matches (duels where user is Player A or B)
       const activeRes = await fetch(`${serverUrl}/api/users/${userAddress}/active-matches`);
       if (activeRes.ok) {
-        const aData = await activeRes.json();
-        if (aData?.matches && Array.isArray(aData.matches)) {
-          setActiveMatches(aData.matches);
-        }
-      }
-
-      // 4. Fetch internal balance
-      const balRes = await fetch(`${serverUrl}/api/users/${userAddress}/balance?telegramId=${userId || ''}&username=${encodeURIComponent(username || '')}`);
-      if (balRes.ok) {
-        const bData = await balRes.json();
-        if (bData?.account) {
-          setUserBalance(bData.account);
+        const data = await activeRes.json();
+        if (data?.matches) {
+          setActiveMatches(data.matches);
         }
       }
     } catch (err) {
@@ -91,33 +88,66 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
     return () => clearInterval(interval);
   }, [userAddress, serverUrl]);
 
-  // Deposit handler
+  // Real Deposit handler via TonConnect
   const handleDeposit = async () => {
-    if (!userAddress || !serverUrl) return;
+    if (!userAddress) {
+      openWalletModal();
+      return;
+    }
     const amt = parseFloat(depositAmount);
     if (isNaN(amt) || amt <= 0) return;
 
     setBalanceLoading(true);
     setBalanceMsg(null);
     try {
+      // 1. Fetch target deposit address from server
+      let targetDepositAddress = '';
+      try {
+        const addrRes = await fetch(`${serverUrl}/api/treasury/address`);
+        if (addrRes.ok) {
+          const addrData = await addrRes.json();
+          targetDepositAddress = addrData.depositAddress;
+        }
+      } catch (e) {
+        console.warn('Could not fetch treasury address, using fallback:', e);
+      }
+
+      if (!targetDepositAddress) {
+        targetDepositAddress = 'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+      }
+
+      setBalanceMsg({ type: 'success', text: 'Confirm the deposit transaction in your Tonkeeper wallet...' });
+
+      // 2. Real on-chain TonConnect transaction
+      const txResult = await sendDepositTransaction(
+        targetDepositAddress,
+        depositAmount,
+        `Sfida Deposit: ${userAddress}`
+      );
+
+      // 3. Confirm to server
+      const boc = txResult?.boc;
       const res = await fetch(`${serverUrl}/api/users/${userAddress}/deposit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountTon: depositAmount }),
+        body: JSON.stringify({
+          amountGram: depositAmount,
+          boc,
+        }),
       });
       const data = await res.json();
       if (res.ok && data?.account) {
         setUserBalance(data.account);
-        setBalanceMsg({ type: 'success', text: `Successfully deposited ${depositAmount} TON into internal balance!` });
+        setBalanceMsg({ type: 'success', text: `Deposit confirmed! +${depositAmount} GRAM added to your balance!` });
         setTimeout(() => {
           setShowDepositModal(false);
           setBalanceMsg(null);
-        }, 2000);
+        }, 2500);
       } else {
-        setBalanceMsg({ type: 'error', text: data?.error || 'Deposit failed.' });
+        setBalanceMsg({ type: 'error', text: data?.error || 'Deposit verification failed.' });
       }
     } catch (err: any) {
-      setBalanceMsg({ type: 'error', text: err?.message || 'Network error during deposit.' });
+      setBalanceMsg({ type: 'error', text: err?.message || 'Transaction was rejected or cancelled in wallet.' });
     } finally {
       setBalanceLoading(false);
     }
@@ -129,22 +159,29 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
     const amt = parseFloat(withdrawAmount);
     if (isNaN(amt) || amt <= 0) return;
 
+    const currentBal = parseFloat(userBalance?.balanceGram || userBalance?.balanceTon || '0');
+    if (currentBal < amt) {
+      setBalanceMsg({ type: 'error', text: `Insufficient balance! You have ${currentBal.toFixed(2)} GRAM.` });
+      return;
+    }
+
     setBalanceLoading(true);
     setBalanceMsg(null);
     try {
       const res = await fetch(`${serverUrl}/api/users/${userAddress}/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountTon: withdrawAmount }),
+        body: JSON.stringify({ amountGram: withdrawAmount }),
       });
       const data = await res.json();
       if (res.ok && data?.account) {
         setUserBalance(data.account);
-        setBalanceMsg({ type: 'success', text: `Withdrew ${withdrawAmount} TON to ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}!` });
+        const txNote = data.txHash ? ' (sent on-chain)' : '';
+        setBalanceMsg({ type: 'success', text: `Successfully withdrew ${withdrawAmount} GRAM${txNote} to your wallet!` });
         setTimeout(() => {
           setShowWithdrawModal(false);
           setBalanceMsg(null);
-        }, 2000);
+        }, 2500);
       } else {
         setBalanceMsg({ type: 'error', text: data?.error || 'Withdrawal failed. Check balance.' });
       }
@@ -165,15 +202,19 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
     ? serverStats.bestReaction
     : (validReactions.length > 0 ? `${Math.min(...validReactions)}` : '-');
 
-  const totalProfitsTon = serverStats ? serverStats.totalProfitsTon : history
-    .reduce((acc, h) => {
-      if (h.outcome === 'WIN') {
-        const p = parseFloat(h.payoutTon);
-        return acc + (isNaN(p) ? 0 : p);
-      }
-      return acc;
-    }, 0)
-    .toFixed(2);
+  const totalProfitsGram = serverStats
+    ? (serverStats.totalProfitsGram || serverStats.totalProfitsTon)
+    : history
+        .reduce((acc, h) => {
+          if (h.outcome === 'WIN') {
+            const p = parseFloat(h.payoutGram || h.payoutTon);
+            return acc + (isNaN(p) ? 0 : p);
+          }
+          return acc;
+        }, 0)
+        .toFixed(2);
+
+  const displayBalance = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
@@ -249,10 +290,10 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
           </div>
           <div className="flex items-baseline space-x-1.5">
             <span className="text-2xl font-chakra font-black text-white">
-              {userBalance?.balanceTon || '0.00'}
+              {displayBalance}
             </span>
             <GramIcon className="w-4 h-4 text-cyber-cyan inline" />
-            <span className="text-[11px] text-slate-400 font-rajdhani ml-2">TON Available</span>
+            <span className="text-[11px] text-slate-400 font-rajdhani ml-2">GRAM Available</span>
           </div>
         </div>
 
@@ -292,8 +333,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
             <div>
               <span className="text-xs font-chakra text-slate-400 block">TOTAL WINNINGS CREDITED</span>
               <div className="text-base font-chakra font-extrabold text-cyber-cyan flex items-center space-x-1">
-                <span>+{totalProfitsTon}</span>
+                <span>+{totalProfitsGram}</span>
                 <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
+                <span className="text-xs font-bold text-slate-400">GRAM</span>
               </div>
             </div>
           </div>
@@ -312,7 +354,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
 
           <div className="space-y-2">
             {activeMatches.map((m) => {
-              const wagerTon = (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2);
+              const wagerGram = (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2);
               const opponent =
                 userAddress && m.playerA.wallet.toLowerCase() === userAddress.toLowerCase()
                   ? (m.playerB?.name || 'Waiting for opponent')
@@ -331,7 +373,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                       </span>
                     </div>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
-                      vs <strong className="text-slate-200">{opponent}</strong> • Wager: {wagerTon} TON
+                      vs <strong className="text-slate-200">{opponent}</strong> • Wager: {wagerGram} GRAM
                     </span>
                   </div>
 
@@ -349,55 +391,54 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
         </div>
       )}
 
-      {/* Match History (Permanent Server Database Record) */}
-      <div className="bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl">
-        <div className="flex items-center justify-between mb-3">
+      {/* Match History */}
+      <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
             <History className="w-4 h-4 text-cyber-cyan" />
-            <span>PERMANENT DUEL HISTORY (DATABASE)</span>
+            <span>RECENT ARENA MATCHES</span>
           </h3>
+          <span className="text-xs font-chakra text-slate-500">{history.length} duels</span>
         </div>
 
         {history.length === 0 ? (
-          <div className="text-center py-8 bg-cyber-bg/40 border border-cyber-border/60 rounded-xl p-4">
-            <Swords className="w-8 h-8 text-slate-600 mx-auto mb-2 opacity-60" />
-            <p className="text-xs text-slate-300 font-semibold font-rajdhani">No duels completed yet</p>
-            <p className="text-[11px] text-slate-500 font-rajdhani mt-0.5">
-              Enter the Arena to challenge opponents and record your earnings in the database!
-            </p>
+          <div className="text-center py-8 text-slate-500 font-chakra text-xs">
+            No match records found yet. Challenge players in the Arena to record your duels!
           </div>
         ) : (
           <div className="space-y-2">
-            {history.map((item) => {
+            {history.slice(0, 10).map((item, index) => {
               const isWin = item.outcome === 'WIN';
-              const dateStr = new Date(item.timestamp).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                day: '2-digit',
-                month: 'short',
-              });
+              const dateStr = item.timestamp
+                ? new Date(item.timestamp).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : 'Recent';
 
               return (
                 <div
-                  key={item.matchId}
-                  className={`bg-cyber-bg/60 border rounded-xl p-3 flex items-center justify-between text-xs font-chakra transition-all ${
-                    isWin ? 'border-cyber-green/40 hover:border-cyber-green' : 'border-cyber-pink/30 hover:border-cyber-pink'
-                  }`}
+                  key={index}
+                  className="bg-cyber-bg/60 border border-cyber-border/80 rounded-xl p-3 flex items-center justify-between text-xs font-chakra"
                 >
-                  <div className="space-y-0.5">
+                  <div>
                     <div className="flex items-center space-x-2">
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-orbitron font-extrabold ${
-                          isWin ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-pink/20 text-cyber-pink'
+                        className={`font-bold font-orbitron text-[11px] px-1.5 py-0.2 rounded border ${
+                          isWin
+                            ? 'bg-cyber-green/15 text-cyber-green border-cyber-green/40'
+                            : 'bg-cyber-pink/15 text-cyber-pink border-cyber-pink/40'
                         }`}
                       >
                         {item.outcome}
                       </span>
-                      <span className="text-white font-bold tracking-wide">VS {item.opponentName}</span>
+                      <span className="text-white font-bold">vs {item.opponentName}</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 block font-rajdhani">
-                      Score: <strong className="text-slate-200">{item.score}</strong>
-                      {item.reactionTimeMs ? ` • Your Reaction: ${item.reactionTimeMs}ms` : ''} • {dateStr}
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      Score: {item.score}
+                      {item.reactionTimeMs ? ` • Reaction: ${item.reactionTimeMs}ms` : ''} • {dateStr}
                     </span>
                   </div>
 
@@ -407,7 +448,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                         isWin ? 'text-cyber-green' : 'text-cyber-pink'
                       }`}
                     >
-                      <span>{isWin ? `+${item.payoutTon}` : `-${item.wagerTon}`}</span>
+                      <span>{isWin ? `+${item.payoutGram || item.payoutTon}` : `-${item.wagerGram || item.wagerTon}`}</span>
                       <GramIcon className={`w-3.5 h-3.5 ${isWin ? 'text-cyber-green' : 'text-cyber-pink'}`} />
                     </span>
                     <span className="text-[10px] text-slate-500 block font-mono">#{item.matchId}</span>
@@ -425,11 +466,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
           <div className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <ArrowDownLeft className="w-4 h-4 text-cyber-cyan" />
-              <span>DEPOSIT TO IN-BOT BALANCE</span>
+              <span>DEPOSIT GRAM TO IN-BOT BALANCE</span>
             </h3>
 
             <p className="text-xs text-slate-300 font-chakra">
-              Deposit TON into your internal balance for instant one-click duels and 2X rematches.
+              Deposit GRAM into your in-bot balance for instant zero-gas duels and 2X rematches. Funds are securely held in custody.
             </p>
 
             {balanceMsg && (
@@ -442,7 +483,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-400 font-chakra block">Amount (TON):</label>
+              <label className="text-xs text-slate-400 font-chakra block">Amount (GRAM):</label>
               <div className="flex items-center space-x-2 bg-cyber-bg border border-cyber-border rounded-xl px-3 py-2">
                 <input
                   type="text"
@@ -467,7 +508,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                 disabled={balanceLoading}
                 className="flex-1 py-2.5 bg-cyber-cyan text-cyber-bg text-xs font-orbitron font-bold rounded-xl shadow-neon-cyan hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
               >
-                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>CONFIRM</span>}
+                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>CONFIRM DEPOSIT</span>}
               </button>
             </div>
           </div>
@@ -480,11 +521,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
           <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <ArrowUpRight className="w-4 h-4 text-cyber-pink" />
-              <span>WITHDRAW FROM IN-BOT BALANCE</span>
+              <span>WITHDRAW GRAM TO WALLET</span>
             </h3>
 
             <p className="text-xs text-slate-300 font-chakra">
-              Withdraw funds back to your connected TON wallet ({userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : ''}).
+              Withdraw funds back to your connected wallet ({userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : ''}).
             </p>
 
             {balanceMsg && (
@@ -498,8 +539,8 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-xs font-chakra text-slate-400">
-                <span>Amount (TON):</span>
-                <span>Available: {userBalance?.balanceTon || '0.00'} TON</span>
+                <span>Amount (GRAM):</span>
+                <span>Available: {displayBalance} GRAM</span>
               </div>
               <div className="flex items-center space-x-2 bg-cyber-bg border border-cyber-border rounded-xl px-3 py-2">
                 <input
@@ -525,7 +566,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                 disabled={balanceLoading}
                 className="flex-1 py-2.5 bg-cyber-pink text-white text-xs font-orbitron font-bold rounded-xl shadow-neon-pink hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
               >
-                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>WITHDRAW</span>}
+                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>WITHDRAW GRAM</span>}
               </button>
             </div>
           </div>

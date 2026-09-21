@@ -10,6 +10,7 @@ export interface StoredMatch {
   escrowAddress?: string;
   wagerAmountNano: string;
   wagerTon: string;
+  wagerGram?: string;
   playerAAddress: string;
   playerAName: string;
   playerBAddress?: string;
@@ -30,7 +31,9 @@ export interface UserMatchHistoryRecord {
   opponentName: string;
   opponentWallet?: string;
   wagerTon: string;
+  wagerGram: string;
   payoutTon: string;
+  payoutGram: string;
   outcome: 'WIN' | 'LOSS' | 'DRAW';
   reactionTimeMs?: number;
   score: string;
@@ -42,6 +45,7 @@ export interface UserStats {
   winRate: number;
   bestReaction: string;
   totalProfitsTon: string;
+  totalProfitsGram: string;
 }
 
 export interface UserAccount {
@@ -49,20 +53,48 @@ export interface UserAccount {
   telegramId?: string;
   username?: string;
   balanceNano: string;
-  balanceTon: string;
+  balanceTon: string; // for backward compatibility
+  balanceGram: string; // primary GRAM balance
   depositedTotalTon: string;
+  depositedTotalGram: string;
   withdrawnTotalTon: string;
+  withdrawnTotalGram: string;
   updatedAt: number;
 }
 
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND';
   amountNano: string;
-  amountTon: string;
+  amountTon: string; // for backward compatibility
+  amountGram: string; // primary GRAM amount
   timestamp: number;
   details?: string;
+}
+
+export interface TreasuryFeeEvent {
+  id: string;
+  type: 'CREATION_FEE' | 'DUEL_RAKE' | 'SPECTATOR_RAKE' | 'WITHDRAWAL';
+  amountGram: string;
+  matchId?: string;
+  recipient?: string;
+  timestamp: number;
+}
+
+export interface TreasuryData {
+  treasuryWallet: string;
+  claimableFeesGram: string;
+  totalEarnedFeesGram: string;
+  totalWithdrawnFeesGram: string;
+  totalMatchesRaked: number;
+  feeBreakdown: {
+    creationFeesGram: string;
+    duelRakeGram: string;
+    spectatorRakeGram: string;
+  };
+  history: TreasuryFeeEvent[];
+  lastUpdated: number;
 }
 
 export class DatabaseService {
@@ -70,10 +102,12 @@ export class DatabaseService {
   private matches: Map<string, StoredMatch> = new Map();
   private users: Map<string, UserAccount> = new Map();
   private transactions: BalanceTransaction[] = [];
+  private treasury: TreasuryData;
   private dataDir: string;
   private filePath: string;
   private usersFilePath: string;
   private txFilePath: string;
+  private treasuryFilePath: string;
   private initialized: boolean = false;
 
   private constructor() {
@@ -81,6 +115,28 @@ export class DatabaseService {
     this.filePath = path.join(this.dataDir, 'matches.json');
     this.usersFilePath = path.join(this.dataDir, 'users.json');
     this.txFilePath = path.join(this.dataDir, 'transactions.json');
+    this.treasuryFilePath = path.join(this.dataDir, 'treasury.json');
+
+    const defaultTreasuryWallet =
+      process.env.TREASURY_ADDRESS ||
+      process.env.OWNER_ADDRESS ||
+      'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+
+    this.treasury = {
+      treasuryWallet: defaultTreasuryWallet,
+      claimableFeesGram: '0.00',
+      totalEarnedFeesGram: '0.00',
+      totalWithdrawnFeesGram: '0.00',
+      totalMatchesRaked: 0,
+      feeBreakdown: {
+        creationFeesGram: '0.00',
+        duelRakeGram: '0.00',
+        spectatorRakeGram: '0.00',
+      },
+      history: [],
+      lastUpdated: Date.now(),
+    };
+
     this.loadData();
   }
 
@@ -110,9 +166,20 @@ export class DatabaseService {
 
       if (fs.existsSync(this.usersFilePath)) {
         const rawUsers = fs.readFileSync(this.usersFilePath, 'utf-8');
-        const userList: UserAccount[] = JSON.parse(rawUsers);
+        const userList: any[] = JSON.parse(rawUsers);
         for (const u of userList) {
-          this.users.set(u.walletAddress.toLowerCase(), u);
+          const bal = u.balanceGram || u.balanceTon || '0.00';
+          const dep = u.depositedTotalGram || u.depositedTotalTon || '0.00';
+          const wit = u.withdrawnTotalGram || u.withdrawnTotalTon || '0.00';
+          this.users.set(u.walletAddress.toLowerCase(), {
+            ...u,
+            balanceGram: bal,
+            balanceTon: bal,
+            depositedTotalGram: dep,
+            depositedTotalTon: dep,
+            withdrawnTotalGram: wit,
+            withdrawnTotalTon: wit,
+          });
         }
       } else {
         fs.writeFileSync(this.usersFilePath, JSON.stringify([], null, 2), 'utf-8');
@@ -120,9 +187,21 @@ export class DatabaseService {
 
       if (fs.existsSync(this.txFilePath)) {
         const rawTx = fs.readFileSync(this.txFilePath, 'utf-8');
-        this.transactions = JSON.parse(rawTx);
+        const txList: any[] = JSON.parse(rawTx);
+        this.transactions = txList.map((t) => ({
+          ...t,
+          amountGram: t.amountGram || t.amountTon || '0.00',
+          amountTon: t.amountTon || t.amountGram || '0.00',
+        }));
       } else {
         fs.writeFileSync(this.txFilePath, JSON.stringify([], null, 2), 'utf-8');
+      }
+
+      if (fs.existsSync(this.treasuryFilePath)) {
+        const rawTreasury = fs.readFileSync(this.treasuryFilePath, 'utf-8');
+        this.treasury = JSON.parse(rawTreasury);
+      } else {
+        this.persistData();
       }
 
       this.initialized = true;
@@ -142,7 +221,9 @@ export class DatabaseService {
       const userList = Array.from(this.users.values());
       fs.writeFileSync(this.usersFilePath, JSON.stringify(userList, null, 2), 'utf-8');
 
-      fs.writeFileSync(this.txFilePath, JSON.stringify(this.transactions.slice(-200), null, 2), 'utf-8');
+      fs.writeFileSync(this.txFilePath, JSON.stringify(this.transactions.slice(-300), null, 2), 'utf-8');
+
+      fs.writeFileSync(this.treasuryFilePath, JSON.stringify(this.treasury, null, 2), 'utf-8');
     } catch (err) {
       console.error('[DatabaseService] Failed to persist data to file:', err);
     }
@@ -158,8 +239,11 @@ export class DatabaseService {
         username: username || '',
         balanceNano: '0',
         balanceTon: '0.00',
+        balanceGram: '0.00',
         depositedTotalTon: '0.00',
+        depositedTotalGram: '0.00',
         withdrawnTotalTon: '0.00',
+        withdrawnTotalGram: '0.00',
         updatedAt: Date.now(),
       };
       this.users.set(key, account);
@@ -173,22 +257,24 @@ export class DatabaseService {
 
   public async creditUserBalance(
     walletAddress: string,
-    amountTon: string,
-    type: 'DEPOSIT' | 'MATCH_WIN',
+    amountGram: string,
+    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND',
     details?: string
   ): Promise<UserAccount> {
     const account = await this.getUserAccount(walletAddress);
-    const amountNum = parseFloat(amountTon) || 0;
-    const currentNum = parseFloat(account.balanceTon) || 0;
+    const amountNum = parseFloat(amountGram) || 0;
+    const currentNum = parseFloat(account.balanceGram || account.balanceTon || '0') || 0;
     const newBal = (currentNum + amountNum).toFixed(2);
-    const newNano = (BigInt(Math.round(parseFloat(newBal) * 1e9))).toString();
+    const newNano = BigInt(Math.round(parseFloat(newBal) * 1e9)).toString();
 
+    account.balanceGram = newBal;
     account.balanceTon = newBal;
     account.balanceNano = newNano;
     account.updatedAt = Date.now();
 
     if (type === 'DEPOSIT') {
-      const depTotal = (parseFloat(account.depositedTotalTon || '0') + amountNum).toFixed(2);
+      const depTotal = (parseFloat(account.depositedTotalGram || '0') + amountNum).toFixed(2);
+      account.depositedTotalGram = depTotal;
       account.depositedTotalTon = depTotal;
     }
 
@@ -196,8 +282,9 @@ export class DatabaseService {
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       walletAddress,
       type,
-      amountNano: (BigInt(Math.round(amountNum * 1e9))).toString(),
-      amountTon,
+      amountNano: BigInt(Math.round(amountNum * 1e9)).toString(),
+      amountTon: amountGram,
+      amountGram: amountGram,
       timestamp: Date.now(),
       details,
     });
@@ -208,27 +295,29 @@ export class DatabaseService {
 
   public async debitUserBalance(
     walletAddress: string,
-    amountTon: string,
-    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET',
+    amountGram: string,
+    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE',
     details?: string
   ): Promise<{ success: boolean; account?: UserAccount; error?: string }> {
     const account = await this.getUserAccount(walletAddress);
-    const amountNum = parseFloat(amountTon) || 0;
-    const currentNum = parseFloat(account.balanceTon) || 0;
+    const amountNum = parseFloat(amountGram) || 0;
+    const currentNum = parseFloat(account.balanceGram || account.balanceTon || '0') || 0;
 
     if (currentNum < amountNum) {
       return { success: false, error: 'Insufficient balance' };
     }
 
     const newBal = (currentNum - amountNum).toFixed(2);
-    const newNano = (BigInt(Math.round(parseFloat(newBal) * 1e9))).toString();
+    const newNano = BigInt(Math.round(parseFloat(newBal) * 1e9)).toString();
 
+    account.balanceGram = newBal;
     account.balanceTon = newBal;
     account.balanceNano = newNano;
     account.updatedAt = Date.now();
 
     if (type === 'WITHDRAW') {
-      const wTotal = (parseFloat(account.withdrawnTotalTon || '0') + amountNum).toFixed(2);
+      const wTotal = (parseFloat(account.withdrawnTotalGram || '0') + amountNum).toFixed(2);
+      account.withdrawnTotalGram = wTotal;
       account.withdrawnTotalTon = wTotal;
     }
 
@@ -236,8 +325,9 @@ export class DatabaseService {
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       walletAddress,
       type,
-      amountNano: (BigInt(Math.round(amountNum * 1e9))).toString(),
-      amountTon,
+      amountNano: BigInt(Math.round(amountNum * 1e9)).toString(),
+      amountTon: amountGram,
+      amountGram: amountGram,
       timestamp: Date.now(),
       details,
     });
@@ -246,10 +336,106 @@ export class DatabaseService {
     return { success: true, account };
   }
 
+  public async refundUserBalance(
+    walletAddress: string,
+    amountGram: string,
+    reason: string
+  ): Promise<UserAccount> {
+    return this.creditUserBalance(walletAddress, amountGram, 'REFUND', reason);
+  }
+
   public async getUserTransactions(walletAddress: string): Promise<BalanceTransaction[]> {
     const key = walletAddress.toLowerCase();
     return this.transactions.filter((tx) => tx.walletAddress.toLowerCase() === key);
   }
+
+  // --- Treasury Management Methods ---
+
+  public async getTreasuryData(): Promise<TreasuryData> {
+    const defaultWallet =
+      process.env.TREASURY_ADDRESS ||
+      process.env.OWNER_ADDRESS ||
+      'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+
+    if (this.treasury.treasuryWallet !== defaultWallet && defaultWallet) {
+      this.treasury.treasuryWallet = defaultWallet;
+    }
+    return this.treasury;
+  }
+
+  public async creditTreasury(
+    amountGram: string,
+    type: 'CREATION_FEE' | 'DUEL_RAKE' | 'SPECTATOR_RAKE',
+    matchId?: string
+  ): Promise<TreasuryData> {
+    const amountNum = parseFloat(amountGram) || 0;
+    if (amountNum <= 0) return this.treasury;
+
+    const currentClaimable = parseFloat(this.treasury.claimableFeesGram || '0');
+    const currentEarned = parseFloat(this.treasury.totalEarnedFeesGram || '0');
+
+    this.treasury.claimableFeesGram = (currentClaimable + amountNum).toFixed(2);
+    this.treasury.totalEarnedFeesGram = (currentEarned + amountNum).toFixed(2);
+    this.treasury.totalMatchesRaked = (this.treasury.totalMatchesRaked || 0) + 1;
+    this.treasury.lastUpdated = Date.now();
+
+    if (type === 'CREATION_FEE') {
+      const cur = parseFloat(this.treasury.feeBreakdown.creationFeesGram || '0');
+      this.treasury.feeBreakdown.creationFeesGram = (cur + amountNum).toFixed(2);
+    } else if (type === 'DUEL_RAKE') {
+      const cur = parseFloat(this.treasury.feeBreakdown.duelRakeGram || '0');
+      this.treasury.feeBreakdown.duelRakeGram = (cur + amountNum).toFixed(2);
+    } else if (type === 'SPECTATOR_RAKE') {
+      const cur = parseFloat(this.treasury.feeBreakdown.spectatorRakeGram || '0');
+      this.treasury.feeBreakdown.spectatorRakeGram = (cur + amountNum).toFixed(2);
+    }
+
+    this.treasury.history.push({
+      id: `fee_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      type,
+      amountGram: amountNum.toFixed(2),
+      matchId,
+      timestamp: Date.now(),
+    });
+
+    this.persistData();
+    console.log(`[Treasury] Credited ${amountGram} GRAM (${type}) to claimable fees. New total: ${this.treasury.claimableFeesGram} GRAM`);
+    return this.treasury;
+  }
+
+  public async withdrawTreasuryFees(
+    amountGram: string,
+    recipientWallet: string
+  ): Promise<{ success: boolean; data?: TreasuryData; error?: string }> {
+    const amountNum = parseFloat(amountGram) || 0;
+    const currentClaimable = parseFloat(this.treasury.claimableFeesGram || '0');
+
+    if (amountNum <= 0) {
+      return { success: false, error: 'Invalid withdrawal amount' };
+    }
+    if (amountNum > currentClaimable) {
+      return { success: false, error: `Insufficient claimable fees. Requested: ${amountNum} GRAM, Available: ${currentClaimable} GRAM` };
+    }
+
+    this.treasury.claimableFeesGram = (currentClaimable - amountNum).toFixed(2);
+    const currentWithdrawn = parseFloat(this.treasury.totalWithdrawnFeesGram || '0');
+    this.treasury.totalWithdrawnFeesGram = (currentWithdrawn + amountNum).toFixed(2);
+    this.treasury.lastUpdated = Date.now();
+
+    this.treasury.history.push({
+      id: `wit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      type: 'WITHDRAWAL',
+      amountGram: amountNum.toFixed(2),
+      recipient: recipientWallet,
+      timestamp: Date.now(),
+    });
+
+    this.persistData();
+    console.log(`[Treasury] Withdrew ${amountGram} GRAM to ${recipientWallet}. Remaining claimable: ${this.treasury.claimableFeesGram} GRAM`);
+    return { success: true, data: this.treasury };
+  }
+
+  // --- Match and History Methods ---
 
   public async saveMatch(record: StoredMatch): Promise<void> {
     this.matches.set(record.matchId, record);
@@ -275,7 +461,7 @@ export class DatabaseService {
 
       const isWinner = m.winnerAddress && m.winnerAddress.toLowerCase() === target;
       const outcome: 'WIN' | 'LOSS' | 'DRAW' = isWinner ? 'WIN' : 'LOSS';
-      const wagerTon = m.wagerTon || (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2);
+      const wagerTon = m.wagerTon || m.wagerGram || (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2);
       const payoutTon = isWinner ? (parseFloat(wagerTon) * 2 * 0.96).toFixed(2) : '0.00';
 
       const opponentName = isPlayerA ? (m.playerBName || 'Player B') : m.playerAName;
@@ -290,7 +476,9 @@ export class DatabaseService {
         opponentName,
         opponentWallet,
         wagerTon,
+        wagerGram: wagerTon,
         payoutTon,
+        payoutGram: payoutTon,
         outcome,
         reactionTimeMs: myReaction,
         score: `${myScore} - ${oppScore}`,
@@ -312,10 +500,10 @@ export class DatabaseService {
 
     const bestReaction = validReactions.length > 0 ? `${Math.min(...validReactions)}` : '-';
 
-    const totalProfitsTon = history
+    const totalProfits = history
       .reduce((acc, h) => {
         if (h.outcome === 'WIN') {
-          const p = parseFloat(h.payoutTon);
+          const p = parseFloat(h.payoutGram || h.payoutTon);
           return acc + (isNaN(p) ? 0 : p);
         }
         return acc;
@@ -327,7 +515,8 @@ export class DatabaseService {
       duelsWon,
       winRate,
       bestReaction,
-      totalProfitsTon,
+      totalProfitsTon: totalProfits,
+      totalProfitsGram: totalProfits,
     };
   }
 }

@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
+    "withdraw:fees": "tsx src/scripts/withdrawFees.ts",
     "test": "jest"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { signerService } from '../services/signer.js';
 import { dbService } from '../services/db.js';
+import { feeConfig } from '../config/feeConfig.js';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -531,13 +532,32 @@ export class QuickdrawRoom {
     });
 
     // Save match permanently in DatabaseService
-    const wagerTon = (parseFloat(this.config.wagerAmountNano.toString()) / 1e9).toFixed(2);
+    const wagerGram = (parseFloat(this.config.wagerAmountNano.toString()) / 1e9).toFixed(2);
+    const wagerNum = parseFloat(wagerGram);
+    const totalPot = wagerNum * 2;
+    const { duelRakePercent } = feeConfig.getConfig();
+    const rakeShare = duelRakePercent / 100;
+    const winnerShare = 1 - rakeShare;
+    const winnerPayoutGram = (totalPot * winnerShare).toFixed(2);
+    const rakeGram = (totalPot * rakeShare).toFixed(2);
+
+    // Credit winner's in-bot balance
+    dbService.creditUserBalance(winnerAddress, winnerPayoutGram, 'MATCH_WIN', `Won duel #${this.matchId}`).catch((err) => {
+      console.error(`[QuickdrawRoom] Error crediting winner balance for match #${this.matchId}:`, err);
+    });
+
+    // Credit platform rake to Treasury
+    dbService.creditTreasury(rakeGram, 'DUEL_RAKE', this.matchId.toString()).catch((err) => {
+      console.error(`[QuickdrawRoom] Error crediting duel rake for match #${this.matchId}:`, err);
+    });
+
     dbService
       .saveMatch({
         matchId: this.matchId.toString(),
         escrowAddress: this.escrowAddress,
         wagerAmountNano: this.config.wagerAmountNano.toString(),
-        wagerTon,
+        wagerTon: wagerGram,
+        wagerGram,
         playerAAddress: this.playerA.walletAddress,
         playerAName: this.playerA.username,
         playerBAddress: this.playerB?.walletAddress,

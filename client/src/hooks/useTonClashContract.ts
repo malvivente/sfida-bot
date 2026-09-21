@@ -213,6 +213,41 @@ export function useTonClashContract() {
     return await tonConnectUI.sendTransaction(transaction);
   };
 
+  // Send Real Deposit to Platform Smart Contract / Cassa
+  const sendDepositTransaction = async (
+    targetAddress: string,
+    amountGram: string,
+    comment?: string
+  ) => {
+    if (!wallet) {
+      tonConnectUI.openModal();
+      throw new Error('Please connect your Tonkeeper wallet first');
+    }
+    if (!targetAddress) {
+      throw new Error('Deposit destination address not available');
+    }
+
+    const amountNano = toNano(amountGram);
+    const commentStr = comment || `Sfida Deposit for ${userAddress}`;
+    const bodyCell = beginCell()
+      .storeUint(0, 32)
+      .storeStringTail(commentStr)
+      .endCell();
+
+    const transaction = {
+      validUntil: Math.floor(Date.now() / 1000) + 360,
+      messages: [
+        {
+          address: targetAddress,
+          amount: amountNano.toString(),
+          payload: bodyCell.toBoc().toString('base64'),
+        },
+      ],
+    };
+
+    return await tonConnectUI.sendTransaction(transaction);
+  };
+
   const openWalletModal = () => {
     tonConnectUI.openModal();
   };
@@ -220,6 +255,7 @@ export function useTonClashContract() {
   return {
     isConnected,
     userAddress,
+    sendDepositTransaction,
     createMatchOnChain,
     joinMatchOnChain,
     cancelMatchOnChain,

@@ -1,0 +1,11 @@
+{
+  "currency": "GRAM",
+  "creationFeeGram": 0.02,
+  "duelRakePercent": 4,
+  "spectatorRakePercent": 6,
+  "minWagerGram": 0.1,
+  "maxWagerGram": 100.0,
+  "minDepositGram": 0.1,
+  "minWithdrawGram": 0.1,
+  "presetsWagerGram": ["1", "2", "5", "10", "25", "50", "100"]
+}

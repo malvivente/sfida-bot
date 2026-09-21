@@ -92,8 +92,11 @@ export interface UserBalance {
   walletAddress: string;
   balanceNano: string;
   balanceTon: string;
+  balanceGram: string;
   depositedTotalTon: string;
+  depositedTotalGram: string;
   withdrawnTotalTon: string;
+  withdrawnTotalGram: string;
 }
 
 export interface DuelHistoryRecord {
@@ -102,7 +105,9 @@ export interface DuelHistoryRecord {
   opponentName: string;
   opponentWallet?: string;
   wagerTon: string;
+  wagerGram?: string;
   payoutTon: string;
+  payoutGram?: string;
   outcome: 'WIN' | 'LOSS' | 'DRAW';
   reactionTimeMs?: number;
   score: string;
@@ -114,5 +119,18 @@ export interface UserStats {
   winRate: number;
   bestReaction: string;
   totalProfitsTon: string;
+  totalProfitsGram?: string;
+}
+
+export interface FeeConfig {
+  currency: string;
+  creationFeeGram: number;
+  duelRakePercent: number;
+  spectatorRakePercent: number;
+  minWagerGram: number;
+  maxWagerGram: number;
+  minDepositGram: number;
+  minWithdrawGram: number;
+  presetsWagerGram: string[];
 }
 
