@@ -25,51 +25,12 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       return;
     }
 
-    let room = roomManager.getRoom(matchId);
+    const room = roomManager.getRoom(matchId);
     if (!room) {
-      // Auto-create room if not already running
-      const wagerNano = 1000000000n; // default 1 TON
-      const playerA = query.wallet || 'EQA_playerA_fallback';
-      const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
-      let escrowAddress = '';
-      if (clashMasterAddr && playerA) {
-        escrowAddress = computeEscrowAddress(
-          clashMasterAddr,
-          BigInt(matchId),
-          playerA,
-          wagerNano,
-          signerService.getPublicKeyBigInt()
-        );
-      }
-
-      room = roomManager.createRoom(
-        {
-          matchId: BigInt(matchId),
-          wagerAmountNano: wagerNano,
-          playerAAddress: playerA,
-          escrowAddress,
-        },
-        async (settledRoom, winner) => {
-          console.log(`[WS] Match #${settledRoom.matchId} settled with winner: ${winner}`);
-          let targetEscrow = settledRoom.escrowAddress;
-          if (!targetEscrow && clashMasterAddr) {
-            targetEscrow = computeEscrowAddress(
-              clashMasterAddr,
-              settledRoom.matchId,
-              settledRoom.config.playerAAddress,
-              settledRoom.config.wagerAmountNano,
-              signerService.getPublicKeyBigInt()
-            );
-          }
-          if (targetEscrow) {
-            await tonSettlementService.settleMatch(
-              targetEscrow,
-              settledRoom.matchId,
-              winner
-            );
-          }
-        }
-      );
+      console.warn(`[WS] Connection rejected: Match #${matchId} does not exist or has already finished.`);
+      ws.send(JSON.stringify({ type: 'ERROR', message: 'Match not found or already closed' }));
+      ws.close();
+      return;
     }
 
     const role = query.role || 'spectator';

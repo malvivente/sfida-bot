@@ -44,13 +44,22 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start p-3 sm:p-6 pb-20 select-none font-rajdhani relative">
       <Navbar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          if (tab !== 'arena') {
+            setDeepMatchId(undefined);
+          }
+          setActiveTab(tab);
+        }}
         onOpenRules={() => setShowRulesModal(true)}
       />
 
       <main className="w-full max-w-md">
         {activeTab === 'arena' && (
-          <Arena initialMatchId={deepMatchId} role={deepRole} />
+          <Arena
+            initialMatchId={deepMatchId}
+            role={deepRole}
+            onClearDeepMatch={() => setDeepMatchId(undefined)}
+          />
         )}
         {activeTab === 'referrals' && <ReferralDashboard />}
         {activeTab === 'profile' && (

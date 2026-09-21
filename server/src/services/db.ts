@@ -205,6 +205,9 @@ export class DatabaseService {
         this.healUnsentWithdrawalsForUser(normKey);
       }
 
+      // Sanitize and revoke any duplicate refunds caused by room resurrection glitch
+      this.sanitizeDuplicateRefunds();
+
       if (fs.existsSync(this.treasuryFilePath)) {
         const rawTreasury = fs.readFileSync(this.treasuryFilePath, 'utf-8');
         this.treasury = JSON.parse(rawTreasury);
@@ -313,6 +316,43 @@ export class DatabaseService {
     return this.healUnsentWithdrawalsForUser(normKey);
   }
 
+  public sanitizeDuplicateRefunds(): void {
+    const refundMatchSeen = new Map<string, number>();
+
+    for (const tx of this.transactions) {
+      if (
+        tx.type === 'REFUND' &&
+        tx.details?.includes('cancelled match #') &&
+        !tx.details?.includes('[DUPLICATE_REVOKED]')
+      ) {
+        const matchRegex = tx.details.match(/cancelled match #([a-zA-Z0-9_-]+)/);
+        if (matchRegex) {
+          const matchId = matchRegex[1];
+          const key = `${this.normalizeAddress(tx.walletAddress)}_${matchId}`;
+          const count = refundMatchSeen.get(key) || 0;
+          if (count > 0) {
+            // Duplicate refund found!
+            const amt = parseFloat(tx.amountGram || tx.amountTon || '0');
+            const account = this.users.get(this.normalizeAddress(tx.walletAddress));
+            if (account && amt > 0) {
+              const curBal = parseFloat(account.balanceGram || account.balanceTon || '0');
+              const correctedBal = Math.max(0, curBal - amt).toFixed(2);
+              account.balanceGram = correctedBal;
+              account.balanceTon = correctedBal;
+              account.balanceNano = BigInt(Math.round(parseFloat(correctedBal) * 1e9)).toString();
+              account.updatedAt = Date.now();
+              console.log(
+                `[DatabaseService] Revoked duplicate refund of ${amt} GRAM for match #${matchId} from ${account.walletAddress}. Corrected balance: ${correctedBal}`
+              );
+            }
+            tx.details = (tx.details || '') + ' [DUPLICATE_REVOKED]';
+          }
+          refundMatchSeen.set(key, count + 1);
+        }
+      }
+    }
+  }
+
   public async getUserAccount(walletAddress: string, telegramId?: string, username?: string): Promise<UserAccount> {
     const normKey = this.normalizeAddress(walletAddress);
     let account = this.users.get(normKey);
@@ -325,6 +365,7 @@ export class DatabaseService {
 
     if (account) {
       this.healUnsentWithdrawalsForUser(normKey);
+      this.sanitizeDuplicateRefunds();
     }
 
     if (!account) {

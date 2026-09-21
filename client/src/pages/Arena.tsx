@@ -13,11 +13,13 @@ import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft,
 interface ArenaProps {
   initialMatchId?: string;
   role?: 'player' | 'spectator';
+  onClearDeepMatch?: () => void;
 }
 
 export const Arena: React.FC<ArenaProps> = ({
   initialMatchId,
   role: initialRole = 'player',
+  onClearDeepMatch,
 }) => {
   const [activeMatchId, setActiveMatchId] = useState<string | null>(initialMatchId || null);
   const [role, setRole] = useState<'player' | 'spectator'>(initialRole);
@@ -116,6 +118,11 @@ export const Arena: React.FC<ArenaProps> = ({
           try {
             localStorage.setItem('sfidabot_saved_matches', JSON.stringify(data.matches.slice(0, 30)));
           } catch {}
+
+          if (activeMatchId && !data.matches.some((m: MatchData) => m.matchId === activeMatchId)) {
+            setActiveMatchId(null);
+            onClearDeepMatch?.();
+          }
         }
       }
     } catch (err) {
@@ -131,7 +138,7 @@ export const Arena: React.FC<ArenaProps> = ({
     fetchMatches();
     const interval = setInterval(fetchMatches, 8000);
     return () => clearInterval(interval);
-  }, [serverUrl]);
+  }, [serverUrl, activeMatchId]);
 
   const socketData = useSocket({
     matchId: activeMatchId || '',
@@ -141,6 +148,16 @@ export const Arena: React.FC<ArenaProps> = ({
     username: displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior'),
     serverUrl,
   });
+
+  useEffect(() => {
+    if (
+      socketData.feedMessage?.includes('Match not found') ||
+      socketData.feedMessage?.includes('already closed')
+    ) {
+      setActiveMatchId(null);
+      onClearDeepMatch?.();
+    }
+  }, [socketData.feedMessage, onClearDeepMatch]);
 
   // Handle Real On-Chain Deposit from Tonkeeper
   const handleQuickDeposit = async () => {
@@ -378,18 +395,30 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const confirmCancelMatch = async () => {
     if (!matchToCancel) return;
+    const matchIdToCancel = matchToCancel.matchId;
     setIsCancelling(true);
     try {
       if (serverUrl) {
-        await fetch(`${serverUrl}/api/matches/${matchToCancel.matchId}`, {
+        const res = await fetch(`${serverUrl}/api/matches/${matchIdToCancel}`, {
           method: 'DELETE',
         });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.message || data?.error || 'Failed to cancel match');
+        }
       }
       fetchUserBalance();
-      setCancelSuccessMsg(`Match #${matchToCancel.matchId} cancelled. Wager and fee refunded to your balance!`);
-      setMatches((prev) => prev.filter((m) => m.matchId !== matchToCancel.matchId));
-      if (activeMatchId === matchToCancel.matchId) {
+      setCancelSuccessMsg(`Match #${matchIdToCancel} cancelled. Wager and fee refunded to your balance!`);
+      setMatches((prev) => {
+        const updated = prev.filter((m) => m.matchId !== matchIdToCancel);
+        try {
+          localStorage.setItem('sfidabot_saved_matches', JSON.stringify(updated.slice(0, 30)));
+        } catch {}
+        return updated;
+      });
+      if (activeMatchId === matchIdToCancel) {
         setActiveMatchId(null);
+        onClearDeepMatch?.();
       }
       setMatchToCancel(null);
       setTimeout(() => setCancelSuccessMsg(null), 4000);
@@ -555,7 +584,10 @@ export const Arena: React.FC<ArenaProps> = ({
           {/* Top Header Controls: Back to Lobby + Cancel Duel if Creator */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button
-              onClick={() => setActiveMatchId(null)}
+              onClick={() => {
+                setActiveMatchId(null);
+                onClearDeepMatch?.();
+              }}
               className="flex items-center space-x-1.5 text-xs font-orbitron font-bold text-slate-400 hover:text-cyber-cyan transition-all"
             >
               <ArrowLeft className="w-4 h-4" />

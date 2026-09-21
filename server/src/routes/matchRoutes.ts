@@ -11,6 +11,7 @@ import { mnemonicToPrivateKey } from '@ton/crypto';
 
 export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
+  const refundedMatchIds = new Set<string>();
 
   // List all active matches (exclude WAITING_FOR_DEPLOY)
   fastify.get('/api/matches', async (_req, reply) => {
@@ -449,17 +450,18 @@ export async function matchRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const neededNano = toNano(amount) + toNano('0.05');
+      const gasBufferTon = 0.008;
+      const neededNano = toNano(amount) + toNano(gasBufferTon.toString());
       if (activeBalance < neededNano) {
-        const availableGram = (Number(activeBalance) / 1e9).toFixed(2);
+        const availableGram = (Number(activeBalance) / 1e9).toFixed(3);
         const v5Friendly = v5Contract.address.toString({ bounceable: false });
         const v4Friendly = v4Contract.address.toString({ bounceable: false });
         console.error(
-          `[matchRoutes] Hot wallet cassa balance insufficient. Available: ${availableGram} GRAM, Needed: ${(withdrawNum + 0.05).toFixed(2)} GRAM. (V5: ${v5Friendly}, V4: ${v4Friendly})`
+          `[matchRoutes] Hot wallet cassa balance insufficient. Available: ${availableGram} GRAM, Needed: ${(withdrawNum + gasBufferTon).toFixed(3)} GRAM. (V5: ${v5Friendly}, V4: ${v4Friendly})`
         );
         return reply.status(400).send({
           error: 'INSUFFICIENT_CASSA_FUNDS',
-          message: `The bot cassa wallet has insufficient funds (${availableGram} GRAM available, needed ${(withdrawNum + 0.05).toFixed(2)} GRAM including gas). Please notify admin or fund cassa address (${v5Friendly}). Your balance was NOT debited.`
+          message: `The bot cassa wallet has insufficient funds (${availableGram} GRAM available, needed ${(withdrawNum + gasBufferTon).toFixed(3)} GRAM including network fee). Please notify admin or fund cassa address (${v5Friendly}). Your balance was NOT debited.`
         });
       }
 
@@ -615,9 +617,19 @@ export async function matchRoutes(fastify: FastifyInstance) {
   // Delete / cancel match endpoint (refunds wager + creation fee if no opponent joined)
   fastify.delete('/api/matches/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const room = roomManager.getRoom(id);
 
-    if (room && room.state === 'LOBBY' && !room.playerB) {
+    if (refundedMatchIds.has(id)) {
+      roomManager.removeRoom(id);
+      return reply.status(400).send({ error: 'ALREADY_REFUNDED', message: 'Match was already cancelled and refunded.' });
+    }
+
+    const room = roomManager.getRoom(id);
+    if (!room) {
+      return reply.status(404).send({ error: 'MATCH_NOT_FOUND', message: 'Match does not exist or was already closed.' });
+    }
+
+    if (room.state === 'LOBBY' && !room.playerB) {
+      refundedMatchIds.add(id);
       const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
       const { creationFeeGram } = feeConfig.getConfig();
       const refundTotal = (wagerGram + creationFeeGram).toFixed(2);
@@ -627,6 +639,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
         `Refund for cancelled match #${id}`
       );
       console.log(`[matchRoutes] Refunded ${refundTotal} GRAM to ${room.playerA.walletAddress} for cancelled match #${id}`);
+      room.state = 'FORFEITED';
+    } else {
+      return reply.status(400).send({ error: 'CANNOT_CANCEL', message: 'Match cannot be cancelled once an opponent has joined or match started.' });
     }
 
     const deleted = roomManager.removeRoom(id);

@@ -72,7 +72,7 @@ async function main() {
     console.log(`- Cassa Wallet Address:     ${activeContract.address.toString({ bounceable: false })} (${contractType})`);
     console.log(`- Cassa Wallet Balance:     ${Number(balance) / 1e9} TON`);
 
-    if (balance < toNano(treasury.claimableFeesGram) + toNano('0.05')) {
+    if (balance < toNano(treasury.claimableFeesGram) + toNano('0.008')) {
       console.error('❌ Insufficient balance in Cassa Wallet to execute the fee transfer + gas.');
       process.exit(1);
     }
