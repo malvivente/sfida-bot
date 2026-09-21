@@ -228,7 +228,16 @@ export function useTonClashContract() {
     }
 
     const amountNano = toNano(amountGram);
-    const commentStr = comment || `Sfida Deposit for ${userAddress}`;
+    let friendlyWallet = userAddress || '';
+    if (userAddress) {
+      try {
+        friendlyWallet = Address.parse(userAddress).toString({ bounceable: false });
+      } catch {}
+    }
+    let commentStr = comment || `Sfida Deposit: ${friendlyWallet}`;
+    if (commentStr.includes('Sfida Deposit:') && commentStr.includes('0:')) {
+      commentStr = `Sfida Deposit: ${friendlyWallet}`;
+    }
     const bodyCell = beginCell()
       .storeUint(0, 32)
       .storeStringTail(commentStr)

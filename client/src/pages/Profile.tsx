@@ -4,6 +4,7 @@ import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData } from '../types/index.js';
+import { Address } from '@ton/ton';
 
 interface ProfileProps {
   onResumeDuel?: (matchId: string) => void;
@@ -119,10 +120,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
       setBalanceMsg({ type: 'success', text: 'Confirm the deposit transaction in your Tonkeeper wallet...' });
 
       // 2. Real on-chain TonConnect transaction
+      let friendlyWallet = userAddress;
+      try {
+        friendlyWallet = Address.parse(userAddress).toString({ bounceable: false });
+      } catch {}
+
       const txResult = await sendDepositTransaction(
         targetDepositAddress,
         depositAmount,
-        `Sfida Deposit: ${userAddress}`
+        `Sfida Deposit: ${friendlyWallet}`
       );
 
       // 3. Confirm to server
@@ -183,7 +189,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
           setBalanceMsg(null);
         }, 2500);
       } else {
-        setBalanceMsg({ type: 'error', text: data?.error || 'Withdrawal failed. Check balance.' });
+        setBalanceMsg({ type: 'error', text: data?.message || data?.error || 'Withdrawal failed. Check balance.' });
       }
     } catch (err: any) {
       setBalanceMsg({ type: 'error', text: err?.message || 'Network error during withdrawal.' });

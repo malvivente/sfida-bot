@@ -6,7 +6,7 @@ import { signerService } from '../services/signer.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
 import { dbService } from '../services/db.js';
 import { feeConfig } from '../config/feeConfig.js';
-import { TonClient, WalletContractV4, internal, toNano, Address } from '@ton/ton';
+import { TonClient, WalletContractV4, WalletContractV5R1, SendMode, internal, toNano, Address } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 
 export async function matchRoutes(fastify: FastifyInstance) {
@@ -354,6 +354,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
   fastify.get('/api/users/:wallet/balance', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };
     const query = req.query as { telegramId?: string; username?: string };
+    await dbService.restoreUnsentWithdrawals(wallet);
     const account = await dbService.getUserAccount(wallet, query.telegramId, query.username);
     const transactions = await dbService.getUserTransactions(wallet);
     return reply.send({ success: true, account, transactions });
@@ -382,54 +383,121 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const body = req.body as { amountGram?: string; amountTon?: string };
     const amount = body.amountGram || body.amountTon;
     if (!amount || parseFloat(amount) <= 0) {
-      return reply.status(400).send({ error: 'Invalid withdrawal amount' });
+      return reply.status(400).send({ error: 'INVALID_AMOUNT', message: 'Invalid withdrawal amount' });
     }
+
+    // Auto-restore any previously failed/unsent withdrawals first
+    await dbService.restoreUnsentWithdrawals(wallet);
 
     const account = await dbService.getUserAccount(wallet);
     const currentBal = parseFloat(account.balanceGram || account.balanceTon || '0');
     const withdrawNum = parseFloat(amount);
     if (currentBal < withdrawNum) {
-      return reply.status(400).send({ error: 'Insufficient balance' });
+      return reply.status(400).send({
+        error: 'INSUFFICIENT_BALANCE',
+        message: `Insufficient balance: you have ${currentBal.toFixed(2)} GRAM, tried to withdraw ${withdrawNum.toFixed(2)} GRAM.`
+      });
     }
+
+    const mnemonic = process.env.SERVER_HOT_WALLET_MNEMONIC || process.env.TON_MNEMONIC;
+    if (!mnemonic || !mnemonic.trim()) {
+      return reply.status(400).send({
+        error: 'CASSA_NOT_CONFIGURED',
+        message: 'Bot cassa wallet is not configured on server (SERVER_HOT_WALLET_MNEMONIC is missing in .env). Withdrawal was cancelled and your balance was NOT debited.'
+      });
+    }
+
+    const endpoint =
+      process.env.TON_RPC_ENDPOINT ||
+      (process.env.NETWORK === 'mainnet'
+        ? 'https://toncenter.com/api/v2/jsonRPC'
+        : 'https://testnet.toncenter.com/api/v2/jsonRPC');
 
     let onChainTxHash: string | undefined = undefined;
-    const mnemonic = process.env.SERVER_HOT_WALLET_MNEMONIC || process.env.TON_MNEMONIC;
-    const endpoint = process.env.TON_RPC_ENDPOINT;
 
-    if (mnemonic && endpoint) {
-      try {
-        const tonClient = new TonClient({ endpoint, apiKey: process.env.TON_API_KEY });
-        const keyPair = await mnemonicToPrivateKey(mnemonic.trim().split(/\s+/));
-        const walletContract = tonClient.open(WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey }));
-        const seqno = await walletContract.getSeqno();
+    try {
+      const tonClient = new TonClient({ endpoint, apiKey: process.env.TON_API_KEY });
+      const keyPair = await mnemonicToPrivateKey(mnemonic.trim().split(/\s+/));
 
-        await walletContract.sendTransfer({
-          secretKey: keyPair.secretKey,
-          seqno,
-          messages: [
-            internal({
-              to: Address.parse(wallet),
-              value: toNano(amount),
-              bounce: false,
-              body: 'SfidaBot Withdrawal Payout',
-            }),
-          ],
-        });
-        onChainTxHash = `onchain_${Date.now()}`;
-        console.log(`[matchRoutes] Sent ${amount} GRAM on-chain to ${wallet}`);
-      } catch (txErr: any) {
-        console.error(`[matchRoutes] On-chain transfer failed (${txErr.message}), debiting ledger anyway:`, txErr);
+      const v4Contract = tonClient.open(WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey }));
+      const v5Contract = tonClient.open(WalletContractV5R1.create({ publicKey: keyPair.publicKey }));
+
+      const [bal4, bal5] = await Promise.all([
+        tonClient.getBalance(v4Contract.address).catch(() => 0n),
+        tonClient.getBalance(v5Contract.address).catch(() => 0n),
+      ]);
+
+      const cassaEnvAddr = process.env.BOT_CASSA_WALLET_ADDRESS
+        ? Address.parse(process.env.BOT_CASSA_WALLET_ADDRESS).toRawString()
+        : null;
+
+      let activeContract: any = v5Contract;
+      let activeBalance = bal5;
+
+      if (cassaEnvAddr) {
+        if (v4Contract.address.toRawString() === cassaEnvAddr) {
+          activeContract = v4Contract;
+          activeBalance = bal4;
+        } else if (v5Contract.address.toRawString() === cassaEnvAddr) {
+          activeContract = v5Contract;
+          activeBalance = bal5;
+        }
+      } else {
+        if (bal4 > bal5) {
+          activeContract = v4Contract;
+          activeBalance = bal4;
+        }
       }
+
+      const neededNano = toNano(amount) + toNano('0.05');
+      if (activeBalance < neededNano) {
+        const availableGram = (Number(activeBalance) / 1e9).toFixed(2);
+        const v5Friendly = v5Contract.address.toString({ bounceable: false });
+        const v4Friendly = v4Contract.address.toString({ bounceable: false });
+        console.error(
+          `[matchRoutes] Hot wallet cassa balance insufficient. Available: ${availableGram} GRAM, Needed: ${(withdrawNum + 0.05).toFixed(2)} GRAM. (V5: ${v5Friendly}, V4: ${v4Friendly})`
+        );
+        return reply.status(400).send({
+          error: 'INSUFFICIENT_CASSA_FUNDS',
+          message: `The bot cassa wallet has insufficient funds (${availableGram} GRAM available, needed ${(withdrawNum + 0.05).toFixed(2)} GRAM including gas). Please notify admin or fund cassa address (${v5Friendly}). Your balance was NOT debited.`
+        });
+      }
+
+      const seqno = await activeContract.getSeqno();
+      await (activeContract as any).sendTransfer({
+        secretKey: keyPair.secretKey,
+        seqno,
+        sendMode: SendMode.PAY_GAS_SEPARATELY,
+        messages: [
+          internal({
+            to: Address.parse(wallet),
+            value: toNano(amount),
+            bounce: false,
+            body: 'SfidaBot Withdrawal Payout',
+          }),
+        ],
+      });
+
+      onChainTxHash = `onchain_${Date.now()}`;
+      console.log(`[matchRoutes] Sent ${amount} GRAM on-chain to ${wallet} (seqno: ${seqno}, contract: ${activeContract.address.toString({ bounceable: false })})`);
+    } catch (txErr: any) {
+      console.error(`[matchRoutes] On-chain transfer failed (${txErr.message}):`, txErr);
+      return reply.status(500).send({
+        error: 'PAYOUT_FAILED',
+        message: `Failed to broadcast on-chain transaction: ${txErr.message || 'Unknown network error'}. Your balance was NOT debited.`
+      });
     }
 
+    // ONLY debit balance if on-chain transfer succeeded!
     const result = await dbService.debitUserBalance(
       wallet,
       amount,
       'WITHDRAW',
-      onChainTxHash ? `Payout on-chain (${onChainTxHash})` : `Payout to ${wallet}`
+      `Payout on-chain (${onChainTxHash})`
     );
+
     if (!result.success) {
-      return reply.status(400).send({ error: result.error || 'Withdrawal failed' });
+      return reply.status(400).send({ error: result.error || 'Withdrawal debit failed' });
     }
     return reply.send({ success: true, account: result.account, txHash: onChainTxHash });
   });
@@ -506,15 +574,41 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
   // Treasury addresses endpoint (for frontend deposit destination)
   fastify.get('/api/treasury/address', async (_req, reply) => {
-    const depositAddress =
-      process.env.BOT_CASSA_WALLET_ADDRESS ||
-      process.env.CLASH_MASTER_ADDRESS ||
-      process.env.TREASURY_ADDRESS ||
-      'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
-    const treasuryOwner =
+    let depositAddress = process.env.BOT_CASSA_WALLET_ADDRESS;
+
+    if (!depositAddress) {
+      const mnemonic = process.env.SERVER_HOT_WALLET_MNEMONIC || process.env.TON_MNEMONIC;
+      if (mnemonic) {
+        try {
+          const keyPair = await mnemonicToPrivateKey(mnemonic.trim().split(/\s+/));
+          const v5 = WalletContractV5R1.create({ publicKey: keyPair.publicKey });
+          depositAddress = v5.address.toString({ bounceable: false });
+        } catch (e) {
+          console.warn('[matchRoutes] Could not derive address from hot wallet mnemonic:', e);
+        }
+      }
+    }
+
+    if (!depositAddress) {
+      depositAddress =
+        process.env.CLASH_MASTER_ADDRESS ||
+        process.env.TREASURY_ADDRESS ||
+        'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+    }
+
+    try {
+      depositAddress = Address.parse(depositAddress).toString({ bounceable: false });
+    } catch {}
+
+    let treasuryOwner =
       process.env.TREASURY_ADDRESS ||
       process.env.OWNER_ADDRESS ||
       'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+
+    try {
+      treasuryOwner = Address.parse(treasuryOwner).toString({ bounceable: false });
+    } catch {}
+
     return reply.send({ success: true, depositAddress, treasuryOwner });
   });
 

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Address } from '@ton/ton';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -171,8 +172,10 @@ export class DatabaseService {
           const bal = u.balanceGram || u.balanceTon || '0.00';
           const dep = u.depositedTotalGram || u.depositedTotalTon || '0.00';
           const wit = u.withdrawnTotalGram || u.withdrawnTotalTon || '0.00';
-          this.users.set(u.walletAddress.toLowerCase(), {
+          const normKey = this.normalizeAddress(u.walletAddress);
+          this.users.set(normKey, {
             ...u,
+            walletAddress: this.toFriendlyAddress(u.walletAddress),
             balanceGram: bal,
             balanceTon: bal,
             depositedTotalGram: dep,
@@ -195,6 +198,11 @@ export class DatabaseService {
         }));
       } else {
         fs.writeFileSync(this.txFilePath, JSON.stringify([], null, 2), 'utf-8');
+      }
+
+      // Auto-recover any unsent withdrawals from previous runs across all users
+      for (const normKey of Array.from(this.users.keys())) {
+        this.healUnsentWithdrawalsForUser(normKey);
       }
 
       if (fs.existsSync(this.treasuryFilePath)) {
@@ -229,12 +237,99 @@ export class DatabaseService {
     }
   }
 
+  public normalizeAddress(walletAddress: string): string {
+    if (!walletAddress) return '';
+    try {
+      return Address.parse(walletAddress).toRawString().toLowerCase();
+    } catch {
+      return walletAddress.toLowerCase();
+    }
+  }
+
+  public toFriendlyAddress(walletAddress: string): string {
+    if (!walletAddress) return '';
+    try {
+      return Address.parse(walletAddress).toString({ bounceable: false });
+    } catch {
+      return walletAddress;
+    }
+  }
+
+  public healUnsentWithdrawalsForUser(normKey: string): number {
+    const account = this.users.get(normKey);
+    if (!account) return 0;
+
+    const unsentWithdraws = this.transactions.filter(
+      (tx) =>
+        this.normalizeAddress(tx.walletAddress) === normKey &&
+        tx.type === 'WITHDRAW' &&
+        !tx.details?.includes('onchain_') &&
+        !tx.details?.includes('[REFUNDED')
+    );
+
+    if (unsentWithdraws.length === 0) return 0;
+
+    let restoredAmount = 0;
+    for (const tx of unsentWithdraws) {
+      const amt = parseFloat(tx.amountGram || tx.amountTon || '0');
+      if (amt > 0) {
+        restoredAmount += amt;
+        tx.details = (tx.details ? tx.details + ' ' : '') + '[REFUNDED_UNBROADCAST]';
+      }
+    }
+
+    if (restoredAmount > 0) {
+      const curBal = parseFloat(account.balanceGram || account.balanceTon || '0');
+      const newBal = (curBal + restoredAmount).toFixed(2);
+      account.balanceGram = newBal;
+      account.balanceTon = newBal;
+      account.balanceNano = BigInt(Math.round(parseFloat(newBal) * 1e9)).toString();
+
+      const curWithdrawn = parseFloat(account.withdrawnTotalGram || account.withdrawnTotalTon || '0');
+      const newWithdrawn = Math.max(0, curWithdrawn - restoredAmount).toFixed(2);
+      account.withdrawnTotalGram = newWithdrawn;
+      account.withdrawnTotalTon = newWithdrawn;
+      account.updatedAt = Date.now();
+
+      this.transactions.push({
+        id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        walletAddress: account.walletAddress,
+        type: 'REFUND',
+        amountNano: BigInt(Math.round(restoredAmount * 1e9)).toString(),
+        amountTon: restoredAmount.toFixed(2),
+        amountGram: restoredAmount.toFixed(2),
+        timestamp: Date.now(),
+        details: `Automatic recovery of unsent withdrawal (${restoredAmount.toFixed(2)} GRAM restored)`,
+      });
+
+      this.persistData();
+      console.log(`[DatabaseService] Auto-restored ${restoredAmount.toFixed(2)} GRAM to user ${account.walletAddress}`);
+    }
+    return restoredAmount;
+  }
+
+  public async restoreUnsentWithdrawals(walletAddress: string): Promise<number> {
+    const normKey = this.normalizeAddress(walletAddress);
+    return this.healUnsentWithdrawalsForUser(normKey);
+  }
+
   public async getUserAccount(walletAddress: string, telegramId?: string, username?: string): Promise<UserAccount> {
-    const key = walletAddress.toLowerCase();
-    let account = this.users.get(key);
+    const normKey = this.normalizeAddress(walletAddress);
+    let account = this.users.get(normKey);
+    if (!account) {
+      account = this.users.get(walletAddress.toLowerCase());
+      if (account) {
+        this.users.set(normKey, account);
+      }
+    }
+
+    if (account) {
+      this.healUnsentWithdrawalsForUser(normKey);
+    }
+
     if (!account) {
       account = {
-        walletAddress,
+        walletAddress: this.toFriendlyAddress(walletAddress),
         telegramId: telegramId || '',
         username: username || '',
         balanceNano: '0',
@@ -246,7 +341,7 @@ export class DatabaseService {
         withdrawnTotalGram: '0.00',
         updatedAt: Date.now(),
       };
-      this.users.set(key, account);
+      this.users.set(normKey, account);
       this.persistData();
     } else {
       if (telegramId && !account.telegramId) account.telegramId = telegramId;
@@ -345,8 +440,11 @@ export class DatabaseService {
   }
 
   public async getUserTransactions(walletAddress: string): Promise<BalanceTransaction[]> {
-    const key = walletAddress.toLowerCase();
-    return this.transactions.filter((tx) => tx.walletAddress.toLowerCase() === key);
+    const normKey = this.normalizeAddress(walletAddress);
+    const lowerKey = walletAddress.toLowerCase();
+    return this.transactions.filter(
+      (tx) => this.normalizeAddress(tx.walletAddress) === normKey || tx.walletAddress.toLowerCase() === lowerKey
+    );
   }
 
   // --- Treasury Management Methods ---

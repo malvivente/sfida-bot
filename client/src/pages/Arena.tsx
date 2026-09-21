@@ -7,6 +7,7 @@ import { useSocket } from '../hooks/useSocket.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { MatchData, UserBalance, FeeConfig } from '../types/index.js';
+import { Address } from '@ton/ton';
 import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle } from 'lucide-react';
 
 interface ArenaProps {
@@ -168,10 +169,15 @@ export const Arena: React.FC<ArenaProps> = ({
 
       setDepositMsg({ type: 'success', text: 'Confirm the deposit transaction in your Tonkeeper wallet...' });
 
+      let friendlyWallet = userAddress;
+      try {
+        friendlyWallet = Address.parse(userAddress).toString({ bounceable: false });
+      } catch {}
+
       const txResult = await sendDepositTransaction(
         targetDepositAddress,
         depositAmount,
-        `Sfida Deposit: ${userAddress}`
+        `Sfida Deposit: ${friendlyWallet}`
       );
 
       const boc = txResult?.boc;

@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dbService } from '../services/db.js';
-import { TonClient, WalletContractV4, internal, toNano, Address } from '@ton/ton';
+import { TonClient, WalletContractV4, WalletContractV5R1, SendMode, internal, toNano, Address } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -57,11 +57,19 @@ async function main() {
     console.log(`🚀 Initiating on-chain transfer of ${treasury.claimableFeesGram} GRAM to ${recipient}...`);
     const tonClient = new TonClient({ endpoint, apiKey: process.env.TON_API_KEY });
     const keyPair = await mnemonicToPrivateKey(mnemonic.trim().split(/\s+/));
-    const walletContract = tonClient.open(WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey }));
+    const v4Contract = tonClient.open(WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey }));
+    const v5Contract = tonClient.open(WalletContractV5R1.create({ publicKey: keyPair.publicKey }));
 
-    const seqno = await walletContract.getSeqno();
-    const balance = await tonClient.getBalance(walletContract.address);
-    console.log(`- Cassa Wallet Address:     ${walletContract.address.toString()}`);
+    const [bal4, bal5] = await Promise.all([
+      tonClient.getBalance(v4Contract.address).catch(() => 0n),
+      tonClient.getBalance(v5Contract.address).catch(() => 0n),
+    ]);
+
+    const activeContract = bal4 > bal5 ? v4Contract : v5Contract;
+    const balance = bal4 > bal5 ? bal4 : bal5;
+    const contractType = activeContract === v5Contract ? 'W5' : 'V4';
+
+    console.log(`- Cassa Wallet Address:     ${activeContract.address.toString({ bounceable: false })} (${contractType})`);
     console.log(`- Cassa Wallet Balance:     ${Number(balance) / 1e9} TON`);
 
     if (balance < toNano(treasury.claimableFeesGram) + toNano('0.05')) {
@@ -69,9 +77,11 @@ async function main() {
       process.exit(1);
     }
 
-    await walletContract.sendTransfer({
+    const seqno = await activeContract.getSeqno();
+    await (activeContract as any).sendTransfer({
       secretKey: keyPair.secretKey,
       seqno,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
       messages: [
         internal({
           to: Address.parse(recipient),
