@@ -572,6 +572,8 @@ export const Arena: React.FC<ArenaProps> = ({
   const playerA_Name = socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A';
   const playerB_Name = socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Opponent');
 
+  const isCurrentUserReady = isReady || (userSide === 'A' ? socketData.playerAReady : socketData.playerBReady);
+
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
   return (
@@ -734,6 +736,11 @@ export const Arena: React.FC<ArenaProps> = ({
               onStand={() => socketData.sendBlackjackAction('STAND')}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
               roomState={socketData.roomState}
               wagerTon={socketData.activeWagerTon || activeWagerTon}
               isCreator={isCurrentCreator}
@@ -761,6 +768,11 @@ export const Arena: React.FC<ArenaProps> = ({
               onPass={socketData.sendBridgePass}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
               roomState={socketData.roomState}
               wagerTon={socketData.activeWagerTon || activeWagerTon}
               isCreator={isCurrentCreator}
@@ -787,6 +799,11 @@ export const Arena: React.FC<ArenaProps> = ({
               onStop={socketData.sendChronoStop}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
               roomState={socketData.roomState}
               wagerTon={socketData.activeWagerTon || activeWagerTon}
               isCreator={isCurrentCreator}
@@ -814,6 +831,11 @@ export const Arena: React.FC<ArenaProps> = ({
               onShoot={socketData.sendRouletteShoot}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
               roomState={socketData.roomState}
               wagerTon={socketData.activeWagerTon || activeWagerTon}
               isCreator={isCurrentCreator}

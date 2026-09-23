@@ -70,6 +70,8 @@ export function useSocket({
   const [activeWagerTon, setActiveWagerTon] = useState<string>('1.00');
   const [gameType, setGameType] = useState<GameType | undefined>(undefined);
   const [gameData, setGameData] = useState<any>(null);
+  const [playerAReady, setPlayerAReady] = useState(false);
+  const [playerBReady, setPlayerBReady] = useState(false);
 
   useEffect(() => {
     if (!matchId) return;
@@ -120,6 +122,8 @@ export function useSocket({
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             if (msg.gameType) setGameType(msg.gameType);
             if (msg.gameData) setGameData(msg.gameData);
+            if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
+            if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
             break;
 
           case 'ROOM_UPDATE':
@@ -136,6 +140,8 @@ export function useSocket({
             if (msg.gameData) setGameData(msg.gameData);
             if (msg.playerA?.name) setPlayerAName(msg.playerA.name);
             if (msg.playerB?.name) setPlayerBName(msg.playerB.name);
+            if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
+            if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
             break;
 
           case 'ROULETTE_UPDATE':
@@ -391,6 +397,8 @@ export function useSocket({
     activeWagerTon,
     gameType,
     gameData,
+    playerAReady,
+    playerBReady,
     sendReady,
     sendTap,
     sendRouletteShoot,
