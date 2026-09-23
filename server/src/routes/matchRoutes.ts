@@ -655,8 +655,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
     const { creationFeeGram } = feeConfig.getConfig();
 
-    // 1. Refund Player A: wager + creation fee
-    const refundPlayerATotal = (wagerGram + creationFeeGram).toFixed(2);
+    // 1. Refund Player A: wager (+ creation fee if not a rematch)
+    const isRematch = (room as any).isRematch === true;
+    const refundPlayerATotal = (isRematch ? wagerGram : (wagerGram + creationFeeGram)).toFixed(2);
     await dbService.refundUserBalance(
       room.playerA.walletAddress,
       refundPlayerATotal,

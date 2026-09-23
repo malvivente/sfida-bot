@@ -36,6 +36,8 @@ interface QuickdrawCanvasProps {
   onRequestRematch?: () => void;
   onAcceptRematch?: () => void;
   onDeclineRematch?: () => void;
+  isRematchProposer?: boolean;
+  opponentConnected?: boolean;
 }
 
 export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
@@ -69,6 +71,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   onRequestRematch,
   onAcceptRematch,
   onDeclineRematch,
+  isRematchProposer = false,
+  opponentConnected = true,
 }) => {
   const { triggerImpact, triggerNotification } = useHaptics();
   const isHoldingPrematurely = useRef(false);
@@ -364,7 +368,29 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             </div>
 
             {/* Rematch Offer Received Modal / Banner */}
-            {rematchOffer && (
+            {rematchOffer && isRematchProposer && (
+              <div className="w-full max-w-xs p-3 rounded-2xl bg-cyber-pink/20 border border-cyber-pink/60 flex flex-col space-y-1.5 mb-3 shadow-[0_0_20px_rgba(255,0,85,0.2)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-orbitron font-extrabold text-white flex items-center space-x-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
+                    <span>REMATCH OFFER SENT (2X)</span>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} TON</span>
+                </div>
+                <span className="text-xs text-slate-300 font-chakra text-center">
+                  Waiting for opponent to accept the 2X challenge...
+                </span>
+                {onDeclineRematch && (
+                  <button
+                    onClick={onDeclineRematch}
+                    className="w-full py-1.5 rounded-xl bg-black/60 border border-slate-600 text-xs font-chakra font-bold text-slate-300 hover:text-white"
+                  >
+                    WITHDRAW OFFER
+                  </button>
+                )}
+              </div>
+            )}
+            {rematchOffer && !isRematchProposer && (
               <div className="w-full max-w-xs p-3 rounded-2xl bg-cyber-pink/25 border border-cyber-pink/70 flex flex-col items-center space-y-2 mb-3 shadow-[0_0_25px_rgba(255,0,85,0.4)] animate-pulse">
                 <span className="text-xs font-orbitron font-extrabold text-white">
                   🔥 REMATCH CHALLENGE!
@@ -392,13 +418,19 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
             {/* Rematch Button for Both Players (if no incoming offer currently pending) */}
             {!rematchOffer && onRequestRematch && role === 'player' && (
-              <button
-                onClick={onRequestRematch}
-                className="w-full max-w-xs py-3 rounded-xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-cyber-pink via-purple-600 to-cyber-cyan text-white shadow-[0_0_20px_rgba(255,0,85,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2 mb-2"
-              >
-                <RotateCcw className="w-4 h-4 text-white" />
-                <span>REMATCH (2X BET)</span>
-              </button>
+              !opponentConnected ? (
+                <div className="w-full max-w-xs py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
+                  OPPONENT LEFT ROOM (REMATCH UNAVAILABLE)
+                </div>
+              ) : (
+                <button
+                  onClick={onRequestRematch}
+                  className="w-full max-w-xs py-3 rounded-xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-cyber-pink via-purple-600 to-cyber-cyan text-white shadow-[0_0_20px_rgba(255,0,85,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2 mb-2"
+                >
+                  <RotateCcw className="w-4 h-4 text-white" />
+                  <span>REMATCH (2X BET)</span>
+                </button>
+              )
             )}
 
             {/* Winner Actions: Claim Button or Status */}

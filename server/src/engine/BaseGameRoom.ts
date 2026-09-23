@@ -62,6 +62,11 @@ export abstract class BaseGameRoom {
   public resolution?: MatchResolutionPayload;
   public forfeitWinner?: string;
 
+  public rematchProposerWallet?: string;
+  public rematchNewWagerNano?: bigint;
+  public isRematch: boolean = false;
+  protected settleCleanupTimer?: NodeJS.Timeout;
+
   private onMatchSettledCallback?: (room: BaseGameRoom, winnerAddress: string) => Promise<void>;
 
   constructor(
@@ -247,6 +252,15 @@ export abstract class BaseGameRoom {
     // Forfeit grace timer strictly applies during active combat/gameplay
     const isGameActive = this.state === 'GAME_ACTIVE' || this.state === 'ROUND_START';
 
+    if (this.rematchProposerWallet) {
+      this.rematchProposerWallet = undefined;
+      this.rematchNewWagerNano = undefined;
+      this.broadcast({
+        type: 'REMATCH_DECLINED',
+        message: 'Rematch cancelled: Player left the duel room.',
+      });
+    }
+
     if (isGameActive && opponent) {
       this.broadcast({
         type: 'PLAYER_DISCONNECTED',
@@ -431,8 +445,11 @@ export abstract class BaseGameRoom {
       this.onMatchSettledCallback(this, winnerAddress);
     }
 
-    // Auto cleanup after 90 seconds
-    setTimeout(async () => {
+    // Auto cleanup after 90 seconds (can be cancelled if rematch accepted)
+    if (this.settleCleanupTimer) {
+      clearTimeout(this.settleCleanupTimer);
+    }
+    this.settleCleanupTimer = setTimeout(async () => {
       try {
         const { RoomManager } = await import('./RoomManager.js');
         RoomManager.getInstance().removeRoom(this.matchId.toString());
@@ -553,10 +570,52 @@ export abstract class BaseGameRoom {
     });
   }
 
-  public requestRematch(proposerWallet: string, proposerName: string) {
+  public async requestRematch(proposerWallet: string, proposerName: string) {
     if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') return;
+    if (!this.playerB) return;
+
+    const isPlayerA = this.isSameWallet(proposerWallet, this.playerA.walletAddress);
+    const isPlayerB = this.isSameWallet(proposerWallet, this.playerB.walletAddress);
+    if (!isPlayerA && !isPlayerB) return;
+
+    const proposer = isPlayerA ? this.playerA : this.playerB;
+    const opponent = isPlayerA ? this.playerB : this.playerA;
+
+    // Verify opponent is still actively connected in the duel room
+    if (!opponent.connected || !opponent.ws || opponent.ws.readyState !== WebSocket.OPEN) {
+      if (proposer.ws) {
+        this.sendTo(proposer.ws, {
+          type: 'ERROR',
+          message: 'Cannot request rematch: Opponent has already left the duel room.',
+        });
+      }
+      return;
+    }
+
     const newWagerNano = this.config.wagerAmountNano * 2n;
     const newWagerTon = (Number(newWagerNano) / 1e9).toFixed(2);
+    const newWagerGram = Number(newWagerNano) / 1e9;
+
+    // Check proposer's internal balance
+    try {
+      const proposerAccount = await dbService.getUserAccount(proposerWallet);
+      const currentBal = parseFloat(proposerAccount.balanceGram || proposerAccount.balanceTon || '0');
+      if (currentBal < newWagerGram) {
+        if (proposer.ws) {
+          this.sendTo(proposer.ws, {
+            type: 'ERROR',
+            message: `Insufficient balance for 2X rematch! Required: ${newWagerTon} GRAM, your balance: ${currentBal.toFixed(2)} GRAM.`,
+          });
+        }
+        return;
+      }
+    } catch (err) {
+      console.error(`[BaseGameRoom] Error checking proposer balance for rematch on #${this.matchId}:`, err);
+      return;
+    }
+
+    this.rematchProposerWallet = proposerWallet;
+    this.rematchNewWagerNano = newWagerNano;
 
     this.broadcast({
       type: 'REMATCH_OFFERED',
@@ -568,18 +627,109 @@ export abstract class BaseGameRoom {
     });
   }
 
-  public acceptRematch(acceptorWallet: string) {
+  public async acceptRematch(acceptorWallet: string) {
     if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') return;
-    this.config.wagerAmountNano = this.config.wagerAmountNano * 2n;
-    const newWagerTon = (Number(this.config.wagerAmountNano) / 1e9).toFixed(2);
+    if (!this.rematchProposerWallet || !this.rematchNewWagerNano) return;
+    if (!this.playerB) return;
+
+    // Prevent self-accept exploit
+    if (this.isSameWallet(acceptorWallet, this.rematchProposerWallet)) {
+      console.warn(`[BaseGameRoom] Proposer ${acceptorWallet} attempted to self-accept rematch on #${this.matchId}. Rejected.`);
+      return;
+    }
+
+    const isPlayerA = this.isSameWallet(acceptorWallet, this.playerA.walletAddress);
+    const isPlayerB = this.isSameWallet(acceptorWallet, this.playerB.walletAddress);
+    if (!isPlayerA && !isPlayerB) return;
+
+    const acceptor = isPlayerA ? this.playerA : this.playerB;
+    const proposer = isPlayerA ? this.playerB : this.playerA;
+
+    // Verify challenger/opponent is still in room
+    if (!proposer.connected || !proposer.ws || proposer.ws.readyState !== WebSocket.OPEN) {
+      if (acceptor.ws) {
+        this.sendTo(acceptor.ws, {
+          type: 'ERROR',
+          message: 'Rematch cancelled: Challenger has already left the duel room.',
+        });
+      }
+      this.rematchProposerWallet = undefined;
+      this.rematchNewWagerNano = undefined;
+      return;
+    }
+
+    const newWagerNano = this.rematchNewWagerNano;
+    const newWagerTon = (Number(newWagerNano) / 1e9).toFixed(2);
+    const newWagerGram = Number(newWagerNano) / 1e9;
+
+    try {
+      // 1. Check acceptor balance
+      const acceptorAccount = await dbService.getUserAccount(acceptorWallet);
+      const acceptorBal = parseFloat(acceptorAccount.balanceGram || acceptorAccount.balanceTon || '0');
+      if (acceptorBal < newWagerGram) {
+        if (acceptor.ws) {
+          this.sendTo(acceptor.ws, {
+            type: 'ERROR',
+            message: `Insufficient balance to accept 2X rematch! Required: ${newWagerTon} GRAM, your balance: ${acceptorBal.toFixed(2)} GRAM.`,
+          });
+        }
+        return;
+      }
+
+      // 2. Re-verify proposer balance
+      const proposerAccount = await dbService.getUserAccount(this.rematchProposerWallet);
+      const proposerBal = parseFloat(proposerAccount.balanceGram || proposerAccount.balanceTon || '0');
+      if (proposerBal < newWagerGram) {
+        this.broadcast({
+          type: 'REMATCH_DECLINED',
+          message: 'Rematch cancelled: Challenger no longer has sufficient balance for 2X wager.',
+        });
+        this.rematchProposerWallet = undefined;
+        this.rematchNewWagerNano = undefined;
+        return;
+      }
+
+      // 3. Deduct wagers from BOTH players
+      await dbService.debitUserBalance(
+        this.rematchProposerWallet,
+        newWagerGram.toFixed(2),
+        'REMATCH_BET',
+        `2X Rematch wager for match #${this.matchId}`
+      );
+      await dbService.debitUserBalance(
+        acceptorWallet,
+        newWagerGram.toFixed(2),
+        'REMATCH_BET',
+        `2X Rematch wager for match #${this.matchId}`
+      );
+      console.log(`[BaseGameRoom] Match #${this.matchId} rematch debited ${newWagerGram.toFixed(2)} GRAM from both players.`);
+    } catch (err: any) {
+      console.error(`[BaseGameRoom] Failed to process rematch balance debit for #${this.matchId}:`, err);
+      if (acceptor.ws) {
+        this.sendTo(acceptor.ws, {
+          type: 'ERROR',
+          message: 'Failed to process rematch balance deduction. Please try again.',
+        });
+      }
+      return;
+    }
+
+    // Cancel 90s auto-cleanup timer so room persists for rematch
+    if (this.settleCleanupTimer) {
+      clearTimeout(this.settleCleanupTimer);
+      this.settleCleanupTimer = undefined;
+    }
+
+    this.config.wagerAmountNano = newWagerNano;
+    this.isRematch = true;
+    this.rematchProposerWallet = undefined;
+    this.rematchNewWagerNano = undefined;
 
     this.state = 'LOBBY';
     this.playerA.score = 0;
     this.playerA.ready = false;
-    if (this.playerB) {
-      this.playerB.score = 0;
-      this.playerB.ready = false;
-    }
+    this.playerB.score = 0;
+    this.playerB.ready = false;
     this.winnerAddress = undefined;
     this.winnerName = undefined;
     this.resolution = undefined;
@@ -594,11 +744,13 @@ export abstract class BaseGameRoom {
     this.broadcastRoomState();
   }
 
-  public declineRematch(declinerWallet: string) {
+  public declineRematch(declinerWallet?: string) {
+    this.rematchProposerWallet = undefined;
+    this.rematchNewWagerNano = undefined;
     this.broadcast({
       type: 'REMATCH_DECLINED',
       declinerWallet,
-      message: 'Rematch offer was declined.',
+      message: 'Rematch offer was cancelled or declined.',
     });
   }
 

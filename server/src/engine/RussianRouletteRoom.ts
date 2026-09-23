@@ -8,6 +8,9 @@ export class RussianRouletteRoom extends BaseGameRoom {
   public currentTurn: 'A' | 'B' = 'A';
   public shieldA: boolean = false;
   public shieldB: boolean = false;
+  public shieldsEarnedA: number = 0;
+  public shieldsEarnedB: number = 0;
+  public readonly maxShields: number = 1;
   public lastOutcome?: RouletteState['lastOutcome'];
 
   private turnTimeout?: NodeJS.Timeout;
@@ -27,6 +30,9 @@ export class RussianRouletteRoom extends BaseGameRoom {
       currentTurn: this.currentTurn,
       shieldA: this.shieldA,
       shieldB: this.shieldB,
+      shieldsEarnedA: this.shieldsEarnedA,
+      shieldsEarnedB: this.shieldsEarnedB,
+      maxShields: this.maxShields,
       lethalOddsPercent: lethalOdds,
       lastOutcome: this.lastOutcome,
     };
@@ -37,6 +43,8 @@ export class RussianRouletteRoom extends BaseGameRoom {
     this.chambersRemaining = this.totalChambers;
     this.shieldA = false;
     this.shieldB = false;
+    this.shieldsEarnedA = 0;
+    this.shieldsEarnedB = 0;
     this.lastOutcome = undefined;
 
     // First turn assigned randomly (or Player A)
@@ -95,9 +103,22 @@ export class RussianRouletteRoom extends BaseGameRoom {
     const isBullet = Math.floor(Math.random() * this.chambersRemaining) + 1 === 1;
 
     if (target === 'self') {
+      const currentShields = shooter === 'A' ? this.shieldsEarnedA : this.shieldsEarnedB;
+      const hasShield = shooter === 'A' ? this.shieldA : this.shieldB;
+      if (hasShield || currentShields >= this.maxShields) {
+        console.warn(`[RussianRoulette] ${shooterName} attempted SHOOT SELF but shield limit reached (${currentShields}/${this.maxShields}, active: ${hasShield})`);
+        const shooterWs = shooter === 'A' ? this.playerA.ws : this.playerB?.ws;
+        if (shooterWs) {
+          this.sendTo(shooterWs, {
+            type: 'ERROR',
+            message: 'Shield limit reached (max 1 per duel). You cannot shoot yourself again!',
+          });
+        }
+        return;
+      }
+
       if (isBullet) {
         // Live bullet shot at oneself!
-        const hasShield = shooter === 'A' ? this.shieldA : this.shieldB;
         if (hasShield) {
           // Shield absorbs!
           if (shooter === 'A') this.shieldA = false; else this.shieldB = false;
@@ -127,8 +148,14 @@ export class RussianRouletteRoom extends BaseGameRoom {
           return;
         }
       } else {
-        // Blank! Survival reward: Shield gained + turn passes
-        if (shooter === 'A') this.shieldA = true; else this.shieldB = true;
+        // Blank! Survival reward: Shield gained + turn passes (capped at max 1)
+        if (shooter === 'A') {
+          this.shieldA = true;
+          this.shieldsEarnedA += 1;
+        } else {
+          this.shieldB = true;
+          this.shieldsEarnedB += 1;
+        }
         this.chambersRemaining -= 1;
         this.currentTurn = opponentSide;
 
@@ -137,7 +164,7 @@ export class RussianRouletteRoom extends BaseGameRoom {
           target,
           result: 'BLANK',
           shieldAbsorbed: false,
-          message: `🔒 CLICK! ${shooterName} risked shooting themselves and SURVIVED! Gained +1 Shield defense.`,
+          message: `🔒 CLICK! ${shooterName} risked shooting themselves and SURVIVED! Gained +1 Shield defense (1/1 max).`,
         };
         this.broadcastOutcome();
         this.startTurnTimer();

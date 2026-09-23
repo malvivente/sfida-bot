@@ -72,6 +72,8 @@ export function useSocket({
   const [gameData, setGameData] = useState<any>(null);
   const [playerAReady, setPlayerAReady] = useState(false);
   const [playerBReady, setPlayerBReady] = useState(false);
+  const [playerAConnected, setPlayerAConnected] = useState(true);
+  const [playerBConnected, setPlayerBConnected] = useState(true);
 
   useEffect(() => {
     if (!matchId) return;
@@ -124,6 +126,8 @@ export function useSocket({
             if (msg.gameData) setGameData(msg.gameData);
             if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
             if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
+            if (msg.playerA?.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
+            if (msg.playerB?.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
             break;
 
           case 'ROOM_UPDATE':
@@ -142,6 +146,8 @@ export function useSocket({
             if (msg.playerB?.name) setPlayerBName(msg.playerB.name);
             if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
             if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
+            if (msg.playerA?.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
+            if (msg.playerB?.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
             break;
 
           case 'ROULETTE_UPDATE':
@@ -237,11 +243,15 @@ export function useSocket({
             break;
 
           case 'PLAYER_DISCONNECTED':
+            if (msg.side === 'A') setPlayerAConnected(false);
+            if (msg.side === 'B') setPlayerBConnected(false);
             if (msg.gracePeriodSeconds) setForfeitCountdown(msg.gracePeriodSeconds);
             if (msg.message) setFeedMessage(msg.message);
             break;
 
           case 'PLAYER_RECONNECTED':
+            if (msg.side === 'A') setPlayerAConnected(true);
+            if (msg.side === 'B') setPlayerBConnected(true);
             setForfeitCountdown(null);
             if (msg.message) setFeedMessage(msg.message);
             break;
@@ -399,6 +409,8 @@ export function useSocket({
     gameData,
     playerAReady,
     playerBReady,
+    playerAConnected,
+    playerBConnected,
     sendReady,
     sendTap,
     sendRouletteShoot,

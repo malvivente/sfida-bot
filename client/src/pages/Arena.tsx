@@ -574,6 +574,22 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const isCurrentUserReady = isReady || (userSide === 'A' ? socketData.playerAReady : socketData.playerBReady);
 
+  const isOpponentInRoom = Boolean(
+    userSide === 'A' ? socketData.playerBConnected : socketData.playerAConnected
+  );
+
+  const isRematchProposer = Boolean(
+    socketData.rematchOffer?.proposerWallet &&
+    userAddress &&
+    areAddressesEqual(socketData.rematchOffer.proposerWallet, userAddress)
+  );
+
+  useEffect(() => {
+    if (socketData.roomState === 'LOBBY' && !socketData.playerAReady && !socketData.playerBReady) {
+      setIsReady(false);
+    }
+  }, [socketData.roomState, socketData.playerAReady, socketData.playerBReady]);
+
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
   return (
@@ -758,6 +774,10 @@ export const Arena: React.FC<ArenaProps> = ({
               onRequestRematch={socketData.requestRematch}
               onAcceptRematch={socketData.acceptRematch}
               onDeclineRematch={socketData.declineRematch}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
+              userAddress={userAddress}
             />
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
@@ -790,6 +810,10 @@ export const Arena: React.FC<ArenaProps> = ({
               onRequestRematch={socketData.requestRematch}
               onAcceptRematch={socketData.acceptRematch}
               onDeclineRematch={socketData.declineRematch}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
+              userAddress={userAddress}
             />
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
@@ -821,7 +845,10 @@ export const Arena: React.FC<ArenaProps> = ({
               onRequestRematch={socketData.requestRematch}
               onAcceptRematch={socketData.acceptRematch}
               onDeclineRematch={socketData.declineRematch}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
               userSide={userSide}
+              userAddress={userAddress}
             />
           ) : (
             <RussianRouletteArena
@@ -853,6 +880,10 @@ export const Arena: React.FC<ArenaProps> = ({
               onRequestRematch={socketData.requestRematch}
               onAcceptRematch={socketData.acceptRematch}
               onDeclineRematch={socketData.declineRematch}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
+              userAddress={userAddress}
             />
           )}
 

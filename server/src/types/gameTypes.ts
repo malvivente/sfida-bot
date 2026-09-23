@@ -19,6 +19,9 @@ export interface RouletteState {
   currentTurn: 'A' | 'B';
   shieldA: boolean;
   shieldB: boolean;
+  shieldsEarnedA?: number;
+  shieldsEarnedB?: number;
+  maxShields?: number;
   lethalOddsPercent: number;
   lastOutcome?: {
     shooter: 'A' | 'B';

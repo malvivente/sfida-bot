@@ -60,6 +60,9 @@ export interface RouletteState {
   currentTurn: 'A' | 'B';
   shieldA: boolean;
   shieldB: boolean;
+  shieldsEarnedA?: number;
+  shieldsEarnedB?: number;
+  maxShields?: number;
   lethalOddsPercent: number;
   lastOutcome?: {
     shooter: 'A' | 'B';
@@ -146,6 +149,7 @@ export interface WsMessage {
   matchId?: string;
   gameType?: GameType;
   role?: string;
+  side?: 'A' | 'B';
   state?: RoomState;
   round?: number;
   currentRound?: number;

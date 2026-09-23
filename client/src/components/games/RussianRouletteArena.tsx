@@ -29,6 +29,10 @@ interface RussianRouletteArenaProps {
   onRequestRematch?: () => void;
   onAcceptRematch?: () => void;
   onDeclineRematch?: () => void;
+  isRematchProposer?: boolean;
+  opponentConnected?: boolean;
+  userSide?: 'A' | 'B';
+  userAddress?: string;
 }
 
 export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
@@ -54,6 +58,9 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
   onRequestRematch,
   onAcceptRematch,
   onDeclineRematch,
+  isRematchProposer = false,
+  opponentConnected = true,
+  userSide = 'A',
 }) => {
   const chambers = gameData?.chambersRemaining ?? 8;
   const totalChambers = gameData?.totalChambers ?? 8;
@@ -62,6 +69,10 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
   const shieldB = gameData?.shieldB ?? false;
   const lethalOdds = gameData?.lethalOddsPercent ?? Math.round((1 / chambers) * 100);
   const lastOutcome = gameData?.lastOutcome;
+
+  const myHasShield = userSide === 'A' ? shieldA : shieldB;
+  const myShieldsEarned = userSide === 'A' ? (gameData?.shieldsEarnedA || 0) : (gameData?.shieldsEarnedB || 0);
+  const isShootSelfDisabled = myHasShield || myShieldsEarned >= 1;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 1.92).toFixed(2);
   const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
@@ -246,7 +257,29 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
             </div>
 
             {/* Rematch Offer Received */}
-            {rematchOffer && (
+            {rematchOffer && isRematchProposer && (
+              <div className="w-full p-2.5 rounded-xl bg-cyber-pink/20 border border-cyber-pink/60 flex flex-col space-y-1.5 mb-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
+                    <span>REMATCH OFFER SENT (2X)</span>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} TON</span>
+                </div>
+                <span className="text-[11px] text-slate-300 font-chakra">
+                  Waiting for opponent to accept the 2X challenge...
+                </span>
+                {onDeclineRematch && (
+                  <button
+                    onClick={onDeclineRematch}
+                    className="w-full py-1.5 rounded-lg bg-black/60 border border-slate-600 text-xs text-slate-300 hover:text-white font-chakra"
+                  >
+                    WITHDRAW OFFER
+                  </button>
+                )}
+              </div>
+            )}
+            {rematchOffer && !isRematchProposer && (
               <div className="w-full p-2.5 rounded-xl bg-cyber-pink/25 border border-cyber-pink flex flex-col space-y-2 mb-2 animate-pulse">
                 <span className="text-xs font-orbitron font-bold text-white">🔥 2X REMATCH OFFER!</span>
                 <span className="text-[11px] text-slate-200 font-chakra">
@@ -261,13 +294,19 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
 
             {/* Rematch Button */}
             {!rematchOffer && onRequestRematch && role === 'player' && (
-              <button
-                onClick={onRequestRematch}
-                className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-cyber-pink to-cyber-cyan text-white shadow-neon-pink hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>REMATCH (2X BET)</span>
-              </button>
+              !opponentConnected ? (
+                <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
+                  OPPONENT LEFT ROOM (REMATCH UNAVAILABLE)
+                </div>
+              ) : (
+                <button
+                  onClick={onRequestRematch}
+                  className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-cyber-pink to-cyber-cyan text-white shadow-neon-pink hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>REMATCH (2X BET)</span>
+                </button>
+              )
             )}
 
             {isWinner && onClaimPayout && !payoutClaimed && (
@@ -337,15 +376,24 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
                 </span>
                 <div className="flex space-x-2.5 w-full">
                   <button
-                    onClick={() => onShoot('self')}
-                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-bg border-2 border-cyber-cyan text-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:bg-cyber-cyan/15 active:scale-95 transition-all flex flex-col items-center"
+                    onClick={() => !isShootSelfDisabled && onShoot('self')}
+                    disabled={isShootSelfDisabled}
+                    className={`flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center ${
+                      isShootSelfDisabled
+                        ? 'bg-black/40 border border-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
+                        : 'bg-cyber-bg border-2 border-cyber-cyan text-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:bg-cyber-cyan/15 active:scale-95'
+                    }`}
                   >
                     <span className="flex items-center space-x-1">
-                      <Shield className="w-4 h-4 text-cyber-green inline" />
+                      <Shield className={`w-4 h-4 inline ${isShootSelfDisabled ? 'text-slate-500' : 'text-cyber-green'}`} />
                       <span>SHOOT SELF</span>
                     </span>
-                    <span className="text-[9px] text-cyber-green font-chakra font-normal mt-0.5">
-                      Survive to gain +1 SHIELD
+                    <span className={`text-[9px] font-chakra font-normal mt-0.5 ${isShootSelfDisabled ? 'text-slate-500' : 'text-cyber-green'}`}>
+                      {myHasShield
+                        ? 'SHIELD ACTIVE (MAX 1)'
+                        : myShieldsEarned >= 1
+                        ? 'MAX SHIELD USED (1/1)'
+                        : 'Survive to gain +1 SHIELD'}
                     </span>
                   </button>
 
