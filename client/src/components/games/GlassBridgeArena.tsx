@@ -64,20 +64,26 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
   opponentConnected = true,
   userSide = 'A',
 }) => {
-  const totalSteps = gameData?.totalSteps ?? 6;
   const stepA = gameData?.currentStepA ?? 0;
   const stepB = gameData?.currentStepB ?? 0;
   const activeStep = gameData?.activeStep ?? 1;
   const currentTurn = gameData?.currentTurn ?? 'A';
   const livesA = gameData?.livesA ?? 2;
   const livesB = gameData?.livesB ?? 2;
+  const passesRemainingA = gameData?.passesRemainingA ?? 1;
+  const passesRemainingB = gameData?.passesRemainingB ?? 1;
   const revealedSteps = gameData?.revealedSteps ?? {};
   const lastOutcome = gameData?.lastOutcome;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 1.92).toFixed(2);
   const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
   const myCurrentStep = currentTurn === 'A' ? stepA : stepB;
-  const canPassLead = myCurrentStep > 0 && myCurrentStep >= activeStep - 1;
+  const myPassesRemaining = userSide === 'A' ? passesRemainingA : passesRemainingB;
+  const canPassLead = myCurrentStep > 0 && myPassesRemaining > 0;
+
+  // Window of 5 steps around the activeStep
+  const minStep = Math.max(1, activeStep - 2);
+  const visibleSteps = Array.from({ length: 5 }, (_, idx) => minStep + idx);
 
   return (
     <div className="w-full flex flex-col items-center justify-between p-3.5 sm:p-4 bg-cyber-card/90 border border-cyber-green/40 rounded-3xl backdrop-blur-xl shadow-[0_0_40px_rgba(0,255,102,0.15)] relative overflow-hidden min-h-[560px]">
@@ -105,9 +111,12 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               />
             ))}
           </div>
-          <span className="text-[9px] font-mono mt-0.5">
+          <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
-              currentTurn === 'A' ? <span className="text-cyber-cyan font-bold">🎯 STEP {stepA}</span> : <span className="text-slate-500">STEP {stepA}</span>
+              <>
+                {currentTurn === 'A' ? <span className="text-cyber-cyan font-bold">🎯 STEP {stepA}</span> : <span className="text-slate-500">STEP {stepA}</span>}
+                <span className="text-[8px] text-slate-500">({passesRemainingA > 0 ? '1 PASS' : '0 PASS'})</span>
+              </>
             ) : (
               playerAReady ? <span className="text-cyber-green font-bold">✓ READY</span> : <span className="text-slate-400">WAITING</span>
             )}
@@ -118,9 +127,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
         <div className="flex flex-col items-center shrink-0 px-1 text-center">
           <span className="text-[8px] text-cyber-green uppercase font-chakra font-bold tracking-widest flex items-center space-x-1">
             <Compass className="w-3 h-3 text-cyber-green inline shrink-0" />
-            <span>GLASS BRIDGE</span>
+            <span>ENDLESS BRIDGE</span>
           </span>
-          <span className="text-xs font-mono font-black text-white">STEP {activeStep} / {totalSteps}</span>
+          <span className="text-xs font-mono font-black text-white">STEP #{activeStep}</span>
         </div>
 
         {/* Player B */}
@@ -142,9 +151,12 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               />
             ))}
           </div>
-          <span className="text-[9px] font-mono mt-0.5">
+          <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
-              currentTurn === 'B' ? <span className="text-cyber-pink font-bold">🎯 STEP {stepB}</span> : <span className="text-slate-500">STEP {stepB}</span>
+              <>
+                <span className="text-[8px] text-slate-500">({passesRemainingB > 0 ? '1 PASS' : '0 PASS'})</span>
+                {currentTurn === 'B' ? <span className="text-cyber-pink font-bold">🎯 STEP {stepB}</span> : <span className="text-slate-500">STEP {stepB}</span>}
+              </>
             ) : (
               playerBReady ? <span className="text-cyber-green font-bold">✓ READY</span> : <span className="text-slate-400">WAITING</span>
             )}
@@ -156,8 +168,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
       <div className="my-auto w-full flex flex-col items-center justify-center py-2 z-10">
         {roomState !== 'MATCH_SETTLED' ? (
           <div className="w-full max-w-xs flex flex-col-reverse space-y-reverse space-y-1.5">
-            {Array.from({ length: totalSteps }).map((_, idx) => {
-              const stepNum = idx + 1;
+            {visibleSteps.map((stepNum) => {
               const isCurrentTarget = roomState === 'GAME_ACTIVE' && stepNum === activeStep;
               const revealed = revealedSteps[stepNum];
               const hasPassed = roomState === 'GAME_ACTIVE' && stepNum < activeStep;
@@ -306,14 +317,12 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               )
             )}
 
-            {isWinner && onClaimPayout && !payoutClaimed && (
-              <button
-                onClick={onClaimPayout}
-                disabled={isClaimingPayout}
-                className="w-full py-3 rounded-xl font-orbitron font-bold text-xs uppercase bg-cyber-amber text-cyber-bg shadow-neon-amber hover:brightness-110 active:scale-95 transition-all mb-2"
-              >
-                {isClaimingPayout ? 'WITHDRAWING...' : `CLAIM PRIZE (${winnerPayoutTon} TON)`}
-              </button>
+            {isWinner && (
+              <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
+                <span className="text-xs font-orbitron font-bold text-cyber-green">
+                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)
+                </span>
+              </div>
             )}
 
             {onReturnToLobby && (
@@ -395,14 +404,23 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                 </div>
 
                 {/* Pass Lead to Opponent */}
-                {canPassLead && (
+                {myPassesRemaining > 0 ? (
                   <button
                     onClick={onPass}
-                    className="w-full py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-xs font-chakra font-bold hover:text-white hover:border-slate-500 active:scale-95 transition-all flex items-center justify-center space-x-1"
+                    disabled={!canPassLead}
+                    className={`w-full py-2 rounded-xl text-xs font-chakra font-bold transition-all flex items-center justify-center space-x-1 ${
+                      canPassLead
+                        ? 'bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 active:scale-95'
+                        : 'bg-black/40 border border-slate-900 text-slate-600 cursor-not-allowed'
+                    }`}
                   >
                     <ArrowUpRight className="w-3.5 h-3.5 text-cyber-amber" />
-                    <span>PASS LEAD TO OPPONENT</span>
+                    <span>PASS LEAD TO OPPONENT (1 LEFT)</span>
                   </button>
+                ) : (
+                  <div className="w-full py-1.5 rounded-xl bg-black/40 border border-slate-900 text-slate-600 text-[10px] font-chakra text-center font-bold">
+                    PASS EXHAUSTED (0 LEFT) • MUST JUMP
+                  </div>
                 )}
               </div>
             ) : (
@@ -416,7 +434,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           ) : (
             <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
               <span className="text-xs font-chakra font-bold text-cyber-green">
-                👁️ SPECTATOR VIEW • 6-STEP GLASS RUN • PLACE BETS BELOW
+                👁️ SPECTATOR VIEW • ENDLESS GLASS RUN • PLACE BETS BELOW
               </span>
             </div>
           )

@@ -77,23 +77,29 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
   const roundWinner = gameData?.roundWinner;
   const roundEndMessage = gameData?.roundEndMessage;
 
-  const [now, setNow] = useState(Date.now());
-  const reqRef = useRef<number | null>(null);
+  const [syncedNow, setSyncedNow] = useState(Date.now());
+  const clockOffsetRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (gameData?.serverTime) {
+      clockOffsetRef.current = gameData.serverTime - Date.now();
+    }
+  }, [gameData?.serverTime]);
 
   useEffect(() => {
     let animId: number;
     const tick = () => {
-      setNow(Date.now());
+      setSyncedNow(Date.now() + clockOffsetRef.current);
       animId = requestAnimationFrame(tick);
     };
     animId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  const hasStarted = startEpochMs > 0 && now >= startEpochMs;
-  const countdownUntilStartMs = Math.max(0, startEpochMs - now);
+  const hasStarted = startEpochMs > 0 && syncedNow >= startEpochMs;
+  const countdownUntilStartMs = Math.max(0, startEpochMs - syncedNow);
 
-  const elapsedMs = hasStarted ? now - startEpochMs : 0;
+  const elapsedMs = hasStarted ? syncedNow - startEpochMs : 0;
   const remainingMs = Math.max(0, targetDurationMs - elapsedMs);
   const isPastZero = hasStarted && elapsedMs > targetDurationMs;
 
@@ -368,14 +374,12 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               )
             )}
 
-            {isWinner && onClaimPayout && !payoutClaimed && (
-              <button
-                onClick={onClaimPayout}
-                disabled={isClaimingPayout}
-                className="w-full py-3 rounded-xl font-orbitron font-bold text-xs uppercase bg-cyber-amber text-cyber-bg shadow-neon-amber hover:brightness-110 active:scale-95 transition-all mb-2"
-              >
-                {isClaimingPayout ? 'WITHDRAWING...' : `CLAIM PRIZE (${winnerPayoutTon} TON)`}
-              </button>
+            {isWinner && (
+              <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
+                <span className="text-xs font-orbitron font-bold text-cyber-green">
+                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)
+                </span>
+              </div>
             )}
 
             {onReturnToLobby && (
@@ -440,11 +444,16 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
             ) : hasStarted ? (
               <button
                 onClick={onStop}
-                className="w-full py-4 rounded-2xl font-orbitron font-black text-sm uppercase tracking-wider bg-cyber-amber text-cyber-bg shadow-neon-amber hover:brightness-110 active:scale-95 transition-all flex flex-col items-center"
+                disabled={!isBlindZone}
+                className={`w-full py-4 rounded-2xl font-orbitron font-black text-sm uppercase tracking-wider flex flex-col items-center transition-all ${
+                  isBlindZone
+                    ? 'bg-cyber-pink text-white shadow-neon-pink hover:brightness-110 active:scale-95 animate-pulse'
+                    : 'bg-black/60 border border-slate-800 text-slate-500 opacity-60 cursor-not-allowed shadow-inner'
+                }`}
               >
-                <span>STOP TIMER NOW!</span>
-                <span className="text-[10px] text-cyber-bg/80 font-chakra font-normal mt-0.5">
-                  Stop as close to 0.00s as you dare
+                <span>{isBlindZone ? '🛑 STOP CHRONO NOW!' : '👁️ TIME VISIBLE • PREPARE FOR BLIND ZONE'}</span>
+                <span className={`text-[10px] font-chakra font-normal mt-0.5 ${isBlindZone ? 'text-white/80' : 'text-slate-500'}`}>
+                  {isBlindZone ? 'Hit stop closest to 0.00s without exceeding!' : 'Button unlocks when screen blacks out'}
                 </span>
               </button>
             ) : (

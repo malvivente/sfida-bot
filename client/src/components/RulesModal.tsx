@@ -103,29 +103,33 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-pink font-bold font-orbitron text-xs">
                   <Swords className="w-4 h-4" />
-                  <span>CYBER QUICKDRAW COMBAT RULES</span>
+                  <span>1V1 DUEL DISCIPLINES & RULES</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Duels are played in a Best-of-3 round format (first player to secure 2 rounds wins the match).
+                  Duelists wager TON / GRAM in high-stakes PvP games. All outcomes are resolved server-side and settled automatically to the winner's balance.
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-cyber-cyan block mb-0.5">1. "FIRE!" Signal</strong>
-                  <span>Fires randomly between 1.8 and 4.2 seconds. The player with the fastest reaction time (measured in milliseconds) wins the round.</span>
+                  <strong className="text-cyber-pink block mb-0.5">1. Russian Roulette (8 Chambers, 1 Bullet)</strong>
+                  <span>Duelists take turns shooting themselves (`SHOOT SELF`). Blank passes the turn with increasing lethal odds. Each player has <strong>1 single offensive shot</strong> against the rival: if missed, you must shoot yourself on all future turns! Instant fatal shot settles the match.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-cyber-amber block mb-0.5">2. "WAIT!" Decoy Signal</strong>
-                  <span>An amber decoy light designed to test trigger discipline. Pressing during decoy or before the FIRE signal triggers an instant false start ("MISFIRE") penalty and awards the round to your opponent.</span>
+                  <strong className="text-cyber-cyan block mb-0.5">2. Blackjack Face-Up (Duel to 21)</strong>
+                  <span>Cards are dealt face-up from a shared common deck visible to both duelists and spectators. Choose HIT or STAND. Closest to 21 without busting wins the wager.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-slate-300 block mb-0.5">3. Disconnection & Forfeit</strong>
-                  <span>If a player disconnects, an 8-second grace countdown initiates. If they fail to reconnect in time, a forfeit victory is awarded to the opponent.</span>
+                  <strong className="text-cyber-green block mb-0.5">3. Endless Glass Bridge (Survival Leap)</strong>
+                  <span>Step across an endless bridge of tempered vs fragile glass tiles. 2 lives each. Each player can use <strong>1 single PASS</strong> to shift the lead to the opponent. Shatter all lives and fall into the abyss—last warrior standing wins!</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-cyber-pink block mb-0.5">4. Double or Nothing (Rematch 2X)</strong>
-                  <span>At the end of a match, either duelist can propose an immediate rematch with 2X the stake! If accepted, both players enter the lobby for doubled stakes.</span>
+                  <strong className="text-cyber-amber block mb-0.5">4. Chrono Blind (Precision Countdown)</strong>
+                  <span>A random timer plunges into the dark Blind Zone at 3.00s. Hit STOP as close to 0.000s as you dare. Stopping past 0.00s is a BUST. First to secure 2 rounds wins the match.</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
+                  <strong className="text-slate-300 block mb-0.5">5. Automated Prize Settlement & Rematches</strong>
+                  <span>Prizes are automatically credited to your in-bot balance upon duel settlement. At the end of any duel, either player can propose an immediate 2X rematch!</span>
                 </div>
               </div>
             </div>

@@ -58,8 +58,10 @@ export interface RouletteState {
   chambersRemaining: number;
   totalChambers: number;
   currentTurn: 'A' | 'B';
-  shieldA: boolean;
-  shieldB: boolean;
+  offensiveShotsA: number;
+  offensiveShotsB: number;
+  shieldA?: boolean;
+  shieldB?: boolean;
   shieldsEarnedA?: number;
   shieldsEarnedB?: number;
   maxShields?: number;
@@ -105,13 +107,15 @@ export interface BlackjackState {
 export type BridgeTileChoice = 'LEFT' | 'RIGHT';
 
 export interface GlassBridgeState {
-  totalSteps: number;
+  totalSteps?: number;
   currentStepA: number;
   currentStepB: number;
   activeStep: number;
   currentTurn: 'A' | 'B';
   livesA: number;
   livesB: number;
+  passesRemainingA?: number;
+  passesRemainingB?: number;
   revealedSteps: Record<number, BridgeTileChoice>;
   lastOutcome?: {
     player: 'A' | 'B';
@@ -132,6 +136,7 @@ export interface ChronoBlindState {
   targetDurationMs: number;
   blindThresholdMs: number;
   startEpochMs: number;
+  serverTime?: number;
   stoppedA: boolean;
   stoppedB: boolean;
   stopTimeA?: number;

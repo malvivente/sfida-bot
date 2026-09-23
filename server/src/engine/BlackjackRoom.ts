@@ -154,8 +154,9 @@ export class BlackjackRoom extends BaseGameRoom {
   }
 
   public handleGameAction(wallet: string, data: any) {
-    if (data.type === 'BLACKJACK_ACTION' && (data.action === 'HIT' || data.action === 'STAND')) {
-      this.handleBlackjackAction(wallet, data.action);
+    const action = data.action || data.choice;
+    if (data.type === 'BLACKJACK_ACTION' && (action === 'HIT' || action === 'STAND')) {
+      this.handleBlackjackAction(wallet, action);
     }
   }
 

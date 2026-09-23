@@ -359,7 +359,7 @@ export function useSocket({
 
   const sendBlackjackAction = useCallback((choice: 'HIT' | 'STAND') => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'BLACKJACK_ACTION', choice }));
+      wsRef.current.send(JSON.stringify({ type: 'BLACKJACK_ACTION', action: choice, choice }));
     }
   }, []);
 

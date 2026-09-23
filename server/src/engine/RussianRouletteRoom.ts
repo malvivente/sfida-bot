@@ -6,11 +6,8 @@ export class RussianRouletteRoom extends BaseGameRoom {
   public chambersRemaining: number = GAMES_CONFIG.roulette.totalChambers;
   public totalChambers: number = GAMES_CONFIG.roulette.totalChambers;
   public currentTurn: 'A' | 'B' = 'A';
-  public shieldA: boolean = false;
-  public shieldB: boolean = false;
-  public shieldsEarnedA: number = 0;
-  public shieldsEarnedB: number = 0;
-  public readonly maxShields: number = 1;
+  public offensiveShotsA: number = 1;
+  public offensiveShotsB: number = 1;
   public lastOutcome?: RouletteState['lastOutcome'];
 
   private turnTimeout?: NodeJS.Timeout;
@@ -23,16 +20,13 @@ export class RussianRouletteRoom extends BaseGameRoom {
   }
 
   public getGamePayload(): RouletteState {
-    const lethalOdds = Math.round((1 / this.chambersRemaining) * 100);
+    const lethalOdds = Math.round((1 / Math.max(1, this.chambersRemaining)) * 100);
     return {
       chambersRemaining: this.chambersRemaining,
       totalChambers: this.totalChambers,
       currentTurn: this.currentTurn,
-      shieldA: this.shieldA,
-      shieldB: this.shieldB,
-      shieldsEarnedA: this.shieldsEarnedA,
-      shieldsEarnedB: this.shieldsEarnedB,
-      maxShields: this.maxShields,
+      offensiveShotsA: this.offensiveShotsA,
+      offensiveShotsB: this.offensiveShotsB,
       lethalOddsPercent: lethalOdds,
       lastOutcome: this.lastOutcome,
     };
@@ -41,10 +35,8 @@ export class RussianRouletteRoom extends BaseGameRoom {
   public onGameStart() {
     this.state = 'GAME_ACTIVE';
     this.chambersRemaining = this.totalChambers;
-    this.shieldA = false;
-    this.shieldB = false;
-    this.shieldsEarnedA = 0;
-    this.shieldsEarnedB = 0;
+    this.offensiveShotsA = 1;
+    this.offensiveShotsB = 1;
     this.lastOutcome = undefined;
 
     // First turn assigned randomly (or Player A)
@@ -65,16 +57,15 @@ export class RussianRouletteRoom extends BaseGameRoom {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
     this.turnTimeout = setTimeout(() => {
-      // Auto-shoot opponent if turn times out
-      console.log(`[RussianRoulette] Match #${this.matchId}: Player ${this.currentTurn} turn timed out. Auto-shooting opponent.`);
+      console.log(`[RussianRoulette] Match #${this.matchId}: Player ${this.currentTurn} turn timed out. Auto-shooting self.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
-      this.handleRouletteShoot(activeWallet, 'opponent');
+      this.handleRouletteShoot(activeWallet, 'self');
     }, GAMES_CONFIG.roulette.turnTimeoutSeconds * 1000);
   }
 
   public handleGameAction(wallet: string, data: any) {
     if (data.type === 'ROULETTE_SHOOT') {
-      const target: RouletteTarget = data.target === 'self' ? 'self' : 'opponent';
+      const target: RouletteTarget = data.target === 'opponent' ? 'opponent' : 'self';
       this.handleRouletteShoot(wallet, target);
     }
   }
@@ -98,73 +89,56 @@ export class RussianRouletteRoom extends BaseGameRoom {
     const shooterName = side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
     const opponentName = side === 'A' ? (this.playerB?.username || 'Player B') : this.playerA.username;
     const opponentWallet = side === 'A' ? (this.playerB?.walletAddress || '') : this.playerA.walletAddress;
+    const shooterWallet = side === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
+
+    // Check offensive shot limits
+    if (target === 'opponent') {
+      const shotsAvailable = shooter === 'A' ? this.offensiveShotsA : this.offensiveShotsB;
+      if (shotsAvailable <= 0) {
+        console.warn(`[RussianRoulette] ${shooterName} attempted SHOOT OPPONENT but offensive shot was already used.`);
+        const shooterWs = shooter === 'A' ? this.playerA.ws : this.playerB?.ws;
+        if (shooterWs) {
+          this.sendTo(shooterWs, {
+            type: 'ERROR',
+            message: 'Offensive shot already used! You can only shoot yourself.',
+          });
+        }
+        this.startTurnTimer();
+        return;
+      }
+      // Consume offensive shot
+      if (shooter === 'A') {
+        this.offensiveShotsA = 0;
+      } else {
+        this.offensiveShotsB = 0;
+      }
+    }
 
     // Roll chamber: random from 1 to chambersRemaining. If roll == 1, it's the live bullet!
     const isBullet = Math.floor(Math.random() * this.chambersRemaining) + 1 === 1;
 
     if (target === 'self') {
-      const currentShields = shooter === 'A' ? this.shieldsEarnedA : this.shieldsEarnedB;
-      const hasShield = shooter === 'A' ? this.shieldA : this.shieldB;
-      if (hasShield || currentShields >= this.maxShields) {
-        console.warn(`[RussianRoulette] ${shooterName} attempted SHOOT SELF but shield limit reached (${currentShields}/${this.maxShields}, active: ${hasShield})`);
-        const shooterWs = shooter === 'A' ? this.playerA.ws : this.playerB?.ws;
-        if (shooterWs) {
-          this.sendTo(shooterWs, {
-            type: 'ERROR',
-            message: 'Shield limit reached (max 1 per duel). You cannot shoot yourself again!',
-          });
-        }
-        return;
-      }
-
       if (isBullet) {
-        // Live bullet shot at oneself!
-        if (hasShield) {
-          // Shield absorbs!
-          if (shooter === 'A') this.shieldA = false; else this.shieldB = false;
-          this.chambersRemaining = this.totalChambers; // Reload cylinder
-          this.currentTurn = opponentSide;
-
-          this.lastOutcome = {
-            shooter,
-            target,
-            result: 'BANG',
-            shieldAbsorbed: true,
-            message: `💥 BANG! ${shooterName} shot themselves with the live bullet, but their SHIELD absorbed the fatal blow! Cylinder reloaded.`,
-          };
-          this.broadcastOutcome();
-          this.startTurnTimer();
-        } else {
-          // Fatal! Opponent wins
-          this.lastOutcome = {
-            shooter,
-            target,
-            result: 'BANG',
-            shieldAbsorbed: false,
-            message: `💥 BANG! ${shooterName} pulled the trigger on themselves and fired the live bullet! Fatal shot!`,
-          };
-          this.broadcastOutcome();
-          this.settleMatch(opponentWallet);
-          return;
-        }
+        // Fatal shot on self! Opponent wins
+        this.lastOutcome = {
+          shooter,
+          target,
+          result: 'BANG',
+          message: `💥 BANG! ${shooterName} pulled the trigger on themselves and fired the live bullet! Fatal hit!`,
+        };
+        this.broadcastOutcome();
+        this.settleMatch(opponentWallet);
+        return;
       } else {
-        // Blank! Survival reward: Shield gained + turn passes (capped at max 1)
-        if (shooter === 'A') {
-          this.shieldA = true;
-          this.shieldsEarnedA += 1;
-        } else {
-          this.shieldB = true;
-          this.shieldsEarnedB += 1;
-        }
-        this.chambersRemaining -= 1;
+        // Blank on self! Survived!
+        this.chambersRemaining = Math.max(1, this.chambersRemaining - 1);
         this.currentTurn = opponentSide;
 
         this.lastOutcome = {
           shooter,
           target,
           result: 'BLANK',
-          shieldAbsorbed: false,
-          message: `🔒 CLICK! ${shooterName} risked shooting themselves and SURVIVED! Gained +1 Shield defense (1/1 max).`,
+          message: `🔒 CLICK! ${shooterName} risked shooting themselves and SURVIVED! Cylinder odds increase!`,
         };
         this.broadcastOutcome();
         this.startTurnTimer();
@@ -172,47 +146,26 @@ export class RussianRouletteRoom extends BaseGameRoom {
     } else {
       // Shoot opponent
       if (isBullet) {
-        const opponentHasShield = opponentSide === 'A' ? this.shieldA : this.shieldB;
-        if (opponentHasShield) {
-          // Opponent shield breaks!
-          if (opponentSide === 'A') this.shieldA = false; else this.shieldB = false;
-          this.chambersRemaining = this.totalChambers;
-          this.currentTurn = opponentSide;
-
-          this.lastOutcome = {
-            shooter,
-            target,
-            result: 'BANG',
-            shieldAbsorbed: true,
-            message: `💥 BANG! ${shooterName} shot ${opponentName}, but ${opponentName}'s SHIELD absorbed the shot! Cylinder reloaded.`,
-          };
-          this.broadcastOutcome();
-          this.startTurnTimer();
-        } else {
-          // Fatal! Shooter wins
-          this.lastOutcome = {
-            shooter,
-            target,
-            result: 'BANG',
-            shieldAbsorbed: false,
-            message: `💥 BANG! ${shooterName} fired the live bullet directly at ${opponentName}! Fatal hit!`,
-          };
-          this.broadcastOutcome();
-          const shooterWallet = shooter === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
-          this.settleMatch(shooterWallet);
-          return;
-        }
+        // Fatal shot on opponent! Shooter wins
+        this.lastOutcome = {
+          shooter,
+          target,
+          result: 'BANG',
+          message: `💥 BANG! ${shooterName} fired the live bullet directly at ${opponentName}! Fatal hit!`,
+        };
+        this.broadcastOutcome();
+        this.settleMatch(shooterWallet);
+        return;
       } else {
         // Blank on opponent!
-        this.chambersRemaining -= 1;
+        this.chambersRemaining = Math.max(1, this.chambersRemaining - 1);
         this.currentTurn = opponentSide;
 
         this.lastOutcome = {
           shooter,
           target,
           result: 'BLANK',
-          shieldAbsorbed: false,
-          message: `💨 CLICK! ${shooterName} aimed at ${opponentName} and fired... Empty chamber! Odds increase for the next shot!`,
+          message: `💨 CLICK! ${shooterName} aimed at ${opponentName} and fired... Empty chamber! Offensive shot exhausted!`,
         };
         this.broadcastOutcome();
         this.startTurnTimer();

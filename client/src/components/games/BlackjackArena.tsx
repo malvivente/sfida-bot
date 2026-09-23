@@ -344,14 +344,12 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               )
             )}
 
-            {isWinner && onClaimPayout && !payoutClaimed && (
-              <button
-                onClick={onClaimPayout}
-                disabled={isClaimingPayout}
-                className="w-full py-3 rounded-xl font-orbitron font-bold text-xs uppercase bg-cyber-amber text-cyber-bg shadow-neon-amber hover:brightness-110 active:scale-95 transition-all mb-2"
-              >
-                {isClaimingPayout ? 'WITHDRAWING...' : `CLAIM PRIZE (${winnerPayoutTon} TON)`}
-              </button>
+            {isWinner && (
+              <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
+                <span className="text-xs font-orbitron font-bold text-cyber-green">
+                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)
+                </span>
+              </div>
             )}
 
             {onReturnToLobby && (

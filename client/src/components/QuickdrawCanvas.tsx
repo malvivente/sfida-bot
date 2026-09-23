@@ -435,35 +435,10 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
             {/* Winner Actions: Claim Button or Status */}
             {isWinner ? (
-              payoutClaimed ? (
-                <div className="w-full max-w-xs py-3 rounded-xl bg-cyber-green/15 border border-cyber-green/50 text-cyber-green font-orbitron font-bold text-xs flex items-center justify-center space-x-2 animate-pulse">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>PRIZE CREDITED TO WALLET!</span>
-                </div>
-              ) : (
-                <div className="w-full max-w-xs flex flex-col items-center space-y-1 mb-1">
-                  <button
-                    onClick={onClaimPayout}
-                    disabled={isClaimingPayout || !onClaimPayout}
-                    className="w-full py-3.5 rounded-xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-cyber-amber via-yellow-400 to-cyber-amber text-cyber-bg shadow-[0_0_20px_rgba(255,180,0,0.5)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
-                  >
-                    {isClaimingPayout ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-cyber-bg" />
-                        <span>WITHDRAWING...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trophy className="w-4 h-4 text-cyber-bg" />
-                        <span>CLAIM PRIZE ({winnerPayoutTon} TON)</span>
-                      </>
-                    )}
-                  </button>
-                  <span className="text-[10px] text-slate-400 font-rajdhani">
-                    Confirm in Tonkeeper to receive {winnerPayoutTon} TON in your wallet
-                  </span>
-                </div>
-              )
+              <div className="w-full max-w-xs py-3 rounded-xl bg-cyber-green/15 border border-cyber-green/50 text-cyber-green font-orbitron font-bold text-xs flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(0,255,102,0.2)] mb-1">
+                <CheckCircle2 className="w-4 h-4 text-cyber-green" />
+                <span>PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)</span>
+              </div>
             ) : (
               <p className="text-xs text-slate-400 font-rajdhani max-w-xs mb-1">
                 Duel concluded. Prize settled on-chain by smart contract.

@@ -65,14 +65,13 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
   const chambers = gameData?.chambersRemaining ?? 8;
   const totalChambers = gameData?.totalChambers ?? 8;
   const currentTurn = gameData?.currentTurn ?? 'A';
-  const shieldA = gameData?.shieldA ?? false;
-  const shieldB = gameData?.shieldB ?? false;
-  const lethalOdds = gameData?.lethalOddsPercent ?? Math.round((1 / chambers) * 100);
+  const offensiveShotsA = gameData?.offensiveShotsA ?? 1;
+  const offensiveShotsB = gameData?.offensiveShotsB ?? 1;
+  const lethalOdds = gameData?.lethalOddsPercent ?? Math.round((1 / Math.max(1, chambers)) * 100);
   const lastOutcome = gameData?.lastOutcome;
 
-  const myHasShield = userSide === 'A' ? shieldA : shieldB;
-  const myShieldsEarned = userSide === 'A' ? (gameData?.shieldsEarnedA || 0) : (gameData?.shieldsEarnedB || 0);
-  const isShootSelfDisabled = myHasShield || myShieldsEarned >= 1;
+  const myOffensiveShots = userSide === 'A' ? offensiveShotsA : offensiveShotsB;
+  const isShootOpponentDisabled = myOffensiveShots <= 0;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 1.92).toFixed(2);
   const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
@@ -82,7 +81,7 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-radial-gradient from-cyber-pink/10 via-transparent to-black/90 pointer-events-none" />
 
-      {/* Top Header: Players & Shield/Ready Status */}
+      {/* Top Header: Players & Offensive Shots / Ready Status */}
       <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 pb-2.5 gap-1.5">
         {/* Player A */}
         <div className={`flex flex-col items-start flex-1 min-w-0 p-2 rounded-xl border transition-all ${
@@ -92,10 +91,13 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
         }`}>
           <div className="flex items-center space-x-1 w-full min-w-0">
             <span className="text-[11px] font-chakra font-bold text-cyber-cyan truncate">{playerAName}</span>
-            {shieldA && (
-              <span className="flex items-center space-x-0.5 text-[8px] text-cyber-green bg-cyber-green/20 px-1 py-0.5 rounded font-mono border border-cyber-green/40 animate-pulse shrink-0">
-                <Shield className="w-2.5 h-2.5" />
-                <span>SHIELD</span>
+            {roomState === 'GAME_ACTIVE' && (
+              <span className={`text-[8px] px-1 py-0.5 rounded font-mono border shrink-0 ${
+                offensiveShotsA > 0
+                  ? 'text-cyber-green bg-cyber-green/20 border-cyber-green/40'
+                  : 'text-slate-500 bg-black/40 border-slate-800'
+              }`}>
+                {offensiveShotsA > 0 ? '🎯 1 SHOT' : '🎯 0 SHOTS'}
               </span>
             )}
           </div>
@@ -121,10 +123,13 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
             : 'bg-black/40 border-cyber-border'
         }`}>
           <div className="flex items-center space-x-1 w-full min-w-0 justify-end">
-            {shieldB && (
-              <span className="flex items-center space-x-0.5 text-[8px] text-cyber-green bg-cyber-green/20 px-1 py-0.5 rounded font-mono border border-cyber-green/40 animate-pulse shrink-0">
-                <Shield className="w-2.5 h-2.5" />
-                <span>SHIELD</span>
+            {roomState === 'GAME_ACTIVE' && (
+              <span className={`text-[8px] px-1 py-0.5 rounded font-mono border shrink-0 ${
+                offensiveShotsB > 0
+                  ? 'text-cyber-pink bg-cyber-pink/20 border-cyber-pink/40'
+                  : 'text-slate-500 bg-black/40 border-slate-800'
+              }`}>
+                {offensiveShotsB > 0 ? '🎯 1 SHOT' : '🎯 0 SHOTS'}
               </span>
             )}
             <span className="text-[11px] font-chakra font-bold text-cyber-pink truncate">{playerBName}</span>
@@ -309,14 +314,12 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
               )
             )}
 
-            {isWinner && onClaimPayout && !payoutClaimed && (
-              <button
-                onClick={onClaimPayout}
-                disabled={isClaimingPayout}
-                className="w-full py-3 rounded-xl font-orbitron font-bold text-xs uppercase bg-cyber-amber text-cyber-bg shadow-neon-amber hover:brightness-110 active:scale-95 transition-all mb-2"
-              >
-                {isClaimingPayout ? 'WITHDRAWING...' : `CLAIM PRIZE (${winnerPayoutTon} TON)`}
-              </button>
+            {isWinner && (
+              <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
+                <span className="text-xs font-orbitron font-bold text-cyber-green">
+                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)
+                </span>
+              </div>
             )}
 
             {onReturnToLobby && (
@@ -372,41 +375,37 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
             isPlayerTurn ? (
               <div className="w-full flex flex-col space-y-2">
                 <span className="text-[11px] font-orbitron font-bold text-cyber-cyan uppercase tracking-wider text-center animate-pulse">
-                  ⚡ YOUR TURN • CHOOSE YOUR TARGET
+                  ⚡ YOUR TURN • PULL TRIGGER OR STRIKE OPPONENT
                 </span>
                 <div className="flex space-x-2.5 w-full">
                   <button
-                    onClick={() => !isShootSelfDisabled && onShoot('self')}
-                    disabled={isShootSelfDisabled}
-                    className={`flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center ${
-                      isShootSelfDisabled
-                        ? 'bg-black/40 border border-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
-                        : 'bg-cyber-bg border-2 border-cyber-cyan text-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:bg-cyber-cyan/15 active:scale-95'
-                    }`}
+                    onClick={() => onShoot('self')}
+                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-bg border-2 border-cyber-cyan text-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:bg-cyber-cyan/15 active:scale-95 transition-all flex flex-col items-center"
                   >
                     <span className="flex items-center space-x-1">
-                      <Shield className={`w-4 h-4 inline ${isShootSelfDisabled ? 'text-slate-500' : 'text-cyber-green'}`} />
+                      <Crosshair className="w-4 h-4 text-cyber-cyan inline" />
                       <span>SHOOT SELF</span>
                     </span>
-                    <span className={`text-[9px] font-chakra font-normal mt-0.5 ${isShootSelfDisabled ? 'text-slate-500' : 'text-cyber-green'}`}>
-                      {myHasShield
-                        ? 'SHIELD ACTIVE (MAX 1)'
-                        : myShieldsEarned >= 1
-                        ? 'MAX SHIELD USED (1/1)'
-                        : 'Survive to gain +1 SHIELD'}
+                    <span className="text-[9px] font-chakra font-normal mt-0.5 text-cyber-cyan/80">
+                      Survive blank to pass turn
                     </span>
                   </button>
 
                   <button
-                    onClick={() => onShoot('opponent')}
-                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-pink text-white shadow-neon-pink hover:brightness-110 active:scale-95 transition-all flex flex-col items-center"
+                    onClick={() => !isShootOpponentDisabled && onShoot('opponent')}
+                    disabled={isShootOpponentDisabled}
+                    className={`flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider transition-all flex flex-col items-center ${
+                      isShootOpponentDisabled
+                        ? 'bg-black/40 border border-slate-800 text-slate-500 opacity-40 cursor-not-allowed'
+                        : 'bg-cyber-pink text-white shadow-neon-pink hover:brightness-110 active:scale-95'
+                    }`}
                   >
                     <span className="flex items-center space-x-1">
                       <Crosshair className="w-4 h-4 text-white inline" />
                       <span>SHOOT RIVAL</span>
                     </span>
-                    <span className="text-[9px] text-white/80 font-chakra font-normal mt-0.5">
-                      {lethalOdds}% chance to eliminate
+                    <span className="text-[9px] font-chakra font-normal mt-0.5">
+                      {isShootOpponentDisabled ? 'EXHAUSTED (0 LEFT)' : `${lethalOdds}% kill • 1 USE ONLY`}
                     </span>
                   </button>
                 </div>

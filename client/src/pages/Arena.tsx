@@ -165,6 +165,15 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   }, [socketData.feedMessage, onClearDeepMatch]);
 
+  // Auto-refresh user balance when match settles
+  useEffect(() => {
+    if (socketData.roomState === 'MATCH_SETTLED') {
+      fetchUserBalance();
+      const t = setTimeout(fetchUserBalance, 1500);
+      return () => clearTimeout(t);
+    }
+  }, [socketData.roomState]);
+
   // Handle Real On-Chain Deposit from Tonkeeper
   const handleQuickDeposit = async () => {
     if (!userAddress) {

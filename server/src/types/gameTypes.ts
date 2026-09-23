@@ -17,17 +17,13 @@ export interface RouletteState {
   chambersRemaining: number;
   totalChambers: number;
   currentTurn: 'A' | 'B';
-  shieldA: boolean;
-  shieldB: boolean;
-  shieldsEarnedA?: number;
-  shieldsEarnedB?: number;
-  maxShields?: number;
+  offensiveShotsA: number;
+  offensiveShotsB: number;
   lethalOddsPercent: number;
   lastOutcome?: {
     shooter: 'A' | 'B';
     target: RouletteTarget;
     result: 'BLANK' | 'BANG';
-    shieldAbsorbed?: boolean;
     message: string;
   };
 }
@@ -70,13 +66,15 @@ export interface BridgeStepInfo {
 }
 
 export interface GlassBridgeState {
-  totalSteps: number;
+  totalSteps?: number;
   currentStepA: number;
   currentStepB: number;
   activeStep: number;
   currentTurn: 'A' | 'B';
   livesA: number;
   livesB: number;
+  passesRemainingA: number;
+  passesRemainingB: number;
   revealedSteps: Record<number, BridgeTileChoice>; // step index -> safe choice
   lastOutcome?: {
     player: 'A' | 'B';
@@ -97,6 +95,7 @@ export interface ChronoBlindState {
   targetDurationMs: number;
   blindThresholdMs: number;
   startEpochMs: number;
+  serverTime?: number;
   stoppedA: boolean;
   stoppedB: boolean;
   stopTimeA?: number; // ms remaining when stopped (positive = before 0, negative = busted)

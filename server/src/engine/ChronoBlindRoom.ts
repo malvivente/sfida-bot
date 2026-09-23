@@ -49,6 +49,7 @@ export class ChronoBlindRoom extends BaseGameRoom {
       targetDurationMs: this.targetDurationMs,
       blindThresholdMs: this.blindThresholdMs,
       startEpochMs: this.startEpochMs,
+      serverTime: Date.now(),
       stoppedA: this.stoppedA,
       stoppedB: this.stoppedB,
       stopTimeA: this.stopTimeA,
@@ -93,6 +94,7 @@ export class ChronoBlindRoom extends BaseGameRoom {
       targetDurationMs: this.targetDurationMs,
       blindThresholdMs: this.blindThresholdMs,
       startEpochMs: this.startEpochMs,
+      serverTime: Date.now(),
       message: `Round ${this.currentRound}! Timer: ${(this.targetDurationMs / 1000).toFixed(2)}s. Blackout at ${(this.blindThresholdMs / 1000).toFixed(2)}s. Get ready!`,
       gameData: this.getGamePayload(),
     });
@@ -122,6 +124,15 @@ export class ChronoBlindRoom extends BaseGameRoom {
     const now = Date.now();
     if (now < this.startEpochMs) {
       console.warn(`[ChronoBlind] Stop attempted before timer officially started.`);
+      return;
+    }
+
+    const elapsedMs = now - this.startEpochMs;
+    const remainingMs = this.targetDurationMs - elapsedMs;
+
+    // Disallow stop while countdown is still in visible zone (150ms grace for network latency)
+    if (remainingMs > this.blindThresholdMs + 150) {
+      console.warn(`[ChronoBlind] Stop rejected: time still visible (${remainingMs}ms > ${this.blindThresholdMs}ms).`);
       return;
     }
 
