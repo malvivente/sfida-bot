@@ -69,7 +69,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             break;
 
           case 'TAP':
-            room?.handleTap(wallet);
+            (room as any)?.handleTap?.(wallet);
             break;
 
           case 'SPECTATOR_BET':
@@ -97,12 +97,21 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             room?.declineRematch(wallet);
             break;
 
+          case 'ROULETTE_SHOOT':
+          case 'BLACKJACK_ACTION':
+          case 'BRIDGE_STEP':
+          case 'BRIDGE_PASS':
+          case 'CHRONO_STOP':
+            room?.handleGameAction(wallet, data);
+            break;
+
           case 'PING':
             ws.send(JSON.stringify({ type: 'PONG', time: Date.now() }));
             break;
 
           default:
-            console.log(`[WS] Unrecognized action from ${wallet}:`, data);
+            room?.handleGameAction(wallet, data);
+            break;
         }
       } catch (err: any) {
         console.error('[WS] Error processing message:', err.message);

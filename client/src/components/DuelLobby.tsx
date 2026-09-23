@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet } from 'lucide-react';
-import { MatchData } from '../types/index.js';
+import { MatchData, GameType } from '../types/index.js';
+import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from './GramIcon.js';
@@ -10,7 +11,7 @@ import { areAddressesEqual } from '../utils/ton.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
-  onCreateMatch: (wagerGram: string) => Promise<boolean | void> | void;
+  onCreateMatch: (wagerGram: string, gameType: GameType) => Promise<boolean | void> | void;
   onJoinMatch: (match: MatchData) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (match: MatchData) => void;
@@ -47,6 +48,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
+  const [selectedGameType, setSelectedGameType] = useState<GameType>('roulette');
+  const [filterGameType, setFilterGameType] = useState<string>('ALL');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
 
@@ -81,7 +84,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     triggerImpact('heavy');
     setIsSubmitting(true);
     try {
-      const result = await onCreateMatch(wagerChoice);
+      const result = await onCreateMatch(wagerChoice, selectedGameType);
       if (result !== false) {
         setShowCreateModal(false);
       }
@@ -106,9 +109,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     onJoinMatch(m);
   };
 
-  const handleShare = (matchId: string, wager: string) => {
+  const handleShare = (matchId: string, wager: string, gType: GameType = 'roulette') => {
     triggerImpact('light');
-    const text = `⚔️ I challenge you to a Cyber Quickdraw duel for ${wager} GRAM! Tap faster across 3 rounds to win the pot!`;
+    const meta = GAMES_METADATA[gType] || GAMES_METADATA.roulette;
+    const text = `⚔️ I challenge you to a ${meta.title} duel for ${wager} GRAM! ${meta.tagline}`;
     const url = `https://t.me/${botUsername}?start=duel_${matchId}`;
     shareToTelegram(url, text);
   };
@@ -117,6 +121,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     const val = e.target.value.replace(/[^0-9.]/g, '');
     setWagerChoice(val);
   };
+
+  const filteredMatches = matches.filter((m: MatchData) => {
+    if (filterGameType === 'ALL') return true;
+    const g = m.gameType || 'roulette';
+    return g === filterGameType;
+  });
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
@@ -154,7 +164,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider">
-            ACTIVE ARENA DUELS ({matches.length})
+            ACTIVE ARENA DUELS ({filteredMatches.length})
           </h3>
           {onRefreshMatches && (
             <button
@@ -176,26 +186,51 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           )}
         </div>
 
-        {matches.length === 0 ? (
+        {/* Game Filter Tabs */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono'].map((gKey) => {
+            const isSelected = filterGameType === gKey;
+            const label = gKey === 'ALL' ? 'ALL GAMES' : GAMES_METADATA[gKey as GameType]?.title || gKey;
+            return (
+              <button
+                key={gKey}
+                onClick={() => {
+                  triggerImpact('light');
+                  setFilterGameType(gKey);
+                }}
+                className={`px-3 py-1 rounded-xl text-[11px] font-chakra font-bold uppercase transition-all whitespace-nowrap border ${
+                  isSelected
+                    ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
+                    : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {filteredMatches.length === 0 ? (
           <div className="text-center py-10 bg-cyber-card border border-cyber-border rounded-2xl p-6">
             <Swords className="w-12 h-12 text-cyber-cyan/40 mx-auto mb-3 animate-pulse" />
-            <p className="text-sm text-slate-200 font-bold font-orbitron">No active duels in lobby</p>
+            <p className="text-sm text-slate-200 font-bold font-orbitron">No active duels found</p>
             <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-              Create the first duel using your in-bot balance to challenge your friends!
+              Create a duel in this mode or switch filters to find open matches!
             </p>
             <button
               onClick={handleOpenModal}
               className="mt-4 px-5 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all inline-flex items-center space-x-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>CREATE FIRST DUEL</span>
+              <span>CREATE DUEL</span>
             </button>
           </div>
         ) : (
           <div className="space-y-3">
-            {matches.map((m) => {
+            {filteredMatches.map((m) => {
               const wagerGram = (parseFloat(m.wagerAmountNano) / 1e9).toString();
               const totalPotGram = (parseFloat(m.wagerAmountNano) * 2 / 1e9).toString();
+              const gameMeta = GAMES_METADATA[m.gameType || 'roulette'] || GAMES_METADATA.roulette;
 
               // Check if current user is Player A (creator)
               const isPlayerA = Boolean(
@@ -229,7 +264,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className="text-xs font-orbitron font-bold text-white">
                           MATCH #{m.matchId}
                         </span>
@@ -241,6 +276,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           }`}
                         >
                           {m.state}
+                        </span>
+                        <span
+                          className={`text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border ${gameMeta.borderColor.split(' ')[0]} ${gameMeta.accentColor} bg-black/60`}
+                        >
+                          {gameMeta.title}
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 font-chakra mt-0.5">
@@ -305,7 +345,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     )}
 
                     <button
-                      onClick={() => handleShare(m.matchId, wagerGram)}
+                      onClick={() => handleShare(m.matchId, wagerGram, m.gameType)}
                       title="Share to Telegram"
                       className="p-2 bg-cyber-bg border border-cyber-border rounded-xl text-slate-300 hover:text-cyber-cyan active:scale-95 transition-all"
                     >
@@ -387,8 +427,48 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <span>SET UP YOUR DUEL</span>
             </h3>
             <p className="text-xs text-slate-400 font-chakra mb-3">
-              Select wager in GRAM for the 1v1 Best of 3 duel
+              Select your game mode and wager in GRAM
             </p>
+
+            {/* Game Mode Selection */}
+            <div className="mb-3 space-y-1.5">
+              <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
+                GAME MODE
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
+                  const isSelected = selectedGameType === game.id;
+                  return (
+                    <button
+                      key={game.id}
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        setSelectedGameType(game.id);
+                      }}
+                      className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? `bg-cyber-bg border-2 ${game.borderColor.split(' ')[0]} shadow-[0_0_12px_rgba(0,240,255,0.2)]`
+                          : 'bg-black/50 border-cyber-border hover:border-slate-600 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-[8px] font-mono px-1 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                          {game.badge}
+                        </span>
+                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
+                      </div>
+                      <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                        {game.title}
+                      </div>
+                      <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
+                        {game.tagline}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Error Message Display */}
             {createError && (

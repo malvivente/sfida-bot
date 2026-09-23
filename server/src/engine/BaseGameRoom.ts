@@ -1,0 +1,616 @@
+import { WebSocket } from 'ws';
+import { Address } from '@ton/core';
+import { GameType, RoomState } from '../types/gameTypes.js';
+import { signerService } from '../services/signer.js';
+import { dbService } from '../services/db.js';
+import { feeConfig } from '../config/feeConfig.js';
+
+export interface RoomConfig {
+  matchId: bigint;
+  gameType?: GameType;
+  wagerAmountNano: bigint;
+  playerAAddress: string;
+  playerBAddress?: string;
+  recruiterA?: string;
+  groupAdminAddress?: string;
+  escrowAddress?: string;
+  bettingWindowSeconds?: number;
+}
+
+export interface PlayerSession {
+  walletAddress: string;
+  telegramId: string;
+  username: string;
+  ws?: WebSocket;
+  connected: boolean;
+  ready: boolean;
+  score: number;
+  disconnectTimer?: NodeJS.Timeout;
+}
+
+export interface SpectatorSession {
+  id: string;
+  ws: WebSocket;
+}
+
+export interface MatchResolutionPayload {
+  matchId: string;
+  winnerAddress: string;
+  timestamp: number;
+  signatureHex: string;
+  signatureCellBoc: string;
+}
+
+export abstract class BaseGameRoom {
+  public matchId: bigint;
+  public gameType: GameType;
+  public config: RoomConfig;
+  public escrowAddress?: string;
+  public state: RoomState = 'LOBBY';
+
+  public playerA: PlayerSession;
+  public playerB?: PlayerSession;
+  public spectators: Map<string, SpectatorSession> = new Map();
+
+  protected bettingTimer?: NodeJS.Timeout;
+
+  public totalBetsA: bigint = 0n;
+  public totalBetsB: bigint = 0n;
+
+  public winnerAddress?: string;
+  public winnerName?: string;
+  public resolution?: MatchResolutionPayload;
+  public forfeitWinner?: string;
+
+  private onMatchSettledCallback?: (room: BaseGameRoom, winnerAddress: string) => Promise<void>;
+
+  constructor(
+    config: RoomConfig,
+    gameType: GameType,
+    onSettled?: (room: BaseGameRoom, winner: string) => Promise<void>
+  ) {
+    this.matchId = config.matchId;
+    this.gameType = gameType;
+    this.config = config;
+    this.escrowAddress = config.escrowAddress;
+    this.onMatchSettledCallback = onSettled;
+
+    this.playerA = {
+      walletAddress: config.playerAAddress,
+      telegramId: '',
+      username: 'Player A',
+      connected: false,
+      ready: false,
+      score: 0,
+    };
+
+    if (config.playerBAddress) {
+      this.playerB = {
+        walletAddress: config.playerBAddress,
+        telegramId: '',
+        username: 'Player B',
+        connected: false,
+        ready: false,
+        score: 0,
+      };
+    }
+  }
+
+  public isSameWallet(a?: string, b?: string): boolean {
+    if (!a || !b) return false;
+    if (a.toLowerCase() === b.toLowerCase()) return true;
+    try {
+      return Address.parse(a).equals(Address.parse(b));
+    } catch {
+      return false;
+    }
+  }
+
+  // Bind WebSocket to Player A or B
+  public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket): boolean {
+    if (
+      this.isSameWallet(wallet, this.playerA.walletAddress) ||
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
+    ) {
+      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A');
+      return true;
+    }
+
+    if (
+      this.playerB &&
+      (this.isSameWallet(wallet, this.playerB.walletAddress) ||
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
+    ) {
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
+      return true;
+    }
+
+    // Assign Player B if invited in config and not attached
+    if (!this.playerB && this.config.playerBAddress && this.isSameWallet(wallet, this.config.playerBAddress)) {
+      this.playerB = {
+        walletAddress: wallet,
+        telegramId,
+        username,
+        ws,
+        connected: true,
+        ready: false,
+        score: 0,
+      };
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
+      return true;
+    }
+
+    return false;
+  }
+
+  protected handlePlayerConnect(
+    player: PlayerSession,
+    telegramId: string,
+    username: string,
+    ws: WebSocket,
+    side: 'A' | 'B'
+  ) {
+    player.ws = ws;
+    if (telegramId) player.telegramId = telegramId;
+    if (username) player.username = username;
+    player.connected = true;
+
+    // Clear grace timer if reconnecting
+    if (player.disconnectTimer) {
+      clearTimeout(player.disconnectTimer);
+      player.disconnectTimer = undefined;
+      this.broadcast({
+        type: 'PLAYER_RECONNECTED',
+        side,
+        message: `${player.username} reconnected. Resuming match.`,
+      });
+    }
+
+    this.sendTo(ws, {
+      type: 'INIT_STATE',
+      matchId: this.matchId.toString(),
+      gameType: this.gameType,
+      role: `PLAYER_${side}`,
+      state: this.state,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB ? this.playerB.score : 0,
+      playerAName: this.playerA.username,
+      playerBName: this.playerB ? this.playerB.username : undefined,
+      wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+      winnerAddress: this.winnerAddress,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
+      gameData: this.getGamePayload(),
+    });
+
+    this.broadcastRoomState();
+  }
+
+  // Spectator connection
+  public attachSpectator(id: string, ws: WebSocket) {
+    this.spectators.set(id, { id, ws });
+
+    this.sendTo(ws, {
+      type: 'INIT_STATE',
+      matchId: this.matchId.toString(),
+      gameType: this.gameType,
+      role: 'SPECTATOR',
+      state: this.state,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB ? this.playerB.score : 0,
+      playerAName: this.playerA.username,
+      playerBName: this.playerB ? this.playerB.username : undefined,
+      wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+      winnerAddress: this.winnerAddress,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
+      gameData: this.getGamePayload(),
+    });
+  }
+
+  public removeSpectator(id: string) {
+    this.spectators.delete(id);
+  }
+
+  // Player Disconnect Handler
+  public handleDisconnect(wallet: string) {
+    let disconnectedPlayer: PlayerSession | undefined;
+    let opponent: PlayerSession | undefined;
+    let side: 'A' | 'B' = 'A';
+
+    if (this.isSameWallet(wallet, this.playerA.walletAddress)) {
+      disconnectedPlayer = this.playerA;
+      opponent = this.playerB;
+      side = 'A';
+    } else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) {
+      disconnectedPlayer = this.playerB;
+      opponent = this.playerA;
+      side = 'B';
+    }
+
+    if (!disconnectedPlayer) return;
+
+    disconnectedPlayer.connected = false;
+    disconnectedPlayer.ws = undefined;
+
+    if (disconnectedPlayer.disconnectTimer) {
+      clearTimeout(disconnectedPlayer.disconnectTimer);
+      disconnectedPlayer.disconnectTimer = undefined;
+    }
+
+    // Forfeit grace timer strictly applies during active combat/gameplay
+    const isGameActive = this.state === 'GAME_ACTIVE' || this.state === 'ROUND_START';
+
+    if (isGameActive && opponent) {
+      this.broadcast({
+        type: 'PLAYER_DISCONNECTED',
+        side,
+        gracePeriodSeconds: 8,
+        message: `${disconnectedPlayer.username} disconnected. 8-second forfeit countdown initiated.`,
+      });
+
+      disconnectedPlayer.disconnectTimer = setTimeout(() => {
+        if (!disconnectedPlayer?.connected && opponent) {
+          this.triggerForfeit(opponent.walletAddress, disconnectedPlayer!.username);
+        }
+      }, 8000);
+    } else {
+      // In LOBBY or BETTING_WINDOW, no forfeit penalty
+      this.broadcast({
+        type: 'PLAYER_DISCONNECTED',
+        side,
+        message: `${disconnectedPlayer.username} stepped away from the room.`,
+      });
+      this.broadcastRoomState();
+    }
+  }
+
+  protected triggerForfeit(winnerWallet: string, forfeiterName: string) {
+    this.state = 'FORFEITED';
+    this.forfeitWinner = winnerWallet;
+    this.broadcast({
+      type: 'MATCH_FORFEITED',
+      forfeiterName,
+      winnerAddress: winnerWallet,
+      message: `${forfeiterName} failed to reconnect in time. Match forfeited!`,
+    });
+    this.settleMatch(winnerWallet);
+  }
+
+  // Ready toggle
+  public setPlayerReady(wallet: string, telegramId?: string) {
+    if (
+      this.isSameWallet(wallet, this.playerA.walletAddress) ||
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
+    ) {
+      this.playerA.ready = true;
+    } else if (
+      this.playerB &&
+      (this.isSameWallet(wallet, this.playerB.walletAddress) ||
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
+    ) {
+      this.playerB.ready = true;
+    }
+
+    this.broadcastRoomState();
+
+    if (this.playerA.ready && this.playerB?.ready && this.state === 'LOBBY') {
+      this.startBettingWindow();
+    }
+  }
+
+  // Spectator Pari-Mutuel Window (5s if no spectators, 20s if spectators present)
+  public startBettingWindow() {
+    if (this.bettingTimer) {
+      clearInterval(this.bettingTimer);
+      this.bettingTimer = undefined;
+    }
+
+    this.state = 'BETTING_WINDOW';
+    const duration = this.config.bettingWindowSeconds || (this.spectators.size > 0 ? 20 : 5);
+    let countdown = duration;
+
+    this.broadcast({
+      type: 'BETTING_WINDOW_OPEN',
+      durationSeconds: duration,
+      message: this.spectators.size > 0
+        ? 'Spectator Pari-Mutuel betting window is open! 20 seconds to place wagers.'
+        : 'Both fighters ready! Duel starts in 5 seconds...',
+    });
+
+    this.bettingTimer = setInterval(() => {
+      countdown -= 1;
+      this.broadcast({
+        type: 'BETTING_COUNTDOWN',
+        secondsLeft: countdown,
+        oddsA: this.calculateOdds('A'),
+        oddsB: this.calculateOdds('B'),
+      });
+
+      if (countdown <= 0) {
+        if (this.bettingTimer) {
+          clearInterval(this.bettingTimer);
+          this.bettingTimer = undefined;
+        }
+        this.onGameStart();
+      }
+    }, 1000);
+  }
+
+  // Settle Match
+  public settleMatch(winnerAddress: string) {
+    if (this.state !== 'FORFEITED') {
+      this.state = 'MATCH_SETTLED';
+    }
+    this.winnerAddress = winnerAddress;
+    this.cleanupTimers();
+
+    const winnerName =
+      this.isSameWallet(winnerAddress, this.playerA.walletAddress)
+        ? this.playerA.username
+        : this.playerB?.username || 'Opponent';
+    this.winnerName = winnerName;
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const { signatureHex, signatureCellBoc } = signerService.signResolution(
+      this.matchId,
+      winnerAddress,
+      timestamp
+    );
+
+    this.resolution = {
+      matchId: this.matchId.toString(),
+      winnerAddress,
+      timestamp,
+      signatureHex,
+      signatureCellBoc,
+    };
+
+    console.log(`[${this.gameType.toUpperCase()}] Match #${this.matchId} settled. Winner: ${winnerName} (${winnerAddress})`);
+
+    const wagerNum = Number(this.config.wagerAmountNano) / 1e9;
+    const totalPot = wagerNum * 2;
+    const { duelRakePercent } = feeConfig.getConfig();
+    const rakeShare = duelRakePercent / 100;
+    const winnerShare = 1 - rakeShare;
+    const winnerPayoutGram = (totalPot * winnerShare).toFixed(2);
+    const rakeGram = (totalPot * rakeShare).toFixed(2);
+
+    // Credit winner's internal balance
+    dbService.creditUserBalance(winnerAddress, winnerPayoutGram, 'MATCH_WIN', `Won ${this.gameType} duel #${this.matchId}`).catch((err) => {
+      console.error(`[BaseGameRoom] Error crediting winner balance:`, err);
+    });
+
+    // Credit platform rake
+    dbService.creditTreasury(rakeGram, 'DUEL_RAKE', this.matchId.toString()).catch((err) => {
+      console.error(`[BaseGameRoom] Error crediting duel rake:`, err);
+    });
+
+    dbService.saveMatch({
+      matchId: this.matchId.toString(),
+      escrowAddress: this.escrowAddress,
+      wagerAmountNano: this.config.wagerAmountNano.toString(),
+      wagerTon: wagerNum.toFixed(2),
+      wagerGram: wagerNum.toFixed(2),
+      playerAAddress: this.playerA.walletAddress,
+      playerAName: this.playerA.username,
+      playerBAddress: this.playerB?.walletAddress,
+      playerBName: this.playerB?.username,
+      winnerAddress,
+      winnerName: this.winnerName,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB?.score || 0,
+      gameType: this.gameType,
+      settledAt: Date.now(),
+      createdAt: Number(this.matchId) || Date.now(),
+    }).catch((err) => {
+      console.error('[BaseGameRoom] Error saving match to db:', err);
+    });
+
+    this.broadcast({
+      type: 'MATCH_SETTLED',
+      winnerAddress,
+      winnerName,
+      resolution: this.resolution,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB?.score || 0,
+      payoutTon: winnerPayoutGram,
+      message: `🏆 ${winnerName} has won the duel!`,
+      gameData: this.getGamePayload(),
+    });
+
+    this.broadcastRoomState();
+
+    if (this.onMatchSettledCallback) {
+      this.onMatchSettledCallback(this, winnerAddress);
+    }
+
+    // Auto cleanup after 90 seconds
+    setTimeout(async () => {
+      try {
+        const { RoomManager } = await import('./RoomManager.js');
+        RoomManager.getInstance().removeRoom(this.matchId.toString());
+      } catch {}
+    }, 90_000);
+  }
+
+  // Spectator Pari-Mutuel Bet
+  public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint, bettorWallet?: string) {
+    if (
+      bettorWallet &&
+      (this.isSameWallet(bettorWallet, this.playerA.walletAddress) ||
+        (this.playerB && this.isSameWallet(bettorWallet, this.playerB.walletAddress)))
+    ) {
+      console.warn(`[BaseGameRoom] Duelist ${bettorWallet} attempted spectator bet. Denied.`);
+      return;
+    }
+
+    if (target === 'A') {
+      this.totalBetsA += amountNano;
+    } else {
+      this.totalBetsB += amountNano;
+    }
+
+    this.broadcast({
+      type: 'ODDS_UPDATE',
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+    });
+  }
+
+  public calculateOdds(side: 'A' | 'B'): number {
+    const totalPool = Number(this.totalBetsA + this.totalBetsB);
+    if (totalPool === 0) return 2.0;
+
+    const distributablePool = totalPool * 0.94;
+    const sideBets = side === 'A' ? Number(this.totalBetsA) : Number(this.totalBetsB);
+    if (sideBets === 0) return 2.0;
+    return parseFloat((distributablePool / sideBets).toFixed(2));
+  }
+
+  public abortRoom(reason: string = 'Match was cancelled.') {
+    this.cleanupTimers();
+    this.state = 'FORFEITED';
+    this.broadcast({
+      type: 'ROOM_CANCELLED',
+      state: 'CANCELLED',
+      message: reason,
+    });
+  }
+
+  public cleanupTimers() {
+    if (this.bettingTimer) {
+      clearInterval(this.bettingTimer);
+      this.bettingTimer = undefined;
+    }
+    if (this.playerA.disconnectTimer) {
+      clearTimeout(this.playerA.disconnectTimer);
+      this.playerA.disconnectTimer = undefined;
+    }
+    if (this.playerB?.disconnectTimer) {
+      clearTimeout(this.playerB.disconnectTimer);
+      this.playerB.disconnectTimer = undefined;
+    }
+    this.cleanupGameTimers();
+  }
+
+  public broadcast(data: any) {
+    const payload = JSON.stringify(data);
+
+    if (this.playerA.ws && this.playerA.ws.readyState === WebSocket.OPEN) {
+      this.playerA.ws.send(payload);
+    }
+    if (this.playerB?.ws && this.playerB.ws.readyState === WebSocket.OPEN) {
+      this.playerB.ws.send(payload);
+    }
+    for (const spec of this.spectators.values()) {
+      if (spec.ws.readyState === WebSocket.OPEN) {
+        spec.ws.send(payload);
+      }
+    }
+  }
+
+  public broadcastRoomState() {
+    this.broadcast({
+      type: 'ROOM_UPDATE',
+      state: this.state,
+      gameType: this.gameType,
+      winnerAddress: this.winnerAddress,
+      winnerName: this.winnerName,
+      resolution: this.resolution,
+      playerAName: this.playerA.username,
+      playerBName: this.playerB ? this.playerB.username : undefined,
+      wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
+      playerA: {
+        wallet: this.playerA.walletAddress,
+        name: this.playerA.username,
+        ready: this.playerA.ready,
+        score: this.playerA.score,
+        connected: this.playerA.connected,
+        telegramUserId: this.playerA.telegramId,
+      },
+      playerB: this.playerB
+        ? {
+            wallet: this.playerB.walletAddress,
+            name: this.playerB.username,
+            ready: this.playerB.ready,
+            score: this.playerB.score,
+            connected: this.playerB.connected,
+            telegramUserId: this.playerB.telegramId,
+          }
+        : null,
+      oddsA: this.calculateOdds('A'),
+      oddsB: this.calculateOdds('B'),
+      gameData: this.getGamePayload(),
+    });
+  }
+
+  public requestRematch(proposerWallet: string, proposerName: string) {
+    if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') return;
+    const newWagerNano = this.config.wagerAmountNano * 2n;
+    const newWagerTon = (Number(newWagerNano) / 1e9).toFixed(2);
+
+    this.broadcast({
+      type: 'REMATCH_OFFERED',
+      proposerWallet,
+      proposerName,
+      newWagerTon,
+      newWagerNano: newWagerNano.toString(),
+      message: `${proposerName} challenged you to a REMATCH with 2X Wager (${newWagerTon} TON)!`,
+    });
+  }
+
+  public acceptRematch(acceptorWallet: string) {
+    if (this.state !== 'MATCH_SETTLED' && this.state !== 'FORFEITED') return;
+    this.config.wagerAmountNano = this.config.wagerAmountNano * 2n;
+    const newWagerTon = (Number(this.config.wagerAmountNano) / 1e9).toFixed(2);
+
+    this.state = 'LOBBY';
+    this.playerA.score = 0;
+    this.playerA.ready = false;
+    if (this.playerB) {
+      this.playerB.score = 0;
+      this.playerB.ready = false;
+    }
+    this.winnerAddress = undefined;
+    this.winnerName = undefined;
+    this.resolution = undefined;
+    this.forfeitWinner = undefined;
+    this.cleanupTimers();
+
+    this.broadcast({
+      type: 'REMATCH_ACCEPTED',
+      newWagerTon,
+      message: `Rematch accepted! Wager doubled to ${newWagerTon} TON. Both players ready up!`,
+    });
+    this.broadcastRoomState();
+  }
+
+  public declineRematch(declinerWallet: string) {
+    this.broadcast({
+      type: 'REMATCH_DECLINED',
+      declinerWallet,
+      message: 'Rematch offer was declined.',
+    });
+  }
+
+  protected sendTo(ws: WebSocket, data: any) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data));
+    }
+  }
+
+  // --- Abstract Game Hooks ---
+  public abstract getGamePayload(): any;
+  public abstract handleGameAction(wallet: string, data: any): void;
+  public abstract onGameStart(): void;
+  public abstract cleanupGameTimers(): void;
+}

@@ -35,6 +35,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
       return {
         matchId: r.matchId.toString(),
+        gameType: r.gameType || 'roulette',
         escrowAddress,
         state: r.state,
         winnerAddress: r.winnerAddress,
@@ -94,12 +95,13 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     return reply.send({
       matchId: room.matchId.toString(),
+      gameType: room.gameType || 'roulette',
       escrowAddress,
       state: room.state,
       winnerAddress: room.winnerAddress,
       winnerName: room.winnerName,
       resolution: room.resolution,
-      currentRound: room.currentRound,
+      gameData: room.getGamePayload(),
       playerA: {
         wallet: room.playerA.walletAddress,
         name: room.playerA.username,
@@ -152,6 +154,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const body = req.body as {
       wagerAmountNano?: string;
       playerAAddress: string;
+      gameType?: any;
       telegramUserId?: string;
       telegramUsername?: string;
       recruiterA?: string;
@@ -165,6 +168,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const matchId = BigInt(Date.now() % 1000000000);
     const wagerNano = body.wagerAmountNano ? BigInt(body.wagerAmountNano) : 1000000000n;
     const wagerGram = Number(wagerNano) / 1e9;
+    const gameType = body.gameType || 'roulette';
 
     const { creationFeeGram } = feeConfig.getConfig();
     const totalRequired = wagerGram + creationFeeGram;
@@ -221,6 +225,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const room = roomManager.createRoom(
       {
         matchId,
+        gameType,
         wagerAmountNano: wagerNano,
         playerAAddress: body.playerAAddress,
         recruiterA: body.recruiterA,
@@ -253,6 +258,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({
       success: true,
       matchId: matchId.toString(),
+      gameType: room.gameType,
       escrowAddress,
       state: room.state,
       wagerGram: wagerGram.toFixed(2),
@@ -541,9 +547,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
       return {
         matchId: r.matchId.toString(),
+        gameType: r.gameType || 'roulette',
         escrowAddress,
         state: r.state,
-        currentRound: r.currentRound,
+        currentRound: (r as any).currentRound || 1,
         playerA: {
           wallet: r.playerA.walletAddress,
           name: r.playerA.username,

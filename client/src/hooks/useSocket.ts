@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { RoomState, WsMessage, MatchResolution } from '../types/index.js';
+import { RoomState, WsMessage, MatchResolution, GameType } from '../types/index.js';
 
 interface UseSocketProps {
   matchId: string;
@@ -68,6 +68,8 @@ export function useSocket({
   const [playerBName, setPlayerBName] = useState<string | null>(null);
   const [rematchOffer, setRematchOffer] = useState<{ proposerWallet: string; proposerName: string; newWagerTon: string } | null>(null);
   const [activeWagerTon, setActiveWagerTon] = useState<string>('1.00');
+  const [gameType, setGameType] = useState<GameType | undefined>(undefined);
+  const [gameData, setGameData] = useState<any>(null);
 
   useEffect(() => {
     if (!matchId) return;
@@ -116,6 +118,8 @@ export function useSocket({
             if (msg.playerAName) setPlayerAName(msg.playerAName);
             if (msg.playerBName) setPlayerBName(msg.playerBName);
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
+            if (msg.gameType) setGameType(msg.gameType);
+            if (msg.gameData) setGameData(msg.gameData);
             break;
 
           case 'ROOM_UPDATE':
@@ -128,8 +132,22 @@ export function useSocket({
             if (msg.playerAName) setPlayerAName(msg.playerAName);
             if (msg.playerBName) setPlayerBName(msg.playerBName);
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
+            if (msg.gameType) setGameType(msg.gameType);
+            if (msg.gameData) setGameData(msg.gameData);
             if (msg.playerA?.name) setPlayerAName(msg.playerA.name);
             if (msg.playerB?.name) setPlayerBName(msg.playerB.name);
+            break;
+
+          case 'ROULETTE_UPDATE':
+          case 'BLACKJACK_START':
+          case 'BLACKJACK_UPDATE':
+          case 'BRIDGE_UPDATE':
+          case 'CHRONO_ROUND_START':
+          case 'CHRONO_UPDATE':
+          case 'CHRONO_ROUND_END':
+            setRoomState('GAME_ACTIVE');
+            if (msg.gameData) setGameData(msg.gameData);
+            if (msg.message) setFeedMessage(msg.message);
             break;
 
           case 'BETTING_WINDOW_OPEN':
@@ -317,6 +335,36 @@ export function useSocket({
     }
   }, []);
 
+  const sendRouletteShoot = useCallback((target: 'self' | 'opponent') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'ROULETTE_SHOOT', target }));
+    }
+  }, []);
+
+  const sendBlackjackAction = useCallback((choice: 'HIT' | 'STAND') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'BLACKJACK_ACTION', choice }));
+    }
+  }, []);
+
+  const sendBridgeStep = useCallback((choice: 'LEFT' | 'RIGHT') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'BRIDGE_STEP', choice }));
+    }
+  }, []);
+
+  const sendBridgePass = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'BRIDGE_PASS' }));
+    }
+  }, []);
+
+  const sendChronoStop = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'CHRONO_STOP' }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -341,8 +389,15 @@ export function useSocket({
     playerBName,
     rematchOffer,
     activeWagerTon,
+    gameType,
+    gameData,
     sendReady,
     sendTap,
+    sendRouletteShoot,
+    sendBlackjackAction,
+    sendBridgeStep,
+    sendBridgePass,
+    sendChronoStop,
     placeSpectatorBet,
     requestRematch,
     acceptRematch,

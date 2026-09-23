@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { QuickdrawCanvas } from '../components/QuickdrawCanvas.js';
+import { RussianRouletteArena } from '../components/games/RussianRouletteArena.js';
+import { BlackjackArena } from '../components/games/BlackjackArena.js';
+import { GlassBridgeArena } from '../components/games/GlassBridgeArena.js';
+import { ChronoBlindArena } from '../components/games/ChronoBlindArena.js';
 import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { useSocket } from '../hooks/useSocket.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
-import { MatchData, UserBalance, FeeConfig } from '../types/index.js';
+import { MatchData, UserBalance, FeeConfig, GameType } from '../types/index.js';
 import { Address } from '@ton/ton';
 import { areAddressesEqual } from '../utils/ton.js';
 import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle } from 'lucide-react';
@@ -227,7 +231,7 @@ export const Arena: React.FC<ArenaProps> = ({
   };
 
   // Create match using in-bot balance
-  const handleCreateMatch = async (wagerGram: string): Promise<boolean> => {
+  const handleCreateMatch = async (wagerGram: string, gameType: GameType = 'roulette'): Promise<boolean> => {
     setCreateError(null);
 
     if (!userAddress) {
@@ -253,6 +257,7 @@ export const Arena: React.FC<ArenaProps> = ({
           playerAAddress: userAddress,
           telegramUserId: userId,
           telegramUsername: username,
+          gameType,
         }),
       });
 
@@ -274,6 +279,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       const newMatch: MatchData = {
         matchId: data.matchId.toString(),
+        gameType,
         escrowAddress: data.escrowAddress,
         state: 'LOBBY',
         currentRound: 1,
@@ -549,6 +555,23 @@ export const Arena: React.FC<ArenaProps> = ({
     )
   );
 
+  const effectiveGameType: GameType = socketData.gameType || currentActiveMatch?.gameType || 'roulette';
+
+  const userSide: 'A' | 'B' = (
+    (userAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, userAddress)) ||
+    (userId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)) ||
+    (username && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.toLowerCase().includes(username.toLowerCase()))
+  ) ? 'B' : 'A';
+
+  const isPlayerTurn = Boolean(
+    effectiveGameType === 'chrono'
+      ? true
+      : socketData.gameData?.currentTurn === userSide
+  );
+
+  const playerA_Name = socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A';
+  const playerB_Name = socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Opponent');
+
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
   return (
@@ -701,43 +724,115 @@ export const Arena: React.FC<ArenaProps> = ({
             )}
           </div>
 
-          {/* Quickdraw Dueling Arena */}
-          <QuickdrawCanvas
-            roomState={socketData.roomState}
-            currentRound={socketData.currentRound}
-            scoreA={socketData.scoreA}
-            scoreB={socketData.scoreB}
-            lastSignal={socketData.lastSignal}
-            feedMessage={socketData.feedMessage}
-            lastReactionTimeMs={socketData.lastReactionTimeMs}
-            countdownSeconds={socketData.countdownSeconds}
-            forfeitCountdown={socketData.forfeitCountdown}
-            roundWinner={socketData.roundWinner}
-            matchWinner={socketData.matchWinner}
-            matchWinnerName={socketData.matchWinnerName}
-            playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
-            playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Player B')}
-            role={role}
-            isReady={isReady}
-            onReady={handleReady}
-            onTap={socketData.sendTap}
-            isCreator={isCurrentCreator}
-            onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
-            wagerTon={socketData.activeWagerTon || activeWagerTon}
-            isWinner={isUserWinner}
-            onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
-            isClaimingPayout={isClaimingPayout}
-            payoutClaimed={payoutClaimed}
-            onReturnToLobby={() => {
-              setActiveMatchId(null);
-              setPayoutClaimed(false);
-              fetchUserBalance();
-            }}
-            rematchOffer={socketData.rematchOffer}
-            onRequestRematch={socketData.requestRematch}
-            onAcceptRematch={socketData.acceptRematch}
-            onDeclineRematch={socketData.declineRematch}
-          />
+          {/* Dynamic Game Arenas */}
+          {effectiveGameType === 'blackjack' ? (
+            <BlackjackArena
+              gameData={socketData.gameData}
+              role={role}
+              isPlayerTurn={isPlayerTurn}
+              onHit={() => socketData.sendBlackjackAction('HIT')}
+              onStand={() => socketData.sendBlackjackAction('STAND')}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
+              isClaimingPayout={isClaimingPayout}
+              payoutClaimed={payoutClaimed}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={socketData.rematchOffer}
+              onRequestRematch={socketData.requestRematch}
+              onAcceptRematch={socketData.acceptRematch}
+              onDeclineRematch={socketData.declineRematch}
+            />
+          ) : effectiveGameType === 'bridge' ? (
+            <GlassBridgeArena
+              gameData={socketData.gameData}
+              role={role}
+              isPlayerTurn={isPlayerTurn}
+              onStep={socketData.sendBridgeStep}
+              onPass={socketData.sendBridgePass}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
+              isClaimingPayout={isClaimingPayout}
+              payoutClaimed={payoutClaimed}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={socketData.rematchOffer}
+              onRequestRematch={socketData.requestRematch}
+              onAcceptRematch={socketData.acceptRematch}
+              onDeclineRematch={socketData.declineRematch}
+            />
+          ) : effectiveGameType === 'chrono' ? (
+            <ChronoBlindArena
+              gameData={socketData.gameData}
+              role={role}
+              isPlayerTurn={isPlayerTurn}
+              onStop={socketData.sendChronoStop}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
+              isClaimingPayout={isClaimingPayout}
+              payoutClaimed={payoutClaimed}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={socketData.rematchOffer}
+              onRequestRematch={socketData.requestRematch}
+              onAcceptRematch={socketData.acceptRematch}
+              onDeclineRematch={socketData.declineRematch}
+              userSide={userSide}
+            />
+          ) : (
+            <RussianRouletteArena
+              gameData={socketData.gameData}
+              role={role}
+              isPlayerTurn={isPlayerTurn}
+              onShoot={socketData.sendRouletteShoot}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
+              isClaimingPayout={isClaimingPayout}
+              payoutClaimed={payoutClaimed}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={socketData.rematchOffer}
+              onRequestRematch={socketData.requestRematch}
+              onAcceptRematch={socketData.acceptRematch}
+              onDeclineRematch={socketData.declineRematch}
+            />
+          )}
 
           {/* Spectator Totalizer Betting Bar */}
           <SpectatorOddsBar

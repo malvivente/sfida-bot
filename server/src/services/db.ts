@@ -22,6 +22,7 @@ export interface StoredMatch {
   scoreB: number;
   bestReactionPlayerA?: number;
   bestReactionPlayerB?: number;
+  gameType?: string;
   settledAt: number;
   createdAt: number;
 }
@@ -38,6 +39,7 @@ export interface UserMatchHistoryRecord {
   outcome: 'WIN' | 'LOSS' | 'DRAW';
   reactionTimeMs?: number;
   score: string;
+  gameType?: string;
 }
 
 export interface UserStats {
@@ -668,6 +670,7 @@ export class DatabaseService {
         outcome,
         reactionTimeMs: myReaction,
         score: `${myScore} - ${oppScore}`,
+        gameType: m.gameType || 'roulette',
       });
     }
 
