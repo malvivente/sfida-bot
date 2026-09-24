@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -426,8 +426,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
       {/* Insufficient Balance to Join Modal */}
       {insufficientJoinMatch && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 text-cyber-pink" />
               <span>{t('lobby.insufficientModalTitle')}</span>
@@ -473,215 +473,240 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
       {/* Create Match Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 max-w-sm w-full shadow-2xl">
-            <h3 className="text-base font-orbitron font-bold text-white mb-1 flex items-center space-x-2">
-              <Flame className="w-5 h-5 text-cyber-cyan" />
-              <span>{t('lobby.createModalTitle')}</span>
-            </h3>
-            <p className="text-xs text-slate-400 font-chakra mb-3">
-              {t('lobby.createModalDesc')}
-            </p>
-
-            {/* Game Mode Selection */}
-            <div className="mb-3 space-y-1.5">
-              <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
-                {t('lobby.gameMode')}
-              </label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
-                  const isSelected = selectedGameType === game.id;
-                  return (
-                    <button
-                      key={game.id}
-                      type="button"
-                      onClick={() => {
-                        triggerImpact('light');
-                        setSelectedGameType(game.id);
-                      }}
-                      className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? `bg-cyber-bg border-2 ${game.borderColor.split(' ')[0]} shadow-[0_0_12px_rgba(0,240,255,0.2)]`
-                          : 'bg-black/50 border-cyber-border hover:border-slate-600 opacity-60'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`text-[8px] font-mono px-1 rounded bg-black/70 font-bold ${game.accentColor}`}>
-                          {game.badge}
-                        </span>
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
-                      </div>
-                      <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                        {game.title}
-                      </div>
-                      <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
-                        {game.tagline}
-                      </div>
-                    </button>
-                  );
-                })}
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-cyber-card border border-cyber-border rounded-2xl max-w-sm w-full shadow-2xl flex flex-col max-h-[90vh] my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 pb-3 border-b border-cyber-border/60 flex items-start justify-between shrink-0 bg-cyber-bg/40">
+              <div>
+                <h3 className="text-base font-orbitron font-bold text-white flex items-center space-x-2">
+                  <Flame className="w-5 h-5 text-cyber-cyan" />
+                  <span>{t('lobby.createModalTitle')}</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-chakra mt-1">
+                  {t('lobby.createModalDesc')}
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerImpact('light');
+                  setShowCreateModal(false);
+                }}
+                className="p-1.5 rounded-lg bg-cyber-border/40 hover:bg-cyber-border text-slate-400 hover:text-white transition-all ml-2 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Room Access Selection: Public vs Private */}
-            <div className="mb-3 space-y-1.5">
-              <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
-                {t('lobby.roomType')}
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerImpact('light');
-                    setIsPrivateRoom(false);
-                  }}
-                  className={`p-2 rounded-xl border text-left transition-all ${
-                    !isPrivateRoom
-                      ? 'bg-cyber-cyan/15 border-cyber-cyan text-white shadow-[0_0_10px_rgba(0,240,255,0.15)]'
-                      : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center space-x-1.5 mb-0.5">
-                    <Globe className="w-3.5 h-3.5 text-cyber-cyan" />
-                    <span className="text-xs font-orbitron font-bold text-white">{t('lobby.public')}</span>
-                  </div>
-                  <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
-                    {t('lobby.publicDesc')}
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerImpact('light');
-                    setIsPrivateRoom(true);
-                  }}
-                  className={`p-2 rounded-xl border text-left transition-all ${
-                    isPrivateRoom
-                      ? 'bg-purple-500/20 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.2)]'
-                      : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center space-x-1.5 mb-0.5">
-                    <Lock className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-xs font-orbitron font-bold text-white">{t('lobby.private')}</span>
-                  </div>
-                  <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
-                    {t('lobby.privateDesc')}
-                  </p>
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message Display */}
-            {createError && (
-              <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2 mb-3">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div className="flex-1 text-[11px] leading-relaxed">
-                  <span className="font-bold block text-white mb-0.5">{t('lobby.creationError')}</span>
-                  <span>{createError}</span>
+            {/* Scrollable Modal Content */}
+            <div className="p-4 sm:p-5 pt-3 overflow-y-auto custom-scrollbar flex-1 space-y-3">
+              {/* Game Mode Selection */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
+                  {t('lobby.gameMode')}
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
+                    const isSelected = selectedGameType === game.id;
+                    return (
+                      <button
+                        key={game.id}
+                        type="button"
+                        onClick={() => {
+                          triggerImpact('light');
+                          setSelectedGameType(game.id);
+                        }}
+                        className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                          isSelected
+                            ? `bg-cyber-bg border-2 ${game.borderColor.split(' ')[0]} shadow-[0_0_12px_rgba(0,240,255,0.2)]`
+                            : 'bg-black/50 border-cyber-border hover:border-slate-600 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-[8px] font-mono px-1 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                            {game.badge}
+                          </span>
+                          {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
+                        </div>
+                        <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                          {game.title}
+                        </div>
+                        <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
+                          {game.tagline}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra mb-1.5">
-              <span>{t('lobby.presetAmount')}</span>
-              <span className="flex items-center space-x-1">
-                <span>{t('lobby.maxWagerLabel', { max: GAME_CONFIG.MAX_WAGER })}</span>
-                <GramIcon className="w-3 h-3 text-slate-400" />
-              </span>
-            </div>
+              {/* Room Access Selection: Public vs Private */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
+                  {t('lobby.roomType')}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerImpact('light');
+                      setIsPrivateRoom(false);
+                    }}
+                    className={`p-2 rounded-xl border text-left transition-all ${
+                      !isPrivateRoom
+                        ? 'bg-cyber-cyan/15 border-cyber-cyan text-white shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                        : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 mb-0.5">
+                      <Globe className="w-3.5 h-3.5 text-cyber-cyan" />
+                      <span className="text-xs font-orbitron font-bold text-white">{t('lobby.public')}</span>
+                    </div>
+                    <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
+                      {t('lobby.publicDesc')}
+                    </p>
+                  </button>
 
-            {/* Presets Grid */}
-            <div className="grid grid-cols-4 gap-1.5 mb-3">
-              {GAME_CONFIG.PRESET_DUEL_WAGERS.map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => {
-                    triggerImpact('light');
-                    setWagerChoice(amt);
-                  }}
-                  className={`py-2 rounded-xl font-chakra text-xs font-bold border transition-all flex items-center justify-center space-x-0.5 ${
-                    wagerChoice === amt
-                      ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
-                      : 'bg-cyber-bg border-cyber-border text-slate-300 hover:border-cyber-cyan/50'
-                  }`}
-                >
-                  <span>{amt}</span>
-                  <GramIcon className={`w-3 h-3 ${wagerChoice === amt ? 'text-cyber-bg' : 'text-slate-300'}`} />
-                </button>
-              ))}
-            </div>
-
-            {/* Custom Input */}
-            <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5 mb-3">
-              <span className="text-xs text-slate-400 font-chakra">{t('lobby.customStake')}</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={wagerChoice}
-                onChange={handleCustomInput}
-                placeholder={`1 - ${GAME_CONFIG.MAX_WAGER}`}
-                className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
-              />
-              <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
-            </div>
-
-            {isOverMax && (
-              <p className="text-[11px] text-cyber-pink font-chakra mb-3">
-                {t('lobby.maxWagerWarn', { max: GAME_CONFIG.MAX_WAGER })}
-              </p>
-            )}
-
-            {/* Stake Breakdown */}
-            <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3 mb-3 text-xs font-chakra text-slate-300 space-y-1.5">
-              <div className="flex justify-between items-center">
-                <span>{t('lobby.yourWager')}</span>
-                <span className="text-white font-bold flex items-center space-x-1">
-                  <span>{wagerChoice || '0'}</span>
-                  <GramIcon className="w-3 h-3 text-white" />
-                </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerImpact('light');
+                      setIsPrivateRoom(true);
+                    }}
+                    className={`p-2 rounded-xl border text-left transition-all ${
+                      isPrivateRoom
+                        ? 'bg-purple-500/20 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                        : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 mb-0.5">
+                      <Lock className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="text-xs font-orbitron font-bold text-white">{t('lobby.private')}</span>
+                    </div>
+                    <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
+                      {t('lobby.privateDesc')}
+                    </p>
+                  </button>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span>{t('lobby.creationFee')}</span>
-                <span className="text-cyber-amber flex items-center space-x-1">
-                  <span>+{creationFeeGram.toFixed(2)}</span>
-                  <GramIcon className="w-3 h-3 text-cyber-amber" />
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>{t('lobby.winnerTakes')}</span>
-                <span className="text-cyber-green font-bold flex items-center space-x-1">
-                  <span>+{netWinnerPayout}</span>
-                  <GramIcon className="w-3 h-3 text-cyber-green" />
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-t border-cyber-border pt-1 font-bold text-white">
-                <span>{t('lobby.totalNeeded')}</span>
-                <span className="text-cyber-cyan flex items-center space-x-1">
-                  <span>{totalRequired}</span>
+
+              {/* Error Message Display */}
+              {createError && (
+                <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-[11px] leading-relaxed">
+                    <span className="font-bold block text-white mb-0.5">{t('lobby.creationError')}</span>
+                    <span>{createError}</span>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra mb-1.5">
+                  <span>{t('lobby.presetAmount')}</span>
+                  <span className="flex items-center space-x-1">
+                    <span>{t('lobby.maxWagerLabel', { max: GAME_CONFIG.MAX_WAGER })}</span>
+                    <GramIcon className="w-3 h-3 text-slate-400" />
+                  </span>
+                </div>
+
+                {/* Presets Grid */}
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {GAME_CONFIG.PRESET_DUEL_WAGERS.map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => {
+                        triggerImpact('light');
+                        setWagerChoice(amt);
+                      }}
+                      className={`py-2 rounded-xl font-chakra text-xs font-bold border transition-all flex items-center justify-center space-x-0.5 ${
+                        wagerChoice === amt
+                          ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
+                          : 'bg-cyber-bg border-cyber-border text-slate-300 hover:border-cyber-cyan/50'
+                      }`}
+                    >
+                      <span>{amt}</span>
+                      <GramIcon className={`w-3 h-3 ${wagerChoice === amt ? 'text-cyber-bg' : 'text-slate-300'}`} />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Input */}
+                <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5">
+                  <span className="text-xs text-slate-400 font-chakra">{t('lobby.customStake')}</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={wagerChoice}
+                    onChange={handleCustomInput}
+                    placeholder={`1 - ${GAME_CONFIG.MAX_WAGER}`}
+                    className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
+                  />
                   <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
-                </span>
+                </div>
+
+                {isOverMax && (
+                  <p className="text-[11px] text-cyber-pink font-chakra mt-1.5">
+                    {t('lobby.maxWagerWarn', { max: GAME_CONFIG.MAX_WAGER })}
+                  </p>
+                )}
               </div>
-              <div className="flex justify-between items-center text-[11px] text-slate-400">
-                <span>{t('lobby.availableBalance')}</span>
-                <span className={isInsufficient ? 'text-cyber-pink font-bold' : 'text-cyber-green font-bold'}>
-                  {currentBal.toFixed(2)} GRAM
-                </span>
+
+              {/* Stake Breakdown */}
+              <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3 text-xs font-chakra text-slate-300 space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span>{t('lobby.yourWager')}</span>
+                  <span className="text-white font-bold flex items-center space-x-1">
+                    <span>{wagerChoice || '0'}</span>
+                    <GramIcon className="w-3 h-3 text-white" />
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>{t('lobby.creationFee')}</span>
+                  <span className="text-cyber-amber flex items-center space-x-1">
+                    <span>+{creationFeeGram.toFixed(2)}</span>
+                    <GramIcon className="w-3 h-3 text-cyber-amber" />
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>{t('lobby.winnerTakes')}</span>
+                  <span className="text-cyber-green font-bold flex items-center space-x-1">
+                    <span>+{netWinnerPayout}</span>
+                    <GramIcon className="w-3 h-3 text-cyber-green" />
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-cyber-border pt-1 font-bold text-white">
+                  <span>{t('lobby.totalNeeded')}</span>
+                  <span className="text-cyber-cyan flex items-center space-x-1">
+                    <span>{totalRequired}</span>
+                    <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-slate-400">
+                  <span>{t('lobby.availableBalance')}</span>
+                  <span className={isInsufficient ? 'text-cyber-pink font-bold' : 'text-cyber-green font-bold'}>
+                    {currentBal.toFixed(2)} GRAM
+                  </span>
+                </div>
               </div>
+
+              {/* Insufficient Balance Notice */}
+              {isInsufficient && (
+                <div className="p-2.5 rounded-xl bg-cyber-pink/15 border border-cyber-pink/40 text-xs font-chakra text-cyber-pink flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{t('lobby.insufficientShort', { total: totalRequired, missing: missingAmount })}</span>
+                </div>
+              )}
             </div>
 
-            {/* Insufficient Balance Notice */}
-            {isInsufficient && (
-              <div className="p-2.5 rounded-xl bg-cyber-pink/15 border border-cyber-pink/40 text-xs font-chakra text-cyber-pink flex items-center space-x-2 mb-3">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{t('lobby.insufficientShort', { total: totalRequired, missing: missingAmount })}</span>
-              </div>
-            )}
-
-            <div className="flex space-x-2">
+            {/* Modal Sticky Footer Action Buttons */}
+            <div className="p-4 sm:p-5 pt-3 border-t border-cyber-border/60 bg-cyber-card shrink-0 flex space-x-2">
               <button
-                onClick={() => setShowCreateModal(false)}
+                type="button"
+                onClick={() => {
+                  triggerImpact('light');
+                  setShowCreateModal(false);
+                }}
                 className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border rounded-xl text-xs font-orbitron font-semibold text-slate-400 hover:text-white"
               >
                 {t('lobby.cancelBtn')}
@@ -689,7 +714,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {isInsufficient ? (
                 <button
+                  type="button"
                   onClick={() => {
+                    triggerImpact('light');
                     setShowCreateModal(false);
                     onOpenDeposit?.(missingAmount);
                   }}
@@ -700,6 +727,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={handleCreate}
                   disabled={!wagerChoice || parsedWager <= 0 || isOverMax || isSubmitting}
                   className={`flex-1 py-2.5 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${

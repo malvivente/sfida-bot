@@ -657,8 +657,8 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {/* Cancel Match Modal */}
       {matchToCancel && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-orbitron font-bold text-white flex items-center space-x-2">
               <AlertTriangle className="w-5 h-5 text-cyber-pink animate-pulse" />
               <span>CANCEL DUEL & REFUND</span>
@@ -713,8 +713,8 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {/* Quick Deposit Modal */}
       {showDepositModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <ArrowDownLeft className="w-4 h-4 text-cyber-cyan" />
               <span>DEPOSIT GRAM TO IN-BOT BALANCE</span>
