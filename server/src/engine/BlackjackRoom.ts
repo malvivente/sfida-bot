@@ -292,21 +292,49 @@ export class BlackjackRoom extends BaseGameRoom {
         winnerWallet = walletB;
         winReason = `${this.playerB?.username} wins with ${this.scoreB} against ${this.scoreA}!`;
       } else {
-        // Exact Tie! Sudden death tiebreaker card closest to 10
-        const cardA = this.deck.pop() || { suit: '♠', value: '10', numericValue: 10 };
-        const cardB = this.deck.pop() || { suit: '♥', value: '9', numericValue: 9 };
-        if (cardA.numericValue >= cardB.numericValue) {
+        // Equal Score! First Tiebreaker: Hand Efficiency (fewer cards in hand wins)
+        if (this.handA.length < this.handB.length) {
           winnerWallet = walletA;
-          winReason = `Tie on ${this.scoreA}! Tie-breaker card: ${this.playerA.username} drew ${cardA.value}${cardA.suit} vs ${cardB.value}${cardB.suit}!`;
-        } else {
+          winReason = `🎯 Hand Efficiency! ${this.playerA.username} wins on ${this.scoreA} with ${this.handA.length} cards vs ${this.playerB?.username}'s ${this.handB.length} cards!`;
+        } else if (this.handB.length < this.handA.length) {
           winnerWallet = walletB;
-          winReason = `Tie on ${this.scoreB}! Tie-breaker card: ${this.playerB?.username} drew ${cardB.value}${cardB.suit} vs ${cardA.value}${cardA.suit}!`;
+          winReason = `🎯 Hand Efficiency! ${this.playerB?.username} wins on ${this.scoreB} with ${this.handB.length} cards vs ${this.playerA.username}'s ${this.handA.length} cards!`;
+        } else {
+          // Second Tiebreaker: Highest single card in hand (Rank, then Suit: ♠ > ♥ > ♦ > ♣)
+          const scoreCard = (c: Card) => this.getCardRank(c.value) * 10 + this.getSuitRank(c.suit);
+          const sortedA = [...this.handA].sort((a, b) => scoreCard(b) - scoreCard(a));
+          const sortedB = [...this.handB].sort((a, b) => scoreCard(b) - scoreCard(a));
+          const topA = sortedA[0];
+          const topB = sortedB[0];
+
+          if (scoreCard(topA) >= scoreCard(topB)) {
+            winnerWallet = walletA;
+            winReason = `Exact Tie on ${this.scoreA} (${this.handA.length} cards)! ${this.playerA.username} wins on card hierarchy: ${topA.value}${topA.suit} vs ${topB.value}${topB.suit}!`;
+          } else {
+            winnerWallet = walletB;
+            winReason = `Exact Tie on ${this.scoreB} (${this.handB.length} cards)! ${this.playerB?.username} wins on card hierarchy: ${topB.value}${topB.suit} vs ${topA.value}${topA.suit}!`;
+          }
         }
       }
     }
 
     console.log(`[Blackjack] Match #${this.matchId} outcome: ${winReason}`);
     this.settleMatch(winnerWallet);
+  }
+
+  private getCardRank(value: string): number {
+    if (value === 'A') return 14;
+    if (value === 'K') return 13;
+    if (value === 'Q') return 12;
+    if (value === 'J') return 11;
+    return parseInt(value, 10) || 10;
+  }
+
+  private getSuitRank(suit: string): number {
+    if (suit === '♠') return 4;
+    if (suit === '♥') return 3;
+    if (suit === '♦') return 2;
+    return 1; // ♣
   }
 
   public cleanupGameTimers() {

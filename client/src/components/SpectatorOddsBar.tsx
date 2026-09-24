@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, TrendingUp, Swords } from 'lucide-react';
+import { Coins, TrendingUp, Swords, Lock } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
@@ -14,6 +14,7 @@ interface SpectatorOddsBarProps {
   isPlayer?: boolean;
   playerAName?: string;
   playerBName?: string;
+  roomState?: string;
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -26,6 +27,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   isPlayer = false,
   playerAName = 'PLAYER A',
   playerBName = 'PLAYER B',
+  roomState,
 }) => {
   const { triggerImpact } = useHaptics();
   const [selectedSide, setSelectedSide] = useState<'A' | 'B'>('A');
@@ -59,6 +61,8 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
     onBet(selectedSide, betAmount);
   };
 
+  const isBettingPhase = roomState === 'BETTING_WINDOW' || roomState === 'LOBBY';
+
   return (
     <div className="w-full max-w-md mx-auto bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl mt-4 font-rajdhani">
       {/* Header */}
@@ -71,8 +75,17 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         </div>
         {!isPlayer ? (
           <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-            <span>Est. payout: ~+{estimatedPayout}</span>
-            <GramIcon className="w-3 h-3 text-cyber-green" />
+            {isBettingPhase ? (
+              <span className="text-slate-400 flex items-center space-x-1">
+                <Lock className="w-3 h-3 text-cyber-cyan" />
+                <span>Pool: Dynamic</span>
+              </span>
+            ) : (
+              <>
+                <span>Est. payout: ~+{estimatedPayout}</span>
+                <GramIcon className="w-3 h-3 text-cyber-green" />
+              </>
+            )}
           </div>
         ) : (
           <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-cyan bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
@@ -91,12 +104,25 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerAName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                <span>{betsANum.toFixed(1)}</span>
-                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                {isBettingPhase ? (
+                  <span className="text-slate-500 font-mono">🔒 --</span>
+                ) : (
+                  <>
+                    <span>{betsANum.toFixed(1)}</span>
+                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                  </>
+                )}
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {oddsA.toFixed(2)}x
+              {isBettingPhase ? (
+                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                  <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
+                  <span>LOCKED</span>
+                </span>
+              ) : (
+                `${oddsA.toFixed(2)}x`
+              )}
             </div>
           </div>
         ) : (
@@ -116,12 +142,25 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerAName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                <span>{betsANum.toFixed(1)}</span>
-                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                {isBettingPhase ? (
+                  <span className="text-slate-500 font-mono">🔒 --</span>
+                ) : (
+                  <>
+                    <span>{betsANum.toFixed(1)}</span>
+                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                  </>
+                )}
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {oddsA.toFixed(2)}x
+              {isBettingPhase ? (
+                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                  <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
+                  <span>LOCKED</span>
+                </span>
+              ) : (
+                `${oddsA.toFixed(2)}x`
+              )}
             </div>
           </button>
         )}
@@ -134,12 +173,25 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerBName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                <span>{betsBNum.toFixed(1)}</span>
-                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                {isBettingPhase ? (
+                  <span className="text-slate-500 font-mono">🔒 --</span>
+                ) : (
+                  <>
+                    <span>{betsBNum.toFixed(1)}</span>
+                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                  </>
+                )}
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {oddsB.toFixed(2)}x
+              {isBettingPhase ? (
+                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                  <Lock className="w-3.5 h-3.5 text-cyber-pink" />
+                  <span>LOCKED</span>
+                </span>
+              ) : (
+                `${oddsB.toFixed(2)}x`
+              )}
             </div>
           </div>
         ) : (
@@ -159,28 +211,57 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerBName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                <span>{betsBNum.toFixed(1)}</span>
-                <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                {isBettingPhase ? (
+                  <span className="text-slate-500 font-mono">🔒 --</span>
+                ) : (
+                  <>
+                    <span>{betsBNum.toFixed(1)}</span>
+                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                  </>
+                )}
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {oddsB.toFixed(2)}x
+              {isBettingPhase ? (
+                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                  <Lock className="w-3.5 h-3.5 text-cyber-pink" />
+                  <span>LOCKED</span>
+                </span>
+              ) : (
+                `${oddsB.toFixed(2)}x`
+              )}
             </div>
           </button>
         )}
       </div>
 
       {/* Pool Distribution Bar */}
-      <div className="w-full h-2.5 bg-cyber-bg rounded-full overflow-hidden flex mb-3 border border-cyber-border">
-        <div
-          style={{ width: `${pctA}%` }}
-          className="bg-cyber-cyan h-full transition-all duration-500"
-        />
-        <div
-          style={{ width: `${pctB}%` }}
-          className="bg-cyber-pink h-full transition-all duration-500"
-        />
-      </div>
+      {isBettingPhase ? (
+        <div className="w-full h-5 bg-cyber-bg/90 rounded-full overflow-hidden flex items-center justify-center mb-3 border border-cyber-border/70 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyber-cyan/15 via-purple-500/10 to-cyber-pink/15 opacity-60 animate-pulse" />
+          <div className="relative z-10 flex items-center space-x-1.5 text-[10px] font-chakra font-bold text-slate-400 uppercase tracking-wider">
+            <Lock className="w-3 h-3 text-cyber-cyan" />
+            <span>ODDS & SHARES REVEALED AT DUEL START</span>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-3 space-y-1">
+          <div className="w-full h-2.5 bg-cyber-bg rounded-full overflow-hidden flex border border-cyber-border">
+            <div
+              style={{ width: `${pctA}%` }}
+              className="bg-cyber-cyan h-full transition-all duration-500"
+            />
+            <div
+              style={{ width: `${pctB}%` }}
+              className="bg-cyber-pink h-full transition-all duration-500"
+            />
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-chakra text-slate-400 px-0.5">
+            <span className="text-cyber-cyan font-bold">{pctA}% ({playerAName})</span>
+            <span className="text-cyber-pink font-bold">{pctB}% ({playerBName})</span>
+          </div>
+        </div>
+      )}
 
       {/* Notice for Duelists or Bet Controls for Spectators */}
       {isPlayer ? (
@@ -260,11 +341,17 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </span>
               <span>ON {selectedSide === 'A' ? playerAName : playerBName}</span>
             </div>
-            <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-              <span>Est. payout:</span>
-              <span className="font-extrabold text-xs">+{estimatedPayout}</span>
-              <GramIcon className="w-3 h-3" />
-            </div>
+            {isBettingPhase ? (
+              <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
+                <span>Pari-Mutuel Pool (Calculated at duel start)</span>
+              </div>
+            ) : (
+              <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
+                <span>Est. payout:</span>
+                <span className="font-extrabold text-xs">+{estimatedPayout}</span>
+                <GramIcon className="w-3 h-3" />
+              </div>
+            )}
           </button>
         </>
       )}

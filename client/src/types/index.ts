@@ -208,6 +208,19 @@ export interface UserStats {
   bestReaction: string;
   totalProfitsTon: string;
   totalProfitsGram: string;
+  dailyStreak?: number;
+  hasWonToday?: boolean;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  walletAddress: string;
+  username: string;
+  duelsPlayed: number;
+  duelsWon: number;
+  winRate: number;
+  dailyStreak: number;
+  totalProfitsGram: string;
 }
 
 export interface MatchHistoryItem {

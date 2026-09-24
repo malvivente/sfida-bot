@@ -49,6 +49,19 @@ export interface UserStats {
   bestReaction: string;
   totalProfitsTon: string;
   totalProfitsGram: string;
+  dailyStreak: number;
+  hasWonToday: boolean;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  walletAddress: string;
+  username: string;
+  duelsPlayed: number;
+  duelsWon: number;
+  winRate: number;
+  dailyStreak: number;
+  totalProfitsGram: string;
 }
 
 export interface UserAccount {
@@ -699,6 +712,8 @@ export class DatabaseService {
       }, 0)
       .toFixed(2);
 
+    const { dailyStreak, hasWonToday } = this.calculateDailyWinStreak(history);
+
     return {
       duelsPlayed,
       duelsWon,
@@ -706,6 +721,154 @@ export class DatabaseService {
       bestReaction,
       totalProfitsTon: totalProfits,
       totalProfitsGram: totalProfits,
+      dailyStreak,
+      hasWonToday,
+    };
+  }
+
+  public calculateDailyWinStreak(history: UserMatchHistoryRecord[]): { dailyStreak: number; hasWonToday: boolean } {
+    const winningMatches = history.filter((h) => h.outcome === 'WIN' && h.timestamp > 0);
+    if (winningMatches.length === 0) {
+      return { dailyStreak: 0, hasWonToday: false };
+    }
+
+    // Set of distinct UTC calendar dates 'YYYY-MM-DD'
+    const winDays = new Set<string>();
+    for (const m of winningMatches) {
+      const d = new Date(m.timestamp);
+      const dayStr = d.toISOString().slice(0, 10);
+      winDays.add(dayStr);
+    }
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+
+    const hasWonToday = winDays.has(todayStr);
+
+    let streak = 0;
+    // If won today, count backwards from today.
+    // If not won today, but won yesterday, count backwards from yesterday.
+    // Otherwise streak is 0.
+    let checkDate: Date;
+    if (hasWonToday) {
+      checkDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    } else if (winDays.has(yesterdayStr)) {
+      checkDate = new Date(Date.UTC(yesterdayDate.getUTCFullYear(), yesterdayDate.getUTCMonth(), yesterdayDate.getUTCDate()));
+    } else {
+      return { dailyStreak: 0, hasWonToday: false };
+    }
+
+    while (true) {
+      const dateStr = checkDate.toISOString().slice(0, 10);
+      if (winDays.has(dateStr)) {
+        streak++;
+        checkDate = new Date(checkDate.getTime() - 24 * 60 * 60 * 1000);
+      } else {
+        break;
+      }
+    }
+
+    return { dailyStreak: streak, hasWonToday };
+  }
+
+  public async getLeaderboard(
+    sortBy: 'wins' | 'streak' | 'profits' = 'wins',
+    limit: number = 50,
+    userAddress?: string
+  ): Promise<{ leaderboard: LeaderboardEntry[]; userEntry?: LeaderboardEntry | null }> {
+    const addressMap = new Map<string, string>(); // normKey -> display/friendly Address
+    const usernameMap = new Map<string, string>(); // normKey -> username
+
+    for (const [key, user] of this.users.entries()) {
+      addressMap.set(key, user.walletAddress);
+      if (user.username) {
+        usernameMap.set(key, user.username);
+      }
+    }
+
+    for (const m of this.matches.values()) {
+      if (m.playerAAddress) {
+        const normA = this.normalizeAddress(m.playerAAddress);
+        if (!addressMap.has(normA)) addressMap.set(normA, this.toFriendlyAddress(m.playerAAddress));
+        if (m.playerAName && !usernameMap.has(normA)) usernameMap.set(normA, m.playerAName);
+      }
+      if (m.playerBAddress) {
+        const normB = this.normalizeAddress(m.playerBAddress);
+        if (!addressMap.has(normB)) addressMap.set(normB, this.toFriendlyAddress(m.playerBAddress));
+        if (m.playerBName && !usernameMap.has(normB)) usernameMap.set(normB, m.playerBName);
+      }
+    }
+
+    const entries: Omit<LeaderboardEntry, 'rank'>[] = [];
+
+    for (const [normKey, addr] of addressMap.entries()) {
+      const stats = await this.getUserStats(addr);
+      // Skip addresses that have never played and have no profit/streak
+      if (stats.duelsPlayed === 0 && parseFloat(stats.totalProfitsGram) <= 0) continue;
+
+      let name = usernameMap.get(normKey);
+      if (!name) {
+        name = addr.length > 10 ? `${addr.slice(0, 4)}...${addr.slice(-4)}` : addr;
+      }
+
+      entries.push({
+        walletAddress: addr,
+        username: name,
+        duelsPlayed: stats.duelsPlayed,
+        duelsWon: stats.duelsWon,
+        winRate: stats.winRate,
+        dailyStreak: stats.dailyStreak,
+        totalProfitsGram: stats.totalProfitsGram,
+      });
+    }
+
+    entries.sort((a, b) => {
+      if (sortBy === 'streak') {
+        if (b.dailyStreak !== a.dailyStreak) return b.dailyStreak - a.dailyStreak;
+        return b.duelsWon - a.duelsWon;
+      } else if (sortBy === 'profits') {
+        const diff = parseFloat(b.totalProfitsGram) - parseFloat(a.totalProfitsGram);
+        if (Math.abs(diff) > 0.001) return diff;
+        return b.duelsWon - a.duelsWon;
+      } else {
+        if (b.duelsWon !== a.duelsWon) return b.duelsWon - a.duelsWon;
+        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+        return b.duelsPlayed - a.duelsPlayed;
+      }
+    });
+
+    const ranked: LeaderboardEntry[] = entries.map((e, idx) => ({
+      ...e,
+      rank: idx + 1,
+    }));
+
+    let userEntry: LeaderboardEntry | null = null;
+    if (userAddress) {
+      const normTarget = this.normalizeAddress(userAddress);
+      const found = ranked.find((e) => this.normalizeAddress(e.walletAddress) === normTarget);
+      if (found) {
+        userEntry = found;
+      } else {
+        const stats = await this.getUserStats(userAddress);
+        userEntry = {
+          rank: ranked.length + 1,
+          walletAddress: this.toFriendlyAddress(userAddress),
+          username: usernameMap.get(normTarget) || 'You',
+          duelsPlayed: stats.duelsPlayed,
+          duelsWon: stats.duelsWon,
+          winRate: stats.winRate,
+          dailyStreak: stats.dailyStreak,
+          totalProfitsGram: stats.totalProfitsGram,
+        };
+      }
+    }
+
+    return {
+      leaderboard: ranked.slice(0, limit),
+      userEntry,
     };
   }
 }

@@ -4,14 +4,17 @@ import { Navbar } from './components/Navbar.js';
 import { Arena } from './pages/Arena.js';
 import { ReferralDashboard } from './pages/ReferralDashboard.js';
 import { Profile } from './pages/Profile.js';
+import { Leaderboard } from './pages/Leaderboard.js';
 import { RulesModal } from './components/RulesModal.js';
 import { ShieldCheck, HelpCircle } from 'lucide-react';
+import { useI18n } from './i18n/index.js';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'arena' | 'profile' | 'referrals'>('arena');
+  const [activeTab, setActiveTab] = useState<'arena' | 'leaderboard' | 'profile' | 'referrals'>('arena');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     try {
@@ -37,6 +40,8 @@ export const App: React.FC = () => {
       setActiveTab('arena');
     } else if (startParam.startsWith('ref_')) {
       setActiveTab('referrals');
+    } else if (startParam.startsWith('lead_') || params.get('tab') === 'leaderboard') {
+      setActiveTab('leaderboard');
     }
   }, []);
 
@@ -61,6 +66,7 @@ export const App: React.FC = () => {
             onClearDeepMatch={() => setDeepMatchId(undefined)}
           />
         )}
+        {activeTab === 'leaderboard' && <Leaderboard />}
         {activeTab === 'referrals' && <ReferralDashboard />}
         {activeTab === 'profile' && (
           <Profile
@@ -74,9 +80,9 @@ export const App: React.FC = () => {
       </main>
 
       {/* Subtle Footer */}
-      <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-center text-[11px] text-slate-500 font-chakra space-x-1.5">
-        <ShieldCheck className="w-3.5 h-3.5 text-cyber-cyan" />
-        <span>TON Smart Contract Escrow • Fair Play Zero House Risk</span>
+      <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-center text-[11px] text-slate-500 font-chakra space-x-1.5 text-center">
+        <ShieldCheck className="w-3.5 h-3.5 text-cyber-cyan shrink-0" />
+        <span>{t('footer.escrow')}</span>
       </footer>
 
       {/* Floating Action Button with ? (HelpCircle) - Fixed in bottom-right corner */}

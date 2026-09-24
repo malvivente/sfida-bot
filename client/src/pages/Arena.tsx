@@ -907,6 +907,7 @@ export const Arena: React.FC<ArenaProps> = ({
             onBet={handleSpectatorBet}
             disabled={socketData.roomState === 'MATCH_SETTLED'}
             isPlayer={isMatchPlayer}
+            roomState={socketData.roomState}
           />
         </div>
       ) : (

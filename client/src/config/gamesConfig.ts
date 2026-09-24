@@ -51,7 +51,7 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     title: 'Chrono Blind',
     badge: 'BLIND STOP',
     tagline: 'Millisecond Duel in the Dark',
-    description: 'The clock counts down to 0.00. At 3.00 seconds, your screen blacks out. Hit STOP as close to zero as possible without busting.',
+    description: 'The clock counts down to 0.00 and suddenly blacks out at an unpredictable instant! Hit STOP as close to zero as possible without busting.',
     spectatorAppeal: 'Spectator view stays illuminated! Spectators scream watching players panic-press in the dark.',
     accentColor: 'text-cyber-amber',
     borderColor: 'border-cyber-amber/50 hover:border-cyber-amber',

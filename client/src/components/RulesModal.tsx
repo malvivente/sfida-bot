@@ -125,7 +125,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-cyber-amber block mb-0.5">4. Chrono Blind (Precision Countdown)</strong>
-                  <span>A random timer plunges into the dark Blind Zone at 3.00s. Hit STOP as close to 0.000s as you dare. Stopping past 0.00s is a BUST. First to secure 2 rounds wins the match.</span>
+                  <span>A random timer plunges into the dark Blind Zone between 2.0s and 4.0s. Hit STOP as close to 0.000s as you dare. Stopping past 0.000s is a BUST. Ties trigger Sudden Death overtime! First to secure 2 rounds wins the match.</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-slate-300 block mb-0.5">5. Automated Prize Settlement & Rematches</strong>

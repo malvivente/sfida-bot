@@ -364,6 +364,15 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({ success: true, stats });
   });
 
+  // Global Leaderboard
+  fastify.get('/api/leaderboard', async (req, reply) => {
+    const query = req.query as { sortBy?: 'wins' | 'streak' | 'profits'; limit?: string; userAddress?: string };
+    const sortBy = query.sortBy || 'wins';
+    const limit = parseInt(query.limit || '50', 10);
+    const result = await dbService.getLeaderboard(sortBy, limit, query.userAddress);
+    return reply.send({ success: true, ...result });
+  });
+
   // User internal balance
   fastify.get('/api/users/:wallet/balance', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };

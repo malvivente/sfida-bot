@@ -8,7 +8,7 @@ export class ChronoBlindRoom extends BaseGameRoom {
   public roundsToWin: number = GAMES_CONFIG.chrono.roundsToWin;
 
   public targetDurationMs: number = 5000;
-  public blindThresholdMs: number = GAMES_CONFIG.chrono.blindThresholdSeconds * 1000;
+  public blindThresholdMs: number = GAMES_CONFIG.chrono.minBlindThresholdSeconds * 1000;
   public startEpochMs: number = 0;
 
   public stoppedA: boolean = false;
@@ -85,7 +85,7 @@ export class ChronoBlindRoom extends BaseGameRoom {
     this.roundEndMessage = undefined;
 
     this.targetDurationMs = this.pickRandomDurationMs();
-    this.blindThresholdMs = GAMES_CONFIG.chrono.blindThresholdSeconds * 1000;
+    this.blindThresholdMs = this.pickRandomBlindThresholdMs();
     this.startEpochMs = Date.now() + 1500; // 1.5s countdown before timer begins
 
     this.broadcast({
@@ -111,6 +111,13 @@ export class ChronoBlindRoom extends BaseGameRoom {
         this.evaluateRound();
       }
     }, maxWaitMs);
+  }
+
+  private pickRandomBlindThresholdMs(): number {
+    const min = GAMES_CONFIG.chrono.minBlindThresholdSeconds;
+    const max = GAMES_CONFIG.chrono.maxBlindThresholdSeconds;
+    const sec = Math.random() * (max - min) + min;
+    return Math.round(sec * 10) * 100;
   }
 
   public handleGameAction(wallet: string, data: any) {
@@ -207,7 +214,10 @@ export class ChronoBlindRoom extends BaseGameRoom {
         this.playerB ? this.playerB.score++ : null;
         msg = `Both busted! ${nameB} was closer (+${(diffB / 1000).toFixed(3)}s vs +${(diffA / 1000).toFixed(3)}s).`;
       } else {
-        msg = `Exact tie bust! Both +${(diffA / 1000).toFixed(3)}s!`;
+        roundWinSide = 'TIE';
+        this.playerA.score++;
+        this.playerB ? this.playerB.score++ : null;
+        msg = `⏱️ INCREDIBLE DRAW! Both busted at identical +${(diffA / 1000).toFixed(3)}s! +1 PT awarded to both!`;
       }
     } else {
       // Neither busted: closest to 0 wins!
@@ -220,7 +230,10 @@ export class ChronoBlindRoom extends BaseGameRoom {
         this.playerB ? this.playerB.score++ : null;
         msg = `🎯 ${nameB} stopped at ${secB}s to 0.000s, beating ${nameA} (${secA}s)!`;
       } else {
-        msg = `Incredible! Both stopped at exact same millisecond (${secA}s)!`;
+        roundWinSide = 'TIE';
+        this.playerA.score++;
+        this.playerB ? this.playerB.score++ : null;
+        msg = `⏱️ INCREDIBLE DRAW! Both stopped at exact same millisecond (${secA}s)! +1 PT awarded to both!`;
       }
     }
 
@@ -235,19 +248,35 @@ export class ChronoBlindRoom extends BaseGameRoom {
     });
     this.broadcastRoomState();
 
-    // Check match victory (Best of 3: first to 2 wins)
-    if (this.playerA.score >= this.roundsToWin) {
+    const scoreA = this.playerA.score;
+    const scoreB = this.playerB?.score || 0;
+
+    // Both reached winning threshold simultaneously (e.g. 2-2 tie)
+    if (scoreA >= this.roundsToWin && scoreB >= this.roundsToWin && scoreA === scoreB) {
+      console.log(`[ChronoBlind] Match #${this.matchId}: Exact score tie (${scoreA}-${scoreB}) at target. Initiating Sudden Death Round!`);
+      this.maxRounds += 1;
+      this.roundsToWin += 1;
+      setTimeout(() => this.startChronoRound(this.currentRound + 1), 3500);
+      return;
+    }
+
+    if (scoreA >= this.roundsToWin && scoreA > scoreB) {
       setTimeout(() => this.settleMatch(this.playerA.walletAddress), 2500);
-    } else if (this.playerB && this.playerB.score >= this.roundsToWin) {
+    } else if (scoreB >= this.roundsToWin && scoreB > scoreA) {
       setTimeout(() => this.settleMatch(this.playerB!.walletAddress), 2500);
     } else if (this.currentRound < this.maxRounds) {
       setTimeout(() => this.startChronoRound(this.currentRound + 1), 3500);
     } else {
-      // Tiebreak or higher score
-      const winner = this.playerA.score >= (this.playerB?.score || 0)
-        ? this.playerA.walletAddress
-        : this.playerB!.walletAddress;
-      setTimeout(() => this.settleMatch(winner), 2500);
+      // Reached max rounds: if tied, Sudden Death Round!
+      if (scoreA === scoreB) {
+        console.log(`[ChronoBlind] Match #${this.matchId}: Tied at final round (${scoreA}-${scoreB}). Launching Overtime Round!`);
+        this.maxRounds += 1;
+        this.roundsToWin = scoreA + 1;
+        setTimeout(() => this.startChronoRound(this.currentRound + 1), 3500);
+      } else {
+        const winner = scoreA > scoreB ? this.playerA.walletAddress : this.playerB!.walletAddress;
+        setTimeout(() => this.settleMatch(winner), 2500);
+      }
     }
   }
 

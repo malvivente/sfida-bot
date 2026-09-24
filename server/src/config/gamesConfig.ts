@@ -20,10 +20,11 @@ export const GAMES_CONFIG = {
   },
   chrono: {
     name: 'Chrono Blind',
-    description: 'Countdown into darkness at 3.00s. Hit STOP closest to 0.00 without overshooting.',
+    description: 'Countdown plunges into darkness. Hit STOP closest to 0.00 without overshooting.',
     minDurationSeconds: 5.0,
     maxDurationSeconds: 8.0,
-    blindThresholdSeconds: 3.0,
+    minBlindThresholdSeconds: 2.0,
+    maxBlindThresholdSeconds: 4.0,
     roundsToWin: 2,
     maxRounds: 3,
   },

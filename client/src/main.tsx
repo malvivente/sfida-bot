@@ -2,6 +2,7 @@ import './polyfills.js';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
+import { LanguageProvider } from './i18n/index.js';
 import App from './App.js';
 import './index.css';
 
@@ -55,7 +56,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <TonConnectUIProvider manifestUrl={manifestUrl}>
-        <App />
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
       </TonConnectUIProvider>
     </ErrorBoundary>
   </React.StrictMode>

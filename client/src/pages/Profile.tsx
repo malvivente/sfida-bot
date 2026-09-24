@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, ArrowRight, ArrowDownLeft, ArrowUpRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Flame, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, ArrowRight, ArrowDownLeft, ArrowUpRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData } from '../types/index.js';
 import { Address } from '@ton/ton';
+import { useI18n } from '../i18n/index.js';
 
 interface ProfileProps {
   onResumeDuel?: (matchId: string) => void;
@@ -214,15 +215,23 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
     }
   };
 
+  const { t } = useI18n();
+
   const duelsPlayed = serverStats ? serverStats.duelsPlayed : history.length;
   const duelsWon = serverStats ? serverStats.duelsWon : history.filter((h) => h.outcome === 'WIN').length;
+  const winRateFormatted = duelsPlayed > 0 ? ((duelsWon / duelsPlayed) * 100).toFixed(1) : '0.0';
 
-  const validReactions = history
-    .map((h) => h.reactionTimeMs)
-    .filter((ms): ms is number => typeof ms === 'number' && ms > 0);
-  const bestReaction = serverStats?.bestReaction && serverStats.bestReaction !== '-'
-    ? serverStats.bestReaction
-    : (validReactions.length > 0 ? `${Math.min(...validReactions)}` : '-');
+  const dailyStreak = serverStats?.dailyStreak || 0;
+  const hasWonToday = serverStats?.hasWonToday || false;
+
+  const MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365];
+  const nextMilestone = MILESTONES.find((m) => m > dailyStreak) || (dailyStreak + 30);
+  const prevMilestones = MILESTONES.filter((m) => m <= dailyStreak);
+  const prevMilestone = prevMilestones.length > 0 ? prevMilestones[prevMilestones.length - 1] : 0;
+  const streakProgressPct = Math.min(
+    100,
+    Math.max(0, Math.round(((dailyStreak - prevMilestone) / (nextMilestone - prevMilestone)) * 100))
+  );
 
   const totalProfitsGram = serverStats
     ? (serverStats.totalProfitsGram || serverStats.totalProfitsTon)
@@ -320,29 +329,58 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-cyber-bg/60 border border-cyber-border rounded-xl p-3">
-            <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-chakra mb-1">
-              <Trophy className="w-3.5 h-3.5 text-cyber-amber" />
-              <span>1V1 VICTORIES</span>
+        <div className="grid grid-cols-2 gap-2.5 mb-4">
+          {/* Victories Card */}
+          <div className="bg-cyber-bg/60 border border-cyber-border rounded-xl p-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-chakra mb-1">
+                <Trophy className="w-3.5 h-3.5 text-cyber-amber shrink-0" />
+                <span className="truncate uppercase font-bold text-slate-300">DUEL VICTORIES</span>
+              </div>
+              <div className="text-sm sm:text-base font-chakra font-extrabold text-white leading-tight">
+                🏆 {duelsWon} W / {duelsPlayed} Games
+              </div>
             </div>
-            <div className="text-xl font-chakra font-extrabold text-white">
-              {duelsWon}
-            </div>
-            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">
-              {duelsPlayed} Duels Played
+            <div className="text-xs font-chakra font-bold text-cyber-cyan mt-2">
+              {winRateFormatted}% Win Rate
             </div>
           </div>
 
-          <div className="bg-cyber-bg/60 border border-cyber-border rounded-xl p-3">
-            <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-chakra mb-1">
-              <Zap className="w-3.5 h-3.5 text-cyber-cyan" />
-              <span>BEST REACTION</span>
+          {/* Daily Win Streak Card */}
+          <div className="bg-cyber-bg/60 border border-orange-500/30 rounded-xl p-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center space-x-1 text-xs font-chakra mb-1 text-orange-400">
+                <Flame className="w-3.5 h-3.5 fill-orange-400 shrink-0" />
+                <span className="font-extrabold font-orbitron text-white text-[11px] sm:text-xs tracking-wider truncate">
+                  {dailyStreak} DAY STREAK
+                </span>
+              </div>
+              <div className="text-[11px] font-chakra text-slate-400">
+                {hasWonToday ? (
+                  <span className="text-cyber-green font-bold flex items-center space-x-0.5">
+                    <span>✓ Completed today!</span>
+                  </span>
+                ) : (
+                  <span>Win 1 match today</span>
+                )}
+              </div>
             </div>
-            <div className="text-xl font-chakra font-extrabold text-cyber-cyan">
-              {bestReaction === '-' ? '- ms' : `${bestReaction}ms`}
+
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-chakra text-slate-400">
+                <span className="text-cyber-green font-bold shrink-0">{prevMilestone} ✓</span>
+                <div className="flex-1 mx-1.5 h-1.5 bg-cyber-bg rounded-full overflow-hidden border border-cyber-border">
+                  <div
+                    style={{ width: `${streakProgressPct}%` }}
+                    className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500"
+                  />
+                </div>
+                <span className="text-amber-300 font-bold shrink-0">{nextMilestone} 🎁</span>
+              </div>
+              <div className="text-[9px] text-slate-500 font-chakra text-center truncate">
+                Reward preview: +{(nextMilestone * 0.5).toFixed(0)} GRAM
+              </div>
             </div>
-            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">Personal best reaction</div>
           </div>
         </div>
 
