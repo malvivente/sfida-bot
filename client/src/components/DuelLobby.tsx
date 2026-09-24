@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -12,8 +12,8 @@ import { useI18n } from '../i18n/index.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
-  onCreateMatch: (wagerGram: string, gameType: GameType) => Promise<boolean | void> | void;
-  onJoinMatch: (match: MatchData) => void;
+  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean) => Promise<boolean | void> | void;
+  onJoinMatch: (match: MatchData, inviteCode?: string) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (match: MatchData) => void;
   onRefreshMatches?: () => void;
@@ -25,6 +25,8 @@ interface DuelLobbyProps {
   onOpenWallet?: () => void;
   userBalanceGram?: string;
   creationFeeGram?: number;
+  joinFeeGram?: number;
+  initialInviteCode?: string;
   onOpenDeposit?: (missingAmount?: string) => void;
 }
 
@@ -42,13 +44,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   userAddress,
   onOpenWallet,
   userBalanceGram = '0.00',
-  creationFeeGram = 0.02,
+  creationFeeGram = 0.05,
+  joinFeeGram = 0.05,
+  initialInviteCode,
   onOpenDeposit,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
   const { t } = useI18n();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isPrivateRoom, setIsPrivateRoom] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [selectedGameType, setSelectedGameType] = useState<GameType>('roulette');
   const [filterGameType, setFilterGameType] = useState<string>('ALL');
@@ -57,11 +62,22 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const parsedWager = parseFloat(wagerChoice || '0');
   const isOverMax = parsedWager > GAME_CONFIG.MAX_WAGER;
-  const netWinnerPayout = (parsedWager * 1.92).toFixed(2);
+  const netWinnerPayout = (parsedWager * 2).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
   const totalRequired = parsedWager > 0 ? (parsedWager + creationFeeGram).toFixed(2) : '0.00';
   const isInsufficient = parsedWager > 0 && currentBal < (parsedWager + creationFeeGram);
   const missingAmount = parsedWager > 0 ? ((parsedWager + creationFeeGram) - currentBal).toFixed(2) : '0.00';
+
+  const getMatchInviteCode = (match: MatchData) => {
+    if (match.inviteCode) return match.inviteCode;
+    if (initialInviteCode) return initialInviteCode;
+    try {
+      const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+      return stored[match.matchId] || undefined;
+    } catch {
+      return undefined;
+    }
+  };
 
   const handleOpenModal = () => {
     onClearError?.();
@@ -86,7 +102,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     triggerImpact('heavy');
     setIsSubmitting(true);
     try {
-      const result = await onCreateMatch(wagerChoice, selectedGameType);
+      const result = await onCreateMatch(wagerChoice, selectedGameType, isPrivateRoom);
       if (result !== false) {
         setShowCreateModal(false);
       }
@@ -95,28 +111,43 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
   };
 
-  const handleAttemptJoin = (m: MatchData) => {
+  const handleAttemptJoin = (m: MatchData, inviteCode?: string) => {
     if (!userAddress) {
       triggerImpact('medium');
       onOpenWallet?.();
       return;
     }
     const wagerGram = parseFloat(m.wagerAmountNano) / 1e9;
-    if (currentBal < wagerGram) {
+    const fee = joinFeeGram !== undefined ? joinFeeGram : 0.05;
+    const requiredTotal = wagerGram + fee;
+    if (currentBal < requiredTotal) {
       triggerImpact('heavy');
-      const diff = (wagerGram - currentBal).toFixed(2);
-      setInsufficientJoinMatch({ match: m, required: wagerGram.toFixed(2), missing: diff });
+      const diff = (requiredTotal - currentBal).toFixed(2);
+      setInsufficientJoinMatch({ match: m, required: requiredTotal.toFixed(2), missing: diff });
       return;
     }
-    onJoinMatch(m);
+    onJoinMatch(m, inviteCode);
   };
 
-  const handleShare = (matchId: string, wager: string, gType: GameType = 'roulette') => {
+  const handleShare = (matchId: string, wager: string, gType: GameType = 'roulette', isPrivate?: boolean, inviteCode?: string) => {
     triggerImpact('light');
     const meta = GAMES_METADATA[gType] || GAMES_METADATA.roulette;
-    const text = `⚔️ I challenge you to a ${meta.title} duel for ${wager} GRAM! ${meta.tagline}`;
-    const url = `https://t.me/${botUsername}?start=duel_${matchId}`;
-    shareToTelegram(url, text);
+    let code = inviteCode;
+    if (!code && typeof window !== 'undefined') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+        code = stored[matchId];
+      } catch {}
+    }
+    if (isPrivate && code) {
+      const text = `⚔️ Ti ho invitato a un duello PRIVATO su ${meta.title} per ${wager} GRAM! Entra con questo link unico:`;
+      const url = `https://t.me/${botUsername}?start=duel_${matchId}_${code}`;
+      shareToTelegram(url, text);
+    } else {
+      const text = `⚔️ I challenge you to a ${meta.title} duel for ${wager} GRAM! ${meta.tagline}`;
+      const url = `https://t.me/${botUsername}?start=duel_${matchId}`;
+      shareToTelegram(url, text);
+    }
   };
 
   const handleCustomInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,6 +290,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               const isAlreadyPlayer = isPlayerA || isPlayerB;
               const isCreator = isPlayerA;
 
+              const effectiveInviteCode = getMatchInviteCode(m);
+
               return (
                 <div
                   key={m.matchId}
@@ -284,6 +317,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         >
                           {gameMeta.title}
                         </span>
+                        {m.isPrivate && (
+                          <span className="text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border border-purple-500/50 bg-purple-500/15 text-purple-300 flex items-center space-x-1">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>{t('lobby.privateBadge')}</span>
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-400 font-chakra mt-0.5">
                         Created by <span className="text-slate-200 font-semibold">{m.playerA.name}</span>
@@ -325,17 +364,27 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <span>{t('profile.resume')}</span>
                       </button>
                     ) : !m.playerB ? (
-                      <button
-                        onClick={() => handleAttemptJoin(m)}
-                        className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
-                      >
-                        <Swords className="w-3.5 h-3.5" />
-                        <span className="flex items-center space-x-1">
-                          <span>{t('lobby.joinBtn')} ({wagerGram}</span>
-                          <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
-                          <span>)</span>
-                        </span>
-                      </button>
+                      m.isPrivate && !effectiveInviteCode ? (
+                        <button
+                          onClick={() => onSpectateMatch(m.matchId)}
+                          className="flex-1 py-2 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-purple-400" />
+                          <span>{t('lobby.spectatePrivate')}</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
+                          className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
+                        >
+                          <Swords className="w-3.5 h-3.5" />
+                          <span className="flex items-center space-x-1">
+                            <span>{t('lobby.joinBtn')} ({wagerGram}</span>
+                            <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
+                            <span>)</span>
+                          </span>
+                        </button>
+                      )
                     ) : (
                       <button
                         onClick={() => onSpectateMatch(m.matchId)}
@@ -347,7 +396,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     )}
 
                     <button
-                      onClick={() => handleShare(m.matchId, wagerGram, m.gameType)}
+                      onClick={() => handleShare(m.matchId, wagerGram, m.gameType, m.isPrivate, effectiveInviteCode)}
                       title="Share to Telegram"
                       className="p-2 bg-cyber-bg border border-cyber-border rounded-xl text-slate-300 hover:text-cyber-cyan active:scale-95 transition-all"
                     >
@@ -474,6 +523,56 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               </div>
             </div>
 
+            {/* Room Access Selection: Public vs Private */}
+            <div className="mb-3 space-y-1.5">
+              <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
+                {t('lobby.roomType')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerImpact('light');
+                    setIsPrivateRoom(false);
+                  }}
+                  className={`p-2 rounded-xl border text-left transition-all ${
+                    !isPrivateRoom
+                      ? 'bg-cyber-cyan/15 border-cyber-cyan text-white shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                      : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center space-x-1.5 mb-0.5">
+                    <Globe className="w-3.5 h-3.5 text-cyber-cyan" />
+                    <span className="text-xs font-orbitron font-bold text-white">{t('lobby.public')}</span>
+                  </div>
+                  <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
+                    {t('lobby.publicDesc')}
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerImpact('light');
+                    setIsPrivateRoom(true);
+                  }}
+                  className={`p-2 rounded-xl border text-left transition-all ${
+                    isPrivateRoom
+                      ? 'bg-purple-500/20 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                      : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center space-x-1.5 mb-0.5">
+                    <Lock className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-xs font-orbitron font-bold text-white">{t('lobby.private')}</span>
+                  </div>
+                  <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
+                    {t('lobby.privateDesc')}
+                  </p>
+                </button>
+              </div>
+            </div>
+
             {/* Error Message Display */}
             {createError && (
               <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2 mb-3">
@@ -548,6 +647,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <span className="text-cyber-amber flex items-center space-x-1">
                   <span>+{creationFeeGram.toFixed(2)}</span>
                   <GramIcon className="w-3 h-3 text-cyber-amber" />
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>{t('lobby.winnerTakes')}</span>
+                <span className="text-cyber-green font-bold flex items-center space-x-1">
+                  <span>+{netWinnerPayout}</span>
+                  <GramIcon className="w-3 h-3 text-cyber-green" />
                 </span>
               </div>
               <div className="flex justify-between items-center border-t border-cyber-border pt-1 font-bold text-white">

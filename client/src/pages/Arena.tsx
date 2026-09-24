@@ -17,6 +17,7 @@ import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft,
 
 interface ArenaProps {
   initialMatchId?: string;
+  initialInviteCode?: string;
   role?: 'player' | 'spectator';
   onClearDeepMatch?: () => void;
   onMatchActiveChange?: (isActive: boolean) => void;
@@ -24,6 +25,7 @@ interface ArenaProps {
 
 export const Arena: React.FC<ArenaProps> = ({
   initialMatchId,
+  initialInviteCode,
   role: initialRole = 'player',
   onClearDeepMatch,
   onMatchActiveChange,
@@ -246,7 +248,7 @@ export const Arena: React.FC<ArenaProps> = ({
   };
 
   // Create match using in-bot balance
-  const handleCreateMatch = async (wagerGram: string, gameType: GameType = 'roulette'): Promise<boolean> => {
+  const handleCreateMatch = async (wagerGram: string, gameType: GameType = 'roulette', isPrivate?: boolean): Promise<boolean> => {
     setCreateError(null);
 
     if (!userAddress) {
@@ -273,6 +275,7 @@ export const Arena: React.FC<ArenaProps> = ({
           telegramUserId: userId,
           telegramUsername: username,
           gameType,
+          isPrivate: Boolean(isPrivate),
         }),
       });
 
@@ -289,12 +292,22 @@ export const Arena: React.FC<ArenaProps> = ({
         throw new Error('Match ID missing in server response.');
       }
 
+      if (data?.inviteCode) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+          stored[data.matchId.toString()] = data.inviteCode;
+          localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
+        } catch {}
+      }
+
       // Refresh balance
       fetchUserBalance();
 
       const newMatch: MatchData = {
         matchId: data.matchId.toString(),
         gameType,
+        isPrivate: data.isPrivate || false,
+        inviteCode: data.inviteCode,
         escrowAddress: data.escrowAddress,
         state: 'LOBBY',
         currentRound: 1,
@@ -326,7 +339,7 @@ export const Arena: React.FC<ArenaProps> = ({
   };
 
   // Join match using in-bot balance
-  const handleJoinMatch = async (match: MatchData) => {
+  const handleJoinMatch = async (match: MatchData, inviteCode?: string) => {
     if (!userAddress) {
       openWalletModal();
       setCreateError('You must connect your Tonkeeper Wallet to enter this duel.');
@@ -363,6 +376,14 @@ export const Arena: React.FC<ArenaProps> = ({
     const wagerGram = (parseFloat(match.wagerAmountNano) / 1e9).toFixed(2);
     setCreateStatus('Joining duel and reserving wager from balance...');
     try {
+      let resolvedCode = inviteCode || initialInviteCode || match.inviteCode;
+      if (!resolvedCode && typeof window !== 'undefined') {
+        try {
+          const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+          resolvedCode = stored[match.matchId];
+        } catch {}
+      }
+
       const res = await fetch(`${serverUrl}/api/matches/${match.matchId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -370,6 +391,7 @@ export const Arena: React.FC<ArenaProps> = ({
           playerBAddress: userAddress,
           telegramUserId: userId,
           telegramUsername: displayName || username,
+          inviteCode: resolvedCode,
         }),
       });
 
@@ -437,8 +459,13 @@ export const Arena: React.FC<ArenaProps> = ({
         setActiveMatchId(initialMatchId);
         setRole('player');
       } else if (!m.playerB && initialRole === 'player') {
-        // Open match invitation: join via balance
-        handleJoinMatch(m);
+        // If private, only join automatically if inviteCode is present
+        if (!m.isPrivate || initialInviteCode) {
+          handleJoinMatch(m, initialInviteCode);
+        } else {
+          setActiveMatchId(initialMatchId);
+          setRole('spectator');
+        }
       } else {
         // Duel is full or spectator requested
         setActiveMatchId(initialMatchId);
@@ -447,7 +474,7 @@ export const Arena: React.FC<ArenaProps> = ({
     };
 
     resolveDeepMatch();
-  }, [initialMatchId, initialRole, userAddress, userId, serverUrl]);
+  }, [initialMatchId, initialInviteCode, initialRole, userAddress, userId, serverUrl]);
 
   const handleSpectateMatch = (matchId: string) => {
     setActiveMatchId(matchId);
@@ -465,7 +492,18 @@ export const Arena: React.FC<ArenaProps> = ({
       return;
     }
 
-    const amountNano = BigInt(Math.round(parseFloat(amountGram) * 1e9));
+    const betAmount = parseFloat(amountGram);
+    const specFee = feeConfigData?.spectatorFeeGram || 0.05;
+    const totalNeeded = betAmount + specFee;
+    const curBal = parseFloat(availableBalanceGram || '0');
+
+    if (curBal < totalNeeded) {
+      setDepositAmount((totalNeeded - curBal).toFixed(2));
+      setShowDepositModal(true);
+      return;
+    }
+
+    const amountNano = BigInt(Math.round(betAmount * 1e9));
     socketData.placeSpectatorBet(target, amountNano.toString());
   };
 
@@ -934,7 +972,9 @@ export const Arena: React.FC<ArenaProps> = ({
           userAddress={userAddress}
           onOpenWallet={openWalletModal}
           userBalanceGram={availableBalanceGram}
-          creationFeeGram={feeConfigData?.creationFeeGram || 0.02}
+          creationFeeGram={feeConfigData?.creationFeeGram || 0.05}
+          joinFeeGram={feeConfigData?.joinFeeGram || 0.05}
+          initialInviteCode={initialInviteCode}
           onOpenDeposit={(missing) => {
             if (missing) setDepositAmount(missing);
             setShowDepositModal(true);

@@ -42,7 +42,10 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
 
   const currentOdds = selectedSide === 'A' ? oddsA : oddsB;
   const parsedBet = parseFloat(betAmount || '0');
+  const isBelowMin = parsedBet < GAME_CONFIG.MIN_WAGER;
   const isOverMax = parsedBet > GAME_CONFIG.MAX_WAGER;
+  const spectatorFee = GAME_CONFIG.SPECTATOR_FEE_GRAM || 0.05;
+  const totalBetRequired = parsedBet > 0 ? (parsedBet + spectatorFee).toFixed(2) : '0.00';
   const estimatedPayout = (parsedBet * currentOdds).toFixed(2);
 
   const handleQuickAmount = (val: string) => {
@@ -56,7 +59,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   };
 
   const handlePlaceBet = () => {
-    if (parsedBet <= 0 || isOverMax) return;
+    if (isBelowMin || isOverMax) return;
     triggerImpact('medium');
     onBet(selectedSide, betAmount);
   };
@@ -313,19 +316,28 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               />
               <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
             </div>
-            {isOverMax && (
-              <p className="text-[11px] text-cyber-pink font-chakra">
-                Warning: Maximum allowed bet is {GAME_CONFIG.MAX_WAGER} TON.
+            {isBelowMin && parsedBet > 0 && (
+              <p className="text-[11px] text-cyber-amber font-chakra">
+                Min bet: {GAME_CONFIG.MIN_WAGER} GRAM.
               </p>
             )}
+            {isOverMax && (
+              <p className="text-[11px] text-cyber-pink font-chakra">
+                Warning: Maximum allowed bet is {GAME_CONFIG.MAX_WAGER} GRAM.
+              </p>
+            )}
+            <div className="flex justify-between items-center text-[10px] text-slate-400 font-chakra px-1 pt-1">
+              <span>Bet fee: <strong className="text-cyber-amber">+{spectatorFee.toFixed(2)} GRAM</strong></span>
+              <span>Total needed: <strong className="text-cyber-cyan">{totalBetRequired} GRAM</strong></span>
+            </div>
           </div>
 
           {/* Place Bet Action Button */}
           <button
             onClick={handlePlaceBet}
-            disabled={disabled || !betAmount || parsedBet <= 0 || isOverMax}
+            disabled={disabled || !betAmount || isBelowMin || isOverMax}
             className={`w-full py-3 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
-              disabled || !betAmount || parsedBet <= 0 || isOverMax
+              disabled || !betAmount || isBelowMin || isOverMax
                 ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
                 : selectedSide === 'A'
                 ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan'
@@ -341,9 +353,12 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </span>
               <span>ON {selectedSide === 'A' ? playerAName : playerBName}</span>
             </div>
+            <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90">
+              Total: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)
+            </div>
             {isBettingPhase ? (
               <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-                <span>Pari-Mutuel Pool (Calculated at duel start)</span>
+                <span>Pari-Mutuel Pool (100% payout, 0% rake)</span>
               </div>
             ) : (
               <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">

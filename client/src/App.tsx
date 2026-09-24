@@ -12,6 +12,7 @@ import { useI18n } from './i18n/index.js';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'arena' | 'leaderboard' | 'profile' | 'referrals'>('arena');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
+  const [deepInviteCode, setDeepInviteCode] = useState<string | undefined>(undefined);
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [isInsideMatch, setIsInsideMatch] = useState(false);
@@ -33,6 +34,14 @@ export const App: React.FC = () => {
     if (startParam.startsWith('duel_')) {
       const parts = startParam.split('_');
       setDeepMatchId(parts[1]);
+      if (parts[2]) {
+        setDeepInviteCode(parts[2]);
+        try {
+          const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+          stored[parts[1]] = parts[2];
+          localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
+        } catch {}
+      }
       setDeepRole('player');
       setActiveTab('arena');
     } else if (startParam.startsWith('spectate_')) {
@@ -58,6 +67,7 @@ export const App: React.FC = () => {
         onTabChange={(tab) => {
           if (tab !== 'arena') {
             setDeepMatchId(undefined);
+            setDeepInviteCode(undefined);
           }
           setActiveTab(tab);
         }}
@@ -68,8 +78,12 @@ export const App: React.FC = () => {
         {activeTab === 'arena' && (
           <Arena
             initialMatchId={deepMatchId}
+            initialInviteCode={deepInviteCode}
             role={deepRole}
-            onClearDeepMatch={() => setDeepMatchId(undefined)}
+            onClearDeepMatch={() => {
+              setDeepMatchId(undefined);
+              setDeepInviteCode(undefined);
+            }}
             onMatchActiveChange={setIsInsideMatch}
           />
         )}

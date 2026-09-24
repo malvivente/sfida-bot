@@ -51,10 +51,10 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ matchId }) => {
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-slate-400">Player Rake (4%):</span>
-            <span className="text-cyber-amber flex items-center space-x-1">
-              <span>0.08</span>
-              <GramIcon className="w-3 h-3 text-cyber-amber" />
+            <span className="text-slate-400">Player Rake (0%):</span>
+            <span className="text-cyber-green flex items-center space-x-1">
+              <span>0.00</span>
+              <GramIcon className="w-3 h-3 text-cyber-green" />
             </span>
           </div>
           <div className="flex justify-between items-center">
@@ -65,18 +65,18 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ matchId }) => {
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-slate-400">Spectator Rake (6%):</span>
-            <span className="text-cyber-amber flex items-center space-x-1">
-              <span>0.30</span>
-              <GramIcon className="w-3 h-3 text-cyber-amber" />
+            <span className="text-slate-400">Spectator Rake (0%):</span>
+            <span className="text-cyber-green flex items-center space-x-1">
+              <span>0.00</span>
+              <GramIcon className="w-3 h-3 text-cyber-green" />
             </span>
           </div>
           <div className="flex justify-between items-center border-t border-cyber-border pt-1">
             <span className="text-slate-400">Distributable Spectator Pool:</span>
             <span className="text-cyber-green font-bold flex items-center space-x-1">
-              <span>4.70</span>
+              <span>5.00</span>
               <GramIcon className="w-3 h-3 text-cyber-green" />
-              <span>(94%)</span>
+              <span>(100%)</span>
             </span>
           </div>
         </div>

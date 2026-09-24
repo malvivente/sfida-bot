@@ -15,6 +15,18 @@ export interface RoomConfig {
   groupAdminAddress?: string;
   escrowAddress?: string;
   bettingWindowSeconds?: number;
+  isPrivate?: boolean;
+  inviteCode?: string;
+}
+
+export interface SpectatorBet {
+  walletAddress: string;
+  telegramId?: string;
+  target: 'A' | 'B';
+  amountGram: number;
+  amountNano: bigint;
+  feePaidGram: number;
+  timestamp: number;
 }
 
 export interface PlayerSession {
@@ -62,6 +74,10 @@ export abstract class BaseGameRoom {
   public resolution?: MatchResolutionPayload;
   public forfeitWinner?: string;
 
+  public isPrivate: boolean = false;
+  public inviteCode?: string;
+  public spectatorBets: SpectatorBet[] = [];
+
   public rematchProposerWallet?: string;
   public rematchNewWagerNano?: bigint;
   public isRematch: boolean = false;
@@ -79,6 +95,8 @@ export abstract class BaseGameRoom {
     this.config = config;
     this.escrowAddress = config.escrowAddress;
     this.onMatchSettledCallback = onSettled;
+    this.isPrivate = Boolean(config.isPrivate);
+    this.inviteCode = config.inviteCode;
 
     this.playerA = {
       walletAddress: config.playerAAddress,
@@ -390,8 +408,8 @@ export abstract class BaseGameRoom {
 
     const wagerNum = Number(this.config.wagerAmountNano) / 1e9;
     const totalPot = wagerNum * 2;
-    const { duelRakePercent } = feeConfig.getConfig();
-    const rakeShare = duelRakePercent / 100;
+    const { duelRakePercent, spectatorRakePercent } = feeConfig.getConfig();
+    const rakeShare = (duelRakePercent || 0) / 100;
     const winnerShare = 1 - rakeShare;
     const winnerPayoutGram = (totalPot * winnerShare).toFixed(2);
     const rakeGram = (totalPot * rakeShare).toFixed(2);
@@ -401,10 +419,57 @@ export abstract class BaseGameRoom {
       console.error(`[BaseGameRoom] Error crediting winner balance:`, err);
     });
 
-    // Credit platform rake
-    dbService.creditTreasury(rakeGram, 'DUEL_RAKE', this.matchId.toString()).catch((err) => {
-      console.error(`[BaseGameRoom] Error crediting duel rake:`, err);
-    });
+    // Credit platform rake if greater than 0
+    if (parseFloat(rakeGram) > 0) {
+      dbService.creditTreasury(rakeGram, 'DUEL_RAKE', this.matchId.toString()).catch((err) => {
+        console.error(`[BaseGameRoom] Error crediting duel rake:`, err);
+      });
+    }
+
+    // Settle spectator bets
+    const winningSide = winnerAddress === this.playerA.walletAddress ? 'A' : 'B';
+    const totalPoolNano = this.totalBetsA + this.totalBetsB;
+    if (totalPoolNano > 0n && this.spectatorBets.length > 0) {
+      const winningBets = this.spectatorBets.filter((b) => b.target === winningSide);
+      const totalWinningBetsNano = winningSide === 'A' ? this.totalBetsA : this.totalBetsB;
+      const specRakeRate = (spectatorRakePercent || 0) / 100;
+      const totalPoolGram = Number(totalPoolNano) / 1e9;
+      const specRakeGram = totalPoolGram * specRakeRate;
+      const distributablePoolGram = totalPoolGram - specRakeGram;
+
+      if (specRakeGram > 0) {
+        dbService.creditTreasury(specRakeGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString()).catch((err) => {
+          console.error(`[BaseGameRoom] Error crediting spectator rake:`, err);
+        });
+      }
+
+      if (winningBets.length > 0 && totalWinningBetsNano > 0n) {
+        const winningBetsGram = Number(totalWinningBetsNano) / 1e9;
+        for (const bet of winningBets) {
+          const share = bet.amountGram / winningBetsGram;
+          const payoutGram = (distributablePoolGram * share).toFixed(2);
+          dbService.creditUserBalance(
+            bet.walletAddress,
+            payoutGram,
+            'MATCH_WIN',
+            `Won spectator bet on match #${this.matchId}`
+          ).catch((err) => {
+            console.error(`[BaseGameRoom] Error crediting spectator winner ${bet.walletAddress}:`, err);
+          });
+        }
+      } else {
+        // No winners on winning side: refund stakes to all spectators
+        for (const bet of this.spectatorBets) {
+          dbService.refundUserBalance(
+            bet.walletAddress,
+            bet.amountGram.toFixed(2),
+            `Refund for spectator bet on match #${this.matchId}`
+          ).catch((err) => {
+            console.error(`[BaseGameRoom] Error refunding spectator ${bet.walletAddress}:`, err);
+          });
+        }
+      }
+    }
 
     const winnerTelegramId = winnerAddress === this.playerA.walletAddress
       ? this.playerA.telegramId
@@ -465,7 +530,13 @@ export abstract class BaseGameRoom {
   }
 
   // Spectator Pari-Mutuel Bet
-  public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint, bettorWallet?: string) {
+  public registerSpectatorBet(
+    target: 'A' | 'B',
+    amountNano: bigint,
+    bettorWallet?: string,
+    telegramId?: string,
+    feePaidGram: number = 0.05
+  ) {
     if (
       bettorWallet &&
       (this.isSameWallet(bettorWallet, this.playerA.walletAddress) ||
@@ -473,6 +544,19 @@ export abstract class BaseGameRoom {
     ) {
       console.warn(`[BaseGameRoom] Duelist ${bettorWallet} attempted spectator bet. Denied.`);
       return;
+    }
+
+    const amountGram = Number(amountNano) / 1e9;
+    if (bettorWallet) {
+      this.spectatorBets.push({
+        walletAddress: bettorWallet,
+        telegramId,
+        target,
+        amountGram,
+        amountNano,
+        feePaidGram,
+        timestamp: Date.now(),
+      });
     }
 
     if (target === 'A') {
@@ -494,7 +578,8 @@ export abstract class BaseGameRoom {
     const totalPool = Number(this.totalBetsA + this.totalBetsB);
     if (totalPool === 0) return 2.0;
 
-    const distributablePool = totalPool * 0.94;
+    const { spectatorRakePercent } = feeConfig.getConfig();
+    const distributablePool = totalPool * (1 - (spectatorRakePercent || 0) / 100);
     const sideBets = side === 'A' ? Number(this.totalBetsA) : Number(this.totalBetsB);
     if (sideBets === 0) return 2.0;
     return parseFloat((distributablePool / sideBets).toFixed(2));
@@ -503,6 +588,17 @@ export abstract class BaseGameRoom {
   public abortRoom(reason: string = 'Match was cancelled.') {
     this.cleanupTimers();
     this.state = 'FORFEITED';
+
+    // Refund any spectator bets + spectator fee
+    for (const bet of this.spectatorBets) {
+      const refundTotal = (bet.amountGram + (bet.feePaidGram || 0)).toFixed(2);
+      dbService.refundUserBalance(
+        bet.walletAddress,
+        refundTotal,
+        `Refund for spectator bet on cancelled match #${this.matchId}`
+      ).catch(console.error);
+    }
+
     this.broadcast({
       type: 'ROOM_CANCELLED',
       state: 'CANCELLED',
@@ -547,6 +643,7 @@ export abstract class BaseGameRoom {
       type: 'ROOM_UPDATE',
       state: this.state,
       gameType: this.gameType,
+      isPrivate: this.isPrivate,
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
       resolution: this.resolution,

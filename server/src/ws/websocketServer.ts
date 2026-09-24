@@ -4,6 +4,8 @@ import { RoomManager } from '../engine/RoomManager.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
+import { dbService } from '../services/db.js';
+import { feeConfig } from '../config/feeConfig.js';
 
 export function registerWebSocketRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
@@ -60,7 +62,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       });
     }
 
-    ws.on('message', (raw: Buffer | string) => {
+    ws.on('message', async (raw: Buffer | string) => {
       try {
         const data = JSON.parse(raw.toString());
         switch (data.type) {
@@ -79,9 +81,70 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                   (room.playerB && wallet.toLowerCase() === room.playerB.walletAddress.toLowerCase())));
               if (isPlayerInRoom) {
                 console.warn(`[WS] Spectator bet rejected: ${wallet} is a duelist in match ${matchId}`);
+                ws.send(JSON.stringify({
+                  type: 'BET_ERROR',
+                  message: 'Duelists cannot place spectator bets on their own match.',
+                }));
                 break;
               }
-              room?.registerSpectatorBet(data.target, BigInt(data.amountNano), wallet);
+
+              if (!room || (room.state !== 'LOBBY' && room.state !== 'BETTING_WINDOW')) {
+                ws.send(JSON.stringify({
+                  type: 'BET_ERROR',
+                  message: 'Betting is closed for this match.',
+                }));
+                break;
+              }
+
+              const betAmountNano = BigInt(data.amountNano);
+              const betAmountGram = Number(betAmountNano) / 1e9;
+              const { minWagerGram, spectatorFeeGram } = feeConfig.getConfig();
+
+              if (betAmountGram < minWagerGram) {
+                ws.send(JSON.stringify({
+                  type: 'BET_ERROR',
+                  message: `Minimum spectator bet is ${minWagerGram.toFixed(1)} GRAM.`,
+                }));
+                break;
+              }
+
+              const totalRequired = betAmountGram + spectatorFeeGram;
+              const userAccount = await dbService.getUserAccount(wallet, telegramId, username);
+              const curBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
+
+              if (curBal < totalRequired) {
+                ws.send(JSON.stringify({
+                  type: 'BET_ERROR',
+                  message: `Insufficient balance! You need ${totalRequired.toFixed(2)} GRAM (${betAmountGram.toFixed(2)} bet + ${spectatorFeeGram.toFixed(2)} fee), but your balance is ${curBal.toFixed(2)} GRAM.`,
+                  missingGram: (totalRequired - curBal).toFixed(2),
+                }));
+                break;
+              }
+
+              // Debit bet and participation fee
+              await dbService.debitUserBalance(
+                wallet,
+                betAmountGram.toFixed(2),
+                'MATCH_BET',
+                `Spectator bet on Player ${data.target} for match #${matchId}`
+              );
+              await dbService.debitUserBalance(
+                wallet,
+                spectatorFeeGram.toFixed(2),
+                'CREATION_FEE',
+                `Spectator participation fee for match #${matchId}`
+              );
+              await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
+
+              room.registerSpectatorBet(data.target, betAmountNano, wallet, telegramId, spectatorFeeGram);
+
+              ws.send(JSON.stringify({
+                type: 'BET_CONFIRMED',
+                target: data.target,
+                amountGram: betAmountGram.toFixed(2),
+                feePaidGram: spectatorFeeGram.toFixed(2),
+                newBalance: (curBal - totalRequired).toFixed(2),
+              }));
             }
             break;
 

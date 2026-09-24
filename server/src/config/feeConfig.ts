@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 export interface FeeConfig {
   currency: string;
   creationFeeGram: number;
+  joinFeeGram: number;
+  spectatorFeeGram: number;
   duelRakePercent: number;
   spectatorRakePercent: number;
   minWagerGram: number;
@@ -19,10 +21,12 @@ export interface FeeConfig {
 
 const DEFAULT_CONFIG: FeeConfig = {
   currency: 'GRAM',
-  creationFeeGram: 0.02,
-  duelRakePercent: 4,
-  spectatorRakePercent: 6,
-  minWagerGram: 0.1,
+  creationFeeGram: 0.05,
+  joinFeeGram: 0.05,
+  spectatorFeeGram: 0.05,
+  duelRakePercent: 0,
+  spectatorRakePercent: 0,
+  minWagerGram: 1.0,
   maxWagerGram: 100.0,
   minDepositGram: 0.1,
   minWithdrawGram: 0.1,

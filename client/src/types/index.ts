@@ -49,6 +49,8 @@ export interface MatchData {
   distributablePoolNano?: string;
   spectatorCount?: number;
   gameData?: any;
+  isPrivate?: boolean;
+  inviteCode?: string;
 }
 
 // --- Russian Roulette Types ---
@@ -191,11 +193,18 @@ export interface WsMessage {
 }
 
 export interface FeeConfig {
-  creationFeeTon: number;
+  creationFeeTon?: number;
   creationFeeGram: number;
-  winnerFeePercent: number;
-  withdrawalFeeTon: number;
-  withdrawalFeeGram: number;
+  joinFeeGram?: number;
+  spectatorFeeGram?: number;
+  duelRakePercent?: number;
+  spectatorRakePercent?: number;
+  winnerFeePercent?: number;
+  withdrawalFeeTon?: number;
+  withdrawalFeeGram?: number;
+  minWagerGram?: number;
+  maxWagerGram?: number;
+  currency?: string;
 }
 
 export type UserBalance = InternalAccount;

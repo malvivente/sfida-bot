@@ -38,6 +38,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         gameType: r.gameType || 'roulette',
         escrowAddress,
         state: r.state,
+        isPrivate: r.isPrivate || false,
         winnerAddress: r.winnerAddress,
         winnerName: r.winnerName,
         resolution: r.resolution,
@@ -98,6 +99,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       gameType: room.gameType || 'roulette',
       escrowAddress,
       state: room.state,
+      isPrivate: room.isPrivate || false,
       winnerAddress: room.winnerAddress,
       winnerName: room.winnerName,
       resolution: room.resolution,
@@ -159,6 +161,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       telegramUsername?: string;
       recruiterA?: string;
       groupAdminAddress?: string;
+      isPrivate?: boolean;
     };
 
     if (!body.playerAAddress) {
@@ -170,7 +173,15 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const wagerGram = Number(wagerNano) / 1e9;
     const gameType = body.gameType || 'roulette';
 
-    const { creationFeeGram } = feeConfig.getConfig();
+    const { creationFeeGram, minWagerGram } = feeConfig.getConfig();
+
+    if (wagerGram < minWagerGram) {
+      return reply.status(400).send({
+        error: 'WAGER_TOO_LOW',
+        message: `Minimum wager is ${minWagerGram.toFixed(1)} GRAM, but ${wagerGram.toFixed(2)} GRAM was provided.`,
+      });
+    }
+
     const totalRequired = wagerGram + creationFeeGram;
 
     // Check Player A's internal balance
@@ -222,6 +233,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
       );
     }
 
+    const isPrivate = Boolean(body.isPrivate);
+    const inviteCode = isPrivate ? Math.random().toString(36).substring(2, 8).toUpperCase() : undefined;
+
     const room = roomManager.createRoom(
       {
         matchId,
@@ -231,6 +245,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
         recruiterA: body.recruiterA,
         groupAdminAddress: body.groupAdminAddress,
         escrowAddress,
+        isPrivate,
+        inviteCode,
       },
       async (settledRoom, winner) => {
         console.log(`[API] Match #${settledRoom.matchId} settled with winner: ${winner}`);
@@ -263,6 +279,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       state: room.state,
       wagerGram: wagerGram.toFixed(2),
       creationFeeGram: creationFeeGram.toFixed(2),
+      isPrivate: room.isPrivate,
+      inviteCode: room.inviteCode,
     });
   });
 
@@ -273,6 +291,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       playerBAddress: string;
       telegramUserId?: string;
       telegramUsername?: string;
+      inviteCode?: string;
     };
 
     if (!body.playerBAddress) {
@@ -290,7 +309,19 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'You cannot duel against yourself' });
     }
 
+    // Private match check: require valid invite code
+    if (room.isPrivate) {
+      if (!body.inviteCode || body.inviteCode.trim().toUpperCase() !== room.inviteCode?.toUpperCase()) {
+        return reply.status(403).send({
+          error: 'PRIVATE_MATCH',
+          message: 'Questa stanza è privata. È necessario il link di invito per partecipare come sfidante.',
+        });
+      }
+    }
+
     const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
+    const { joinFeeGram } = feeConfig.getConfig();
+    const totalRequired = wagerGram + joinFeeGram;
 
     // Check Player B's balance
     const userAccount = await dbService.getUserAccount(
@@ -300,13 +331,15 @@ export async function matchRoutes(fastify: FastifyInstance) {
     );
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
-    if (currentBal < wagerGram) {
+    if (currentBal < totalRequired) {
       return reply.status(400).send({
         error: 'INSUFFICIENT_BALANCE',
-        message: `Insufficient balance! You need ${wagerGram.toFixed(2)} GRAM to join, but your balance is ${currentBal.toFixed(2)} GRAM.`,
-        requiredGram: wagerGram.toFixed(2),
+        message: `Insufficient balance! You need ${totalRequired.toFixed(2)} GRAM (${wagerGram.toFixed(2)} GRAM wager + ${joinFeeGram.toFixed(2)} GRAM participation fee) to join, but your balance is ${currentBal.toFixed(2)} GRAM.`,
+        requiredGram: totalRequired.toFixed(2),
+        wagerGram: wagerGram.toFixed(2),
+        joinFeeGram: joinFeeGram.toFixed(2),
         currentBalanceGram: currentBal.toFixed(2),
-        missingGram: (wagerGram - currentBal).toFixed(2),
+        missingGram: (totalRequired - currentBal).toFixed(2),
       });
     }
 
@@ -317,6 +350,15 @@ export async function matchRoutes(fastify: FastifyInstance) {
       'MATCH_BET',
       `Wager for match #${id}`
     );
+
+    // Debit join fee from Player B and credit to Treasury
+    await dbService.debitUserBalance(
+      body.playerBAddress,
+      joinFeeGram.toFixed(2),
+      'CREATION_FEE',
+      `Participation fee for match #${id}`
+    );
+    await dbService.creditTreasury(joinFeeGram.toFixed(2), 'CREATION_FEE', id);
 
     // Assign Player B and keep room in LOBBY until both ready up
     room.playerB = {
@@ -347,6 +389,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       matchId: id,
       state: room.state,
       wagerGram: wagerGram.toFixed(2),
+      joinFeeGram: joinFeeGram.toFixed(2),
     });
   });
 
@@ -676,10 +719,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
     );
     console.log(`[matchRoutes] Refunded ${refundPlayerATotal} GRAM to Player A (${room.playerA.walletAddress}) for cancelled match #${id}`);
 
-    // 2. If Player B has joined, refund Player B: wager
+    // 2. If Player B has joined, refund Player B: wager + join fee
     let refundPlayerBTotal = '0.00';
     if (room.playerB?.walletAddress) {
-      refundPlayerBTotal = wagerGram.toFixed(2);
+      const { joinFeeGram } = feeConfig.getConfig();
+      refundPlayerBTotal = (wagerGram + joinFeeGram).toFixed(2);
       await dbService.refundUserBalance(
         room.playerB.walletAddress,
         refundPlayerBTotal,

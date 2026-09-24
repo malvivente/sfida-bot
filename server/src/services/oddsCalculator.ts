@@ -1,3 +1,5 @@
+import { feeConfig } from '../config/feeConfig.js';
+
 export interface OddsResult {
   totalPoolNano: bigint;
   distributablePoolNano: bigint;
@@ -26,9 +28,9 @@ export function computePariMutuelOdds(
     };
   }
 
-  // 6% total rake
-  const spectatorRakeNano = (totalPoolNano * 600n) / 10000n;
-  // 94% distributable pool
+  // Dynamic rake from configuration (0% by default)
+  const { spectatorRakePercent } = feeConfig.getConfig();
+  const spectatorRakeNano = (totalPoolNano * BigInt(Math.round(spectatorRakePercent * 100))) / 10000n;
   const distributablePoolNano = totalPoolNano - spectatorRakeNano;
 
   // 70% of rake to Treasury, 30% to Affiliate Pool
