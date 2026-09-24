@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, Swords, TrendingUp, Users, X, FileText, CheckCircle2 } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
+import { useI18n } from '../i18n/index.js';
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface RulesModalProps {
 
 export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
   const { triggerImpact } = useHaptics();
+  const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<'fairplay' | 'duels' | 'fees' | 'affiliates'>('fairplay');
 
   if (!isOpen) return null;
@@ -23,7 +25,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center space-x-2">
             <FileText className="w-5 h-5 text-cyber-cyan" />
             <h2 className="text-base font-orbitron font-bold text-white tracking-wide">
-              RULES & TERMS (ToS)
+              {t('rules.title')}
             </h2>
           </div>
           <button
@@ -40,10 +42,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         {/* Section Navigation */}
         <div className="flex border-b border-cyber-border bg-cyber-bg/40 p-1 space-x-1 text-xs">
           {[
-            { id: 'fairplay', label: 'FAIR PLAY', icon: ShieldCheck },
-            { id: 'duels', label: '1V1 DUELS', icon: Swords },
-            { id: 'fees', label: 'FEES & PRIZES', icon: TrendingUp },
-            { id: 'affiliates', label: 'AFFILIATES', icon: Users },
+            { id: 'fairplay', label: t('rules.fairplay'), icon: ShieldCheck },
+            { id: 'duels', label: t('rules.duels'), icon: Swords },
+            { id: 'fees', label: t('rules.fees'), icon: TrendingUp },
+            { id: 'affiliates', label: t('rules.affiliates'), icon: Users },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
@@ -75,24 +77,24 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-cyan font-bold font-orbitron text-xs">
                   <ShieldCheck className="w-4 h-4" />
-                  <span>SMART CONTRACT ESCROW (ZERO-HOUSE RISK)</span>
+                  <span>{t('rules.escrowTitle')}</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  All 1v1 duel wagers and spectator bets are securely held by dedicated smart contracts written in Tact on the <strong>TON</strong> blockchain.
+                  {t('rules.escrowP1')}
                 </p>
                 <p className="text-xs text-slate-400">
-                  No intermediary or server can seize user funds: outcomes are cryptographically signed with authoritative Ed25519 signatures and settled automatically to the winner at the conclusion of each duel.
+                  {t('rules.escrowP2')}
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="flex items-start space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-cyber-green shrink-0 mt-0.5" />
-                  <span><strong>Total Transparency:</strong> Every transaction and resolution is publicly verifiable on the TON Explorer.</span>
+                  <span>{t('rules.transparency')}</span>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-cyber-green shrink-0 mt-0.5" />
-                  <span><strong>Automatic Refund:</strong> If you create a duel and no opponent joins, you can cancel and refund the full wager at any time.</span>
+                  <span>{t('rules.autoRefund')}</span>
                 </div>
               </div>
             </div>
@@ -103,33 +105,33 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-pink font-bold font-orbitron text-xs">
                   <Swords className="w-4 h-4" />
-                  <span>1V1 DUEL DISCIPLINES & RULES</span>
+                  <span>{t('rules.duelsTitle')}</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Duelists wager TON / GRAM in high-stakes PvP games. All outcomes are resolved server-side and settled automatically to the winner's balance.
+                  {t('rules.duelsDesc')}
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-cyber-pink block mb-0.5">1. Russian Roulette (8 Chambers, 1 Bullet)</strong>
-                  <span>Duelists take turns shooting themselves (`SHOOT SELF`). Blank passes the turn with increasing lethal odds. Each player has <strong>1 single offensive shot</strong> against the rival: if missed, you must shoot yourself on all future turns! Instant fatal shot settles the match.</span>
+                  <span>{t('rules.rrRule')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-cyber-cyan block mb-0.5">2. Blackjack Face-Up (Duel to 21)</strong>
-                  <span>Cards are dealt face-up from a shared common deck visible to both duelists and spectators. Choose HIT or STAND. Closest to 21 without busting wins the wager.</span>
+                  <span>{t('rules.bjRule')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-cyber-green block mb-0.5">3. Endless Glass Bridge (Survival Leap)</strong>
-                  <span>Step across an endless bridge of tempered vs fragile glass tiles. 2 lives each. Each player can use <strong>1 single PASS</strong> to shift the lead to the opponent. Shatter all lives and fall into the abyss—last warrior standing wins!</span>
+                  <span>{t('rules.gbRule')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-cyber-amber block mb-0.5">4. Chrono Blind (Precision Countdown)</strong>
-                  <span>A random timer plunges into the dark Blind Zone between 2.0s and 4.0s. Hit STOP as close to 0.000s as you dare. Stopping past 0.000s is a BUST. Ties trigger Sudden Death overtime! First to secure 2 rounds wins the match.</span>
+                  <span>{t('rules.cbRule')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-slate-300 block mb-0.5">5. Automated Prize Settlement & Rematches</strong>
-                  <span>Prizes are automatically credited to your in-bot balance upon duel settlement. At the end of any duel, either player can propose an immediate 2X rematch!</span>
+                  <span>{t('rules.settleRule')}</span>
                 </div>
               </div>
             </div>
@@ -140,31 +142,31 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-amber font-bold font-orbitron text-xs">
                   <TrendingUp className="w-4 h-4" />
-                  <span>HOW WINNINGS & FEES WORK</span>
+                  <span>{t('rules.feesTitle')}</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Zero hidden rake. The 1v1 winner collects the total prize pool generated by both players' wagers (2x the stake), minus a standard <strong>4%</strong> platform fee retained by the smart contract.
+                  {t('rules.feesDesc')}
                 </p>
               </div>
 
               <div className="bg-cyber-bg/50 border border-cyber-border rounded-xl p-3 text-xs space-y-1.5 font-chakra">
-                <div className="text-white font-bold mb-1 font-orbitron">Practical Example:</div>
+                <div className="text-white font-bold mb-1 font-orbitron">{t('rules.example')}</div>
                 <div className="flex justify-between items-center">
-                  <span>Wager per player:</span>
+                  <span>{t('rules.wagerPerPlayer')}</span>
                   <span className="font-bold text-white flex items-center space-x-1">
                     <span>1.00</span>
                     <GramIcon className="w-3 h-3 text-white" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Total prize pool generated:</span>
+                  <span>{t('rules.poolGenerated')}</span>
                   <span className="font-bold text-white flex items-center space-x-1">
                     <span>2.00</span>
                     <GramIcon className="w-3 h-3 text-white" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center border-t border-cyber-border pt-1 text-cyber-green font-bold">
-                  <span>Net prize to winner (96%):</span>
+                  <span>{t('rules.netPrize')}</span>
                   <span className="flex items-center space-x-1">
                     <span>+1.92</span>
                     <GramIcon className="w-3 h-3 text-cyber-green" />
@@ -173,7 +175,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               <p className="text-[11px] text-slate-400">
-                For spectator Pari-Mutuel betting, multipliers are dynamic and calculated based on proportional pool volume, with a 6% fee supporting platform liquidity and the affiliate program.
+                {t('rules.pariMutuelDesc')}
               </p>
             </div>
           )}
@@ -183,25 +185,25 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center space-x-2 text-cyber-cyan font-bold font-orbitron text-xs">
                   <Users className="w-4 h-4" />
-                  <span>EARNING WITH AFFILIATES</span>
+                  <span>{t('rules.affiliatesTitle')}</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Every duelist has a unique invite link. By sharing it with friends or adding the bot to your Telegram groups, you automatically earn a share of every duel played:
+                  {t('rules.affiliatesDesc')}
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-white block mb-0.5">Direct Player Referrals</strong>
-                  <span className="text-slate-300">Earn up to 30% of platform fees generated from all duels played by friends you invited.</span>
+                  <strong className="text-white block mb-0.5">{t('rules.affiliateDirect')}</strong>
+                  <span className="text-slate-300">{t('rules.affiliateDirectDesc')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-white block mb-0.5">Telegram Group Admins</strong>
-                  <span className="text-slate-300">Add the bot to your Telegram community: when members duel within the group, the group admin automatically earns recurring rewards on every match.</span>
+                  <strong className="text-white block mb-0.5">{t('rules.affiliateGroup')}</strong>
+                  <span className="text-slate-300">{t('rules.affiliateGroupDesc')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-white block mb-0.5">Instant On-Chain Payouts</strong>
-                  <span className="text-slate-300">Affiliate commissions are credited directly from the smart contract to your linked TON wallet address.</span>
+                  <strong className="text-white block mb-0.5">{t('rules.affiliatePayout')}</strong>
+                  <span className="text-slate-300">{t('rules.affiliatePayoutDesc')}</span>
                 </div>
               </div>
             </div>
@@ -217,7 +219,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
             }}
             className="w-full py-2.5 bg-cyber-cyan text-cyber-bg font-bold font-orbitron text-xs uppercase tracking-wider rounded-xl shadow-neon-cyan active:scale-95 transition-all"
           >
-            UNDERSTOOD
+            {t('rules.understood')}
           </button>
         </div>
 

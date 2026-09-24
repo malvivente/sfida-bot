@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Trophy } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -8,6 +8,7 @@ import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { areAddressesEqual } from '../utils/ton.js';
+import { useI18n } from '../i18n/index.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -25,6 +26,7 @@ interface DuelLobbyProps {
   userBalanceGram?: string;
   creationFeeGram?: number;
   onOpenDeposit?: (missingAmount?: string) => void;
+  onOpenLeaderboard?: () => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -43,9 +45,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   userBalanceGram = '0.00',
   creationFeeGram = 0.02,
   onOpenDeposit,
+  onOpenLeaderboard,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
+  const { t } = useI18n();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [selectedGameType, setSelectedGameType] = useState<GameType>('roulette');
@@ -135,36 +139,52 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         <div>
           <div className="flex items-center space-x-2">
             <Flame className="w-5 h-5 text-cyber-cyan animate-pulse" />
-            <h2 className="text-base font-orbitron font-bold text-white">1V1 LIVE DUELS</h2>
+            <h2 className="text-base font-orbitron font-bold text-white">{t('lobby.liveDuels')}</h2>
           </div>
           <div className="flex items-center space-x-1.5 mt-1 text-xs font-chakra text-slate-300">
             <Wallet className="w-3.5 h-3.5 text-cyber-cyan" />
-            <span>Balance: <strong className="text-white font-bold">{currentBal.toFixed(2)} GRAM</strong></span>
+            <span>{t('lobby.balance')} <strong className="text-white font-bold">{currentBal.toFixed(2)} GRAM</strong></span>
             {onOpenDeposit && (
               <button
                 onClick={() => onOpenDeposit()}
                 className="text-[10px] text-cyber-cyan hover:underline ml-1 font-bold"
               >
-                + Deposit
+                {t('lobby.deposit')}
               </button>
             )}
           </div>
         </div>
 
-        <button
-          onClick={handleOpenModal}
-          className="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          <span>CREATE</span>
-        </button>
+        <div className="flex items-center space-x-1.5">
+          {onOpenLeaderboard && (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                onOpenLeaderboard();
+              }}
+              className="px-3 py-2.5 bg-amber-400/15 border border-amber-400/50 hover:bg-amber-400/25 text-amber-300 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center space-x-1"
+              title={t('leaderboard.title')}
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>{t('nav.leaderboardShort')}</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleOpenModal}
+            className="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t('lobby.create')}</span>
+          </button>
+        </div>
       </div>
 
       {/* Active Matches Feed */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider">
-            ACTIVE ARENA DUELS ({filteredMatches.length})
+            {t('lobby.activeDuels')} ({filteredMatches.length})
           </h3>
           {onRefreshMatches && (
             <button
@@ -181,7 +201,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               title="Refresh duels list"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyber-cyan' : ''}`} />
-              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+              <span>{isRefreshing ? t('lobby.refreshing') : t('lobby.refresh')}</span>
             </button>
           )}
         </div>
@@ -190,7 +210,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
           {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono'].map((gKey) => {
             const isSelected = filterGameType === gKey;
-            const label = gKey === 'ALL' ? 'ALL GAMES' : GAMES_METADATA[gKey as GameType]?.title || gKey;
+            const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
             return (
               <button
                 key={gKey}
@@ -213,16 +233,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         {filteredMatches.length === 0 ? (
           <div className="text-center py-10 bg-cyber-card border border-cyber-border rounded-2xl p-6">
             <Swords className="w-12 h-12 text-cyber-cyan/40 mx-auto mb-3 animate-pulse" />
-            <p className="text-sm text-slate-200 font-bold font-orbitron">No active duels found</p>
+            <p className="text-sm text-slate-200 font-bold font-orbitron">{t('lobby.noDuelsTitle')}</p>
             <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-              Create a duel in this mode or switch filters to find open matches!
+              {t('lobby.noDuelsDesc')}
             </p>
             <button
               onClick={handleOpenModal}
               className="mt-4 px-5 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all inline-flex items-center space-x-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>CREATE DUEL</span>
+              <span>{t('lobby.createDuelBtn')}</span>
             </button>
           </div>
         ) : (
@@ -295,7 +315,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[11px] text-slate-400 font-chakra block">Total Pot</span>
+                      <span className="text-[11px] text-slate-400 font-chakra block">{t('lobby.poolLabel')}</span>
                       <span className="text-sm font-chakra font-extrabold text-cyber-cyan flex items-center justify-end space-x-1">
                         <span>{totalPotGram}</span>
                         <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
@@ -304,7 +324,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between bg-cyber-bg/60 border border-cyber-border rounded-xl p-2.5 mb-3 text-xs font-chakra">
-                    <span className="text-slate-400">Single Player Stake:</span>
+                    <span className="text-slate-400">{t('lobby.wagerLabel')}:</span>
                     <span className="text-white font-bold flex items-center space-x-1">
                       <span>{wagerGram}</span>
                       <GramIcon className="w-3 h-3 text-white" />
@@ -320,7 +340,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         className="flex-1 py-2 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                       >
                         <Swords className="w-3.5 h-3.5" />
-                        <span>RESUME DUEL</span>
+                        <span>{t('profile.resume')}</span>
                       </button>
                     ) : !m.playerB ? (
                       <button
@@ -329,7 +349,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       >
                         <Swords className="w-3.5 h-3.5" />
                         <span className="flex items-center space-x-1">
-                          <span>ACCEPT ({wagerGram}</span>
+                          <span>{t('lobby.joinBtn')} ({wagerGram}</span>
                           <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
                           <span>)</span>
                         </span>
@@ -340,7 +360,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         className="flex-1 py-2 bg-cyber-border text-slate-200 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:border-cyber-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyber-cyan" />
-                        <span>SPECTATE</span>
+                        <span>{t('lobby.spectateBtn')}</span>
                       </button>
                     )}
 
@@ -379,16 +399,18 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 text-cyber-pink" />
-              <span>INSUFFICIENT BALANCE TO JOIN</span>
+              <span>{t('lobby.insufficientModalTitle')}</span>
             </h3>
 
             <p className="text-xs text-slate-300 font-chakra">
-              This duel requires a wager of <strong className="text-white">{insufficientJoinMatch.required} GRAM</strong>.
-              Your available balance is <strong className="text-white">{currentBal.toFixed(2)} GRAM</strong>.
+              {t('lobby.insufficientJoinDesc', {
+                required: insufficientJoinMatch.required,
+                current: currentBal.toFixed(2),
+              })}
             </p>
 
             <div className="p-3 bg-cyber-bg/70 border border-cyber-border rounded-xl flex items-center justify-between text-xs font-chakra">
-              <span className="text-slate-400">Missing Deposit:</span>
+              <span className="text-slate-400">{t('lobby.missingDeposit')}</span>
               <span className="font-bold text-cyber-pink flex items-center space-x-1">
                 <span>{insufficientJoinMatch.missing}</span>
                 <GramIcon className="w-3.5 h-3.5 text-cyber-pink" />
@@ -400,7 +422,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 onClick={() => setInsufficientJoinMatch(null)}
                 className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border rounded-xl text-xs font-orbitron font-semibold text-slate-400 hover:text-white"
               >
-                CANCEL
+                {t('lobby.cancelBtn')}
               </button>
               <button
                 onClick={() => {
@@ -411,7 +433,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 className="flex-1 py-2.5 bg-cyber-pink text-white font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-pink hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
               >
                 <ArrowDownLeft className="w-4 h-4" />
-                <span>DEPOSIT GRAM</span>
+                <span>{t('lobby.depositGram')}</span>
               </button>
             </div>
           </div>
@@ -424,16 +446,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 max-w-sm w-full shadow-2xl">
             <h3 className="text-base font-orbitron font-bold text-white mb-1 flex items-center space-x-2">
               <Flame className="w-5 h-5 text-cyber-cyan" />
-              <span>SET UP YOUR DUEL</span>
+              <span>{t('lobby.createModalTitle')}</span>
             </h3>
             <p className="text-xs text-slate-400 font-chakra mb-3">
-              Select your game mode and wager in GRAM
+              {t('lobby.createModalDesc')}
             </p>
 
             {/* Game Mode Selection */}
             <div className="mb-3 space-y-1.5">
               <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
-                GAME MODE
+                {t('lobby.gameMode')}
               </label>
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
@@ -475,16 +497,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2 mb-3">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1 text-[11px] leading-relaxed">
-                  <span className="font-bold block text-white mb-0.5">Creation Error</span>
+                  <span className="font-bold block text-white mb-0.5">{t('lobby.creationError')}</span>
                   <span>{createError}</span>
                 </div>
               </div>
             )}
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra mb-1.5">
-              <span>Preset amount:</span>
+              <span>{t('lobby.presetAmount')}</span>
               <span className="flex items-center space-x-1">
-                <span>Max: {GAME_CONFIG.MAX_WAGER}</span>
+                <span>{t('lobby.maxWagerLabel', { max: GAME_CONFIG.MAX_WAGER })}</span>
                 <GramIcon className="w-3 h-3 text-slate-400" />
               </span>
             </div>
@@ -512,7 +534,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
             {/* Custom Input */}
             <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5 mb-3">
-              <span className="text-xs text-slate-400 font-chakra">Custom amount:</span>
+              <span className="text-xs text-slate-400 font-chakra">{t('lobby.customStake')}</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -526,35 +548,35 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
             {isOverMax && (
               <p className="text-[11px] text-cyber-pink font-chakra mb-3">
-                Warning: Maximum allowed wager is {GAME_CONFIG.MAX_WAGER} GRAM.
+                {t('lobby.maxWagerWarn', { max: GAME_CONFIG.MAX_WAGER })}
               </p>
             )}
 
             {/* Stake Breakdown */}
             <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3 mb-3 text-xs font-chakra text-slate-300 space-y-1.5">
               <div className="flex justify-between items-center">
-                <span>Your wager:</span>
+                <span>{t('lobby.yourWager')}</span>
                 <span className="text-white font-bold flex items-center space-x-1">
                   <span>{wagerChoice || '0'}</span>
                   <GramIcon className="w-3 h-3 text-white" />
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span>Creation Fee:</span>
+                <span>{t('lobby.creationFee')}</span>
                 <span className="text-cyber-amber flex items-center space-x-1">
                   <span>+{creationFeeGram.toFixed(2)}</span>
                   <GramIcon className="w-3 h-3 text-cyber-amber" />
                 </span>
               </div>
               <div className="flex justify-between items-center border-t border-cyber-border pt-1 font-bold text-white">
-                <span>Total Required from Balance:</span>
+                <span>{t('lobby.totalNeeded')}</span>
                 <span className="text-cyber-cyan flex items-center space-x-1">
                   <span>{totalRequired}</span>
                   <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px] text-slate-400">
-                <span>Available Balance:</span>
+                <span>{t('lobby.availableBalance')}</span>
                 <span className={isInsufficient ? 'text-cyber-pink font-bold' : 'text-cyber-green font-bold'}>
                   {currentBal.toFixed(2)} GRAM
                 </span>
@@ -565,7 +587,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
             {isInsufficient && (
               <div className="p-2.5 rounded-xl bg-cyber-pink/15 border border-cyber-pink/40 text-xs font-chakra text-cyber-pink flex items-center space-x-2 mb-3">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Insufficient balance! Need {totalRequired} GRAM ({missingAmount} GRAM short).</span>
+                <span>{t('lobby.insufficientShort', { total: totalRequired, missing: missingAmount })}</span>
               </div>
             )}
 
@@ -574,7 +596,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 onClick={() => setShowCreateModal(false)}
                 className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border rounded-xl text-xs font-orbitron font-semibold text-slate-400 hover:text-white"
               >
-                CANCEL
+                {t('lobby.cancelBtn')}
               </button>
 
               {isInsufficient ? (
@@ -586,7 +608,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   className="flex-1 py-2.5 bg-cyber-pink text-white font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-pink hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
                 >
                   <ArrowDownLeft className="w-4 h-4" />
-                  <span>DEPOSIT {missingAmount} GRAM</span>
+                  <span>{t('lobby.depositMissingBtn', { missing: missingAmount })}</span>
                 </button>
               ) : (
                 <button
@@ -601,10 +623,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>CREATING...</span>
+                      <span>{t('lobby.creatingEscrow')}</span>
                     </>
                   ) : (
-                    <span>CREATE DUEL ({totalRequired} GRAM)</span>
+                    <span>{t('lobby.createDuelWithAmount', { amount: totalRequired })}</span>
                   )}
                 </button>
               )}

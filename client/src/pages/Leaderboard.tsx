@@ -6,7 +6,11 @@ import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 
-export const Leaderboard: React.FC = () => {
+interface LeaderboardProps {
+  onBack?: () => void;
+}
+
+export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
   const { userAddress } = useTonClashContract();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
@@ -94,6 +98,21 @@ export const Leaderboard: React.FC = () => {
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyber-card via-cyber-card/90 to-cyber-bg border border-cyber-border p-4 shadow-xl text-center">
         <div className="absolute top-0 right-0 w-32 h-32 bg-cyber-cyan/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+
+        {onBack && (
+          <div className="flex items-center justify-start mb-2">
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                onBack();
+              }}
+              className="text-xs font-chakra font-bold text-cyber-cyan hover:underline flex items-center space-x-1"
+            >
+              <span>{t('leaderboard.backToArena')}</span>
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center space-x-2">
             <Trophy className="w-5 h-5 text-cyber-cyan" />
@@ -158,7 +177,7 @@ export const Leaderboard: React.FC = () => {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-16 space-y-3">
           <Loader2 className="w-8 h-8 text-cyber-cyan animate-spin" />
-          <span className="text-xs font-chakra text-slate-400">Loading hall of fame...</span>
+          <span className="text-xs font-chakra text-slate-400">{t('leaderboard.loading')}</span>
         </div>
       ) : leaderboard.length === 0 ? (
         <div className="p-8 text-center bg-cyber-card/40 border border-cyber-border rounded-2xl">

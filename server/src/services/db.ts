@@ -649,18 +649,23 @@ export class DatabaseService {
   }
 
   public async getUserHistory(walletAddress: string): Promise<UserMatchHistoryRecord[]> {
-    const target = walletAddress.toLowerCase();
+    const targetNorm = this.normalizeAddress(walletAddress);
+    const targetLower = walletAddress ? walletAddress.toLowerCase() : '';
     const result: UserMatchHistoryRecord[] = [];
 
     const sorted = Array.from(this.matches.values()).sort((a, b) => b.settledAt - a.settledAt);
 
     for (const m of sorted) {
-      const isPlayerA = m.playerAAddress.toLowerCase() === target;
-      const isPlayerB = m.playerBAddress && m.playerBAddress.toLowerCase() === target;
+      const normA = this.normalizeAddress(m.playerAAddress);
+      const normB = m.playerBAddress ? this.normalizeAddress(m.playerBAddress) : '';
+      const normWinner = m.winnerAddress ? this.normalizeAddress(m.winnerAddress) : '';
+
+      const isPlayerA = (targetNorm && normA === targetNorm) || m.playerAAddress.toLowerCase() === targetLower;
+      const isPlayerB = (targetNorm && normB === targetNorm) || (m.playerBAddress && m.playerBAddress.toLowerCase() === targetLower);
 
       if (!isPlayerA && !isPlayerB) continue;
 
-      const isWinner = m.winnerAddress && m.winnerAddress.toLowerCase() === target;
+      const isWinner = (targetNorm && normWinner === targetNorm) || (m.winnerAddress && m.winnerAddress.toLowerCase() === targetLower);
       const outcome: 'WIN' | 'LOSS' | 'DRAW' = isWinner ? 'WIN' : 'LOSS';
       const wagerTon = m.wagerTon || m.wagerGram || (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2);
       const payoutTon = isWinner ? (parseFloat(wagerTon) * 2 * 0.96).toFixed(2) : '0.00';
@@ -783,9 +788,10 @@ export class DatabaseService {
     const usernameMap = new Map<string, string>(); // normKey -> username
 
     for (const [key, user] of this.users.entries()) {
-      addressMap.set(key, user.walletAddress);
+      const norm = this.normalizeAddress(user.walletAddress) || key;
+      addressMap.set(norm, this.toFriendlyAddress(user.walletAddress));
       if (user.username) {
-        usernameMap.set(key, user.username);
+        usernameMap.set(norm, user.username);
       }
     }
 
@@ -800,6 +806,11 @@ export class DatabaseService {
         if (!addressMap.has(normB)) addressMap.set(normB, this.toFriendlyAddress(m.playerBAddress));
         if (m.playerBName && !usernameMap.has(normB)) usernameMap.set(normB, m.playerBName);
       }
+    }
+
+    if (userAddress) {
+      const normUser = this.normalizeAddress(userAddress);
+      if (!addressMap.has(normUser)) addressMap.set(normUser, this.toFriendlyAddress(userAddress));
     }
 
     const entries: Omit<LeaderboardEntry, 'rank'>[] = [];

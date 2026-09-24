@@ -9,9 +9,10 @@ import { useI18n } from '../i18n/index.js';
 
 interface ProfileProps {
   onResumeDuel?: (matchId: string) => void;
+  onOpenLeaderboard?: () => void;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
+export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboard }) => {
   const { userAddress, openWalletModal, sendDepositTransaction } = useTonClashContract();
   const { userId, username, fullName, displayName, photoUrl, isPremium } = useTelegram();
 
@@ -286,7 +287,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
             <div className="flex items-center space-x-1 text-[11px] font-chakra text-slate-400 mt-1">
               <Wallet className="w-3 h-3 text-slate-500 shrink-0" />
               <span className="truncate">
-                {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-6)}` : 'Wallet not connected'}
+                {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-6)}` : t('profile.walletNotConnected')}
               </span>
             </div>
           </div>
@@ -295,7 +296,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
         {/* In-Bot Internal Balance Card */}
         <div className="bg-gradient-to-r from-cyber-bg via-cyber-card to-cyber-bg border border-cyber-cyan/40 rounded-xl p-3.5 mb-4 shadow-inner">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-chakra text-slate-400 uppercase tracking-wider">In-Bot Balance</span>
+            <span className="text-xs font-chakra text-slate-400 uppercase tracking-wider">{t('profile.balance')}</span>
             <div className="flex items-center space-x-1.5">
               <button
                 onClick={() => {
@@ -305,7 +306,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                 className="px-2.5 py-1 rounded-lg bg-cyber-cyan/15 hover:bg-cyber-cyan/25 border border-cyber-cyan/40 text-cyber-cyan text-[11px] font-chakra font-bold uppercase transition-all flex items-center space-x-1"
               >
                 <ArrowDownLeft className="w-3 h-3" />
-                <span>Deposit</span>
+                <span>{t('profile.deposit')}</span>
               </button>
               <button
                 onClick={() => {
@@ -315,7 +316,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                 className="px-2.5 py-1 rounded-lg bg-cyber-border/80 hover:bg-cyber-border border border-cyber-border text-slate-300 text-[11px] font-chakra font-bold uppercase transition-all flex items-center space-x-1"
               >
                 <ArrowUpRight className="w-3 h-3" />
-                <span>Withdraw</span>
+                <span>{t('profile.withdraw')}</span>
               </button>
             </div>
           </div>
@@ -324,7 +325,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
               {displayBalance}
             </span>
             <GramIcon className="w-4 h-4 text-cyber-cyan inline" />
-            <span className="text-[11px] text-slate-400 font-rajdhani ml-2">GRAM Available</span>
+            <span className="text-[11px] text-slate-400 font-rajdhani ml-2">{t('profile.availableGram')}</span>
           </div>
         </div>
 
@@ -335,14 +336,14 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
             <div>
               <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-chakra mb-1">
                 <Trophy className="w-3.5 h-3.5 text-cyber-amber shrink-0" />
-                <span className="truncate uppercase font-bold text-slate-300">DUEL VICTORIES</span>
+                <span className="truncate uppercase font-bold text-slate-300">{t('profile.duelVictories')}</span>
               </div>
               <div className="text-sm sm:text-base font-chakra font-extrabold text-white leading-tight">
-                🏆 {duelsWon} W / {duelsPlayed} Games
+                {t('profile.victoriesCount', { won: duelsWon, played: duelsPlayed })}
               </div>
             </div>
             <div className="text-xs font-chakra font-bold text-cyber-cyan mt-2">
-              {winRateFormatted}% Win Rate
+              {t('profile.winRate', { rate: winRateFormatted })}
             </div>
           </div>
 
@@ -352,16 +353,16 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
               <div className="flex items-center space-x-1 text-xs font-chakra mb-1 text-orange-400">
                 <Flame className="w-3.5 h-3.5 fill-orange-400 shrink-0" />
                 <span className="font-extrabold font-orbitron text-white text-[11px] sm:text-xs tracking-wider truncate">
-                  {dailyStreak} DAY STREAK
+                  {t('profile.streakTitle', { streak: dailyStreak })}
                 </span>
               </div>
               <div className="text-[11px] font-chakra text-slate-400">
                 {hasWonToday ? (
                   <span className="text-cyber-green font-bold flex items-center space-x-0.5">
-                    <span>✓ Completed today!</span>
+                    <span>{t('profile.streakCompleted')}</span>
                   </span>
                 ) : (
-                  <span>Win 1 match today</span>
+                  <span>{t('profile.streakAction')}</span>
                 )}
               </div>
             </div>
@@ -378,7 +379,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                 <span className="text-amber-300 font-bold shrink-0">{nextMilestone} 🎁</span>
               </div>
               <div className="text-[9px] text-slate-500 font-chakra text-center truncate">
-                Reward preview: +{(nextMilestone * 0.5).toFixed(0)} GRAM
+                {t('profile.rewardPreview', { reward: (nextMilestone * 0.5).toFixed(0) })}
               </div>
             </div>
           </div>
@@ -391,7 +392,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-xs font-chakra text-slate-400 block">TOTAL WINNINGS CREDITED</span>
+              <span className="text-xs font-chakra text-slate-400 block">{t('profile.totalWinningsCredited')}</span>
               <div className="text-base font-chakra font-extrabold text-cyber-cyan flex items-center space-x-1">
                 <span>+{totalProfitsGram}</span>
                 <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
@@ -400,6 +401,17 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
             </div>
           </div>
         </div>
+
+        {/* View Global Leaderboard button */}
+        {onOpenLeaderboard && (
+          <button
+            onClick={onOpenLeaderboard}
+            className="w-full mt-3 py-2.5 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 hover:border-amber-400 rounded-xl text-amber-300 font-orbitron font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-sm"
+          >
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <span>{t('profile.viewLeaderboard')}</span>
+          </button>
+        )}
       </div>
 
       {/* ACTIVE DUELS SECTION (Matches where user is already registered) */}
@@ -408,7 +420,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-orbitron font-bold text-cyber-cyan uppercase tracking-wider flex items-center space-x-1.5">
               <Swords className="w-4 h-4 text-cyber-cyan animate-pulse" />
-              <span>ACTIVE DUELS IN PROGRESS ({activeMatches.length})</span>
+              <span>{t('profile.activeDuelsTitle')} ({activeMatches.length})</span>
             </h3>
           </div>
 
@@ -441,7 +453,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
                     onClick={() => onResumeDuel?.(m.matchId)}
                     className="px-3.5 py-1.5 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase shadow-neon-cyan hover:brightness-110 active:scale-95 transition-all flex items-center space-x-1"
                   >
-                    <span>RESUME</span>
+                    <span>{t('profile.resume')}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -456,14 +468,14 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel }) => {
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
             <History className="w-4 h-4 text-cyber-cyan" />
-            <span>RECENT ARENA MATCHES</span>
+            <span>{t('profile.recentHistoryTitle')}</span>
           </h3>
           <span className="text-xs font-chakra text-slate-500">{history.length} duels</span>
         </div>
 
         {history.length === 0 ? (
           <div className="text-center py-8 text-slate-500 font-chakra text-xs">
-            No match records found yet. Challenge players in the Arena to record your duels!
+            {t('profile.noMatches')}
           </div>
         ) : (
           <div className="space-y-2">

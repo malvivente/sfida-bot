@@ -14,7 +14,8 @@ export const App: React.FC = () => {
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
   const [showRulesModal, setShowRulesModal] = useState(false);
-  const { t } = useI18n();
+  const [isInsideMatch, setIsInsideMatch] = useState(false);
+  const { language, toggleLanguage, t } = useI18n();
 
   useEffect(() => {
     try {
@@ -45,6 +46,10 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Floating controls (Language on bottom-left and ToS on bottom-right)
+  // are hidden during active game matches to keep the battle screen completely clean
+  const showFloatingButtons = activeTab !== 'arena' || !isInsideMatch;
+
   return (
     <div className="min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start p-3 sm:p-6 pb-20 select-none font-rajdhani relative">
       <Navbar
@@ -64,9 +69,13 @@ export const App: React.FC = () => {
             initialMatchId={deepMatchId}
             role={deepRole}
             onClearDeepMatch={() => setDeepMatchId(undefined)}
+            onMatchActiveChange={setIsInsideMatch}
+            onOpenLeaderboard={() => setActiveTab('leaderboard')}
           />
         )}
-        {activeTab === 'leaderboard' && <Leaderboard />}
+        {activeTab === 'leaderboard' && (
+          <Leaderboard onBack={() => setActiveTab('arena')} />
+        )}
         {activeTab === 'referrals' && <ReferralDashboard />}
         {activeTab === 'profile' && (
           <Profile
@@ -75,6 +84,7 @@ export const App: React.FC = () => {
               setDeepRole('player');
               setActiveTab('arena');
             }}
+            onOpenLeaderboard={() => setActiveTab('leaderboard')}
           />
         )}
       </main>
@@ -85,15 +95,32 @@ export const App: React.FC = () => {
         <span>{t('footer.escrow')}</span>
       </footer>
 
-      {/* Floating Action Button with ? (HelpCircle) - Fixed in bottom-right corner */}
-      <button
-        onClick={() => setShowRulesModal(true)}
-        title="Game Rules & ToS (?)"
-        aria-label="Game Rules & ToS"
-        className="fixed bottom-5 right-4 z-40 w-11 h-11 rounded-2xl bg-cyber-card/90 hover:bg-cyber-cyan text-cyber-cyan hover:text-cyber-bg border border-cyber-cyan/50 hover:border-cyber-cyan shadow-neon-cyan backdrop-blur-md flex items-center justify-center transition-all active:scale-95 group"
-      >
-        <HelpCircle className="w-5 h-5 text-cyber-cyan group-hover:text-cyber-bg transition-colors" />
-      </button>
+      {/* Floating Action Buttons: Language (Bottom-Left) & ToS (Bottom-Right) */}
+      {showFloatingButtons && (
+        <>
+          {/* Language Switcher - Fixed in bottom-left corner */}
+          <button
+            onClick={toggleLanguage}
+            title={language === 'en' ? 'Passa alla lingua Italiana' : 'Switch to English'}
+            aria-label="Toggle language"
+            className="fixed bottom-5 left-4 z-40 w-11 h-11 rounded-2xl bg-cyber-card/90 hover:bg-cyber-cyan text-cyber-cyan hover:text-cyber-bg border border-cyber-cyan/50 hover:border-cyber-cyan shadow-neon-cyan backdrop-blur-md flex items-center justify-center transition-all active:scale-95 group font-orbitron font-extrabold text-xs"
+          >
+            <span className="group-hover:text-cyber-bg transition-colors">
+              {language === 'en' ? 'IT' : 'EN'}
+            </span>
+          </button>
+
+          {/* Rules & ToS (?) - Fixed in bottom-right corner */}
+          <button
+            onClick={() => setShowRulesModal(true)}
+            title="Game Rules & ToS (?)"
+            aria-label="Game Rules & ToS"
+            className="fixed bottom-5 right-4 z-40 w-11 h-11 rounded-2xl bg-cyber-card/90 hover:bg-cyber-cyan text-cyber-cyan hover:text-cyber-bg border border-cyber-cyan/50 hover:border-cyber-cyan shadow-neon-cyan backdrop-blur-md flex items-center justify-center transition-all active:scale-95 group"
+          >
+            <HelpCircle className="w-5 h-5 text-cyber-cyan group-hover:text-cyber-bg transition-colors" />
+          </button>
+        </>
+      )}
 
       {/* Rules & ToS Modal */}
       <RulesModal

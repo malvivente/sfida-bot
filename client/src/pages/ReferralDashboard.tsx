@@ -5,11 +5,13 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from '../components/GramIcon.js';
+import { useI18n } from '../i18n/index.js';
 
 export const ReferralDashboard: React.FC = () => {
   const { userAddress } = useTonClashContract();
   const { userId, username, fullName, botUsername } = useTelegram();
   const { triggerImpact } = useHaptics();
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   // Referral code tied to Telegram ID or wallet fallback
@@ -38,8 +40,8 @@ export const ReferralDashboard: React.FC = () => {
             <Users className="w-6 h-6 text-cyber-pink" />
           </div>
           <div>
-            <h2 className="text-base font-orbitron font-bold text-white">YOUR AFFILIATE PROGRAM</h2>
-            <p className="text-xs text-slate-400">Earn TON rewards from your friends' duels</p>
+            <h2 className="text-base font-orbitron font-bold text-white">{t('affiliates.title')}</h2>
+            <p className="text-xs text-slate-400">{t('affiliates.subtitle')}</p>
           </div>
         </div>
 
@@ -48,22 +50,22 @@ export const ReferralDashboard: React.FC = () => {
           <div className="bg-cyber-bg/60 border border-cyber-border rounded-xl p-3">
             <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-chakra mb-1">
               <DollarSign className="w-3.5 h-3.5 text-cyber-cyan" />
-              <span>TOTAL EARNINGS</span>
+              <span>{t('affiliates.totalEarnings')}</span>
             </div>
             <div className="text-xl font-chakra font-extrabold text-cyber-cyan flex items-center space-x-1">
               <span>0.00</span>
               <GramIcon className="w-4 h-4 text-cyber-cyan" />
             </div>
-            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">Instant payout</div>
+            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">{t('affiliates.instantPayout')}</div>
           </div>
 
           <div className="bg-cyber-bg/60 border border-cyber-border rounded-xl p-3">
             <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-chakra mb-1">
               <Users className="w-3.5 h-3.5 text-cyber-pink" />
-              <span>FRIENDS INVITED</span>
+              <span>{t('affiliates.friendsInvited')}</span>
             </div>
             <div className="text-xl font-chakra font-extrabold text-cyber-pink">0</div>
-            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">Active in duels</div>
+            <div className="text-[11px] text-slate-500 font-chakra mt-0.5">{t('affiliates.activeInDuels')}</div>
           </div>
         </div>
 
@@ -71,12 +73,12 @@ export const ReferralDashboard: React.FC = () => {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-chakra text-slate-300 uppercase tracking-wider block">
-              Your Personal Invite Link
+              {t('affiliates.personalLink')}
             </label>
             {copied && (
               <span className="text-xs font-chakra font-bold text-cyber-green flex items-center space-x-1 animate-pulse">
                 <Check className="w-3.5 h-3.5" />
-                <span>COPIED!</span>
+                <span>{t('affiliates.copied')}</span>
               </span>
             )}
           </div>
@@ -105,22 +107,22 @@ export const ReferralDashboard: React.FC = () => {
               className="px-3 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5 text-xs"
             >
               <Share2 className="w-4 h-4" />
-              <span className="hidden sm:inline">INVITE</span>
+              <span className="hidden sm:inline">{t('affiliates.inviteBtn')}</span>
             </button>
           </div>
 
           <div className="flex items-center justify-between text-[11px] font-chakra text-slate-400 pt-0.5">
             <span className="flex items-center space-x-1">
               <UserCheck className="w-3.5 h-3.5 text-cyber-cyan" />
-              <span>Telegram Parameter: <strong className="text-cyber-cyan font-mono">{refCode}</strong></span>
+              <span>{t('affiliates.telegramParam')} <strong className="text-cyber-cyan font-mono">{refCode}</strong></span>
             </span>
             {username && <span className="text-slate-500 font-mono">(@{username})</span>}
           </div>
 
           <p className="text-[11px] text-slate-400">
             {userAddress
-              ? 'Your TON wallet is connected and will receive affiliate shares automatically.'
-              : 'Connect your TON wallet to receive contract payouts.'}
+              ? t('affiliates.walletConnected')
+              : t('affiliates.walletNotConnected')}
           </p>
         </div>
       </div>
@@ -129,7 +131,7 @@ export const ReferralDashboard: React.FC = () => {
       <div className="bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl space-y-3">
         <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
           <Zap className="w-4 h-4 text-cyber-cyan" />
-          <span>HOW AFFILIATE REWARDS WORK</span>
+          <span>{t('affiliates.howItWorks')}</span>
         </h3>
 
         <div className="space-y-2.5 text-xs">
@@ -138,9 +140,9 @@ export const ReferralDashboard: React.FC = () => {
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">1. Invite Your Friends</span>
+              <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">{t('affiliates.step1Title')}</span>
               <span className="text-slate-300 leading-relaxed">
-                Send your link with <code className="text-cyber-cyan font-mono text-[10px]">?start={refCode}</code> to your contacts. Every time they duel or place bets, a share of the platform contract fee is automatically routed to you.
+                {t('affiliates.step1Desc')}
               </span>
             </div>
           </div>
@@ -150,9 +152,9 @@ export const ReferralDashboard: React.FC = () => {
               <MessageSquare className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">2. Add the Bot to Telegram Groups</span>
+              <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">{t('affiliates.step2Title')}</span>
               <span className="text-slate-300 leading-relaxed">
-                Add <strong>@{botUsername}</strong> to your Telegram community. When members challenge each other in chat, the group admin automatically earns affiliate yields on every match.
+                {t('affiliates.step2Desc')}
               </span>
             </div>
           </div>
@@ -162,9 +164,9 @@ export const ReferralDashboard: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">3. Direct Smart Contract Payouts</span>
+              <span className="text-white font-bold block mb-0.5 font-orbitron text-[11px]">{t('affiliates.step3Title')}</span>
               <span className="text-slate-300 leading-relaxed">
-                Zero lockups: rewards are calculated and settled transparently on the TON blockchain directly to your address.
+                {t('affiliates.step3Desc')}
               </span>
             </div>
           </div>
