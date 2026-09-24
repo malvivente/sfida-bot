@@ -20,7 +20,6 @@ interface ArenaProps {
   role?: 'player' | 'spectator';
   onClearDeepMatch?: () => void;
   onMatchActiveChange?: (isActive: boolean) => void;
-  onOpenLeaderboard?: () => void;
 }
 
 export const Arena: React.FC<ArenaProps> = ({
@@ -28,7 +27,6 @@ export const Arena: React.FC<ArenaProps> = ({
   role: initialRole = 'player',
   onClearDeepMatch,
   onMatchActiveChange,
-  onOpenLeaderboard,
 }) => {
   const [activeMatchId, setActiveMatchId] = useState<string | null>(initialMatchId || null);
 
@@ -941,7 +939,6 @@ export const Arena: React.FC<ArenaProps> = ({
             if (missing) setDepositAmount(missing);
             setShowDepositModal(true);
           }}
-          onOpenLeaderboard={onOpenLeaderboard}
         />
       )}
     </div>

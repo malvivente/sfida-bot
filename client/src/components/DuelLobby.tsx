@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Trophy } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -26,7 +26,6 @@ interface DuelLobbyProps {
   userBalanceGram?: string;
   creationFeeGram?: number;
   onOpenDeposit?: (missingAmount?: string) => void;
-  onOpenLeaderboard?: () => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -45,7 +44,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   userBalanceGram = '0.00',
   creationFeeGram = 0.02,
   onOpenDeposit,
-  onOpenLeaderboard,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
@@ -155,29 +153,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-1.5">
-          {onOpenLeaderboard && (
-            <button
-              onClick={() => {
-                triggerImpact('light');
-                onOpenLeaderboard();
-              }}
-              className="px-3 py-2.5 bg-amber-400/15 border border-amber-400/50 hover:bg-amber-400/25 text-amber-300 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center space-x-1"
-              title={t('leaderboard.title')}
-            >
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span>{t('nav.leaderboardShort')}</span>
-            </button>
-          )}
-
-          <button
-            onClick={handleOpenModal}
-            className="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('lobby.create')}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleOpenModal}
+          className="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{t('lobby.create')}</span>
+        </button>
       </div>
 
       {/* Active Matches Feed */}

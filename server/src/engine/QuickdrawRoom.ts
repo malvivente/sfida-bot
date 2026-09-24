@@ -611,6 +611,10 @@ export class QuickdrawRoom {
       console.error(`[QuickdrawRoom] Error crediting duel rake for match #${this.matchId}:`, err);
     });
 
+    const winnerTelegramId = winnerAddress === this.playerA.walletAddress
+      ? this.playerA.telegramId
+      : this.playerB?.telegramId;
+
     dbService
       .saveMatch({
         matchId: this.matchId.toString(),
@@ -620,10 +624,13 @@ export class QuickdrawRoom {
         wagerGram,
         playerAAddress: this.playerA.walletAddress,
         playerAName: this.playerA.username,
+        playerATelegramId: this.playerA.telegramId,
         playerBAddress: this.playerB?.walletAddress,
         playerBName: this.playerB?.username,
+        playerBTelegramId: this.playerB?.telegramId,
         winnerAddress,
         winnerName: this.winnerName,
+        winnerTelegramId,
         scoreA: this.playerA.score,
         scoreB: this.playerB?.score || 0,
         bestReactionPlayerA: this.playerA.bestReactionTimeMs,

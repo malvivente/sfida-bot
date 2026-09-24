@@ -3,6 +3,7 @@ import { Trophy, Flame, TrendingUp, Medal, Crown, Sparkles, RefreshCw, Loader2, 
 import { GramIcon } from '../components/GramIcon.js';
 import { LeaderboardEntry } from '../types/index.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
+import { useTelegram } from '../hooks/useTelegram.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 
@@ -12,6 +13,7 @@ interface LeaderboardProps {
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
   const { userAddress } = useTonClashContract();
+  const { userId } = useTelegram();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
@@ -32,7 +34,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
     try {
       const url = `${serverUrl}/api/leaderboard?sortBy=${sortBy}&limit=50${
         userAddress ? `&userAddress=${userAddress}` : ''
-      }`;
+      }${userId ? `&telegramId=${userId}` : ''}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -55,7 +57,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
     fetchLeaderboard();
     const interval = setInterval(() => fetchLeaderboard(), 15000);
     return () => clearInterval(interval);
-  }, [sortBy, userAddress, serverUrl]);
+  }, [sortBy, userAddress, userId, serverUrl]);
 
   const handleTabChange = (type: 'wins' | 'streak' | 'profits') => {
     triggerImpact('light');
@@ -108,7 +110,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
               }}
               className="text-xs font-chakra font-bold text-cyber-cyan hover:underline flex items-center space-x-1"
             >
-              <span>{t('leaderboard.backToArena')}</span>
+              <span>{t('leaderboard.back')}</span>
             </button>
           </div>
         )}
@@ -252,13 +254,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
           {remaining.length > 0 && (
             <div className="space-y-1.5">
               {remaining.map((entry) => {
-                const isCurrentUser =
-                  userAddress &&
-                  entry.walletAddress.toLowerCase() === userAddress.toLowerCase();
+                const isCurrentUser = Boolean(
+                  (userId && entry.telegramId && String(entry.telegramId) === String(userId)) ||
+                  (userAddress && entry.walletAddress && entry.walletAddress.toLowerCase() === userAddress.toLowerCase())
+                );
 
                 return (
                   <div
-                    key={entry.walletAddress}
+                    key={entry.telegramId ? `tg_${entry.telegramId}` : entry.walletAddress}
                     className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                       isCurrentUser
                         ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-sm'
@@ -309,7 +312,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
       )}
 
       {/* Pinned User Rank Bar (if user is connected) */}
-      {userAddress && userEntry && (
+      {(userAddress || userId) && userEntry && (
         <div className="sticky bottom-2 z-20 bg-cyber-bg/95 border-2 border-cyber-cyan/70 rounded-xl p-3 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5 min-w-0">

@@ -51,7 +51,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
     if (!userAddress || !serverUrl) return;
     try {
       // 1. Fetch user history
-      const historyRes = await fetch(`${serverUrl}/api/users/${userAddress}/history`);
+      const historyRes = await fetch(`${serverUrl}/api/users/${userAddress}/history?telegramId=${userId || ''}`);
       if (historyRes.ok) {
         const data = await historyRes.json();
         if (data?.history) {
@@ -61,7 +61,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
       }
 
       // 2. Fetch server user stats
-      const statsRes = await fetch(`${serverUrl}/api/users/${userAddress}/stats`);
+      const statsRes = await fetch(`${serverUrl}/api/users/${userAddress}/stats?telegramId=${userId || ''}`);
       if (statsRes.ok) {
         const data = await statsRes.json();
         if (data?.stats) {
@@ -369,17 +369,21 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
             <div className="mt-2 space-y-1">
               <div className="flex items-center justify-between text-[10px] font-chakra text-slate-400">
-                <span className="text-cyber-green font-bold shrink-0">{prevMilestone} ✓</span>
+                <span className="text-cyber-green font-bold shrink-0">
+                  {t('profile.streakUnit', { days: prevMilestone })} ✓
+                </span>
                 <div className="flex-1 mx-1.5 h-1.5 bg-cyber-bg rounded-full overflow-hidden border border-cyber-border">
                   <div
                     style={{ width: `${streakProgressPct}%` }}
                     className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500"
                   />
                 </div>
-                <span className="text-amber-300 font-bold shrink-0">{nextMilestone} 🎁</span>
+                <span className="text-amber-300 font-bold shrink-0">
+                  {t('profile.streakUnit', { days: nextMilestone })} 🎁
+                </span>
               </div>
-              <div className="text-[9px] text-slate-500 font-chakra text-center truncate">
-                {t('profile.rewardPreview', { reward: (nextMilestone * 0.5).toFixed(0) })}
+              <div className="text-[9px] text-slate-400 font-chakra text-center truncate font-medium">
+                {t('profile.streakGoal', { days: nextMilestone, reward: (nextMilestone * 0.5).toFixed(0) })}
               </div>
             </div>
           </div>

@@ -215,6 +215,7 @@ export interface UserStats {
 export interface LeaderboardEntry {
   rank: number;
   walletAddress: string;
+  telegramId?: string;
   username: string;
   duelsPlayed: number;
   duelsWon: number;

@@ -406,6 +406,10 @@ export abstract class BaseGameRoom {
       console.error(`[BaseGameRoom] Error crediting duel rake:`, err);
     });
 
+    const winnerTelegramId = winnerAddress === this.playerA.walletAddress
+      ? this.playerA.telegramId
+      : this.playerB?.telegramId;
+
     dbService.saveMatch({
       matchId: this.matchId.toString(),
       escrowAddress: this.escrowAddress,
@@ -414,10 +418,13 @@ export abstract class BaseGameRoom {
       wagerGram: wagerNum.toFixed(2),
       playerAAddress: this.playerA.walletAddress,
       playerAName: this.playerA.username,
+      playerATelegramId: this.playerA.telegramId,
       playerBAddress: this.playerB?.walletAddress,
       playerBName: this.playerB?.username,
+      playerBTelegramId: this.playerB?.telegramId,
       winnerAddress,
       winnerName: this.winnerName,
+      winnerTelegramId,
       scoreA: this.playerA.score,
       scoreB: this.playerB?.score || 0,
       gameType: this.gameType,

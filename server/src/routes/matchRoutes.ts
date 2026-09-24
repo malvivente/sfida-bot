@@ -353,23 +353,25 @@ export async function matchRoutes(fastify: FastifyInstance) {
   // User match history from persistent database
   fastify.get('/api/users/:wallet/history', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };
-    const history = await dbService.getUserHistory(wallet);
+    const query = req.query as { telegramId?: string };
+    const history = await dbService.getUserHistory(wallet, query.telegramId);
     return reply.send({ success: true, history });
   });
 
   // User statistics from persistent database
   fastify.get('/api/users/:wallet/stats', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };
-    const stats = await dbService.getUserStats(wallet);
+    const query = req.query as { telegramId?: string };
+    const stats = await dbService.getUserStats(wallet, query.telegramId);
     return reply.send({ success: true, stats });
   });
 
   // Global Leaderboard
   fastify.get('/api/leaderboard', async (req, reply) => {
-    const query = req.query as { sortBy?: 'wins' | 'streak' | 'profits'; limit?: string; userAddress?: string };
+    const query = req.query as { sortBy?: 'wins' | 'streak' | 'profits'; limit?: string; userAddress?: string; telegramId?: string };
     const sortBy = query.sortBy || 'wins';
     const limit = parseInt(query.limit || '50', 10);
-    const result = await dbService.getLeaderboard(sortBy, limit, query.userAddress);
+    const result = await dbService.getLeaderboard(sortBy, limit, query.userAddress, query.telegramId);
     return reply.send({ success: true, ...result });
   });
 

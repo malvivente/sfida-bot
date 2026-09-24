@@ -15,6 +15,7 @@ export const App: React.FC = () => {
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [isInsideMatch, setIsInsideMatch] = useState(false);
+  const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<'arena' | 'profile'>('profile');
   const { language, toggleLanguage, t } = useI18n();
 
   useEffect(() => {
@@ -70,11 +71,10 @@ export const App: React.FC = () => {
             role={deepRole}
             onClearDeepMatch={() => setDeepMatchId(undefined)}
             onMatchActiveChange={setIsInsideMatch}
-            onOpenLeaderboard={() => setActiveTab('leaderboard')}
           />
         )}
         {activeTab === 'leaderboard' && (
-          <Leaderboard onBack={() => setActiveTab('arena')} />
+          <Leaderboard onBack={() => setActiveTab(lastTabBeforeLeaderboard)} />
         )}
         {activeTab === 'referrals' && <ReferralDashboard />}
         {activeTab === 'profile' && (
@@ -84,7 +84,10 @@ export const App: React.FC = () => {
               setDeepRole('player');
               setActiveTab('arena');
             }}
-            onOpenLeaderboard={() => setActiveTab('leaderboard')}
+            onOpenLeaderboard={() => {
+              setLastTabBeforeLeaderboard('profile');
+              setActiveTab('leaderboard');
+            }}
           />
         )}
       </main>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TonConnectButton } from '@tonconnect/ui-react';
-import { Swords, User, Users, Trophy } from 'lucide-react';
+import { Swords, User, Users } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 
@@ -36,23 +36,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onOpenRu
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Quick Leaderboard Trophy Button */}
-          <button
-            onClick={() => handleTab('leaderboard')}
-            className={`py-1.5 px-2.5 rounded-xl border transition-all flex items-center space-x-1.5 active:scale-95 ${
-              activeTab === 'leaderboard'
-                ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-neon-amber'
-                : 'bg-cyber-card border-cyber-border hover:border-amber-400/50 text-slate-300 hover:text-amber-300'
-            }`}
-            title={t('leaderboard.title')}
-            aria-label="Leaderboard"
-          >
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span className="font-orbitron font-extrabold text-[11px] text-amber-300 uppercase tracking-wider">
-              {t('nav.leaderboardShort')}
-            </span>
-          </button>
-
           <TonConnectButton />
         </div>
       </div>
