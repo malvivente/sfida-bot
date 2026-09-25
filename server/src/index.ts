@@ -5,6 +5,7 @@ import websocket from '@fastify/websocket';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { TonClient, Address } from '@ton/ton';
+import pino from 'pino';
 import { registerWebSocketRoutes } from './ws/websocketServer.js';
 import { matchRoutes } from './routes/matchRoutes.js';
 import { profileRoutes } from './routes/profileRoutes.js';
@@ -16,18 +17,19 @@ const cjsRequire = createRequire(import.meta.url);
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Safe in-process logger (avoids worker thread crashes from thread-stream on low-memory VPS)
-let loggerConfig: any = true;
+let loggerInstance: any = true;
 if (!isProduction) {
   try {
     const pinoPrettyModule = cjsRequire('pino-pretty');
     const pinoPretty = pinoPrettyModule.default || pinoPrettyModule;
-    loggerConfig = pinoPretty({
+    const stream = pinoPretty({
       colorize: true,
       translateTime: 'HH:MM:ss Z',
       ignore: 'pid,hostname',
     });
+    loggerInstance = pino({ level: 'info' }, stream);
   } catch {
-    loggerConfig = true;
+    loggerInstance = true;
   }
 }
 
@@ -40,7 +42,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const fastify = Fastify({
-  logger: loggerConfig,
+  logger: loggerInstance,
 });
 
 async function main() {
