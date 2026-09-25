@@ -9,7 +9,7 @@ import { RulesModal } from './components/RulesModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { ShieldCheck, HelpCircle } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
-import { useTelegramViewport } from './hooks/useTelegramViewport.js';
+import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
 
 export const App: React.FC = () => {
   const { isFullscreen, topInset } = useTelegramViewport();
@@ -23,33 +23,42 @@ export const App: React.FC = () => {
   const { language, toggleLanguage, t } = useI18n();
 
   useEffect(() => {
-    try {
-      WebApp.ready();
-      WebApp.expand();
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg && !tg.isFullscreen && typeof tg.requestFullscreen === 'function') {
-        tg.requestFullscreen();
-      }
-    } catch {
-      // Browser preview fallback
-    }
-
-    // Automatically request fullscreen on any user click or touch interaction
+    // Automatically request fullscreen on mobile portrait, or exit fullscreen on desktop/horizontal
     const ensureFullscreen = () => {
       try {
         const tg = (window as any).Telegram?.WebApp;
-        if (tg && !tg.isFullscreen && typeof tg.requestFullscreen === 'function') {
+        if (!tg) return;
+
+        if (isDesktopPlatform() || isHorizontalScreen()) {
+          if (tg.isFullscreen && typeof tg.exitFullscreen === 'function') {
+            tg.exitFullscreen();
+          }
+          return;
+        }
+
+        if (!tg.isFullscreen && typeof tg.requestFullscreen === 'function') {
           tg.requestFullscreen();
         }
       } catch {}
     };
 
-    const t1 = setTimeout(ensureFullscreen, 150);
-    const t2 = setTimeout(ensureFullscreen, 500);
+    try {
+      WebApp.ready();
+      WebApp.expand();
+      ensureFullscreen();
+    } catch {
+      // Browser preview fallback
+    }
+
+    const t1 = setTimeout(ensureFullscreen, 100);
+    const t2 = setTimeout(ensureFullscreen, 300);
+    const t3 = setTimeout(ensureFullscreen, 700);
 
     window.addEventListener('click', ensureFullscreen, { passive: true });
     window.addEventListener('touchstart', ensureFullscreen, { passive: true });
     window.addEventListener('pointerdown', ensureFullscreen, { passive: true });
+    window.addEventListener('resize', ensureFullscreen, { passive: true });
+    window.addEventListener('orientationchange', ensureFullscreen, { passive: true });
 
     // Parse Telegram startapp parameter or URL query
     const params = new URLSearchParams(window.location.search);
@@ -82,9 +91,12 @@ export const App: React.FC = () => {
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
       window.removeEventListener('click', ensureFullscreen);
       window.removeEventListener('touchstart', ensureFullscreen);
       window.removeEventListener('pointerdown', ensureFullscreen);
+      window.removeEventListener('resize', ensureFullscreen);
+      window.removeEventListener('orientationchange', ensureFullscreen);
     };
   }, []);
 

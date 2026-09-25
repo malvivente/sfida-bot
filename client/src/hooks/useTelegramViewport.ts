@@ -5,15 +5,41 @@ export interface TelegramViewportState {
   topInset: number;
 }
 
+export function isDesktopPlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  const tg = (window as any).Telegram?.WebApp;
+  const platform = (tg?.platform || '').toLowerCase();
+  const desktopPlatforms = ['tdesktop', 'macos', 'web', 'weba', 'webk'];
+  if (desktopPlatforms.includes(platform)) return true;
+  if (window.innerWidth > 1024) return true;
+  return false;
+}
+
+export function isHorizontalScreen(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth > window.innerHeight;
+}
+
 export function useTelegramViewport(): TelegramViewportState {
   const getViewportState = (): TelegramViewportState => {
     if (typeof window === 'undefined') {
       return { isFullscreen: false, topInset: 0 };
     }
 
+    // Never enable fullscreen mode on desktop or horizontal / landscape screens
+    if (isDesktopPlatform() || isHorizontalScreen()) {
+      return { isFullscreen: false, topInset: 0 };
+    }
+
     const tg = (window as any).Telegram?.WebApp;
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlFullscreen = urlParams.get('fullscreen') === 'true' || urlParams.get('fullscreen') === '1';
+
+    // Strict detection: ONLY genuine Telegram Fullscreen mode
+    // (Never rely on URL params or ambiguous safe-area insets which exist in standard mode too)
+    const isFullscreen = Boolean(tg?.isFullscreen);
+
+    if (!isFullscreen) {
+      return { isFullscreen: false, topInset: 0 };
+    }
 
     let cssContentTop = 0;
     let cssSafeTop = 0;
@@ -25,26 +51,17 @@ export function useTelegramViewport(): TelegramViewportState {
       if (rawSafeTop) cssSafeTop = parseFloat(rawSafeTop) || 0;
     }
 
-    const tgIsFullscreen = Boolean(tg?.isFullscreen);
     const contentTop = Number(tg?.contentSafeAreaInset?.top) || 0;
     const safeTop = Number(tg?.safeAreaInset?.top) || 0;
 
-    // Detect if Telegram WebApp is in fullscreen mode (Bot API 8.0+)
-    const isFullscreen = Boolean(
-      tgIsFullscreen ||
-      urlFullscreen ||
-      contentTop > 0 ||
-      cssContentTop > 0
-    );
-
     // In fullscreen on mobile devices, Telegram renders floating buttons (Close on left, chevron + menu on right)
     // with a height of ~36px plus device status bar (~24px), totaling ~60-64px.
-    // 78px provides comfortable vertical breathing room, matching the default Telegram titlebar height.
+    // 80px provides comfortable vertical breathing room, matching the default Telegram titlebar height.
     const rawTop = Math.max(contentTop, safeTop, cssContentTop, cssSafeTop);
-    const topInset = isFullscreen ? Math.max(rawTop, 78) : rawTop;
+    const topInset = Math.max(rawTop, 80);
 
     return {
-      isFullscreen,
+      isFullscreen: true,
       topInset,
     };
   };
@@ -69,6 +86,8 @@ export function useTelegramViewport(): TelegramViewportState {
       try {
         tg.onEvent?.('fullscreenChanged', update);
         tg.onEvent?.('fullscreen_changed', update);
+        tg.onEvent?.('fullscreenFailed', update);
+        tg.onEvent?.('fullscreen_failed', update);
         tg.onEvent?.('contentSafeAreaChanged', update);
         tg.onEvent?.('content_safe_area_changed', update);
         tg.onEvent?.('safeAreaChanged', update);
@@ -78,6 +97,7 @@ export function useTelegramViewport(): TelegramViewportState {
     }
 
     window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
 
     return () => {
       clearTimeout(t1);
@@ -85,11 +105,14 @@ export function useTelegramViewport(): TelegramViewportState {
       clearTimeout(t3);
       clearTimeout(t4);
       window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
 
       if (tg) {
         try {
           tg.offEvent?.('fullscreenChanged', update);
           tg.offEvent?.('fullscreen_changed', update);
+          tg.offEvent?.('fullscreenFailed', update);
+          tg.offEvent?.('fullscreen_failed', update);
           tg.offEvent?.('contentSafeAreaChanged', update);
           tg.offEvent?.('content_safe_area_changed', update);
           tg.offEvent?.('safeAreaChanged', update);

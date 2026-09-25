@@ -63,7 +63,7 @@ export function createTelegramBot(token?: string): Bot {
     }
 
     const keyboard = new InlineKeyboard()
-      .webApp('⚔️ Enter Arena', `${webAppUrl}?startapp=${payload || 'lobby'}&fullscreen=true`)
+      .webApp('⚔️ Enter Arena', `${webAppUrl}?startapp=${payload || 'lobby'}`)
       .row()
       .url('📢 Official Telegram Channel', 'https://t.me/toncoin');
 
@@ -73,12 +73,12 @@ export function createTelegramBot(token?: string): Bot {
     });
   });
 
-  // Configure Telegram Menu Button with fullscreen webapp
+  // Configure Telegram Menu Button
   bot.api.setChatMenuButton({
     menu_button: {
       type: 'web_app',
       text: '⚔️ Sfida Arena',
-      web_app: { url: `${webAppUrl}?startapp=menu&fullscreen=true` },
+      web_app: { url: `${webAppUrl}?startapp=menu` },
     },
   }).catch((err) => {
     console.warn('[Bot] Note on setChatMenuButton:', err?.message || err);
@@ -101,8 +101,8 @@ export function createTelegramBot(token?: string): Bot {
     const duelPayload = `duel_${matchId}_${userWallet}_${chatId}`;
     const spectatePayload = `spectate_${matchId}`;
 
-    const duelUrl = `${webAppUrl}?startapp=${duelPayload}&fullscreen=true`;
-    const spectateUrl = `${webAppUrl}?startapp=${spectatePayload}&fullscreen=true`;
+    const duelUrl = `${webAppUrl}?startapp=${duelPayload}`;
+    const spectateUrl = `${webAppUrl}?startapp=${spectatePayload}`;
 
     const keyboard = new InlineKeyboard()
       .webApp(`⚔️ Accept Challenge (${wager} TON)`, duelUrl)

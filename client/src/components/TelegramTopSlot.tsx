@@ -22,11 +22,11 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
   topInset,
   children,
 }) => {
-  if (!isFullscreen && topInset <= 0) {
+  if (!isFullscreen) {
     return null;
   }
 
-  const height = Math.max(topInset, 78);
+  const height = Math.max(topInset, 80);
 
   return (
     <div
