@@ -13,25 +13,34 @@ import { createTelegramBot } from './bot/index.js';
 import { signerService } from './services/signer.js';
 
 const cjsRequire = createRequire(import.meta.url);
-let hasPinoPretty = false;
-try {
-  cjsRequire.resolve('pino-pretty');
-  hasPinoPretty = true;
-} catch {
-  hasPinoPretty = false;
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Safe in-process logger (avoids worker thread crashes from thread-stream on low-memory VPS)
+let loggerConfig: any = true;
+if (!isProduction) {
+  try {
+    const pinoPrettyModule = cjsRequire('pino-pretty');
+    const pinoPretty = pinoPrettyModule.default || pinoPrettyModule;
+    loggerConfig = pinoPretty({
+      colorize: true,
+      translateTime: 'HH:MM:ss Z',
+      ignore: 'pid,hostname',
+    });
+  } catch {
+    loggerConfig = true;
+  }
 }
 
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const fastify = Fastify({
-  logger: hasPinoPretty
-    ? {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-          },
-        },
-      }
-    : true,
+  logger: loggerConfig,
 });
 
 async function main() {
