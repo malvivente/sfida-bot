@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, ShieldAlert, Crosshair, RotateCcw, Clock, Trophy, Loader2, Flame, ArrowDownLeft } from 'lucide-react';
+import { Shield, ShieldAlert, Crosshair, RotateCcw, Clock, Trophy, Loader2, Flame, ArrowDownLeft, Swords } from 'lucide-react';
 import { RouletteState } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
 
@@ -36,6 +36,8 @@ interface RussianRouletteArenaProps {
   userBalanceGram?: string;
   onOpenDeposit?: (missingAmount?: string) => void;
   socketError?: string | null;
+  hasPlayerB?: boolean;
+  onJoinAsPlayer?: () => void;
 }
 
 export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
@@ -67,6 +69,8 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
   userBalanceGram,
   onOpenDeposit,
   socketError,
+  hasPlayerB = true,
+  onJoinAsPlayer,
 }) => {
   const chambers = gameData?.chambersRemaining ?? 8;
   const totalChambers = gameData?.totalChambers ?? 8;
@@ -375,10 +379,12 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
           role === 'player' ? (
             <button
               onClick={onReady}
-              disabled={isReady}
+              disabled={isReady || !hasPlayerB}
               className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
                 isReady
                   ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
+                  : !hasPlayerB
+                  ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
                   : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
               }`}
             >
@@ -387,15 +393,38 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
                   <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
                   <span>READY • WAITING FOR OPPONENT</span>
                 </>
+              ) : !hasPlayerB ? (
+                <span>⏳ IN ATTESA DI UNO SFIDANTE...</span>
               ) : (
                 <span>⚔️ READY TO DUEL</span>
               )}
             </button>
           ) : (
-            <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
-              <span className="text-xs font-chakra font-bold text-cyber-pink">
-                👁️ SPECTATOR VIEW • WAITING FOR DUELISTS TO READY UP
-              </span>
+            <div className="w-full flex flex-col items-center">
+              {!hasPlayerB ? (
+                <div className="w-full flex flex-col space-y-2">
+                  <div className="w-full py-2.5 px-3 bg-black/60 border border-cyber-cyan/30 rounded-xl text-center">
+                    <span className="text-xs font-chakra font-bold text-cyber-cyan">
+                      👁️ VISTA SPETTATORE • IN ATTESA DI UNO SFIDANTE
+                    </span>
+                  </div>
+                  {onJoinAsPlayer && (
+                    <button
+                      onClick={onJoinAsPlayer}
+                      className="w-full py-3 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                    >
+                      <Swords className="w-4 h-4" />
+                      <span>PARTECIPA AL DUELLO ({wagerTon} GRAM)</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
+                  <span className="text-xs font-chakra font-bold text-cyber-pink">
+                    👁️ SPECTATOR VIEW • WAITING FOR DUELISTS TO READY UP
+                  </span>
+                </div>
+              )}
             </div>
           )
         ) : roomState === 'BETTING_WINDOW' ? (

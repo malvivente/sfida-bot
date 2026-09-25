@@ -137,7 +137,11 @@ export const translations: Translations = {
 
   // Arena & Rematch
   'arena.shareDuel': { it: 'CONDIVIDI', en: 'SHARE' },
+  'arena.cancelDuel': { it: 'ANNULLA', en: 'CANCEL' },
   'arena.backToLobby': { it: 'TORNA IN LOBBY', en: 'BACK TO LOBBY' },
+  'arena.joinDuelAsOpponent': { it: 'PARTECIPA AL DUELLO ({amount} GRAM)', en: 'JOIN DUEL ({amount} GRAM)' },
+  'arena.waitingForOpponent': { it: 'IN ATTESA DI UNO SFIDANTE...', en: 'WAITING FOR OPPONENT...' },
+  'arena.spectatorWaitingOpponent': { it: '👁️ VISTA SPETTATORE • IN ATTESA DI UNO SFIDANTE', en: '👁️ SPECTATOR VIEW • WAITING FOR OPPONENT' },
   'rematch.offerTitle': { it: 'PROPOSTA DI RIVINCITA (2X)', en: '2X REMATCH OFFER' },
   'rematch.offeredBy': { it: '{name} ti sfida a una rivincita 2X per {amount} GRAM!', en: '{name} challenges you to a 2X Rematch for {amount} GRAM!' },
   'rematch.accept': { it: 'ACCETTA 2X', en: 'ACCEPT 2X' },

@@ -635,8 +635,22 @@ export const Arena: React.FC<ArenaProps> = ({
       : socketData.gameData?.currentTurn === userSide
   );
 
+  const hasPlayerB = Boolean(socketData.playerBName || currentActiveMatch?.playerB);
   const playerA_Name = socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A';
-  const playerB_Name = socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Opponent');
+  const playerB_Name = socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent'));
+
+  const handleJoinFromArena = () => {
+    if (!currentActiveMatch && activeMatchId) {
+      const m = matches.find((x) => x.matchId === activeMatchId);
+      if (m) {
+        handleJoinMatch(m, m.inviteCode);
+      }
+      return;
+    }
+    if (currentActiveMatch) {
+      handleJoinMatch(currentActiveMatch, currentActiveMatch.inviteCode);
+    }
+  };
 
   const isCurrentUserReady = isReady || (userSide === 'A' ? socketData.playerAReady : socketData.playerBReady);
 
@@ -839,10 +853,11 @@ export const Arena: React.FC<ArenaProps> = ({
               {canCancelCurrentMatch && currentActiveMatch && (
                 <button
                   onClick={() => handleCancelMatch(currentActiveMatch)}
-                  className="flex items-center space-x-1 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                  className="flex items-center space-x-1.5 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-[0_0_10px_rgba(255,0,85,0.15)]"
+                  title="Annulla duello e rimborsa"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-cyber-pink" />
-                  <span>CANCEL & REFUND</span>
+                  <span>{t('arena.cancelDuel')}</span>
                 </button>
               )}
             </div>
@@ -890,6 +905,8 @@ export const Arena: React.FC<ArenaProps> = ({
                 setShowDepositModal(true);
               }}
               socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
             />
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
@@ -932,6 +949,8 @@ export const Arena: React.FC<ArenaProps> = ({
                 setShowDepositModal(true);
               }}
               socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
             />
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
@@ -973,6 +992,8 @@ export const Arena: React.FC<ArenaProps> = ({
                 setShowDepositModal(true);
               }}
               socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
             />
           ) : (
             <RussianRouletteArena
@@ -1014,6 +1035,8 @@ export const Arena: React.FC<ArenaProps> = ({
                 setShowDepositModal(true);
               }}
               socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
             />
           )}
 

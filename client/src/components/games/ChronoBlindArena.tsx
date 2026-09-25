@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Eye, EyeOff, Trophy, RotateCcw, Loader2, Zap, ArrowDownLeft } from 'lucide-react';
+import { Clock, Eye, EyeOff, Trophy, RotateCcw, Loader2, Zap, ArrowDownLeft, Swords } from 'lucide-react';
 import { ChronoBlindState } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
 
@@ -36,6 +36,8 @@ interface ChronoBlindArenaProps {
   userBalanceGram?: string;
   onOpenDeposit?: (missingAmount?: string) => void;
   socketError?: string | null;
+  hasPlayerB?: boolean;
+  onJoinAsPlayer?: () => void;
 }
 
 export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
@@ -66,6 +68,8 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
   userBalanceGram,
   onOpenDeposit,
   socketError,
+  hasPlayerB = true,
+  onJoinAsPlayer,
 }) => {
   const currentRound = gameData?.currentRound ?? 1;
   const maxRounds = gameData?.maxRounds ?? 3;
@@ -434,10 +438,12 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
           role === 'player' ? (
             <button
               onClick={onReady}
-              disabled={isReady}
+              disabled={isReady || !hasPlayerB}
               className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
                 isReady
                   ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
+                  : !hasPlayerB
+                  ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
                   : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
               }`}
             >
@@ -446,15 +452,38 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
                   <span>READY • WAITING FOR OPPONENT</span>
                 </>
+              ) : !hasPlayerB ? (
+                <span>⏳ IN ATTESA DI UNO SFIDANTE...</span>
               ) : (
                 <span>⚔️ READY TO DUEL</span>
               )}
             </button>
           ) : (
-            <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
-              <span className="text-xs font-chakra font-bold text-cyber-amber">
-                👁️ SPECTATOR VIEW • WAITING FOR DUELISTS TO READY UP
-              </span>
+            <div className="w-full flex flex-col items-center">
+              {!hasPlayerB ? (
+                <div className="w-full flex flex-col space-y-2">
+                  <div className="w-full py-2.5 px-3 bg-black/60 border border-cyber-amber/30 rounded-xl text-center">
+                    <span className="text-xs font-chakra font-bold text-cyber-amber">
+                      👁️ VISTA SPETTATORE • IN ATTESA DI UNO SFIDANTE
+                    </span>
+                  </div>
+                  {onJoinAsPlayer && (
+                    <button
+                      onClick={onJoinAsPlayer}
+                      className="w-full py-3 bg-gradient-to-r from-cyber-amber to-amber-500 text-black font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-[0_0_15px_rgba(255,184,0,0.3)] active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                    >
+                      <Swords className="w-4 h-4" />
+                      <span>PARTECIPA AL DUELLO ({wagerTon} GRAM)</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
+                  <span className="text-xs font-chakra font-bold text-cyber-amber">
+                    👁️ SPECTATOR VIEW • WAITING FOR DUELISTS TO READY UP
+                  </span>
+                </div>
+              )}
             </div>
           )
         ) : roomState === 'BETTING_WINDOW' ? (

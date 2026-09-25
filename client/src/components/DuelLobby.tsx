@@ -374,17 +374,27 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           <span>{t('lobby.spectatePrivate')}</span>
                         </button>
                       ) : (
-                        <button
-                          onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
-                          className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
-                        >
-                          <Swords className="w-3.5 h-3.5" />
-                          <span className="flex items-center space-x-1">
-                            <span>{t('lobby.joinBtn')} ({wagerGram}</span>
-                            <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
-                            <span>)</span>
-                          </span>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
+                            className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
+                          >
+                            <Swords className="w-3.5 h-3.5" />
+                            <span className="flex items-center space-x-1">
+                              <span>{t('lobby.joinBtn')} ({wagerGram}</span>
+                              <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
+                              <span>)</span>
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => onSpectateMatch(m.matchId)}
+                            title={t('lobby.spectateBtn')}
+                            className="py-2 px-3 bg-cyber-border/70 hover:bg-slate-800 text-slate-200 hover:text-cyber-cyan border border-cyber-border hover:border-cyber-cyan/50 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-cyber-cyan" />
+                            <span>{t('lobby.spectateBtn')}</span>
+                          </button>
+                        </>
                       )
                     ) : (
                       <button
