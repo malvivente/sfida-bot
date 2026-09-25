@@ -38,9 +38,10 @@ export function useTelegramViewport(): TelegramViewportState {
     );
 
     // In fullscreen on mobile devices, Telegram renders floating buttons (Close on left, chevron + menu on right)
-    // with a height of ~36px plus device status bar (~20-24px), totaling ~56px.
+    // with a height of ~36px plus device status bar (~24px), totaling ~60-64px.
+    // 78px provides comfortable vertical breathing room, matching the default Telegram titlebar height.
     const rawTop = Math.max(contentTop, safeTop, cssContentTop, cssSafeTop);
-    const topInset = isFullscreen ? Math.max(rawTop, 56) : rawTop;
+    const topInset = isFullscreen ? Math.max(rawTop, 78) : rawTop;
 
     return {
       isFullscreen,

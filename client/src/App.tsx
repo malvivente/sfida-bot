@@ -26,9 +26,30 @@ export const App: React.FC = () => {
     try {
       WebApp.ready();
       WebApp.expand();
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg && !tg.isFullscreen && typeof tg.requestFullscreen === 'function') {
+        tg.requestFullscreen();
+      }
     } catch {
       // Browser preview fallback
     }
+
+    // Automatically request fullscreen on any user click or touch interaction
+    const ensureFullscreen = () => {
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg && !tg.isFullscreen && typeof tg.requestFullscreen === 'function') {
+          tg.requestFullscreen();
+        }
+      } catch {}
+    };
+
+    const t1 = setTimeout(ensureFullscreen, 150);
+    const t2 = setTimeout(ensureFullscreen, 500);
+
+    window.addEventListener('click', ensureFullscreen, { passive: true });
+    window.addEventListener('touchstart', ensureFullscreen, { passive: true });
+    window.addEventListener('pointerdown', ensureFullscreen, { passive: true });
 
     // Parse Telegram startapp parameter or URL query
     const params = new URLSearchParams(window.location.search);
@@ -57,6 +78,14 @@ export const App: React.FC = () => {
     } else if (startParam.startsWith('lead_') || params.get('tab') === 'leaderboard') {
       setActiveTab('leaderboard');
     }
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener('click', ensureFullscreen);
+      window.removeEventListener('touchstart', ensureFullscreen);
+      window.removeEventListener('pointerdown', ensureFullscreen);
+    };
   }, []);
 
   // Floating controls (Language on bottom-left and ToS on bottom-right)

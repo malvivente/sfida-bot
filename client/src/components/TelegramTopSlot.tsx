@@ -26,7 +26,7 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
     return null;
   }
 
-  const height = Math.max(topInset, 56);
+  const height = Math.max(topInset, 78);
 
   return (
     <div
@@ -35,7 +35,7 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
       aria-hidden="true"
     >
       {/* Left zone: Reserved empty space underneath Telegram's floating '✕ Close' button */}
-      <div className="w-20 h-full shrink-0" />
+      <div className="w-24 h-full shrink-0" />
 
       {/* Center zone: Dedicated slot between '✕ Close' and 'v ⋮' buttons */}
       <div
@@ -46,7 +46,7 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
       </div>
 
       {/* Right zone: Reserved empty space underneath Telegram's floating 'v' and '⋮' buttons */}
-      <div className="w-20 h-full shrink-0" />
+      <div className="w-24 h-full shrink-0" />
     </div>
   );
 };
