@@ -12,7 +12,6 @@
     "@ton/core": "^0.63.1",
     "@ton/ton": "^16.2.4",
     "@tonconnect/ui-react": "^2.0.9",
-    "@twa-dev/sdk": "^7.0.0",
     "buffer": "^6.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",

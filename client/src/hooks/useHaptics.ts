@@ -1,8 +1,9 @@
-import WebApp from '@twa-dev/sdk';
+import { getTelegramWebApp } from '../utils/telegram.js';
 
 export function useHaptics() {
   const triggerImpact = (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'medium') => {
     try {
+      const WebApp = getTelegramWebApp();
       if (WebApp && WebApp.HapticFeedback) {
         WebApp.HapticFeedback.impactOccurred(style);
       }
@@ -13,6 +14,7 @@ export function useHaptics() {
 
   const triggerNotification = (type: 'error' | 'success' | 'warning') => {
     try {
+      const WebApp = getTelegramWebApp();
       if (WebApp && WebApp.HapticFeedback) {
         WebApp.HapticFeedback.notificationOccurred(type);
       }
@@ -23,6 +25,7 @@ export function useHaptics() {
 
   const triggerSelection = () => {
     try {
+      const WebApp = getTelegramWebApp();
       if (WebApp && WebApp.HapticFeedback) {
         WebApp.HapticFeedback.selectionChanged();
       }

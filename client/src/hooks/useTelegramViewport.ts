@@ -17,6 +17,7 @@ export function isDesktopPlatform(): boolean {
 
 export function isHorizontalScreen(): boolean {
   if (typeof window === 'undefined') return false;
+  if (window.innerWidth === 0 || window.innerHeight === 0) return false;
   return window.innerWidth > window.innerHeight;
 }
 

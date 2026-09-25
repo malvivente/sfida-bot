@@ -11,6 +11,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      (function() {
+        try {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg) {
+            tg.ready();
+            tg.expand();
+            var platform = (tg.platform || '').toLowerCase();
+            var isDesktop = ['tdesktop', 'macos', 'web', 'weba', 'webk'].indexOf(platform) !== -1 || window.innerWidth > 1024;
+            var isHorizontal = window.innerWidth > window.innerHeight && window.innerHeight > 0;
+            if (!isDesktop && !isHorizontal && !tg.isFullscreen) {
+              if (typeof tg.requestFullscreen === 'function') {
+                try { tg.requestFullscreen(); } catch(e) {}
+              }
+              if (window.Telegram && window.Telegram.WebView && typeof window.Telegram.WebView.postEvent === 'function') {
+                try { window.Telegram.WebView.postEvent('web_app_request_fullscreen'); } catch(e) {}
+              }
+            }
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body class="bg-cyber-bg text-slate-100 font-sans antialiased select-none touch-manipulation overflow-x-hidden min-h-screen">
     <div id="root"></div>

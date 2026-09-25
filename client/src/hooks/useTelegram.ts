@@ -1,4 +1,4 @@
-import WebApp from '@twa-dev/sdk';
+import { getTelegramWebApp } from '../utils/telegram.js';
 
 export interface TelegramUser {
   id?: number;
@@ -15,9 +15,10 @@ export interface TelegramUser {
  */
 export function useTelegram() {
   let user: TelegramUser | undefined;
+  const WebApp = getTelegramWebApp();
 
   try {
-    if (typeof window !== 'undefined' && WebApp?.initDataUnsafe?.user) {
+    if (WebApp?.initDataUnsafe?.user) {
       user = WebApp.initDataUnsafe.user;
     }
   } catch (err) {
