@@ -6,10 +6,13 @@ import { ReferralDashboard } from './pages/ReferralDashboard.js';
 import { Profile } from './pages/Profile.js';
 import { Leaderboard } from './pages/Leaderboard.js';
 import { RulesModal } from './components/RulesModal.js';
+import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { ShieldCheck, HelpCircle } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
+import { useTelegramViewport } from './hooks/useTelegramViewport.js';
 
 export const App: React.FC = () => {
+  const { isFullscreen, topInset } = useTelegramViewport();
   const [activeTab, setActiveTab] = useState<'arena' | 'leaderboard' | 'profile' | 'referrals'>('arena');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepInviteCode, setDeepInviteCode] = useState<string | undefined>(undefined);
@@ -61,7 +64,14 @@ export const App: React.FC = () => {
   const showFloatingButtons = activeTab !== 'arena' || !isInsideMatch;
 
   return (
-    <div className="min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start p-3 sm:p-6 pb-20 select-none font-rajdhani relative">
+    <div
+      className={`min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start px-3 sm:px-6 pb-20 select-none font-rajdhani relative ${
+        isFullscreen ? 'pt-1' : 'pt-3'
+      }`}
+    >
+      {/* Top clearance & Jackpot Slot for Telegram Fullscreen mode */}
+      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset} />
+
       <Navbar
         activeTab={activeTab}
         onTabChange={(tab) => {
