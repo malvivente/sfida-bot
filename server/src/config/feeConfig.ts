@@ -26,11 +26,11 @@ const DEFAULT_CONFIG: FeeConfig = {
   spectatorFeeGram: 0.05,
   duelRakePercent: 0,
   spectatorRakePercent: 0,
-  minWagerGram: 1.0,
+  minWagerGram: 0.1,
   maxWagerGram: 100.0,
   minDepositGram: 0.1,
   minWithdrawGram: 0.1,
-  presetsWagerGram: ['1', '2', '5', '10', '25', '50', '100'],
+  presetsWagerGram: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
 };
 
 class FeeConfigManager {

@@ -140,7 +140,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
       const txResult = await sendDepositTransaction(
         targetDepositAddress,
         depositAmount,
-        `Sfida Deposit: ${friendlyWallet}`
+        'Sfida deposit'
       );
 
       // 3. Confirm to server
@@ -469,12 +469,14 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
       {/* Match History */}
       <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 shadow-xl space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
-            <History className="w-4 h-4 text-cyber-cyan" />
-            <span>{t('profile.recentHistoryTitle')}</span>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5 truncate">
+            <History className="w-4 h-4 text-cyber-cyan shrink-0" />
+            <span className="truncate">{t('profile.recentHistoryTitle')}</span>
           </h3>
-          <span className="text-xs font-chakra text-slate-500">{history.length} duels</span>
+          <span className="text-xs font-chakra text-slate-500 shrink-0 font-medium">
+            {t('profile.duelsCount', { count: history.length })}
+          </span>
         </div>
 
         {history.length === 0 ? (

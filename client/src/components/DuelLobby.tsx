@@ -62,6 +62,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const parsedWager = parseFloat(wagerChoice || '0');
   const isOverMax = parsedWager > GAME_CONFIG.MAX_WAGER;
+  const isBelowMin = parsedWager > 0 && parsedWager < GAME_CONFIG.MIN_WAGER;
   const netWinnerPayout = (parsedWager * 2).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
   const totalRequired = parsedWager > 0 ? (parsedWager + creationFeeGram).toFixed(2) : '0.00';
@@ -91,7 +92,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   };
 
   const handleCreate = async () => {
-    if (parsedWager <= 0 || isOverMax || isSubmitting) return;
+    if (parsedWager < GAME_CONFIG.MIN_WAGER || isOverMax || isSubmitting) return;
     if (isInsufficient) {
       triggerImpact('heavy');
       setShowCreateModal(false);
@@ -639,12 +640,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     inputMode="decimal"
                     value={wagerChoice}
                     onChange={handleCustomInput}
-                    placeholder={`1 - ${GAME_CONFIG.MAX_WAGER}`}
+                    placeholder={`${GAME_CONFIG.MIN_WAGER} - ${GAME_CONFIG.MAX_WAGER}`}
                     className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
                   />
                   <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
                 </div>
 
+                {isBelowMin && (
+                  <p className="text-[11px] text-cyber-pink font-chakra mt-1.5">
+                    {t('lobby.minWagerWarn')}
+                  </p>
+                )}
                 {isOverMax && (
                   <p className="text-[11px] text-cyber-pink font-chakra mt-1.5">
                     {t('lobby.maxWagerWarn', { max: GAME_CONFIG.MAX_WAGER })}
@@ -729,7 +735,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <button
                   type="button"
                   onClick={handleCreate}
-                  disabled={!wagerChoice || parsedWager <= 0 || isOverMax || isSubmitting}
+                  disabled={!wagerChoice || parsedWager < GAME_CONFIG.MIN_WAGER || isOverMax || isSubmitting}
                   className={`flex-1 py-2.5 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${
                     !wagerChoice || parsedWager <= 0 || isOverMax || isSubmitting
                       ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'

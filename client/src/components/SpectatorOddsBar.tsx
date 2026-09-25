@@ -311,7 +311,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 inputMode="decimal"
                 value={betAmount}
                 onChange={handleCustomInput}
-                placeholder={`1 - ${GAME_CONFIG.MAX_WAGER}`}
+                placeholder={`${GAME_CONFIG.MIN_WAGER} - ${GAME_CONFIG.MAX_WAGER}`}
                 className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
               />
               <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />

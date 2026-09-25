@@ -542,7 +542,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
             to: Address.parse(wallet),
             value: toNano(amount),
             bounce: false,
-            body: 'SfidaBot Withdrawal Payout',
+            body: 'Sfida Withdrawal Payout',
           }),
         ],
       });

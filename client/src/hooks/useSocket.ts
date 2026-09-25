@@ -74,6 +74,7 @@ export function useSocket({
   const [playerBReady, setPlayerBReady] = useState(false);
   const [playerAConnected, setPlayerAConnected] = useState(true);
   const [playerBConnected, setPlayerBConnected] = useState(true);
+  const [socketError, setSocketError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!matchId) return;
@@ -276,6 +277,7 @@ export function useSocket({
 
           case 'REMATCH_ACCEPTED':
             setRematchOffer(null);
+            setSocketError(null);
             setMatchWinner(null);
             setMatchWinnerName(null);
             setResolution(null);
@@ -289,7 +291,15 @@ export function useSocket({
 
           case 'REMATCH_DECLINED':
             setRematchOffer(null);
+            setSocketError(null);
             if (msg.message) setFeedMessage(msg.message);
+            break;
+
+          case 'ERROR':
+            if (msg.message) {
+              setSocketError(msg.message);
+              setFeedMessage(msg.message);
+            }
             break;
         }
       } catch (err) {
@@ -334,18 +344,21 @@ export function useSocket({
   }, []);
 
   const requestRematch = useCallback(() => {
+    setSocketError(null);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
     }
   }, []);
 
   const acceptRematch = useCallback(() => {
+    setSocketError(null);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_ACCEPT' }));
     }
   }, []);
 
   const declineRematch = useCallback(() => {
+    setSocketError(null);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_DECLINE' }));
     }
@@ -422,5 +435,7 @@ export function useSocket({
     requestRematch,
     acceptRematch,
     declineRematch,
+    socketError,
+    setSocketError,
   };
 }

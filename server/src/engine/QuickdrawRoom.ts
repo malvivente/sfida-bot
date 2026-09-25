@@ -725,7 +725,7 @@ export class QuickdrawRoom {
     const newWagerNano = this.config.wagerAmountNano * 2n;
     const newWagerTon = (Number(newWagerNano) / 1e9).toFixed(2);
 
-    console.log(`[QuickdrawRoom] Rematch 2X requested by ${proposerName} (${proposerWallet}) for ${newWagerTon} TON`);
+    console.log(`[QuickdrawRoom] Rematch 2X requested by ${proposerName} (${proposerWallet}) for ${newWagerTon} GRAM`);
 
     this.broadcast({
       type: 'REMATCH_OFFERED',
@@ -733,7 +733,7 @@ export class QuickdrawRoom {
       proposerName,
       newWagerTon,
       newWagerNano: newWagerNano.toString(),
-      message: `${proposerName} challenged you to a REMATCH with 2X Wager (${newWagerTon} TON)!`,
+      message: `${proposerName} challenged you to a REMATCH with 2X Wager (${newWagerTon} GRAM)!`,
     });
   }
 
@@ -757,12 +757,12 @@ export class QuickdrawRoom {
     this.forfeitWinner = undefined;
     this.cleanupTimers();
 
-    console.log(`[QuickdrawRoom] Rematch accepted by ${acceptorWallet}. Match #${this.matchId} wager doubled to ${newWagerTon} TON`);
+    console.log(`[QuickdrawRoom] Rematch accepted by ${acceptorWallet}. Match #${this.matchId} wager doubled to ${newWagerTon} GRAM`);
 
     this.broadcast({
       type: 'REMATCH_ACCEPTED',
       newWagerTon,
-      message: `Rematch accepted! Wager doubled to ${newWagerTon} TON. Both players ready up!`,
+      message: `Rematch accepted! Wager doubled to ${newWagerTon} GRAM. Both players ready up!`,
     });
 
     this.broadcastRoomState();

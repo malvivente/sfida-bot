@@ -13,7 +13,11 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { MatchData, UserBalance, FeeConfig, GameType } from '../types/index.js';
 import { Address } from '@ton/ton';
 import { areAddressesEqual } from '../utils/ton.js';
-import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2 } from 'lucide-react';
+import { shareToTelegram } from '../utils/telegram.js';
+import { GAMES_METADATA } from '../config/gamesConfig.js';
+import { useHaptics } from '../hooks/useHaptics.js';
+import { useI18n } from '../i18n/index.js';
 
 interface ArenaProps {
   initialMatchId?: string;
@@ -64,7 +68,9 @@ export const Arena: React.FC<ArenaProps> = ({
     openWalletModal,
     placeSpectatorBetOnChain,
   } = useTonClashContract();
-  const { userId, username, fullName, displayName } = useTelegram();
+  const { userId, username, fullName, displayName, botUsername } = useTelegram();
+  const { triggerImpact } = useHaptics();
+  const { t } = useI18n();
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
   const [isClaimingPayout, setIsClaimingPayout] = useState(false);
@@ -217,7 +223,7 @@ export const Arena: React.FC<ArenaProps> = ({
       const txResult = await sendDepositTransaction(
         targetDepositAddress,
         depositAmount,
-        `Sfida Deposit: ${friendlyWallet}`
+        'Sfida deposit'
       );
 
       const boc = txResult?.boc;
@@ -339,10 +345,12 @@ export const Arena: React.FC<ArenaProps> = ({
   };
 
   // Join match using in-bot balance
-  const handleJoinMatch = async (match: MatchData, inviteCode?: string) => {
+  const handleJoinMatch = async (match: MatchData, inviteCode?: string, isUserClick: boolean = true) => {
     if (!userAddress) {
-      openWalletModal();
-      setCreateError('You must connect your Tonkeeper Wallet to enter this duel.');
+      if (isUserClick) {
+        openWalletModal();
+        setCreateError('You must connect your Tonkeeper Wallet to enter this duel.');
+      }
       return;
     }
 
@@ -461,7 +469,12 @@ export const Arena: React.FC<ArenaProps> = ({
       } else if (!m.playerB && initialRole === 'player') {
         // If private, only join automatically if inviteCode is present
         if (!m.isPrivate || initialInviteCode) {
-          handleJoinMatch(m, initialInviteCode);
+          if (!userAddress) {
+            // TonConnect is still establishing/restoring connection.
+            // Do NOT open wallet modal automatically on deep link resolution!
+            return;
+          }
+          handleJoinMatch(m, initialInviteCode, false);
         } else {
           setActiveMatchId(initialMatchId);
           setRole('spectator');
@@ -645,6 +658,34 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
+  const handleInGameShare = () => {
+    if (!activeMatchId) return;
+    triggerImpact('light');
+    const m = currentActiveMatch;
+    const wager = m ? (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2) : (socketData.activeWagerTon || activeWagerTon || '1.0');
+    const gType = effectiveGameType || 'roulette';
+    const meta = GAMES_METADATA[gType] || GAMES_METADATA.roulette;
+    const isPrivate = m?.isPrivate || false;
+
+    let code = m?.inviteCode || initialInviteCode;
+    if (!code && typeof window !== 'undefined') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+        code = stored[activeMatchId];
+      } catch {}
+    }
+
+    if (isPrivate && code) {
+      const text = `⚔️ Ti ho invitato a un duello PRIVATO su ${meta.title} per ${wager} GRAM! Entra con questo link unico:`;
+      const url = `https://t.me/${botUsername}?start=duel_${activeMatchId}_${code}`;
+      shareToTelegram(url, text);
+    } else {
+      const text = `⚔️ Ti sfido a un duello ${meta.title} per ${wager} GRAM! ${meta.tagline}`;
+      const url = `https://t.me/${botUsername}?start=duel_${activeMatchId}`;
+      shareToTelegram(url, text);
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
       {/* Toast Confirmation Banner */}
@@ -771,7 +812,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {activeMatchId ? (
         <div className="space-y-4">
-          {/* Top Header Controls: Back to Lobby + Cancel Duel if Creator */}
+          {/* Top Header Controls: Back to Lobby + Share + Cancel Duel if Creator */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button
               onClick={() => {
@@ -781,18 +822,30 @@ export const Arena: React.FC<ArenaProps> = ({
               className="flex items-center space-x-1.5 text-xs font-orbitron font-bold text-slate-400 hover:text-cyber-cyan transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>BACK TO LOBBY</span>
+              <span>{t('arena.backToLobby')}</span>
             </button>
 
-            {canCancelCurrentMatch && currentActiveMatch && (
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => handleCancelMatch(currentActiveMatch)}
-                className="flex items-center space-x-1 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                type="button"
+                onClick={handleInGameShare}
+                className="flex items-center space-x-1.5 text-[11px] font-orbitron font-bold text-cyber-cyan hover:text-white bg-cyber-cyan/15 hover:bg-cyber-cyan/30 border border-cyber-cyan/40 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-[0_0_10px_rgba(0,240,255,0.15)]"
+                title="Condividi Stanza"
               >
-                <Trash2 className="w-3.5 h-3.5 text-cyber-pink" />
-                <span>CANCEL & REFUND</span>
+                <Share2 className="w-3.5 h-3.5 text-cyber-cyan" />
+                <span>{t('arena.shareDuel')}</span>
               </button>
-            )}
+
+              {canCancelCurrentMatch && currentActiveMatch && (
+                <button
+                  onClick={() => handleCancelMatch(currentActiveMatch)}
+                  className="flex items-center space-x-1 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-cyber-pink" />
+                  <span>CANCEL & REFUND</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Dynamic Game Arenas */}
@@ -831,6 +884,12 @@ export const Arena: React.FC<ArenaProps> = ({
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
               userAddress={userAddress}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
             />
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
@@ -867,6 +926,12 @@ export const Arena: React.FC<ArenaProps> = ({
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
               userAddress={userAddress}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
             />
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
@@ -902,6 +967,12 @@ export const Arena: React.FC<ArenaProps> = ({
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
               userAddress={userAddress}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
             />
           ) : (
             <RussianRouletteArena
@@ -937,6 +1008,12 @@ export const Arena: React.FC<ArenaProps> = ({
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
               userAddress={userAddress}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
             />
           )}
 

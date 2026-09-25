@@ -727,7 +727,7 @@ export abstract class BaseGameRoom {
       proposerName,
       newWagerTon,
       newWagerNano: newWagerNano.toString(),
-      message: `${proposerName} challenged you to a REMATCH with 2X Wager (${newWagerTon} TON)!`,
+      message: `${proposerName} challenged you to a REMATCH with 2X Wager (${newWagerTon} GRAM)!`,
     });
   }
 
@@ -843,7 +843,7 @@ export abstract class BaseGameRoom {
     this.broadcast({
       type: 'REMATCH_ACCEPTED',
       newWagerTon,
-      message: `Rematch accepted! Wager doubled to ${newWagerTon} TON. Both players ready up!`,
+      message: `Rematch accepted! Wager doubled to ${newWagerTon} GRAM. Both players ready up!`,
     });
     this.broadcastRoomState();
   }

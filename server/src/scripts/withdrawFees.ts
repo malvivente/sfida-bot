@@ -87,7 +87,7 @@ async function main() {
           to: Address.parse(recipient),
           value: toNano(treasury.claimableFeesGram),
           bounce: false,
-          body: 'SfidaBot Platform Fee Withdrawal',
+          body: 'Sfida Platform Fee Withdrawal',
         }),
       ],
     });

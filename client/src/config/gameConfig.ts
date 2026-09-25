@@ -8,12 +8,12 @@ export const GAME_CONFIG = {
   CURRENCY_TICKER: 'GRAM',
 
   // Wager & stake limits
-  MIN_WAGER: 1.0, // Minimum wager/bet: 1 GRAM
+  MIN_WAGER: 0.1, // Minimum wager/bet: 0.1 GRAM
   MAX_WAGER: 100, // Maximum wager limit
 
   // Preset quick-selection amounts for duels and spectator bets
-  PRESET_DUEL_WAGERS: ['1', '2', '5', '10', '25', '50', '100'],
-  PRESET_SPECTATOR_BETS: ['1', '2', '5', '10', '25', '50', '100'],
+  PRESET_DUEL_WAGERS: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
+  PRESET_SPECTATOR_BETS: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
 
   // Platform economics
   DUEL_WINNER_SHARE: 1.0, // 100% to winner (0% platform rake)

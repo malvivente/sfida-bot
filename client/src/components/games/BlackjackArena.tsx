@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, RotateCcw, Loader2, Sparkles, Layers, Clock } from 'lucide-react';
+import { Trophy, RotateCcw, Loader2, Sparkles, Layers, Clock, Flame, ArrowDownLeft } from 'lucide-react';
 import { BlackjackState, Card } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
 
@@ -34,6 +34,9 @@ interface BlackjackArenaProps {
   opponentConnected?: boolean;
   userSide?: 'A' | 'B';
   userAddress?: string;
+  userBalanceGram?: string;
+  onOpenDeposit?: (missingAmount?: string) => void;
+  socketError?: string | null;
 }
 
 const renderSuitIcon = (suit: string) => {
@@ -103,6 +106,9 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   onDeclineRematch,
   isRematchProposer = false,
   opponentConnected = true,
+  userBalanceGram,
+  onOpenDeposit,
+  socketError,
 }) => {
   const deckRemaining = gameData?.deckRemaining ?? 48;
   const handA = gameData?.handA ?? [];
@@ -118,9 +124,14 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   const bustOddsB = gameData?.bustOddsPercentB ?? 0;
   const lastAction = gameData?.lastAction;
 
-  const winnerPayoutTon = (parseFloat(wagerTon || '1') * 1.92).toFixed(2);
+  const winnerPayoutTon = (parseFloat(wagerTon || '1') * 2.0).toFixed(2);
   const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
   const activeBustOdds = currentTurn === 'A' ? bustOddsA : bustOddsB;
+
+  const currentBal = parseFloat(userBalanceGram || '0');
+  const rematchWager = rematchOffer ? parseFloat(rematchOffer.newWagerTon || '0') : 0;
+  const hasEnoughForRematch = currentBal >= rematchWager;
+  const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
   return (
     <div className="w-full flex flex-col items-center justify-between p-3.5 sm:p-4 bg-cyber-card/90 border border-cyber-cyan/40 rounded-3xl backdrop-blur-xl shadow-[0_0_40px_rgba(0,240,255,0.15)] relative overflow-hidden min-h-[540px]">
@@ -299,7 +310,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
                     <span>REMATCH OFFER SENT (2X)</span>
                   </span>
-                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} TON</span>
+                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} GRAM</span>
                 </div>
                 <span className="text-[11px] text-slate-300 font-chakra">
                   Waiting for opponent to accept the 2X challenge...
@@ -318,12 +329,36 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               <div className="w-full p-2.5 rounded-xl bg-cyber-pink/25 border border-cyber-pink flex flex-col space-y-2 mb-2 animate-pulse">
                 <span className="text-xs font-orbitron font-bold text-white">🔥 2X REMATCH OFFER!</span>
                 <span className="text-[11px] text-slate-200 font-chakra">
-                  {rematchOffer.proposerName} challenges you to a 2X Rematch for {rematchOffer.newWagerTon} TON!
+                  {rematchOffer.proposerName} challenges you to a 2X Rematch for {rematchOffer.newWagerTon} GRAM!
                 </span>
-                <div className="flex space-x-2 pt-1">
-                  <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
-                  <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron">ACCEPT 2X</button>
-                </div>
+                {!hasEnoughForRematch ? (
+                  <div className="flex flex-col space-y-1.5 pt-1">
+                    <div className="p-2 rounded-lg bg-black/70 border border-cyber-pink/50 text-[10px] text-cyber-pink font-chakra flex items-center justify-between">
+                      <span>Saldo: {currentBal.toFixed(2)} GRAM</span>
+                      <span className="font-bold">Mancano: {missingForRematch} GRAM</span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
+                      <button
+                        onClick={() => onOpenDeposit?.(missingForRematch)}
+                        className="flex-1 py-1.5 rounded-lg bg-cyber-cyan text-cyber-bg text-xs font-bold font-orbitron flex items-center justify-center space-x-1 shadow-neon-cyan hover:brightness-110 active:scale-95"
+                      >
+                        <ArrowDownLeft className="w-3.5 h-3.5" />
+                        <span>DEPOSITA ({missingForRematch})</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2 pt-1">
+                    <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
+                    <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron shadow-neon-pink hover:brightness-110 active:scale-95">ACCEPT 2X</button>
+                  </div>
+                )}
+                {socketError && (
+                  <div className="p-1.5 rounded-lg bg-cyber-pink/20 border border-cyber-pink/60 text-[10px] text-cyber-pink font-chakra text-center">
+                    {socketError}
+                  </div>
+                )}
               </div>
             )}
 
@@ -347,7 +382,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             {isWinner && (
               <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
                 <span className="text-xs font-orbitron font-bold text-cyber-green">
-                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)
+                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} GRAM)
                 </span>
               </div>
             )}

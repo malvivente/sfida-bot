@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff, Trash2, ArrowLeft, Loader2, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff, Trash2, ArrowLeft, Loader2, CheckCircle2, RotateCcw, ArrowDownLeft } from 'lucide-react';
 import { RoomState } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
@@ -38,6 +38,9 @@ interface QuickdrawCanvasProps {
   onDeclineRematch?: () => void;
   isRematchProposer?: boolean;
   opponentConnected?: boolean;
+  userBalanceGram?: string;
+  onOpenDeposit?: (missingAmount?: string) => void;
+  socketError?: string | null;
 }
 
 export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
@@ -73,6 +76,9 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   onDeclineRematch,
   isRematchProposer = false,
   opponentConnected = true,
+  userBalanceGram,
+  onOpenDeposit,
+  socketError,
 }) => {
   const { triggerImpact, triggerNotification } = useHaptics();
   const isHoldingPrematurely = useRef(false);
@@ -120,7 +126,11 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
   const isMisfire = (lastSignal === 'MISFIRE!' || feedMessage.toLowerCase().includes('false start') || feedMessage.toLowerCase().includes('misfire')) && (isRoundEnd || roomState === 'FORFEITED');
 
   const wagerNum = parseFloat(wagerTon) || 1.0;
-  const winnerPayoutTon = (wagerNum * 2 * 0.96).toFixed(2);
+  const winnerPayoutTon = (wagerNum * 2.0).toFixed(2);
+  const currentBal = parseFloat(userBalanceGram || '0');
+  const requiredBal = rematchOffer ? parseFloat(rematchOffer.newWagerTon || '0') : 0;
+  const hasEnoughForRematch = currentBal >= requiredBal;
+  const missingForRematch = Math.max(0, requiredBal - currentBal).toFixed(2);
 
   const winnerDisplayName =
     matchWinnerName && matchWinnerName !== 'Giocatore' && matchWinnerName !== 'Opponent' && matchWinnerName !== 'Player'
@@ -360,7 +370,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
             {/* Pot Breakdown Box */}
             <div className="my-3 px-4 py-2.5 rounded-xl bg-cyber-bg/90 border border-cyber-cyan/40 flex items-center justify-between w-full max-w-xs shadow-inner">
-              <span className="text-xs text-slate-400 font-chakra">Winner Prize (96%):</span>
+              <span className="text-xs text-slate-400 font-chakra">Winner Prize:</span>
               <span className="text-base font-chakra font-black text-cyber-cyan flex items-center space-x-1.5">
                 <span>{winnerPayoutTon}</span>
                 <GramIcon className="w-4 h-4 text-cyber-cyan inline" />
@@ -375,7 +385,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
                     <span>REMATCH OFFER SENT (2X)</span>
                   </span>
-                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} TON</span>
+                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} GRAM</span>
                 </div>
                 <span className="text-xs text-slate-300 font-chakra text-center">
                   Waiting for opponent to accept the 2X challenge...
@@ -397,22 +407,51 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                 </span>
                 <span className="text-xs text-slate-200 font-chakra text-center">
                   <strong>{rematchOffer.proposerName}</strong> challenged you to a 2X Rematch for{' '}
-                  <strong className="text-cyber-cyan">{rematchOffer.newWagerTon} TON</strong>!
+                  <strong className="text-cyber-cyan">{rematchOffer.newWagerTon} GRAM</strong>!
                 </span>
-                <div className="flex space-x-2 w-full pt-1">
-                  <button
-                    onClick={onDeclineRematch}
-                    className="flex-1 py-2 rounded-xl bg-cyber-bg/80 border border-cyber-border text-xs font-chakra font-bold text-slate-300 hover:text-white"
-                  >
-                    DECLINE
-                  </button>
-                  <button
-                    onClick={onAcceptRematch}
-                    className="flex-1 py-2 rounded-xl bg-cyber-pink text-white text-xs font-orbitron font-bold hover:brightness-110 shadow-neon-pink active:scale-95"
-                  >
-                    ACCEPT 2X
-                  </button>
-                </div>
+                {!hasEnoughForRematch ? (
+                  <div className="flex flex-col space-y-1.5 w-full pt-1">
+                    <div className="p-2 rounded-lg bg-black/70 border border-cyber-pink/50 text-[10px] text-cyber-pink font-chakra flex items-center justify-between">
+                      <span>Saldo: {currentBal.toFixed(2)} GRAM</span>
+                      <span className="font-bold">Mancano: {missingForRematch} GRAM</span>
+                    </div>
+                    <div className="flex space-x-2 w-full">
+                      <button
+                        onClick={onDeclineRematch}
+                        className="flex-1 py-2 rounded-xl bg-cyber-bg/80 border border-cyber-border text-xs font-chakra font-bold text-slate-300 hover:text-white"
+                      >
+                        DECLINE
+                      </button>
+                      <button
+                        onClick={() => onOpenDeposit?.(missingForRematch)}
+                        className="flex-1 py-2 rounded-xl bg-cyber-cyan text-cyber-bg text-xs font-orbitron font-bold flex items-center justify-center space-x-1 shadow-neon-cyan hover:brightness-110 active:scale-95"
+                      >
+                        <ArrowDownLeft className="w-3.5 h-3.5" />
+                        <span>DEPOSITA ({missingForRematch})</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2 w-full pt-1">
+                    <button
+                      onClick={onDeclineRematch}
+                      className="flex-1 py-2 rounded-xl bg-cyber-bg/80 border border-cyber-border text-xs font-chakra font-bold text-slate-300 hover:text-white"
+                    >
+                      DECLINE
+                    </button>
+                    <button
+                      onClick={onAcceptRematch}
+                      className="flex-1 py-2 rounded-xl bg-cyber-pink text-white text-xs font-orbitron font-bold hover:brightness-110 shadow-neon-pink active:scale-95"
+                    >
+                      ACCEPT 2X
+                    </button>
+                  </div>
+                )}
+                {socketError && (
+                  <div className="p-1.5 rounded-lg bg-cyber-pink/20 border border-cyber-pink/60 text-[10px] text-cyber-pink font-chakra text-center w-full">
+                    {socketError}
+                  </div>
+                )}
               </div>
             )}
 
@@ -437,7 +476,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             {isWinner ? (
               <div className="w-full max-w-xs py-3 rounded-xl bg-cyber-green/15 border border-cyber-green/50 text-cyber-green font-orbitron font-bold text-xs flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(0,255,102,0.2)] mb-1">
                 <CheckCircle2 className="w-4 h-4 text-cyber-green" />
-                <span>PRIZE AUTO-CREDITED (+{winnerPayoutTon} TON)</span>
+                <span>PRIZE AUTO-CREDITED (+{winnerPayoutTon} GRAM)</span>
               </div>
             ) : (
               <p className="text-xs text-slate-400 font-rajdhani max-w-xs mb-1">
