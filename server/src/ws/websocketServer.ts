@@ -88,10 +88,14 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                 break;
               }
 
-              if (!room || (room.state !== 'LOBBY' && room.state !== 'BETTING_WINDOW')) {
+              if (!room || room.state !== 'BETTING_WINDOW') {
                 ws.send(JSON.stringify({
                   type: 'BET_ERROR',
-                  message: 'Betting is closed for this match.',
+                  message: !room
+                    ? 'Match not found.'
+                    : room.state === 'LOBBY'
+                    ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 30s).'
+                    : 'Le scommesse per questa partita sono chiuse.',
                 }));
                 break;
               }

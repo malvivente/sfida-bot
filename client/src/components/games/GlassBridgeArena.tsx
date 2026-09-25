@@ -433,7 +433,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           <div className="w-full py-3 px-4 rounded-xl bg-black/60 border border-cyber-amber/60 text-center flex items-center justify-center space-x-2">
             <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
             <span className="text-xs font-chakra font-bold text-cyber-amber">
-              PREPARING GLASS BRIDGE • BETTING ACTIVE ({countdownSeconds ?? 5}s)
+              PREPARING GLASS BRIDGE • BETTING ACTIVE ({countdownSeconds ?? 30}s)
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (

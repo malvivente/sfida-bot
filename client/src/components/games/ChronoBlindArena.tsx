@@ -213,7 +213,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               PARI-MUTUEL BETTING OPEN
             </span>
             <span className="text-3xl font-mono font-black text-white">
-              00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '05'}
+              00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
             </span>
             <span className="text-[11px] text-slate-400 font-rajdhani">
               Both duelists confirmed. Round 1 countdown starts at 00:00!
@@ -490,7 +490,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
           <div className="w-full py-3 px-4 rounded-xl bg-black/60 border border-cyber-amber/60 text-center flex items-center justify-center space-x-2">
             <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
             <span className="text-xs font-chakra font-bold text-cyber-amber">
-              PREPARING CHRONO TIMER • BETTING ACTIVE ({countdownSeconds ?? 5}s)
+              PREPARING CHRONO TIMER • BETTING ACTIVE ({countdownSeconds ?? 30}s)
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (

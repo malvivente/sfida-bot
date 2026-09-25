@@ -342,15 +342,14 @@ export class QuickdrawRoom {
     }
 
     this.state = 'BETTING_WINDOW';
-    const duration = this.config.bettingWindowSeconds || (this.spectators.size > 0 ? 20 : 5);
+    const dynamicConfig = feeConfig.getConfig();
+    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 30;
     let countdown = duration;
 
     this.broadcast({
       type: 'BETTING_WINDOW_OPEN',
       durationSeconds: duration,
-      message: this.spectators.size > 0
-        ? 'Spectator Pari-Mutuel betting window is open! 20 seconds to place wagers.'
-        : 'Both fighters ready! Duel starts in 5 seconds...',
+      message: `Both fighters ready! Spectator betting window is open for ${duration} seconds.`,
     });
 
     this.bettingTimer = setInterval(() => {
@@ -660,6 +659,11 @@ export class QuickdrawRoom {
 
   // Update spectator betting pool
   public registerSpectatorBet(target: 'A' | 'B', amountNano: bigint, bettorWallet?: string) {
+    if (this.state !== 'BETTING_WINDOW') {
+      console.warn(`[QuickdrawRoom] Match #${this.matchId} is in state '${this.state}'. Spectator betting is only allowed during BETTING_WINDOW.`);
+      return;
+    }
+
     if (
       bettorWallet &&
       (this.isSameWallet(bettorWallet, this.playerA.walletAddress) ||

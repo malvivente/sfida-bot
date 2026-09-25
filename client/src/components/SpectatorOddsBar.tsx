@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Coins, TrendingUp, Swords, Lock } from 'lucide-react';
+import { Coins, TrendingUp, Swords, Lock, Clock } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { useLanguage } from '../i18n/index.js';
 
 interface SpectatorOddsBarProps {
   oddsA: number;
@@ -15,6 +16,7 @@ interface SpectatorOddsBarProps {
   playerAName?: string;
   playerBName?: string;
   roomState?: string;
+  countdownSeconds?: number | null;
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -28,7 +30,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   playerAName = 'PLAYER A',
   playerBName = 'PLAYER B',
   roomState,
+  countdownSeconds,
 }) => {
+  const { t } = useLanguage();
   const { triggerImpact } = useHaptics();
   const [selectedSide, setSelectedSide] = useState<'A' | 'B'>('A');
   const [betAmount, setBetAmount] = useState<string>('1');
@@ -64,7 +68,17 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
     onBet(selectedSide, betAmount);
   };
 
-  const isBettingPhase = roomState === 'BETTING_WINDOW' || roomState === 'LOBBY';
+  const isBettingWindow = roomState === 'BETTING_WINDOW';
+  const isLobby = roomState === 'LOBBY';
+  const isBettingClosed = !isBettingWindow && !isLobby;
+  const isPoolLocked = isLobby || isBettingWindow;
+
+  const countdownFormatted =
+    countdownSeconds !== null && countdownSeconds !== undefined
+      ? countdownSeconds < 10
+        ? `0${countdownSeconds}`
+        : `${countdownSeconds}`
+      : '30';
 
   return (
     <div className="w-full max-w-md mx-auto bg-cyber-card border border-cyber-border rounded-2xl p-4 shadow-xl mt-4 font-rajdhani">
@@ -73,21 +87,26 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         <div className="flex items-center space-x-2">
           <TrendingUp className="w-4 h-4 text-cyber-cyan" />
           <span className="text-xs font-orbitron font-bold text-slate-200 tracking-wider">
-            {isPlayer ? 'PARI-MUTUEL ODDS (SPECTATORS)' : 'SPECTATOR TOTALIZER BETTING'}
+            {isPlayer ? 'PARI-MUTUEL ODDS (SPECTATORS)' : t('spectator.title')}
           </span>
         </div>
         {!isPlayer ? (
-          <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-            {isBettingPhase ? (
-              <span className="text-slate-400 flex items-center space-x-1">
-                <Lock className="w-3 h-3 text-cyber-cyan" />
-                <span>Pool: Dynamic</span>
-              </span>
+          <div>
+            {isBettingWindow ? (
+              <div className="flex items-center space-x-1.5 text-xs font-chakra font-bold text-cyber-amber bg-cyber-amber/15 px-2.5 py-0.5 rounded-lg border border-cyber-amber/40 animate-pulse">
+                <Clock className="w-3.5 h-3.5 text-cyber-amber animate-spin" />
+                <span>00:{countdownFormatted}</span>
+              </div>
+            ) : isLobby ? (
+              <div className="flex items-center space-x-1.5 text-xs font-chakra font-bold text-slate-400 bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
+                <Lock className="w-3 h-3 text-slate-400" />
+                <span>{t('spectator.waitingReady')}</span>
+              </div>
             ) : (
-              <>
+              <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
                 <span>Est. payout: ~+{estimatedPayout}</span>
                 <GramIcon className="w-3 h-3 text-cyber-green" />
-              </>
+              </div>
             )}
           </div>
         ) : (
@@ -107,7 +126,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerAName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isBettingPhase ? (
+                {isPoolLocked ? (
                   <span className="text-slate-500 font-mono">🔒 --</span>
                 ) : (
                   <>
@@ -118,7 +137,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isBettingPhase ? (
+              {isPoolLocked ? (
                 <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
                   <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
                   <span>LOCKED</span>
@@ -145,7 +164,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerAName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isBettingPhase ? (
+                {isPoolLocked ? (
                   <span className="text-slate-500 font-mono">🔒 --</span>
                 ) : (
                   <>
@@ -156,7 +175,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isBettingPhase ? (
+              {isPoolLocked ? (
                 <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
                   <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
                   <span>LOCKED</span>
@@ -176,7 +195,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerBName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isBettingPhase ? (
+                {isPoolLocked ? (
                   <span className="text-slate-500 font-mono">🔒 --</span>
                 ) : (
                   <>
@@ -187,7 +206,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isBettingPhase ? (
+              {isPoolLocked ? (
                 <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
                   <Lock className="w-3.5 h-3.5 text-cyber-pink" />
                   <span>LOCKED</span>
@@ -214,7 +233,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 {playerBName}
               </span>
               <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isBettingPhase ? (
+                {isPoolLocked ? (
                   <span className="text-slate-500 font-mono">🔒 --</span>
                 ) : (
                   <>
@@ -225,7 +244,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </span>
             </div>
             <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isBettingPhase ? (
+              {isPoolLocked ? (
                 <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
                   <Lock className="w-3.5 h-3.5 text-cyber-pink" />
                   <span>LOCKED</span>
@@ -239,13 +258,19 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       </div>
 
       {/* Pool Distribution Bar */}
-      {isBettingPhase ? (
-        <div className="w-full h-5 bg-cyber-bg/90 rounded-full overflow-hidden flex items-center justify-center mb-3 border border-cyber-border/70 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyber-cyan/15 via-purple-500/10 to-cyber-pink/15 opacity-60 animate-pulse" />
-          <div className="relative z-10 flex items-center space-x-1.5 text-[10px] font-chakra font-bold text-slate-400 uppercase tracking-wider">
-            <Lock className="w-3 h-3 text-cyber-cyan" />
-            <span>ODDS & SHARES REVEALED AT DUEL START</span>
-          </div>
+      {isLobby ? (
+        <div className="w-full py-2 bg-cyber-bg/90 rounded-xl flex items-center justify-center mb-3 border border-cyber-border/70 relative px-2.5 text-center">
+          <span className="text-[10px] font-chakra font-bold text-slate-400 flex items-center space-x-1.5">
+            <Lock className="w-3 h-3 text-cyber-cyan shrink-0" />
+            <span>{t('spectator.waitingReadyNotice')}</span>
+          </span>
+        </div>
+      ) : isBettingWindow ? (
+        <div className="w-full py-2 bg-cyber-amber/10 rounded-xl flex items-center justify-center mb-3 border border-cyber-amber/50 relative px-2.5 text-center animate-pulse">
+          <span className="text-[11px] font-chakra font-extrabold text-cyber-amber flex items-center space-x-1.5 uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('spectator.bettingWindowActive')}: 00:{countdownFormatted}</span>
+          </span>
         </div>
       ) : (
         <div className="mb-3 space-y-1">
@@ -333,41 +358,53 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           </div>
 
           {/* Place Bet Action Button */}
-          <button
-            onClick={handlePlaceBet}
-            disabled={disabled || !betAmount || isBelowMin || isOverMax}
-            className={`w-full py-3 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
-              disabled || !betAmount || isBelowMin || isOverMax
-                ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
-                : selectedSide === 'A'
-                ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan'
-                : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink'
-            }`}
-          >
-            <div className="flex items-center justify-center space-x-2">
-              <Coins className="w-4 h-4 shrink-0" />
-              <span>BET</span>
-              <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
-                <span>{betAmount || '0'}</span>
-                <GramIcon className="w-3.5 h-3.5" />
-              </span>
-              <span>ON {selectedSide === 'A' ? playerAName : playerBName}</span>
-            </div>
-            <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90">
-              Total: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)
-            </div>
-            {isBettingPhase ? (
+          {isLobby ? (
+            <button
+              disabled={true}
+              className="w-full py-3.5 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs bg-cyber-border/30 border border-cyber-border/60 text-slate-400 cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              <Lock className="w-4 h-4 text-slate-400" />
+              <span>{t('spectator.btnWaitingReady')}</span>
+            </button>
+          ) : isBettingClosed ? (
+            <button
+              disabled={true}
+              className="w-full py-3.5 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs bg-cyber-border/20 border border-cyber-border/40 text-slate-500 cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              <Lock className="w-4 h-4 text-slate-500" />
+              <span>{t('spectator.btnBettingClosed')}</span>
+            </button>
+          ) : (
+            <button
+              onClick={handlePlaceBet}
+              disabled={disabled || !betAmount || isBelowMin || isOverMax}
+              className={`w-full py-3.5 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
+                disabled || !betAmount || isBelowMin || isOverMax
+                  ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
+                  : selectedSide === 'A'
+                  ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan animate-pulse'
+                  : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink animate-pulse'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Coins className="w-4 h-4 shrink-0" />
+                <span>{t('spectator.bet')}</span>
+                <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
+                  <span>{betAmount || '0'}</span>
+                  <GramIcon className="w-3.5 h-3.5" />
+                </span>
+                <span>{t('spectator.on')} {selectedSide === 'A' ? playerAName : playerBName}</span>
+              </div>
+              <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90 flex items-center justify-center space-x-1">
+                <span>Totale: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)</span>
+                <span>•</span>
+                <span className="font-bold text-cyber-amber">00:{countdownFormatted}</span>
+              </div>
               <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
                 <span>Pari-Mutuel Pool (100% payout, 0% rake)</span>
               </div>
-            ) : (
-              <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-                <span>Est. payout:</span>
-                <span className="font-extrabold text-xs">+{estimatedPayout}</span>
-                <GramIcon className="w-3 h-3" />
-              </div>
-            )}
-          </button>
+            </button>
+          )}
         </>
       )}
     </div>

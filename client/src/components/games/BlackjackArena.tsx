@@ -177,7 +177,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               PARI-MUTUEL BETTING OPEN
             </span>
             <span className="text-3xl font-mono font-black text-white">
-              00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '05'}
+              00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
             </span>
             <span className="text-[11px] text-slate-400 font-rajdhani">
               Cards will be dealt face-up once countdown reaches 00:00!
@@ -461,7 +461,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
           <div className="w-full py-3 px-4 rounded-xl bg-black/60 border border-cyber-amber/60 text-center flex items-center justify-center space-x-2">
             <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
             <span className="text-xs font-chakra font-bold text-cyber-amber">
-              DEALING FACE-UP SHOE • BETTING WINDOW ACTIVE ({countdownSeconds ?? 5}s)
+              DEALING FACE-UP SHOE • BETTING WINDOW ACTIVE ({countdownSeconds ?? 30}s)
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (

@@ -337,7 +337,7 @@ export abstract class BaseGameRoom {
     }
   }
 
-  // Spectator Pari-Mutuel Window (5s if no spectators, 20s if spectators present)
+  // Spectator Pari-Mutuel Window (configurable, default 30s when both players are ready)
   public startBettingWindow() {
     if (this.bettingTimer) {
       clearInterval(this.bettingTimer);
@@ -345,15 +345,14 @@ export abstract class BaseGameRoom {
     }
 
     this.state = 'BETTING_WINDOW';
-    const duration = this.config.bettingWindowSeconds || (this.spectators.size > 0 ? 20 : 5);
+    const dynamicConfig = feeConfig.getConfig();
+    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 30;
     let countdown = duration;
 
     this.broadcast({
       type: 'BETTING_WINDOW_OPEN',
       durationSeconds: duration,
-      message: this.spectators.size > 0
-        ? 'Spectator Pari-Mutuel betting window is open! 20 seconds to place wagers.'
-        : 'Both fighters ready! Duel starts in 5 seconds...',
+      message: `Entrambi i duellanti sono pronti! Finestra scommesse aperta per ${duration} secondi.`,
     });
 
     this.bettingTimer = setInterval(() => {
@@ -537,6 +536,11 @@ export abstract class BaseGameRoom {
     telegramId?: string,
     feePaidGram: number = 0.05
   ) {
+    if (this.state !== 'BETTING_WINDOW') {
+      console.warn(`[BaseGameRoom] Match #${this.matchId} is in state '${this.state}'. Spectator betting is only allowed during BETTING_WINDOW.`);
+      return;
+    }
+
     if (
       bettorWallet &&
       (this.isSameWallet(bettorWallet, this.playerA.walletAddress) ||

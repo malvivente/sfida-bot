@@ -17,6 +17,7 @@ export interface FeeConfig {
   minDepositGram: number;
   minWithdrawGram: number;
   presetsWagerGram: string[];
+  bettingWindowSeconds: number;
 }
 
 const DEFAULT_CONFIG: FeeConfig = {
@@ -31,6 +32,7 @@ const DEFAULT_CONFIG: FeeConfig = {
   minDepositGram: 0.1,
   minWithdrawGram: 0.1,
   presetsWagerGram: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
+  bettingWindowSeconds: process.env.BETTING_WINDOW_SECONDS ? parseInt(process.env.BETTING_WINDOW_SECONDS, 10) : 30,
 };
 
 class FeeConfigManager {

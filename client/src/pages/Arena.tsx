@@ -1049,9 +1049,10 @@ export const Arena: React.FC<ArenaProps> = ({
             playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
             playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Player B')}
             onBet={handleSpectatorBet}
-            disabled={socketData.roomState === 'MATCH_SETTLED'}
+            disabled={socketData.roomState !== 'BETTING_WINDOW'}
             isPlayer={isMatchPlayer}
             roomState={socketData.roomState}
+            countdownSeconds={socketData.countdownSeconds}
           />
         </div>
       ) : (

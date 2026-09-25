@@ -22,4 +22,5 @@ export const GAME_CONFIG = {
   JOIN_FEE_GRAM: 0.05, // 0.05 GRAM player B participation fee
   SPECTATOR_FEE_GRAM: 0.05, // 0.05 GRAM spectator betting participation fee
   GAS_MICRO_FEE: 0.05,
+  DEFAULT_BETTING_WINDOW_SECONDS: 30, // 30 seconds spectator betting window when duelists ready up
 };

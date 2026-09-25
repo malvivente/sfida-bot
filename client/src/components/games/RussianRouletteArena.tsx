@@ -217,7 +217,7 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
                   <span>PARI-MUTUEL BETTING WINDOW</span>
                 </span>
                 <span className="text-2xl font-mono font-black text-white">
-                  00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '05'}
+                  00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
                 </span>
                 <span className="text-[10px] font-rajdhani text-slate-400">
                   Both duelists confirmed. Round 1 initiating!
@@ -431,7 +431,7 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
           <div className="w-full py-3 px-4 rounded-xl bg-black/60 border border-cyber-amber/60 text-center flex items-center justify-center space-x-2">
             <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
             <span className="text-xs font-chakra font-bold text-cyber-amber">
-              PREPARING REVOLVER • BETTING WINDOW ACTIVE ({countdownSeconds ?? 5}s)
+              PREPARING REVOLVER • BETTING WINDOW ACTIVE ({countdownSeconds ?? 30}s)
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (

@@ -73,8 +73,15 @@ export const translations: Translations = {
   'spectator.bet': { it: 'PUNTA', en: 'BET' },
   'spectator.on': { it: 'SU', en: 'ON' },
   'spectator.feeNotice': { it: '+0.05 GRAM quota scommessa', en: '+0.05 GRAM bet entry fee' },
-  'spectator.minBetNotice': { it: 'Puntata minima: 1 GRAM', en: 'Minimum bet: 1 GRAM' },
+  'spectator.minBetNotice': { it: 'Puntata minima: 0.1 GRAM', en: 'Minimum bet: 0.1 GRAM' },
   'spectator.isPlayerNotice': { it: 'Sei un duellante in questa partita: le scommesse spettatori sono disabilitate per i combattenti.', en: 'You are a duelist in this match: spectator betting is disabled for combatants.' },
+  'spectator.waitingReady': { it: 'IN ATTESA DEI DUELLANTI', en: 'WAITING FOR DUELISTS' },
+  'spectator.waitingReadyNotice': { it: 'Le scommesse apriranno per 30s quando entrambi i duellanti saranno pronti', en: '30s betting window unlocks once both duelists are ready' },
+  'spectator.bettingWindowActive': { it: 'FINESTRA SCOMMESSE ATTIVA', en: 'BETTING WINDOW ACTIVE' },
+  'spectator.bettingClosed': { it: 'SCOMMESSE CHIUSE', en: 'BETTING CLOSED' },
+  'spectator.bettingClosedNotice': { it: 'Scommesse chiuse • Duello in corso', en: 'Betting closed • Duel in progress' },
+  'spectator.btnWaitingReady': { it: 'ATTESA CHE I DUELLANTI SIANO PRONTI', en: 'WAITING FOR DUELISTS TO READY UP' },
+  'spectator.btnBettingClosed': { it: 'SCOMMESSE CHIUSE (DUELLO IN CORSO)', en: 'BETTING CLOSED (DUEL IN PROGRESS)' },
 
   // Lobby
   'lobby.liveDuels': { it: 'DUELLI LIVE 1V1', en: '1V1 LIVE DUELS' },
@@ -269,3 +276,4 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 };
 
 export const useI18n = () => useContext(LanguageContext);
+export const useLanguage = useI18n;

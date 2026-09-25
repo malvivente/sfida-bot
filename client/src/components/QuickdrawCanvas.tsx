@@ -225,7 +225,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
                 PARI-MUTUEL BETTING OPEN
               </span>
               <span className="text-3xl font-mono font-extrabold text-white mt-1">
-                00:{countdownSeconds !== null ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '05'}
+                00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
               </span>
 
               {isCreator && onCancelMatch && (
