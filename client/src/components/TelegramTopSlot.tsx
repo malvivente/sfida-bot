@@ -40,7 +40,7 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
       {/* Center zone: Dedicated slot between '✕ Close' and 'v ⋮' buttons */}
       <div
         id="telegram-top-jackpot-slot"
-        className="flex-1 h-full flex items-center justify-center pt-3.5 px-1 pointer-events-auto"
+        className="flex-1 h-full flex items-center justify-center pt-8 px-1 pointer-events-auto"
       >
         {children || null}
       </div>
