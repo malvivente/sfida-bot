@@ -226,7 +226,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
         {/* Game Filter Tabs */}
         <div className="flex items-center space-x-2 overflow-x-auto py-3 -my-3 px-1.5 -mx-1.5 scrollbar-none">
-          {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono'].map((gKey) => {
+          {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split'].map((gKey) => {
             const isSelected = filterGameType === gKey;
             const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
             return (
@@ -535,6 +535,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <div className="grid grid-cols-2 gap-1.5">
                   {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
                     const isSelected = selectedGameType === game.id;
+                    const isSplit = game.id === 'split';
                     return (
                       <button
                         key={game.id}
@@ -544,15 +545,24 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           setSelectedGameType(game.id);
                         }}
                         className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                          isSplit ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
+                        } ${
                           isSelected
                             ? `bg-cyber-bg border-2 ${game.borderColor.split(' ')[0]} shadow-[0_0_12px_rgba(0,240,255,0.2)]`
                             : 'bg-black/50 border-cyber-border hover:border-slate-600 opacity-60'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className={`text-[8px] font-mono px-1 rounded bg-black/70 font-bold ${game.accentColor}`}>
-                            {game.badge}
-                          </span>
+                          <div className="flex items-center space-x-1.5">
+                            <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                              {game.badge}
+                            </span>
+                            {isSplit && (
+                              <span className="text-[8px] font-chakra font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40 flex items-center space-x-1">
+                                <span>🏆 TRUST JACKPOT</span>
+                              </span>
+                            )}
+                          </div>
                           {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
                         </div>
                         <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>

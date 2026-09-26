@@ -55,3 +55,62 @@ export function computePariMutuelOdds(
     oddsB,
   };
 }
+
+export interface Odds3WayResult {
+  totalPoolNano: bigint;
+  distributablePoolNano: bigint;
+  spectatorRakeNano: bigint;
+  treasuryRakeNano: bigint;
+  affiliateRakeNano: bigint;
+  oddsA: number;
+  oddsB: number;
+  oddsX: number;
+}
+
+export function compute3WayPariMutuelOdds(
+  totalBetsANano: bigint,
+  totalBetsBNano: bigint,
+  totalBetsXNano: bigint = 0n
+): Odds3WayResult {
+  const totalPoolNano = totalBetsANano + totalBetsBNano + totalBetsXNano;
+
+  if (totalPoolNano === 0n) {
+    return {
+      totalPoolNano: 0n,
+      distributablePoolNano: 0n,
+      spectatorRakeNano: 0n,
+      treasuryRakeNano: 0n,
+      affiliateRakeNano: 0n,
+      oddsA: 2.8,
+      oddsB: 2.8,
+      oddsX: 2.8,
+    };
+  }
+
+  const { spectatorRakePercent } = feeConfig.getConfig();
+  const spectatorRakeNano = (totalPoolNano * BigInt(Math.round(spectatorRakePercent * 100))) / 10000n;
+  const distributablePoolNano = totalPoolNano - spectatorRakeNano;
+
+  const treasuryRakeNano = (spectatorRakeNano * 7000n) / 10000n;
+  const affiliateRakeNano = spectatorRakeNano - treasuryRakeNano;
+
+  const poolNum = Number(distributablePoolNano);
+  const betsANum = Number(totalBetsANano);
+  const betsBNum = Number(totalBetsBNano);
+  const betsXNum = Number(totalBetsXNano);
+
+  const oddsA = betsANum > 0 ? parseFloat((poolNum / betsANum).toFixed(2)) : 2.8;
+  const oddsB = betsBNum > 0 ? parseFloat((poolNum / betsBNum).toFixed(2)) : 2.8;
+  const oddsX = betsXNum > 0 ? parseFloat((poolNum / betsXNum).toFixed(2)) : 2.8;
+
+  return {
+    totalPoolNano,
+    distributablePoolNano,
+    spectatorRakeNano,
+    treasuryRakeNano,
+    affiliateRakeNano,
+    oddsA,
+    oddsB,
+    oddsX,
+  };
+}

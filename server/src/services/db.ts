@@ -85,7 +85,7 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
@@ -95,7 +95,7 @@ export interface BalanceTransaction {
 
 export interface TreasuryFeeEvent {
   id: string;
-  type: 'CREATION_FEE' | 'DUEL_RAKE' | 'SPECTATOR_RAKE' | 'WITHDRAWAL';
+  type: 'CREATION_FEE' | 'DUEL_RAKE' | 'SPECTATOR_RAKE' | 'WITHDRAWAL' | 'DOUBLE_STEAL_HOUSE_SHARE' | 'SPECTATOR_DOUBLE_STEAL_SHARE';
   amountGram: string;
   matchId?: string;
   recipient?: string;
@@ -117,17 +117,28 @@ export interface TreasuryData {
   lastUpdated: number;
 }
 
+export interface JackpotData {
+  trustJackpotGram: string;
+  thresholdGram: string;
+  bonusPercentage: number;
+  totalDistributedGram: string;
+  totalCollectedGram: string;
+  lastUpdated: number;
+}
+
 export class DatabaseService {
   private static instance: DatabaseService;
   private matches: Map<string, StoredMatch> = new Map();
   private users: Map<string, UserAccount> = new Map();
   private transactions: BalanceTransaction[] = [];
   private treasury: TreasuryData;
+  private jackpot: JackpotData;
   private dataDir: string;
   private filePath: string;
   private usersFilePath: string;
   private txFilePath: string;
   private treasuryFilePath: string;
+  private jackpotFilePath: string;
   private initialized: boolean = false;
 
   private constructor() {
@@ -136,11 +147,21 @@ export class DatabaseService {
     this.usersFilePath = path.join(this.dataDir, 'users.json');
     this.txFilePath = path.join(this.dataDir, 'transactions.json');
     this.treasuryFilePath = path.join(this.dataDir, 'treasury.json');
+    this.jackpotFilePath = path.join(this.dataDir, 'jackpot.json');
 
     const defaultTreasuryWallet =
       process.env.TREASURY_ADDRESS ||
       process.env.OWNER_ADDRESS ||
       'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+
+    this.jackpot = {
+      trustJackpotGram: '5.00',
+      thresholdGram: '5.00',
+      bonusPercentage: 20,
+      totalDistributedGram: '0.00',
+      totalCollectedGram: '0.00',
+      lastUpdated: Date.now(),
+    };
 
     this.treasury = {
       treasuryWallet: defaultTreasuryWallet,
@@ -234,6 +255,13 @@ export class DatabaseService {
         this.persistData();
       }
 
+      if (fs.existsSync(this.jackpotFilePath)) {
+        const rawJackpot = fs.readFileSync(this.jackpotFilePath, 'utf-8');
+        this.jackpot = JSON.parse(rawJackpot);
+      } else {
+        this.persistData();
+      }
+
       this.initialized = true;
     } catch (err) {
       console.warn('[DatabaseService] Warning loading database file:', err);
@@ -254,6 +282,8 @@ export class DatabaseService {
       fs.writeFileSync(this.txFilePath, JSON.stringify(this.transactions.slice(-300), null, 2), 'utf-8');
 
       fs.writeFileSync(this.treasuryFilePath, JSON.stringify(this.treasury, null, 2), 'utf-8');
+
+      fs.writeFileSync(this.jackpotFilePath, JSON.stringify(this.jackpot, null, 2), 'utf-8');
     } catch (err) {
       console.error('[DatabaseService] Failed to persist data to file:', err);
     }
@@ -570,7 +600,7 @@ export class DatabaseService {
 
   public async creditTreasury(
     amountGram: string,
-    type: 'CREATION_FEE' | 'DUEL_RAKE' | 'SPECTATOR_RAKE',
+    type: 'CREATION_FEE' | 'DUEL_RAKE' | 'SPECTATOR_RAKE' | 'DOUBLE_STEAL_HOUSE_SHARE' | 'SPECTATOR_DOUBLE_STEAL_SHARE',
     matchId?: string
   ): Promise<TreasuryData> {
     const amountNum = parseFloat(amountGram) || 0;
@@ -587,10 +617,10 @@ export class DatabaseService {
     if (type === 'CREATION_FEE') {
       const cur = parseFloat(this.treasury.feeBreakdown.creationFeesGram || '0');
       this.treasury.feeBreakdown.creationFeesGram = (cur + amountNum).toFixed(2);
-    } else if (type === 'DUEL_RAKE') {
+    } else if (type === 'DUEL_RAKE' || type === 'DOUBLE_STEAL_HOUSE_SHARE') {
       const cur = parseFloat(this.treasury.feeBreakdown.duelRakeGram || '0');
       this.treasury.feeBreakdown.duelRakeGram = (cur + amountNum).toFixed(2);
-    } else if (type === 'SPECTATOR_RAKE') {
+    } else if (type === 'SPECTATOR_RAKE' || type === 'SPECTATOR_DOUBLE_STEAL_SHARE') {
       const cur = parseFloat(this.treasury.feeBreakdown.spectatorRakeGram || '0');
       this.treasury.feeBreakdown.spectatorRakeGram = (cur + amountNum).toFixed(2);
     }
@@ -1003,6 +1033,58 @@ export class DatabaseService {
       leaderboard: ranked.slice(0, limit),
       userEntry,
     };
+  }
+
+  // --- Trust Jackpot Methods ---
+  public async getTrustJackpot(): Promise<number> {
+    return parseFloat(this.jackpot.trustJackpotGram || '0.00');
+  }
+
+  public async getJackpotInfo(): Promise<{
+    trustJackpotGram: string;
+    isActive: boolean;
+    thresholdGram: string;
+    bonusPercentage: number;
+    totalDistributedGram: string;
+    totalCollectedGram: string;
+  }> {
+    const current = parseFloat(this.jackpot.trustJackpotGram || '0.00');
+    const threshold = parseFloat(this.jackpot.thresholdGram || '5.00');
+    return {
+      trustJackpotGram: current.toFixed(2),
+      isActive: current >= threshold,
+      thresholdGram: threshold.toFixed(2),
+      bonusPercentage: this.jackpot.bonusPercentage || 20,
+      totalDistributedGram: this.jackpot.totalDistributedGram || '0.00',
+      totalCollectedGram: this.jackpot.totalCollectedGram || '0.00',
+    };
+  }
+
+  public async addTrustJackpot(amountGram: number): Promise<number> {
+    if (isNaN(amountGram) || amountGram <= 0) return this.getTrustJackpot();
+    const current = parseFloat(this.jackpot.trustJackpotGram || '0.00');
+    const newBal = (current + amountGram).toFixed(2);
+    const collected = (parseFloat(this.jackpot.totalCollectedGram || '0.00') + amountGram).toFixed(2);
+    this.jackpot.trustJackpotGram = newBal;
+    this.jackpot.totalCollectedGram = collected;
+    this.jackpot.lastUpdated = Date.now();
+    this.persistData();
+    console.log(`[DatabaseService] Added ${amountGram.toFixed(2)} GRAM to Trust Jackpot. New balance: ${newBal} GRAM`);
+    return parseFloat(newBal);
+  }
+
+  public async deductTrustJackpot(amountGram: number): Promise<number> {
+    if (isNaN(amountGram) || amountGram <= 0) return this.getTrustJackpot();
+    const current = parseFloat(this.jackpot.trustJackpotGram || '0.00');
+    const deducted = Math.min(current, amountGram);
+    const newBal = Math.max(0, current - deducted).toFixed(2);
+    const distributed = (parseFloat(this.jackpot.totalDistributedGram || '0.00') + deducted).toFixed(2);
+    this.jackpot.trustJackpotGram = newBal;
+    this.jackpot.totalDistributedGram = distributed;
+    this.jackpot.lastUpdated = Date.now();
+    this.persistData();
+    console.log(`[DatabaseService] Deducted ${deducted.toFixed(2)} GRAM from Trust Jackpot for bonus payout. New balance: ${newBal} GRAM`);
+    return parseFloat(newBal);
   }
 }
 

@@ -3,6 +3,7 @@ import { RussianRouletteRoom } from './RussianRouletteRoom.js';
 import { BlackjackRoom } from './BlackjackRoom.js';
 import { GlassBridgeRoom } from './GlassBridgeRoom.js';
 import { ChronoBlindRoom } from './ChronoBlindRoom.js';
+import { SplitStealRoom } from './SplitStealRoom.js';
 
 export class RoomManager {
   private static instance: RoomManager;
@@ -34,6 +35,9 @@ export class RoomManager {
         break;
       case 'chrono':
         room = new ChronoBlindRoom(config, onSettled);
+        break;
+      case 'split':
+        room = new SplitStealRoom(config, onSettled);
         break;
       case 'roulette':
       default:

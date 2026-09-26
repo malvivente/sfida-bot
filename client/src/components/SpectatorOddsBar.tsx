@@ -4,13 +4,17 @@ import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { useLanguage } from '../i18n/index.js';
+import { GameType } from '../types/index.js';
 
 interface SpectatorOddsBarProps {
   oddsA: number;
   oddsB: number;
+  oddsX?: number;
   totalBetsA: string;
   totalBetsB: string;
-  onBet: (side: 'A' | 'B', amountTon: string) => void;
+  totalBetsX?: string;
+  gameType?: GameType;
+  onBet: (side: 'A' | 'B' | 'X', amountTon: string) => void;
   disabled?: boolean;
   isPlayer?: boolean;
   playerAName?: string;
@@ -22,8 +26,11 @@ interface SpectatorOddsBarProps {
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   oddsA,
   oddsB,
+  oddsX,
   totalBetsA,
   totalBetsB,
+  totalBetsX,
+  gameType,
   onBet,
   disabled = false,
   isPlayer = false,
@@ -34,17 +41,20 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
 }) => {
   const { t } = useLanguage();
   const { triggerImpact } = useHaptics();
-  const [selectedSide, setSelectedSide] = useState<'A' | 'B'>('A');
+  const [selectedSide, setSelectedSide] = useState<'A' | 'B' | 'X'>('A');
   const [betAmount, setBetAmount] = useState<string>('1');
 
+  const isSplit = gameType === 'split';
   const betsANum = Number(BigInt(totalBetsA || '0')) / 1e9;
   const betsBNum = Number(BigInt(totalBetsB || '0')) / 1e9;
-  const total = betsANum + betsBNum;
+  const betsXNum = Number(BigInt(totalBetsX || '0')) / 1e9;
+  const total = betsANum + betsBNum + (isSplit ? betsXNum : 0);
 
-  const pctA = total > 0 ? Math.round((betsANum / total) * 100) : 50;
-  const pctB = 100 - pctA;
+  const pctA = total > 0 ? Math.round((betsANum / total) * 100) : (isSplit ? 34 : 50);
+  const pctX = isSplit ? (total > 0 ? Math.round((betsXNum / total) * 100) : 33) : 0;
+  const pctB = isSplit ? Math.max(0, 100 - pctA - pctX) : (100 - pctA);
 
-  const currentOdds = selectedSide === 'A' ? oddsA : oddsB;
+  const currentOdds = selectedSide === 'A' ? oddsA : selectedSide === 'X' ? (oddsX || 2.0) : oddsB;
   const parsedBet = parseFloat(betAmount || '0');
   const isBelowMin = parsedBet < GAME_CONFIG.MIN_WAGER;
   const isOverMax = parsedBet > GAME_CONFIG.MAX_WAGER;
@@ -87,7 +97,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         <div className="flex items-center space-x-2">
           <TrendingUp className="w-4 h-4 text-cyber-cyan" />
           <span className="text-xs font-orbitron font-bold text-slate-200 tracking-wider">
-            {isPlayer ? 'PARI-MUTUEL ODDS (SPECTATORS)' : t('spectator.title')}
+            {isPlayer
+              ? isSplit ? 'PARI-MUTUEL ODDS (1-X-2)' : 'PARI-MUTUEL ODDS (SPECTATORS)'
+              : isSplit ? 'PRE-MATCH BETTING (1-X-2)' : t('spectator.title')}
           </span>
         </div>
         {!isPlayer ? (
@@ -117,145 +129,364 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       </div>
 
       {/* Dynamic Odds Cards */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        {/* Side A */}
-        {isPlayer ? (
-          <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
-                {playerAName}
-              </span>
-              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isPoolLocked ? (
-                  <span className="text-slate-500 font-mono">🔒 --</span>
-                ) : (
-                  <>
-                    <span>{betsANum.toFixed(1)}</span>
-                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-                  </>
-                )}
-              </span>
-            </div>
-            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isPoolLocked ? (
-                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
-                  <span>LOCKED</span>
+      {isSplit ? (
+        /* 3-Way 1-X-2 Market Grid */
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {/* Side 1: Player A Steals */}
+          {isPlayer ? (
+            <div className="p-2.5 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
+                  1: {playerAName}
                 </span>
-              ) : (
-                `${oddsA.toFixed(2)}x`
-              )}
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => {
-              triggerImpact('light');
-              setSelectedSide('A');
-            }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 ${
-              selectedSide === 'A'
-                ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
-                : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-cyan/50'
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
-                {playerAName}
-              </span>
-              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isPoolLocked ? (
-                  <span className="text-slate-500 font-mono">🔒 --</span>
-                ) : (
-                  <>
-                    <span>{betsANum.toFixed(1)}</span>
-                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-                  </>
-                )}
-              </span>
-            </div>
-            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isPoolLocked ? (
-                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
-                  <span>LOCKED</span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒</span>
+                  ) : (
+                    <>
+                      <span>{betsANum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
                 </span>
-              ) : (
-                `${oddsA.toFixed(2)}x`
-              )}
+              </div>
+              <div className="text-base font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-xs font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-cyber-cyan" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsA.toFixed(2)}x`
+                )}
+              </div>
+              <div className="text-[9px] font-chakra text-cyber-cyan uppercase font-bold mt-0.5">P1 STEAL</div>
             </div>
-          </button>
-        )}
+          ) : (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setSelectedSide('A');
+              }}
+              className={`p-2.5 rounded-xl border text-left transition-all duration-200 ${
+                selectedSide === 'A'
+                  ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                  : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-cyan/50'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
+                  1: {playerAName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒</span>
+                  ) : (
+                    <>
+                      <span>{betsANum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-base font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-xs font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-cyber-cyan" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsA.toFixed(2)}x`
+                )}
+              </div>
+              <div className="text-[9px] font-chakra text-cyber-cyan uppercase font-bold mt-0.5">P1 STEAL</div>
+            </button>
+          )}
 
-        {/* Side B */}
-        {isPlayer ? (
-          <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
-                {playerBName}
-              </span>
-              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isPoolLocked ? (
-                  <span className="text-slate-500 font-mono">🔒 --</span>
-                ) : (
-                  <>
-                    <span>{betsBNum.toFixed(1)}</span>
-                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-                  </>
-                )}
-              </span>
-            </div>
-            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isPoolLocked ? (
-                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-cyber-pink" />
-                  <span>LOCKED</span>
+          {/* Side X: Peace (Both Split) */}
+          {isPlayer ? (
+            <div className="p-2.5 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-chakra font-bold text-cyber-green truncate max-w-[70%]" title="Peace">
+                  X: PEACE
                 </span>
-              ) : (
-                `${oddsB.toFixed(2)}x`
-              )}
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => {
-              triggerImpact('light');
-              setSelectedSide('B');
-            }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 ${
-              selectedSide === 'B'
-                ? 'bg-cyber-pink/15 border-cyber-pink shadow-[0_0_12px_rgba(255,0,85,0.25)]'
-                : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-pink/50'
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
-                {playerBName}
-              </span>
-              <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
-                {isPoolLocked ? (
-                  <span className="text-slate-500 font-mono">🔒 --</span>
-                ) : (
-                  <>
-                    <span>{betsBNum.toFixed(1)}</span>
-                    <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-                  </>
-                )}
-              </span>
-            </div>
-            <div className="text-xl font-orbitron font-extrabold text-white mt-1">
-              {isPoolLocked ? (
-                <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-cyber-pink" />
-                  <span>LOCKED</span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒</span>
+                  ) : (
+                    <>
+                      <span>{betsXNum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
                 </span>
-              ) : (
-                `${oddsB.toFixed(2)}x`
-              )}
+              </div>
+              <div className="text-base font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-xs font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-cyber-green" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${(oddsX || 2.0).toFixed(2)}x`
+                )}
+              </div>
+              <div className="text-[9px] font-chakra text-cyber-green uppercase font-bold mt-0.5">BOTH SPLIT</div>
             </div>
-          </button>
-        )}
-      </div>
+          ) : (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setSelectedSide('X');
+              }}
+              className={`p-2.5 rounded-xl border text-left transition-all duration-200 ${
+                selectedSide === 'X'
+                  ? 'bg-cyber-green/15 border-cyber-green shadow-[0_0_12px_rgba(0,255,136,0.25)]'
+                  : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-green/50'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-chakra font-bold text-cyber-green truncate max-w-[70%]" title="Peace">
+                  X: PEACE
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒</span>
+                  ) : (
+                    <>
+                      <span>{betsXNum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-base font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-xs font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-cyber-green" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${(oddsX || 2.0).toFixed(2)}x`
+                )}
+              </div>
+              <div className="text-[9px] font-chakra text-cyber-green uppercase font-bold mt-0.5">BOTH SPLIT</div>
+            </button>
+          )}
+
+          {/* Side 2: Player B Steals */}
+          {isPlayer ? (
+            <div className="p-2.5 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
+                  2: {playerBName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒</span>
+                  ) : (
+                    <>
+                      <span>{betsBNum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-base font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-xs font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-cyber-pink" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsB.toFixed(2)}x`
+                )}
+              </div>
+              <div className="text-[9px] font-chakra text-cyber-pink uppercase font-bold mt-0.5">P2 STEAL</div>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setSelectedSide('B');
+              }}
+              className={`p-2.5 rounded-xl border text-left transition-all duration-200 ${
+                selectedSide === 'B'
+                  ? 'bg-cyber-pink/15 border-cyber-pink shadow-[0_0_12px_rgba(255,0,85,0.25)]'
+                  : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-pink/50'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
+                  2: {playerBName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒</span>
+                  ) : (
+                    <>
+                      <span>{betsBNum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-base font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-xs font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-cyber-pink" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsB.toFixed(2)}x`
+                )}
+              </div>
+              <div className="text-[9px] font-chakra text-cyber-pink uppercase font-bold mt-0.5">P2 STEAL</div>
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Standard 2-Way Market Grid */
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Side A */}
+          {isPlayer ? (
+            <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
+                  {playerAName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒 --</span>
+                  ) : (
+                    <>
+                      <span>{betsANum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsA.toFixed(2)}x`
+                )}
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setSelectedSide('A');
+              }}
+              className={`p-3 rounded-xl border text-left transition-all duration-200 ${
+                selectedSide === 'A'
+                  ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                  : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-cyan/50'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[70%]" title={playerAName}>
+                  {playerAName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒 --</span>
+                  ) : (
+                    <>
+                      <span>{betsANum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3.5 h-3.5 text-cyber-cyan" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsA.toFixed(2)}x`
+                )}
+              </div>
+            </button>
+          )}
+
+          {/* Side B */}
+          {isPlayer ? (
+            <div className="p-3 rounded-xl border text-left bg-cyber-bg/60 border-cyber-border">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
+                  {playerBName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒 --</span>
+                  ) : (
+                    <>
+                      <span>{betsBNum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3.5 h-3.5 text-cyber-pink" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsB.toFixed(2)}x`
+                )}
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setSelectedSide('B');
+              }}
+              className={`p-3 rounded-xl border text-left transition-all duration-200 ${
+                selectedSide === 'B'
+                  ? 'bg-cyber-pink/15 border-cyber-pink shadow-[0_0_12px_rgba(255,0,85,0.25)]'
+                  : 'bg-cyber-bg/60 border-cyber-border hover:border-cyber-pink/50'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[70%]" title={playerBName}>
+                  {playerBName}
+                </span>
+                <span className="text-[10px] text-slate-400 font-chakra flex items-center space-x-0.5">
+                  {isPoolLocked ? (
+                    <span className="text-slate-500 font-mono">🔒 --</span>
+                  ) : (
+                    <>
+                      <span>{betsBNum.toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="text-xl font-orbitron font-extrabold text-white mt-1">
+                {isPoolLocked ? (
+                  <span className="text-sm font-chakra text-slate-400 flex items-center space-x-1">
+                    <Lock className="w-3.5 h-3.5 text-cyber-pink" />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  `${oddsB.toFixed(2)}x`
+                )}
+              </div>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Pool Distribution Bar */}
       {isLobby ? (
@@ -271,6 +502,28 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             <Clock className="w-3.5 h-3.5 shrink-0" />
             <span>{t('spectator.bettingWindowActive')}: 00:{countdownFormatted}</span>
           </span>
+        </div>
+      ) : isSplit ? (
+        <div className="mb-3 space-y-1">
+          <div className="w-full h-2.5 bg-cyber-bg rounded-full overflow-hidden flex border border-cyber-border">
+            <div
+              style={{ width: `${pctA}%` }}
+              className="bg-cyber-cyan h-full transition-all duration-500"
+            />
+            <div
+              style={{ width: `${pctX}%` }}
+              className="bg-cyber-green h-full transition-all duration-500"
+            />
+            <div
+              style={{ width: `${pctB}%` }}
+              className="bg-cyber-pink h-full transition-all duration-500"
+            />
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-chakra text-slate-400 px-0.5">
+            <span className="text-cyber-cyan font-bold">{pctA}% (1: {playerAName})</span>
+            <span className="text-cyber-green font-bold">{pctX}% (X: Peace)</span>
+            <span className="text-cyber-pink font-bold">{pctB}% (2: {playerBName})</span>
+          </div>
         </div>
       ) : (
         <div className="mb-3 space-y-1">
@@ -383,6 +636,8 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
                   : selectedSide === 'A'
                   ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan animate-pulse'
+                  : selectedSide === 'X'
+                  ? 'bg-cyber-green text-cyber-bg hover:brightness-110 shadow-neon-green animate-pulse'
                   : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink animate-pulse'
               }`}
             >
@@ -393,7 +648,18 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   <span>{betAmount || '0'}</span>
                   <GramIcon className="w-3.5 h-3.5" />
                 </span>
-                <span>{t('spectator.on')} {selectedSide === 'A' ? playerAName : playerBName}</span>
+                <span>
+                  {t('spectator.on')}{' '}
+                  {selectedSide === 'A'
+                    ? isSplit
+                      ? `[1] ${playerAName} (Steal)`
+                      : playerAName
+                    : selectedSide === 'X'
+                    ? '[X] PEACE (Both Split)'
+                    : isSplit
+                    ? `[2] ${playerBName} (Steal)`
+                    : playerBName}
+                </span>
               </div>
               <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90 flex items-center justify-center space-x-1">
                 <span>Totale: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)</span>

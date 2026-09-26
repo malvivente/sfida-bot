@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { RoomManager } from '../engine/RoomManager.js';
-import { computePariMutuelOdds } from '../services/oddsCalculator.js';
+import { computePariMutuelOdds, compute3WayPariMutuelOdds } from '../services/oddsCalculator.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
@@ -13,13 +13,21 @@ export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
   const refundedMatchIds = new Set<string>();
 
+  // Get Trust Jackpot status
+  fastify.get('/api/jackpot', async (_req, reply) => {
+    const info = await dbService.getJackpotInfo();
+    return reply.send(info);
+  });
+
   // List all active matches (exclude WAITING_FOR_DEPLOY)
   fastify.get('/api/matches', async (_req, reply) => {
     const rooms = roomManager.getAllRooms().filter((r) => r.state !== 'WAITING_FOR_DEPLOY');
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
 
     const matches = rooms.map((r) => {
-      const odds = computePariMutuelOdds(r.totalBetsA, r.totalBetsB);
+      const odds = r.gameType === 'split'
+        ? compute3WayPariMutuelOdds(r.totalBetsA, r.totalBetsB, r.totalBetsX)
+        : computePariMutuelOdds(r.totalBetsA, r.totalBetsB);
       let escrowAddress = r.escrowAddress;
       if (!escrowAddress && clashMasterAddr) {
         escrowAddress = computeEscrowAddress(
@@ -61,8 +69,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
         wagerGram,
         totalBetsA: r.totalBetsA.toString(),
         totalBetsB: r.totalBetsB.toString(),
+        totalBetsX: r.totalBetsX.toString(),
         oddsA: odds.oddsA,
         oddsB: odds.oddsB,
+        oddsX: (odds as any).oddsX,
         spectatorCount: r.spectators.size,
       };
     });
@@ -79,7 +89,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Match not found' });
     }
 
-    const odds = computePariMutuelOdds(room.totalBetsA, room.totalBetsB);
+    const odds = room.gameType === 'split'
+      ? compute3WayPariMutuelOdds(room.totalBetsA, room.totalBetsB, room.totalBetsX)
+      : computePariMutuelOdds(room.totalBetsA, room.totalBetsB);
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
     let escrowAddress = room.escrowAddress;
     if (!escrowAddress && clashMasterAddr) {
@@ -125,8 +137,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
       wagerGram,
       totalBetsA: room.totalBetsA.toString(),
       totalBetsB: room.totalBetsB.toString(),
+      totalBetsX: room.totalBetsX.toString(),
       oddsA: odds.oddsA,
       oddsB: odds.oddsB,
+      oddsX: (odds as any).oddsX,
       distributablePoolNano: odds.distributablePoolNano.toString(),
       spectatorCount: room.spectators.size,
     });

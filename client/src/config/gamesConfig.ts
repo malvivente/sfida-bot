@@ -57,4 +57,15 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-cyber-amber/50 hover:border-cyber-amber',
     bgGradient: 'from-cyber-amber/15 via-black/40 to-black/80',
   },
+  split: {
+    id: 'split',
+    title: 'Split or Steal',
+    badge: 'MIND GAME',
+    tagline: 'Cooperate or Betray · Shared Jackpot',
+    description: 'Two duelists choose in secret: SPLIT to cooperate or STEAL to betray. Mutual split shares the Trust Jackpot bonus! But if both steal, all is lost.',
+    spectatorAppeal: '3-way 1-X-2 betting: P1 Steal, P2 Steal, or mutual Peace! If both steal, the house and the Trust Jackpot take all!',
+    accentColor: 'text-purple-400',
+    borderColor: 'border-purple-500/60 hover:border-purple-400',
+    bgGradient: 'from-purple-950/40 via-amber-950/20 to-black/80',
+  },
 };

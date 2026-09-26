@@ -52,8 +52,10 @@ export function useSocket({
   const [scoreB, setScoreB] = useState<number>(0);
   const [oddsA, setOddsA] = useState<number>(2.0);
   const [oddsB, setOddsB] = useState<number>(2.0);
+  const [oddsX, setOddsX] = useState<number>(2.8);
   const [totalBetsA, setTotalBetsA] = useState<string>('0');
   const [totalBetsB, setTotalBetsB] = useState<string>('0');
+  const [totalBetsX, setTotalBetsX] = useState<string>('0');
   const [lastSignal, setLastSignal] = useState<string | null>(null);
   const [feedMessage, setFeedMessage] = useState<string>('In attesa nella lobby del duello...');
   const [lastReactionTimeMs, setLastReactionTimeMs] = useState<number | null>(null);
@@ -115,8 +117,10 @@ export function useSocket({
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsX) setOddsX(msg.oddsX);
             if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
             if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.totalBetsX) setTotalBetsX(msg.totalBetsX);
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.resolution) setResolution(msg.resolution);
@@ -135,6 +139,7 @@ export function useSocket({
             if (msg.state) setRoomState(msg.state);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsX) setOddsX(msg.oddsX);
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.resolution) setResolution(msg.resolution);
@@ -158,9 +163,14 @@ export function useSocket({
           case 'CHRONO_ROUND_START':
           case 'CHRONO_UPDATE':
           case 'CHRONO_ROUND_END':
+          case 'SPLIT_STEAL_START':
+          case 'SPLIT_STEAL_TICK':
+          case 'SPLIT_STEAL_CHOICE_LOCKED':
+          case 'SPLIT_STEAL_REVEAL':
             setRoomState('GAME_ACTIVE');
             if (msg.gameData) setGameData(msg.gameData);
             if (msg.message) setFeedMessage(msg.message);
+            if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
             break;
 
           case 'BETTING_WINDOW_OPEN':
@@ -173,6 +183,7 @@ export function useSocket({
             if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsX) setOddsX(msg.oddsX);
             break;
 
           case 'ROUND_INITIALIZING':
@@ -260,8 +271,10 @@ export function useSocket({
           case 'ODDS_UPDATE':
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsX) setOddsX(msg.oddsX);
             if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
             if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.totalBetsX) setTotalBetsX(msg.totalBetsX);
             break;
 
           case 'REMATCH_OFFERED':
@@ -337,7 +350,7 @@ export function useSocket({
     }
   }, []);
 
-  const placeSpectatorBet = useCallback((target: 'A' | 'B', amountNano: string) => {
+  const placeSpectatorBet = useCallback((target: 'A' | 'B' | 'X', amountNano: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'SPECTATOR_BET', target, amountNano }));
     }
@@ -394,6 +407,12 @@ export function useSocket({
     }
   }, []);
 
+  const sendSplitStealChoice = useCallback((choice: 'SPLIT' | 'STEAL') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'SPLIT_STEAL_CHOICE', choice }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -402,8 +421,10 @@ export function useSocket({
     scoreB,
     oddsA,
     oddsB,
+    oddsX,
     totalBetsA,
     totalBetsB,
+    totalBetsX,
     lastSignal,
     feedMessage,
     lastReactionTimeMs,
@@ -431,6 +452,7 @@ export function useSocket({
     sendBridgeStep,
     sendBridgePass,
     sendChronoStop,
+    sendSplitStealChoice,
     placeSpectatorBet,
     requestRematch,
     acceptRematch,

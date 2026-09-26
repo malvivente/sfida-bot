@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -106,4 +106,27 @@ export interface ChronoBlindState {
   bustedB: boolean;
   roundWinner?: 'A' | 'B' | 'TIE';
   roundEndMessage?: string;
+}
+
+// --- Split or Steal Types ---
+export type SplitStealChoice = 'SPLIT' | 'STEAL';
+export type SplitStealOutcome = 'P1_STEAL' | 'P2_STEAL' | 'PEACE' | 'DOUBLE_STEAL';
+
+export interface SplitStealState {
+  phase: 'COUNTDOWN' | 'REVEALED';
+  secondsLeft?: number;
+  durationSeconds?: number;
+  choicesRevealed: boolean;
+  choiceA?: SplitStealChoice;
+  choiceB?: SplitStealChoice;
+  hasChosenA: boolean;
+  hasChosenB: boolean;
+  outcome?: SplitStealOutcome;
+  jackpotGram: number;
+  jackpotStatus: 'ACTIVE' | 'CHARGING';
+  bonusAwardedGram?: number;
+  bonusPerPlayerGram?: number;
+  message?: string;
+  oddsX?: number;
+  totalBetsX?: string;
 }

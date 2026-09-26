@@ -130,7 +130,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                 wallet,
                 betAmountGram.toFixed(2),
                 'MATCH_BET',
-                `Spectator bet on Player ${data.target} for match #${matchId}`
+                `Spectator bet on ${data.target === 'X' ? 'Peace (Both Split)' : 'Player ' + data.target} for match #${matchId}`
               );
               await dbService.debitUserBalance(
                 wallet,
@@ -169,6 +169,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
           case 'BRIDGE_STEP':
           case 'BRIDGE_PASS':
           case 'CHRONO_STOP':
+          case 'SPLIT_STEAL_CHOICE':
             room?.handleGameAction(wallet, data);
             break;
 

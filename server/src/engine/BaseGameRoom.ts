@@ -22,7 +22,7 @@ export interface RoomConfig {
 export interface SpectatorBet {
   walletAddress: string;
   telegramId?: string;
-  target: 'A' | 'B';
+  target: 'A' | 'B' | 'X';
   amountGram: number;
   amountNano: bigint;
   feePaidGram: number;
@@ -68,6 +68,7 @@ export abstract class BaseGameRoom {
 
   public totalBetsA: bigint = 0n;
   public totalBetsB: bigint = 0n;
+  public totalBetsX: bigint = 0n;
 
   public winnerAddress?: string;
   public winnerName?: string;
@@ -202,6 +203,10 @@ export abstract class BaseGameRoom {
       wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsX: this.calculateOdds('X'),
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+      totalBetsX: this.totalBetsX.toString(),
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
       resolution: this.resolution,
@@ -228,8 +233,10 @@ export abstract class BaseGameRoom {
       wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsX: this.calculateOdds('X'),
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
+      totalBetsX: this.totalBetsX.toString(),
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
       resolution: this.resolution,
@@ -362,6 +369,7 @@ export abstract class BaseGameRoom {
         secondsLeft: countdown,
         oddsA: this.calculateOdds('A'),
         oddsB: this.calculateOdds('B'),
+        oddsX: this.calculateOdds('X'),
       });
 
       if (countdown <= 0) {
@@ -530,7 +538,7 @@ export abstract class BaseGameRoom {
 
   // Spectator Pari-Mutuel Bet
   public registerSpectatorBet(
-    target: 'A' | 'B',
+    target: 'A' | 'B' | 'X',
     amountNano: bigint,
     bettorWallet?: string,
     telegramId?: string,
@@ -565,27 +573,31 @@ export abstract class BaseGameRoom {
 
     if (target === 'A') {
       this.totalBetsA += amountNano;
-    } else {
+    } else if (target === 'B') {
       this.totalBetsB += amountNano;
+    } else {
+      this.totalBetsX += amountNano;
     }
 
     this.broadcast({
       type: 'ODDS_UPDATE',
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
+      totalBetsX: this.totalBetsX.toString(),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsX: this.calculateOdds('X'),
     });
   }
 
-  public calculateOdds(side: 'A' | 'B'): number {
-    const totalPool = Number(this.totalBetsA + this.totalBetsB);
-    if (totalPool === 0) return 2.0;
+  public calculateOdds(side: 'A' | 'B' | 'X'): number {
+    const totalPool = Number(this.totalBetsA + this.totalBetsB + this.totalBetsX);
+    if (totalPool === 0) return this.gameType === 'split' || this.totalBetsX > 0n || side === 'X' ? 2.8 : 2.0;
 
     const { spectatorRakePercent } = feeConfig.getConfig();
     const distributablePool = totalPool * (1 - (spectatorRakePercent || 0) / 100);
-    const sideBets = side === 'A' ? Number(this.totalBetsA) : Number(this.totalBetsB);
-    if (sideBets === 0) return 2.0;
+    const sideBets = side === 'A' ? Number(this.totalBetsA) : (side === 'B' ? Number(this.totalBetsB) : Number(this.totalBetsX));
+    if (sideBets === 0) return this.gameType === 'split' ? 2.8 : 2.0;
     return parseFloat((distributablePool / sideBets).toFixed(2));
   }
 
