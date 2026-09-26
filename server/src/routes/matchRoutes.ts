@@ -481,7 +481,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       disp,
       query.photoUrl
     );
-    const transactions = await dbService.getUserTransactions(wallet);
+    const transactions = await dbService.getUserTransactions(wallet, query.telegramId);
     return reply.send({ success: true, account, transactions });
   });
 

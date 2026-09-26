@@ -85,6 +85,14 @@ export interface UserAccount {
   withdrawnTotalTon: string;
   withdrawnTotalGram: string;
   updatedAt: number;
+  mockStats?: {
+    duelsPlayed: number;
+    duelsWon: number;
+    winRate: number;
+    bestReaction?: string;
+    totalProfitsGram: string;
+    dailyStreak: number;
+  };
 }
 
 export interface BalanceTransaction {
@@ -134,7 +142,13 @@ export interface JackpotData {
 export class DatabaseService {
   private static instance: DatabaseService;
   private matches: Map<string, StoredMatch> = new Map();
+  private matchesByTg: Map<string, StoredMatch[]> = new Map();
+  private matchesByWallet: Map<string, StoredMatch[]> = new Map();
+  private leaderboardCache: Map<string, { timestamp: number; data: LeaderboardEntry[] }> = new Map();
   private users: Map<string, UserAccount> = new Map();
+  private usersByTg: Map<string, UserAccount> = new Map();
+  private usersByWallet: Map<string, UserAccount> = new Map();
+  private usersByUsername: Map<string, UserAccount> = new Map();
   private transactions: BalanceTransaction[] = [];
   private treasury: TreasuryData;
   private jackpot: JackpotData;
@@ -202,8 +216,11 @@ export class DatabaseService {
       if (fs.existsSync(this.filePath)) {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
         const list: StoredMatch[] = JSON.parse(raw);
+        this.matchesByTg.clear();
+        this.matchesByWallet.clear();
         for (const m of list) {
           this.matches.set(m.matchId, m);
+          this.indexMatch(m);
         }
         console.log(`[DatabaseService] Loaded ${this.matches.size} matches from persistent storage.`);
       } else {
@@ -213,17 +230,22 @@ export class DatabaseService {
       if (fs.existsSync(this.usersFilePath)) {
         const rawUsers = fs.readFileSync(this.usersFilePath, 'utf-8');
         const userList: any[] = JSON.parse(rawUsers);
+        this.users.clear();
+        this.usersByTg.clear();
+        this.usersByWallet.clear();
+        this.usersByUsername.clear();
         for (const u of userList) {
           const bal = u.balanceGram || u.balanceTon || '0.00';
           const dep = u.depositedTotalGram || u.depositedTotalTon || '0.00';
           const wit = u.withdrawnTotalGram || u.withdrawnTotalTon || '0.00';
-          const tgKey = u.telegramId ? `tg_${u.telegramId}` : '';
+          const cleanTg = u.telegramId ? String(u.telegramId).trim() : '';
+          const tgKey = cleanTg ? `tg_${cleanTg}` : '';
           const normKey = u.walletAddress ? this.normalizeAddress(u.walletAddress) : '';
           const storageKey = tgKey || normKey || `user_${Math.random()}`;
-          this.users.set(storageKey, {
+          const account: UserAccount = {
             ...u,
             walletAddress: u.walletAddress ? this.toFriendlyAddress(u.walletAddress) : '',
-            telegramId: u.telegramId || '',
+            telegramId: cleanTg,
             username: u.username || '',
             displayName: u.displayName || u.username || '',
             photoUrl: u.photoUrl || '',
@@ -233,8 +255,11 @@ export class DatabaseService {
             depositedTotalTon: dep,
             withdrawnTotalGram: wit,
             withdrawnTotalTon: wit,
-          });
+          };
+          this.users.set(storageKey, account);
+          this.indexUser(account);
         }
+        console.log(`[DatabaseService] Loaded ${this.users.size} users from persistent storage.`);
       } else {
         fs.writeFileSync(this.usersFilePath, JSON.stringify([], null, 2), 'utf-8');
       }
@@ -300,6 +325,54 @@ export class DatabaseService {
     }
   }
 
+  private indexUser(u: UserAccount) {
+    if (u.telegramId && String(u.telegramId).trim()) {
+      this.usersByTg.set(String(u.telegramId).trim(), u);
+    }
+    if (u.walletAddress) {
+      const norm = this.normalizeAddress(u.walletAddress);
+      if (norm) {
+        this.usersByWallet.set(norm, u);
+      }
+      this.usersByWallet.set(u.walletAddress.toLowerCase(), u);
+    }
+    if (u.username) {
+      const uname = u.username.replace(/^@/, '').toLowerCase().trim();
+      if (uname) {
+        this.usersByUsername.set(uname, u);
+      }
+    }
+  }
+
+  private indexMatch(m: StoredMatch) {
+    if (m.playerATelegramId) {
+      const list = this.matchesByTg.get(m.playerATelegramId) || [];
+      list.push(m);
+      this.matchesByTg.set(m.playerATelegramId, list);
+    }
+    if (m.playerBTelegramId) {
+      const list = this.matchesByTg.get(m.playerBTelegramId) || [];
+      list.push(m);
+      this.matchesByTg.set(m.playerBTelegramId, list);
+    }
+    if (m.playerAAddress) {
+      const normA = this.normalizeAddress(m.playerAAddress);
+      if (normA) {
+        const list = this.matchesByWallet.get(normA) || [];
+        list.push(m);
+        this.matchesByWallet.set(normA, list);
+      }
+    }
+    if (m.playerBAddress) {
+      const normB = this.normalizeAddress(m.playerBAddress);
+      if (normB) {
+        const list = this.matchesByWallet.get(normB) || [];
+        list.push(m);
+        this.matchesByWallet.set(normB, list);
+      }
+    }
+  }
+
   public normalizeAddress(walletAddress: string): string {
     if (!walletAddress) return '';
     try {
@@ -319,7 +392,7 @@ export class DatabaseService {
   }
 
   public healUnsentWithdrawalsForUser(normKey: string): number {
-    const account = this.users.get(normKey);
+    const account = this.usersByWallet.get(normKey) || this.users.get(normKey);
     if (!account) return 0;
 
     const unsentWithdraws = this.transactions.filter(
@@ -393,7 +466,8 @@ export class DatabaseService {
           if (count > 0) {
             // Duplicate refund found!
             const amt = parseFloat(tx.amountGram || tx.amountTon || '0');
-            const account = this.users.get(this.normalizeAddress(tx.walletAddress));
+            const norm = this.normalizeAddress(tx.walletAddress);
+            const account = this.usersByWallet.get(norm) || this.users.get(norm);
             if (account && amt > 0) {
               const curBal = parseFloat(account.balanceGram || account.balanceTon || '0');
               const correctedBal = Math.max(0, curBal - amt).toFixed(2);
@@ -421,39 +495,32 @@ export class DatabaseService {
     photoUrl?: string
   ): Promise<UserAccount> {
     const cleanTgId = telegramId ? String(telegramId).trim() : '';
+    const normWallet = walletAddress ? this.normalizeAddress(walletAddress) : '';
+    const cleanUsername = username ? username.replace(/^@/, '').toLowerCase().trim() : '';
+
     let account: UserAccount | undefined;
 
-    // 1. If telegramId is present, search by telegramId FIRST (Primary persistent identity!)
+    // 1. By Telegram ID (primary persistent identity)
     if (cleanTgId) {
-      for (const u of this.users.values()) {
-        if (u.telegramId && String(u.telegramId).trim() === cleanTgId) {
-          account = u;
-          break;
-        }
-      }
+      account = this.usersByTg.get(cleanTgId);
     }
 
-    // 2. If not found by telegramId, search by walletAddress if provided
-    const normKey = walletAddress ? this.normalizeAddress(walletAddress) : '';
-    if (!account && normKey) {
-      account = this.users.get(normKey) || this.users.get(walletAddress!.toLowerCase());
-      if (account && cleanTgId && !account.telegramId) {
-        account.telegramId = cleanTgId;
-      }
+    // 2. By Wallet Address
+    if (!account && normWallet) {
+      account = this.usersByWallet.get(normWallet) || (walletAddress ? this.usersByWallet.get(walletAddress.toLowerCase()) : undefined);
     }
 
-    // 3. If still not found and walletAddress was 'tg_...' or a number, check by that key
+    // 3. If walletAddress was 'tg_12345'
     if (!account && walletAddress) {
       const matchTg = walletAddress.match(/^(?:tg_)?(\d+)$/);
       if (matchTg) {
-        const foundTgId = matchTg[1];
-        for (const u of this.users.values()) {
-          if (u.telegramId && String(u.telegramId).trim() === foundTgId) {
-            account = u;
-            break;
-          }
-        }
+        account = this.usersByTg.get(matchTg[1]);
       }
+    }
+
+    // 4. By Username
+    if (!account && cleanUsername) {
+      account = this.usersByUsername.get(cleanUsername);
     }
 
     if (account) {
@@ -465,6 +532,7 @@ export class DatabaseService {
       let changed = false;
       if (cleanTgId && account.telegramId !== cleanTgId) {
         account.telegramId = cleanTgId;
+        this.usersByTg.set(cleanTgId, account);
         changed = true;
       }
       if (displayName && displayName.trim() && account.displayName !== displayName.trim()) {
@@ -477,12 +545,16 @@ export class DatabaseService {
       }
       if (username && account.username !== username) {
         account.username = username;
+        if (cleanUsername) this.usersByUsername.set(cleanUsername, account);
         changed = true;
       }
       if (walletAddress && !walletAddress.startsWith('tg_') && !/^\d+$/.test(walletAddress)) {
         const friendly = this.toFriendlyAddress(walletAddress);
         if (friendly && account.walletAddress !== friendly) {
           account.walletAddress = friendly;
+          const newNorm = this.normalizeAddress(walletAddress);
+          if (newNorm) this.usersByWallet.set(newNorm, account);
+          this.usersByWallet.set(walletAddress.toLowerCase(), account);
           changed = true;
         }
       }
@@ -495,11 +567,11 @@ export class DatabaseService {
       return account;
     }
 
-    // 4. Create new UserAccount
+    // 5. Create new UserAccount
     const friendlyWallet = walletAddress && !walletAddress.startsWith('tg_') && !/^\d+$/.test(walletAddress)
       ? this.toFriendlyAddress(walletAddress)
       : '';
-    const userStorageKey = cleanTgId ? `tg_${cleanTgId}` : (normKey || `user_${Date.now()}`);
+    const userStorageKey = cleanTgId ? `tg_${cleanTgId}` : (normWallet || `user_${Date.now()}`);
 
     account = {
       walletAddress: friendlyWallet,
@@ -518,7 +590,9 @@ export class DatabaseService {
     };
 
     this.users.set(userStorageKey, account);
+    this.indexUser(account);
     this.persistData();
+    console.log(`[DatabaseService] Created UserAccount ${account.displayName} (${account.walletAddress || account.telegramId})`);
     return account;
   }
 
@@ -543,19 +617,25 @@ export class DatabaseService {
     amountGram: string
   ): Promise<UserAccount | null> {
     const normId = identifier.trim().toLowerCase();
-    let account: UserAccount | undefined;
+    const cleanUname = normId.replace('@', '');
+    let account: UserAccount | undefined =
+      this.usersByTg.get(normId) ||
+      this.usersByWallet.get(this.normalizeAddress(normId)) ||
+      this.usersByWallet.get(normId) ||
+      this.usersByUsername.get(cleanUname);
 
-    // Search by telegramId, walletAddress, or username
-    for (const [key, u] of this.users.entries()) {
-      if (
-        u.telegramId === normId ||
-        key === this.normalizeAddress(identifier) ||
-        key === normId ||
-        u.walletAddress.toLowerCase() === normId ||
-        (u.username && u.username.toLowerCase() === normId.replace('@', ''))
-      ) {
-        account = u;
-        break;
+    if (!account) {
+      for (const [key, u] of this.users.entries()) {
+        if (
+          u.telegramId === normId ||
+          key === this.normalizeAddress(identifier) ||
+          key === normId ||
+          u.walletAddress.toLowerCase() === normId ||
+          (u.username && u.username.toLowerCase() === cleanUname)
+        ) {
+          account = u;
+          break;
+        }
       }
     }
 
@@ -580,6 +660,7 @@ export class DatabaseService {
       details: `Admin balance adjustment to ${validAmt} GRAM`,
     });
 
+    this.leaderboardCache.clear();
     this.persistData();
     console.log(`[DatabaseService] Admin set balance for ${account.walletAddress} (ID: ${account.telegramId}) to ${validAmt} GRAM`);
     return account;
@@ -620,6 +701,7 @@ export class DatabaseService {
       details,
     });
 
+    this.leaderboardCache.clear();
     this.persistData();
     return account;
   }
@@ -664,6 +746,7 @@ export class DatabaseService {
       details,
     });
 
+    this.leaderboardCache.clear();
     this.persistData();
     return { success: true, account };
   }
@@ -677,12 +760,31 @@ export class DatabaseService {
     return this.creditUserBalance(walletAddress, amountGram, 'REFUND', reason, telegramId);
   }
 
-  public async getUserTransactions(walletAddress: string): Promise<BalanceTransaction[]> {
-    const normKey = this.normalizeAddress(walletAddress);
-    const lowerKey = walletAddress.toLowerCase();
-    return this.transactions.filter(
-      (tx) => this.normalizeAddress(tx.walletAddress) === normKey || tx.walletAddress.toLowerCase() === lowerKey
-    );
+  public async getUserTransactions(walletAddress?: string, telegramId?: string): Promise<BalanceTransaction[]> {
+    const resolvedTg = this.resolveTelegramId(walletAddress, telegramId);
+    const userAcc = resolvedTg
+      ? this.usersByTg.get(resolvedTg)
+      : (walletAddress ? (this.usersByWallet.get(this.normalizeAddress(walletAddress)) || this.usersByWallet.get(walletAddress.toLowerCase())) : undefined);
+
+    const possibleWallets = new Set<string>();
+    if (walletAddress) {
+      possibleWallets.add(this.normalizeAddress(walletAddress));
+      possibleWallets.add(walletAddress.toLowerCase());
+    }
+    if (userAcc?.walletAddress) {
+      possibleWallets.add(this.normalizeAddress(userAcc.walletAddress));
+      possibleWallets.add(userAcc.walletAddress.toLowerCase());
+    }
+    if (resolvedTg) {
+      possibleWallets.add(`tg_${resolvedTg}`);
+      possibleWallets.add(resolvedTg);
+    }
+
+    return this.transactions.filter((tx) => {
+      const txNorm = this.normalizeAddress(tx.walletAddress);
+      const txLower = tx.walletAddress.toLowerCase();
+      return possibleWallets.has(txNorm) || possibleWallets.has(txLower);
+    });
   }
 
   // --- Treasury Management Methods ---
@@ -775,6 +877,8 @@ export class DatabaseService {
 
   public async saveMatch(record: StoredMatch): Promise<void> {
     this.matches.set(record.matchId, record);
+    this.indexMatch(record);
+    this.leaderboardCache.clear();
     this.persistData();
     console.log(`[DatabaseService] Persisted match #${record.matchId} (Winner: ${record.winnerName || record.winnerAddress})`);
   }
@@ -798,78 +902,70 @@ export class DatabaseService {
       return String(telegramId).trim();
     }
     if (walletAddress) {
+      const matchTg = walletAddress.match(/^(?:tg_)?(\d+)$/);
+      if (matchTg) return matchTg[1];
       const norm = this.normalizeAddress(walletAddress);
-      const acc = this.users.get(norm);
+      const acc = this.usersByWallet.get(norm) || this.usersByWallet.get(walletAddress.toLowerCase());
       if (acc?.telegramId && String(acc.telegramId).trim()) return String(acc.telegramId).trim();
     }
     const uname = this.extractUsername(name);
     if (uname) {
-      for (const u of this.users.values()) {
-        if (u.telegramId && u.username && u.username.toLowerCase() === uname) {
-          return String(u.telegramId).trim();
-        }
-      }
+      const acc = this.usersByUsername.get(uname);
+      if (acc?.telegramId && String(acc.telegramId).trim()) return String(acc.telegramId).trim();
     }
     return undefined;
   }
 
   public async getUserHistory(walletAddress?: string, telegramId?: string): Promise<UserMatchHistoryRecord[]> {
     const resolvedTgId = this.resolveTelegramId(walletAddress, telegramId);
-    let targetUsername = '';
-    if (walletAddress) {
-      const acc = this.users.get(this.normalizeAddress(walletAddress));
-      if (acc?.username) targetUsername = acc.username.toLowerCase();
+    const targetNorm = walletAddress ? this.normalizeAddress(walletAddress) : '';
+
+    let candidateMatches: StoredMatch[] = [];
+    if (resolvedTgId && this.matchesByTg.has(resolvedTgId)) {
+      candidateMatches = this.matchesByTg.get(resolvedTgId)!;
+    } else if (targetNorm && this.matchesByWallet.has(targetNorm)) {
+      candidateMatches = this.matchesByWallet.get(targetNorm)!;
+    } else if (resolvedTgId) {
+      candidateMatches = Array.from(this.matches.values()).filter(
+        (m) => m.playerATelegramId === resolvedTgId || m.playerBTelegramId === resolvedTgId
+      );
+    } else if (targetNorm) {
+      candidateMatches = Array.from(this.matches.values()).filter(
+        (m) => (m.playerAAddress && this.normalizeAddress(m.playerAAddress) === targetNorm) ||
+               (m.playerBAddress && this.normalizeAddress(m.playerBAddress) === targetNorm)
+      );
     }
 
-    const targetNorm = walletAddress ? this.normalizeAddress(walletAddress) : '';
-    const targetLower = walletAddress ? walletAddress.toLowerCase() : '';
+    if (candidateMatches.length === 0) {
+      return [];
+    }
 
     const result: UserMatchHistoryRecord[] = [];
-    const sorted = Array.from(this.matches.values()).sort((a, b) => b.settledAt - a.settledAt);
+    const sorted = [...candidateMatches].sort((a, b) => b.settledAt - a.settledAt);
 
     for (const m of sorted) {
-      const normA = this.normalizeAddress(m.playerAAddress);
-      const normB = m.playerBAddress ? this.normalizeAddress(m.playerBAddress) : '';
-      const normWinner = m.winnerAddress ? this.normalizeAddress(m.winnerAddress) : '';
-
-      const tgA = m.playerATelegramId || this.resolveTelegramId(m.playerAAddress, undefined, m.playerAName);
-      const tgB = m.playerBTelegramId || (m.playerBAddress ? this.resolveTelegramId(m.playerBAddress, undefined, m.playerBName) : undefined);
-      const unameA = this.extractUsername(m.playerAName);
-      const unameB = this.extractUsername(m.playerBName);
-
-      let isPlayerA = false;
-      let isPlayerB = false;
-
-      if (resolvedTgId) {
-        if (tgA && String(tgA) === String(resolvedTgId)) isPlayerA = true;
-        if (tgB && String(tgB) === String(resolvedTgId)) isPlayerB = true;
-      }
-
-      if (!isPlayerA && !isPlayerB && targetUsername) {
-        if (unameA && unameA === targetUsername) isPlayerA = true;
-        if (unameB && unameB === targetUsername) isPlayerB = true;
-      }
-
-      if (!isPlayerA && targetNorm && (normA === targetNorm || m.playerAAddress.toLowerCase() === targetLower)) isPlayerA = true;
-      if (!isPlayerB && targetNorm && (normB === targetNorm || (m.playerBAddress && m.playerBAddress.toLowerCase() === targetLower))) isPlayerB = true;
+      const isPlayerA = Boolean(
+        (resolvedTgId && m.playerATelegramId && String(m.playerATelegramId) === String(resolvedTgId)) ||
+        (targetNorm && m.playerAAddress && this.normalizeAddress(m.playerAAddress) === targetNorm)
+      );
+      const isPlayerB = !isPlayerA && Boolean(
+        (resolvedTgId && m.playerBTelegramId && String(m.playerBTelegramId) === String(resolvedTgId)) ||
+        (targetNorm && m.playerBAddress && this.normalizeAddress(m.playerBAddress) === targetNorm)
+      );
 
       if (!isPlayerA && !isPlayerB) continue;
 
+      const myTg = isPlayerA ? m.playerATelegramId : m.playerBTelegramId;
+      const myWallet = isPlayerA ? m.playerAAddress : m.playerBAddress;
+      const myName = isPlayerA ? m.playerAName : m.playerBName;
+
       let isWinner = false;
-      if (isPlayerA && !isPlayerB) {
-        isWinner = Boolean(
-          (m.winnerTelegramId && tgA && String(m.winnerTelegramId) === String(tgA)) ||
-          (normWinner && normWinner === normA) ||
-          (m.winnerName && m.playerAName && m.winnerName === m.playerAName)
-        );
-      } else if (isPlayerB && !isPlayerA) {
-        isWinner = Boolean(
-          (m.winnerTelegramId && tgB && String(m.winnerTelegramId) === String(tgB)) ||
-          (normWinner && normWinner === normB) ||
-          (m.winnerName && m.playerBName && m.winnerName === m.playerBName)
-        );
-      } else {
-        isWinner = Boolean(normWinner && (normWinner === normA || normWinner === normB));
+      if (m.winnerTelegramId && myTg && String(m.winnerTelegramId) === String(myTg)) {
+        isWinner = true;
+      } else if (m.winnerAddress && myWallet && this.normalizeAddress(m.winnerAddress) === this.normalizeAddress(myWallet)) {
+        isWinner = true;
+      } else if (m.winnerName && myName && m.winnerName === myName) {
+        isWinner = true;
       }
 
       const outcome: 'WIN' | 'LOSS' | 'DRAW' = isWinner ? 'WIN' : 'LOSS';
@@ -904,7 +1000,29 @@ export class DatabaseService {
   }
 
   public async getUserStats(walletAddress?: string, telegramId?: string): Promise<UserStats> {
+    const resolvedTgId = this.resolveTelegramId(walletAddress, telegramId);
+    const targetNorm = walletAddress ? this.normalizeAddress(walletAddress) : '';
+
+    const userAcc = resolvedTgId
+      ? this.usersByTg.get(resolvedTgId)
+      : (targetNorm ? (this.usersByWallet.get(targetNorm) || this.usersByWallet.get(walletAddress!.toLowerCase())) : undefined);
+
     const history = await this.getUserHistory(walletAddress, telegramId);
+
+    // If mockStats present on seeded user and history is empty, return mockStats directly
+    if (history.length === 0 && userAcc?.mockStats) {
+      return {
+        duelsPlayed: userAcc.mockStats.duelsPlayed,
+        duelsWon: userAcc.mockStats.duelsWon,
+        winRate: userAcc.mockStats.winRate,
+        bestReaction: userAcc.mockStats.bestReaction || '-',
+        totalProfitsTon: userAcc.mockStats.totalProfitsGram,
+        totalProfitsGram: userAcc.mockStats.totalProfitsGram,
+        dailyStreak: userAcc.mockStats.dailyStreak,
+        hasWonToday: userAcc.mockStats.dailyStreak > 0,
+      };
+    }
+
     const duelsPlayed = history.length;
     const duelsWon = history.filter((h) => h.outcome === 'WIN').length;
     const winRate = duelsPlayed > 0 ? Math.round((duelsWon / duelsPlayed) * 100) : 0;
@@ -990,46 +1108,45 @@ export class DatabaseService {
     userAddress?: string,
     telegramId?: string
   ): Promise<{ leaderboard: LeaderboardEntry[]; userEntry?: LeaderboardEntry | null }> {
-    interface UserGroup {
-      key: string;
-      telegramId?: string;
-      primaryWallet: string;
-      username: string;
-      photoUrl?: string;
-    }
+    const cacheKey = `${sortBy}_${limit}`;
+    const cached = this.leaderboardCache.get(cacheKey);
+    let ranked: LeaderboardEntry[];
 
-    const groups = new Map<string, UserGroup>();
-
-    const getGroupKey = (tgId?: string, wallet?: string, name?: string): string => {
-      const resolvedTg = this.resolveTelegramId(wallet, tgId, name);
-      if (resolvedTg) return `tg_${resolvedTg}`;
-      if (wallet) return `wallet_${this.normalizeAddress(wallet)}`;
-      const uname = this.extractUsername(name);
-      if (uname) return `user_${uname}`;
-      return '';
-    };
-
-    const registerPlayer = (wallet?: string, tgId?: string, name?: string, photo?: string) => {
-      const resolvedTg = this.resolveTelegramId(wallet, tgId, name);
-      const key = getGroupKey(tgId, wallet, name);
-      if (!key) return;
-
-      const userAcc = resolvedTg
-        ? Array.from(this.users.values()).find((u) => u.telegramId && String(u.telegramId).trim() === resolvedTg)
-        : (wallet ? this.users.get(this.normalizeAddress(wallet)) : undefined);
-
-      const friendlyWallet = wallet ? this.toFriendlyAddress(wallet) : (userAcc?.walletAddress || '');
-
-      let cleanName = userAcc?.displayName || userAcc?.username || name || '';
-      if (cleanName.startsWith('@')) {
-        cleanName = cleanName.substring(1);
+    if (cached && Date.now() - cached.timestamp < 3000) {
+      ranked = cached.data;
+    } else {
+      interface UserGroup {
+        key: string;
+        telegramId?: string;
+        primaryWallet: string;
+        username: string;
+        photoUrl?: string;
       }
-      if (!cleanName && friendlyWallet) {
-        cleanName = friendlyWallet.length > 10 ? `${friendlyWallet.slice(0, 4)}...${friendlyWallet.slice(-4)}` : friendlyWallet;
-      }
-      const userPhoto = userAcc?.photoUrl || photo || '';
 
-      if (!groups.has(key)) {
+      const groups = new Map<string, UserGroup>();
+
+      const registerPlayer = (wallet?: string, tgId?: string, name?: string, photo?: string) => {
+        const resolvedTg = this.resolveTelegramId(wallet, tgId, name);
+        const key = resolvedTg ? `tg_${resolvedTg}` : (wallet ? `wallet_${this.normalizeAddress(wallet)}` : '');
+        if (!key) return;
+
+        if (groups.has(key)) return;
+
+        const userAcc = resolvedTg
+          ? this.usersByTg.get(resolvedTg)
+          : (wallet ? (this.usersByWallet.get(this.normalizeAddress(wallet)) || this.usersByWallet.get(wallet.toLowerCase())) : undefined);
+
+        const friendlyWallet = wallet ? this.toFriendlyAddress(wallet) : (userAcc?.walletAddress || '');
+
+        let cleanName = userAcc?.displayName || userAcc?.username || name || '';
+        if (cleanName.startsWith('@')) {
+          cleanName = cleanName.substring(1);
+        }
+        if (!cleanName && friendlyWallet) {
+          cleanName = friendlyWallet.length > 10 ? `${friendlyWallet.slice(0, 4)}...${friendlyWallet.slice(-4)}` : friendlyWallet;
+        }
+        const userPhoto = userAcc?.photoUrl || photo || '';
+
         groups.set(key, {
           key,
           telegramId: resolvedTg,
@@ -1037,87 +1154,68 @@ export class DatabaseService {
           username: cleanName,
           photoUrl: userPhoto,
         });
-      } else {
-        const g = groups.get(key)!;
-        if (!g.telegramId && resolvedTg) g.telegramId = resolvedTg;
-        if (friendlyWallet && !g.primaryWallet) g.primaryWallet = friendlyWallet;
-        if (userPhoto && !g.photoUrl) g.photoUrl = userPhoto;
-        if (cleanName && (!g.username || g.username.startsWith('0:') || g.username.startsWith('Player_') || g.username.startsWith('EQ') || g.username.startsWith('UQ'))) {
-          g.username = cleanName;
+      };
+
+      // 1. Register from users
+      for (const user of this.users.values()) {
+        registerPlayer(user.walletAddress, user.telegramId, user.displayName || user.username, user.photoUrl);
+      }
+
+      // 2. Register current requesting user if present
+      if (userAddress || telegramId) {
+        registerPlayer(userAddress, telegramId);
+      }
+
+      const entries: Omit<LeaderboardEntry, 'rank'>[] = [];
+
+      for (const group of groups.values()) {
+        const stats = await this.getUserStats(group.primaryWallet, group.telegramId);
+        // Skip players with 0 duels played and 0 profits
+        if (stats.duelsPlayed === 0 && parseFloat(stats.totalProfitsGram) <= 0) continue;
+
+        entries.push({
+          walletAddress: group.primaryWallet,
+          telegramId: group.telegramId,
+          username: group.username || (group.primaryWallet ? `${group.primaryWallet.slice(0, 4)}...${group.primaryWallet.slice(-4)}` : 'Warrior'),
+          photoUrl: group.photoUrl || undefined,
+          duelsPlayed: stats.duelsPlayed,
+          duelsWon: stats.duelsWon,
+          winRate: stats.winRate,
+          dailyStreak: stats.dailyStreak,
+          totalProfitsGram: stats.totalProfitsGram,
+        });
+      }
+
+      entries.sort((a, b) => {
+        if (sortBy === 'streak') {
+          if (b.dailyStreak !== a.dailyStreak) return b.dailyStreak - a.dailyStreak;
+          return b.duelsWon - a.duelsWon;
+        } else if (sortBy === 'profits') {
+          const diff = parseFloat(b.totalProfitsGram) - parseFloat(a.totalProfitsGram);
+          if (Math.abs(diff) > 0.001) return diff;
+          return b.duelsWon - a.duelsWon;
+        } else {
+          if (b.duelsWon !== a.duelsWon) return b.duelsWon - a.duelsWon;
+          if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+          return b.duelsPlayed - a.duelsPlayed;
         }
-      }
-    };
-
-    // 1. Register from users
-    for (const user of this.users.values()) {
-      registerPlayer(user.walletAddress, user.telegramId, user.displayName || user.username, user.photoUrl);
-    }
-
-    // 2. Register from matches
-    for (const m of this.matches.values()) {
-      if (m.playerAAddress || m.playerATelegramId) {
-        registerPlayer(m.playerAAddress, m.playerATelegramId, m.playerAName);
-      }
-      if (m.playerBAddress || m.playerBTelegramId) {
-        registerPlayer(m.playerBAddress, m.playerBTelegramId, m.playerBName);
-      }
-    }
-
-    // 3. Register current requesting user if present
-    if (userAddress || telegramId) {
-      registerPlayer(userAddress, telegramId);
-    }
-
-    const entries: Omit<LeaderboardEntry, 'rank'>[] = [];
-
-    for (const group of groups.values()) {
-      const stats = await this.getUserStats(group.primaryWallet, group.telegramId);
-      // Skip players with 0 duels played and 0 profits
-      if (stats.duelsPlayed === 0 && parseFloat(stats.totalProfitsGram) <= 0) continue;
-
-      entries.push({
-        walletAddress: group.primaryWallet,
-        telegramId: group.telegramId,
-        username: group.username || (group.primaryWallet ? `${group.primaryWallet.slice(0, 4)}...${group.primaryWallet.slice(-4)}` : 'Warrior'),
-        photoUrl: group.photoUrl || undefined,
-        duelsPlayed: stats.duelsPlayed,
-        duelsWon: stats.duelsWon,
-        winRate: stats.winRate,
-        dailyStreak: stats.dailyStreak,
-        totalProfitsGram: stats.totalProfitsGram,
       });
+
+      ranked = entries.map((e, idx) => ({
+        ...e,
+        rank: idx + 1,
+      }));
+
+      this.leaderboardCache.set(cacheKey, { timestamp: Date.now(), data: ranked });
     }
-
-    entries.sort((a, b) => {
-      if (sortBy === 'streak') {
-        if (b.dailyStreak !== a.dailyStreak) return b.dailyStreak - a.dailyStreak;
-        return b.duelsWon - a.duelsWon;
-      } else if (sortBy === 'profits') {
-        const diff = parseFloat(b.totalProfitsGram) - parseFloat(a.totalProfitsGram);
-        if (Math.abs(diff) > 0.001) return diff;
-        return b.duelsWon - a.duelsWon;
-      } else {
-        if (b.duelsWon !== a.duelsWon) return b.duelsWon - a.duelsWon;
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        return b.duelsPlayed - a.duelsPlayed;
-      }
-    });
-
-    const ranked: LeaderboardEntry[] = entries.map((e, idx) => ({
-      ...e,
-      rank: idx + 1,
-    }));
 
     let userEntry: LeaderboardEntry | null = null;
-    const targetKey = getGroupKey(telegramId, userAddress);
+    const targetTg = telegramId ? String(telegramId).trim() : this.resolveTelegramId(userAddress);
+    const targetWalletNorm = userAddress ? this.normalizeAddress(userAddress) : '';
 
-    if (targetKey) {
-      const targetGroup = groups.get(targetKey);
-      const targetTg = targetGroup?.telegramId || telegramId;
-      const targetWalletNorm = userAddress ? this.normalizeAddress(userAddress) : '';
-
+    if (targetTg || targetWalletNorm) {
       const found = ranked.find((e) => {
-        if (targetTg && e.telegramId && String(e.telegramId) === String(targetTg)) return true;
+        if (targetTg && e.telegramId && String(e.telegramId) === targetTg) return true;
         if (targetWalletNorm && e.walletAddress && this.normalizeAddress(e.walletAddress) === targetWalletNorm) return true;
         return false;
       });
@@ -1126,13 +1224,14 @@ export class DatabaseService {
         userEntry = found;
       } else if (userAddress || telegramId) {
         const stats = await this.getUserStats(userAddress, telegramId);
-        const disp = targetGroup?.username || (userAddress ? `${userAddress.slice(0, 4)}...${userAddress.slice(-4)}` : 'You');
+        const userAcc = targetTg ? this.usersByTg.get(targetTg) : (targetWalletNorm ? (this.usersByWallet.get(targetWalletNorm) || this.usersByWallet.get(userAddress!.toLowerCase())) : undefined);
+        const disp = userAcc?.displayName || userAcc?.username || (userAddress ? `${userAddress.slice(0, 4)}...${userAddress.slice(-4)}` : 'You');
         userEntry = {
           rank: ranked.length + 1,
-          walletAddress: userAddress ? this.toFriendlyAddress(userAddress) : '',
-          telegramId,
+          walletAddress: userAddress ? this.toFriendlyAddress(userAddress) : (userAcc?.walletAddress || ''),
+          telegramId: targetTg,
           username: disp,
-          photoUrl: targetGroup?.photoUrl,
+          photoUrl: userAcc?.photoUrl,
           duelsPlayed: stats.duelsPlayed,
           duelsWon: stats.duelsWon,
           winRate: stats.winRate,

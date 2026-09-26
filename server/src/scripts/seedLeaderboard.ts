@@ -71,57 +71,41 @@ export async function seedLeaderboard(userCount: number = 150) {
       withdrawnTotalTon: '0.00',
       withdrawnTotalGram: '0.00',
       updatedAt: now - i * 60000,
+      mockStats: {
+        duelsPlayed,
+        duelsWon,
+        winRate: Math.round(winRate * 100),
+        bestReaction: i < 20 ? `${Math.floor(180 + Math.random() * 120)}` : '-',
+        totalProfitsGram: profitGram,
+        dailyStreak: streak,
+      },
     };
     users.push(userAccount);
 
-    // Create matches for this user to back up their stats
-    for (let w = 0; w < duelsWon; w++) {
-      const matchTimestamp = now - (w * 3600000) - (streak > 0 && w < streak ? w * ONE_DAY_MS : 0);
+    // Generate 1-2 sample matches for match history
+    const sampleMatchesCount = i < 30 ? 2 : 1;
+    for (let mIdx = 0; mIdx < sampleMatchesCount; mIdx++) {
+      const matchTimestamp = now - (mIdx * 3600000) - (i * 120000);
+      const isWin = mIdx === 0 || duelsWon > losses;
       matches.push({
-        matchId: `seed_${i}_win_${w}`,
+        matchId: `seed_${i}_${mIdx}`,
         wagerAmountNano: '1000000000',
         wagerTon: '1.00',
         wagerGram: '1.00',
-        payoutTon: '1.92',
-        payoutGram: '1.92',
+        payoutTon: isWin ? '1.92' : '0.00',
+        payoutGram: isWin ? '1.92' : '0.00',
         playerAAddress: userAccount.walletAddress,
         playerAName: fullName,
         playerATelegramId: tgId,
         playerBAddress: 'UQOpponent00000000000000000000000000000000000000000',
         playerBName: 'Arena Challenger',
         playerBTelegramId: '999999999',
-        winnerAddress: userAccount.walletAddress,
-        winnerName: fullName,
-        winnerTelegramId: tgId,
-        scoreA: 1,
-        scoreB: 0,
+        winnerAddress: isWin ? userAccount.walletAddress : 'UQOpponent00000000000000000000000000000000000000000',
+        winnerName: isWin ? fullName : 'Arena Challenger',
+        winnerTelegramId: isWin ? tgId : '999999999',
+        scoreA: isWin ? 1 : 0,
+        scoreB: isWin ? 0 : 1,
         gameType: i % 2 === 0 ? 'split' : 'roulette',
-        settledAt: matchTimestamp,
-        createdAt: matchTimestamp - 30000,
-      });
-    }
-
-    for (let l = 0; l < losses; l++) {
-      const matchTimestamp = now - ((duelsWon + l) * 3600000) - (15 * ONE_DAY_MS);
-      matches.push({
-        matchId: `seed_${i}_loss_${l}`,
-        wagerAmountNano: '1000000000',
-        wagerTon: '1.00',
-        wagerGram: '1.00',
-        payoutTon: '0.00',
-        payoutGram: '0.00',
-        playerAAddress: userAccount.walletAddress,
-        playerAName: fullName,
-        playerATelegramId: tgId,
-        playerBAddress: 'UQOpponent00000000000000000000000000000000000000000',
-        playerBName: 'Arena Challenger',
-        playerBTelegramId: '999999999',
-        winnerAddress: 'UQOpponent00000000000000000000000000000000000000000',
-        winnerName: 'Arena Challenger',
-        winnerTelegramId: '999999999',
-        scoreA: 0,
-        scoreB: 1,
-        gameType: 'roulette',
         settledAt: matchTimestamp,
         createdAt: matchTimestamp - 30000,
       });
