@@ -3,6 +3,7 @@ import { ShieldCheck, Swords, TrendingUp, Users, X, FileText, CheckCircle2 } fro
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { useI18n } from '../i18n/index.js';
+import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -10,15 +11,25 @@ interface RulesModalProps {
 }
 
 export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
+  const { isFullscreen, topInset } = useTelegramViewport();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<'fairplay' | 'duels' | 'fees' | 'affiliates'>('fairplay');
 
   if (!isOpen) return null;
 
+  const topOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 16;
+  const bottomOffset = isFullscreen ? 24 : 16;
+
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-cyber-card border border-cyber-border rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div
+      style={{ paddingTop: `${topOffset}px`, paddingBottom: `${bottomOffset}px` }}
+      className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+    >
+      <div
+        style={{ maxHeight: `calc(100dvh - ${topOffset + bottomOffset}px)` }}
+        className="bg-cyber-card border border-cyber-border rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         
         {/* Modal Header */}
         <div className="p-4 border-b border-cyber-border flex items-center justify-between bg-cyber-bg/60">

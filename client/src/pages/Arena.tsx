@@ -18,6 +18,7 @@ import { shareToTelegram } from '../utils/telegram.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
+import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 
 interface ArenaProps {
   initialMatchId?: string;
@@ -34,6 +35,9 @@ export const Arena: React.FC<ArenaProps> = ({
   onClearDeepMatch,
   onMatchActiveChange,
 }) => {
+  const { isFullscreen, topInset } = useTelegramViewport();
+  const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
+  const modalBottomOffset = isFullscreen ? 24 : 12;
   const [activeMatchId, setActiveMatchId] = useState<string | null>(initialMatchId || null);
 
   useEffect(() => {
@@ -712,8 +716,14 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {/* Cancel Match Modal */}
       {matchToCancel && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+        >
+          <div
+            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+            className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+          >
             <h3 className="text-base font-orbitron font-bold text-white flex items-center space-x-2">
               <AlertTriangle className="w-5 h-5 text-cyber-pink animate-pulse" />
               <span>CANCEL DUEL & REFUND</span>
@@ -768,8 +778,14 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {/* Quick Deposit Modal */}
       {showDepositModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+        >
+          <div
+            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+            className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+          >
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <ArrowDownLeft className="w-4 h-4 text-cyber-cyan" />
               <span>DEPOSIT GRAM TO IN-BOT BALANCE</span>

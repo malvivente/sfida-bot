@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Flame, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, ArrowRight, ArrowDownLeft, ArrowUpRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
+import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData } from '../types/index.js';
 import { Address } from '@ton/ton';
@@ -15,6 +16,10 @@ interface ProfileProps {
 export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboard }) => {
   const { userAddress, openWalletModal, sendDepositTransaction } = useTonClashContract();
   const { userId, username, fullName, displayName, photoUrl, isPremium } = useTelegram();
+  const { isFullscreen, topInset } = useTelegramViewport();
+
+  const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
+  const modalBottomOffset = isFullscreen ? 24 : 12;
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
 
@@ -540,8 +545,19 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
       {/* Deposit Modal */}
       {showDepositModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          style={{
+            paddingTop: `${modalTopOffset}px`,
+            paddingBottom: `${modalBottomOffset}px`
+          }}
+        >
+          <div 
+            className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            style={{
+              maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)`
+            }}
+          >
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <ArrowDownLeft className="w-4 h-4 text-cyber-cyan" />
               <span>DEPOSIT GRAM TO IN-BOT BALANCE</span>
@@ -595,8 +611,19 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
       {/* Withdraw Modal */}
       {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          style={{
+            paddingTop: `${modalTopOffset}px`,
+            paddingBottom: `${modalBottomOffset}px`
+          }}
+        >
+          <div 
+            className="bg-cyber-card border border-cyber-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            style={{
+              maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)`
+            }}
+          >
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <ArrowUpRight className="w-4 h-4 text-cyber-pink" />
               <span>WITHDRAW GRAM TO WALLET</span>

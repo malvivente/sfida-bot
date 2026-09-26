@@ -9,6 +9,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { areAddressesEqual } from '../utils/ton.js';
 import { useI18n } from '../i18n/index.js';
+import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -52,6 +53,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
   const { t } = useI18n();
+  const { isFullscreen, topInset } = useTelegramViewport();
+  const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
+  const modalBottomOffset = isFullscreen ? 24 : 12;
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isPrivateRoom, setIsPrivateRoom] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
@@ -437,8 +441,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
       {/* Insufficient Balance to Join Modal */}
       {insufficientJoinMatch && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+        >
+          <div
+            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+            className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+          >
             <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 text-cyber-pink" />
               <span>{t('lobby.insufficientModalTitle')}</span>
@@ -484,8 +494,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
       {/* Create Match Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-cyber-card border border-cyber-border rounded-2xl max-w-sm w-full shadow-2xl flex flex-col max-h-[90vh] my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+        >
+          <div
+            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+            className="bg-cyber-card border border-cyber-border rounded-2xl max-w-sm w-full shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          >
             {/* Modal Header */}
             <div className="p-4 sm:p-5 pb-3 border-b border-cyber-border/60 flex items-start justify-between shrink-0 bg-cyber-bg/40">
               <div>
