@@ -11,12 +11,12 @@ import {
   Clock,
   RotateCcw,
   CheckCircle2,
-  AlertTriangle,
-  Zap,
+  Loader2,
 } from 'lucide-react';
 import { SplitStealState, SplitStealChoice } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
+import { useI18n } from '../../i18n/index.js';
 
 interface SplitStealArenaProps {
   gameData?: SplitStealState;
@@ -64,10 +64,9 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   playerBReady = false,
   isReady = false,
   onReady,
+  countdownSeconds,
   roomState,
   wagerTon,
-  isCreator,
-  onCancelMatch,
   onReturnToLobby,
   rematchOffer,
   onRequestRematch,
@@ -79,7 +78,8 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   hasPlayerB = true,
   onJoinAsPlayer,
 }) => {
-  const { triggerImpact, triggerSelection } = useHaptics();
+  const { t } = useI18n();
+  const { triggerImpact } = useHaptics();
   const [localChoice, setLocalChoice] = useState<SplitStealChoice | null>(null);
 
   const phase = gameData?.phase ?? 'COUNTDOWN';
@@ -92,7 +92,6 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const outcome = gameData?.outcome;
   const jackpotGram = gameData?.jackpotGram ?? 5.0;
   const jackpotStatus = gameData?.jackpotStatus ?? (jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING');
-  const bonusAwardedGram = gameData?.bonusAwardedGram;
   const bonusPerPlayerGram = gameData?.bonusPerPlayerGram;
 
   const isLobby = roomState === 'LOBBY';
@@ -119,25 +118,25 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
       <div className="absolute inset-0 bg-radial-gradient from-purple-900/15 via-transparent to-black/90 pointer-events-none" />
 
       {/* Top Banner: Trust Jackpot Counter */}
-      <div className="w-full z-10 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/40 rounded-2xl p-2.5 flex items-center justify-between shadow-lg">
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0">
+      <div className="w-full z-10 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/40 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between shadow-lg gap-2">
+        <div className="flex items-center space-x-2 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0">
             <Trophy className="w-4 h-4 text-amber-300" />
           </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="text-[10px] font-orbitron font-extrabold tracking-wider text-amber-300 uppercase">
-                JACKPOT DELLA FIDUCIA
+          <div className="min-w-0">
+            <div className="flex items-center space-x-1">
+              <span className="text-[10px] sm:text-[11px] font-orbitron font-extrabold tracking-wider text-amber-300 uppercase truncate">
+                {t('split.trustJackpot')}
               </span>
-              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+              <Sparkles className="w-3 h-3 text-amber-300 shrink-0 animate-pulse" />
             </div>
-            <div className="text-xs font-chakra font-bold text-white flex items-center space-x-1">
+            <div className="text-xs sm:text-sm font-chakra font-bold text-white flex items-center space-x-1">
               <span>{jackpotGram.toFixed(2)} GRAM</span>
             </div>
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <span
             className={`text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider inline-block ${
               isJackpotActive
@@ -145,41 +144,43 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                 : 'bg-cyber-amber/20 border-cyber-amber text-cyber-amber'
             }`}
           >
-            {isJackpotActive ? 'ATTIVO (20% BONUS)' : 'IN CARICA (< 5 GRAM)'}
+            {isJackpotActive ? t('split.jackpotActive') : t('split.jackpotCharging')}
           </span>
           <p className="text-[8px] font-chakra text-slate-400 mt-0.5">
-            {isJackpotActive ? 'Bonus sbloccato se entrambi Split' : 'Solo rimborso se entrambi Split'}
+            {isJackpotActive ? t('split.bonusUnlockedDesc') : t('split.refundOnlyDesc')}
           </p>
         </div>
       </div>
 
       {/* Duelists Header Status */}
-      <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 py-2 gap-1.5 mt-2">
+      <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 pb-2.5 gap-1.5 mt-2">
         {/* Player A */}
-        <div className="flex-1 flex items-center space-x-2 bg-cyber-bg/40 p-2 rounded-xl border border-cyber-cyan/30">
-          <div className="w-7 h-7 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan flex items-center justify-center text-xs font-orbitron font-bold text-cyber-cyan">
+        <div className="flex-1 min-w-0 flex items-center space-x-2 bg-cyber-bg/50 p-2 rounded-xl border border-cyber-cyan/30">
+          <div className="w-7 h-7 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan flex items-center justify-center text-xs font-orbitron font-bold text-cyber-cyan shrink-0">
             P1
           </div>
-          <div className="truncate">
-            <div className="text-xs font-chakra font-bold text-white truncate">{playerAName}</div>
-            <div className="text-[9px] font-mono text-slate-400 flex items-center space-x-1">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-chakra font-bold text-cyber-cyan truncate" title={playerAName}>
+              {playerAName}
+            </div>
+            <div className="text-[9px] font-mono text-slate-400 truncate">
               {isLobby ? (
                 playerAReady ? (
                   <span className="text-cyber-green font-bold flex items-center space-x-0.5">
-                    <CheckCircle2 className="w-2.5 h-2.5" />
-                    <span>READY</span>
+                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                    <span>{t('arena.readyBadge')}</span>
                   </span>
                 ) : (
-                  <span className="text-slate-500">NOT READY</span>
+                  <span className="text-slate-500 font-bold">{t('arena.notReadyBadge')}</span>
                 )
               ) : isCombatActive && !choicesRevealed ? (
                 hasChosenA ? (
                   <span className="text-cyber-green font-bold flex items-center space-x-0.5">
-                    <Lock className="w-2.5 h-2.5 text-cyber-green" />
-                    <span>SCELTA BLOCCATA</span>
+                    <Lock className="w-2.5 h-2.5 text-cyber-green shrink-0" />
+                    <span>{t('split.secretLocked')}</span>
                   </span>
                 ) : (
-                  <span className="text-cyber-amber animate-pulse font-bold">STA PENSANDO...</span>
+                  <span className="text-cyber-amber animate-pulse font-bold">{t('split.thinking')}</span>
                 )
               ) : choicesRevealed ? (
                 <span className={`font-bold ${choiceA === 'SPLIT' ? 'text-cyber-green' : 'text-cyber-pink'}`}>
@@ -193,36 +194,38 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
         </div>
 
         {/* VS / Wager Middle Badge */}
-        <div className="px-2 text-center shrink-0">
-          <div className="text-[10px] font-orbitron font-bold text-purple-400">VS</div>
-          <div className="flex items-center space-x-0.5 text-[11px] font-chakra font-bold text-white mt-0.5">
+        <div className="px-1 text-center shrink-0">
+          <div className="text-[9px] font-orbitron font-bold text-purple-400">VS</div>
+          <div className="flex items-center justify-center space-x-0.5 text-[11px] font-chakra font-bold text-white mt-0.5">
             <span>{wagerTon}</span>
             <GramIcon className="w-3 h-3 text-cyber-cyan" />
           </div>
         </div>
 
         {/* Player B */}
-        <div className="flex-1 flex items-center space-x-2 justify-end bg-cyber-bg/40 p-2 rounded-xl border border-cyber-pink/30 text-right">
-          <div className="truncate">
-            <div className="text-xs font-chakra font-bold text-white truncate">{playerBName}</div>
-            <div className="text-[9px] font-mono text-slate-400 flex items-center justify-end space-x-1">
+        <div className="flex-1 min-w-0 flex items-center space-x-2 bg-cyber-bg/50 p-2 rounded-xl border border-cyber-pink/30 text-right justify-end">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-chakra font-bold text-cyber-pink truncate" title={playerBName}>
+              {playerBName}
+            </div>
+            <div className="text-[9px] font-mono text-slate-400 truncate flex items-center justify-end">
               {isLobby ? (
                 playerBReady ? (
                   <span className="text-cyber-green font-bold flex items-center space-x-0.5">
-                    <CheckCircle2 className="w-2.5 h-2.5" />
-                    <span>READY</span>
+                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                    <span>{t('arena.readyBadge')}</span>
                   </span>
                 ) : (
-                  <span className="text-slate-500">NOT READY</span>
+                  <span className="text-slate-500 font-bold">{t('arena.notReadyBadge')}</span>
                 )
               ) : isCombatActive && !choicesRevealed ? (
                 hasChosenB ? (
                   <span className="text-cyber-green font-bold flex items-center space-x-0.5">
-                    <Lock className="w-2.5 h-2.5 text-cyber-green" />
-                    <span>SCELTA BLOCCATA</span>
+                    <Lock className="w-2.5 h-2.5 text-cyber-green shrink-0" />
+                    <span>{t('split.secretLocked')}</span>
                   </span>
                 ) : (
-                  <span className="text-cyber-amber animate-pulse font-bold">STA PENSANDO...</span>
+                  <span className="text-cyber-amber animate-pulse font-bold">{t('split.thinking')}</span>
                 )
               ) : choicesRevealed ? (
                 <span className={`font-bold ${choiceB === 'SPLIT' ? 'text-cyber-green' : 'text-cyber-pink'}`}>
@@ -233,7 +236,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
               )}
             </div>
           </div>
-          <div className="w-7 h-7 rounded-lg bg-cyber-pink/20 border border-cyber-pink flex items-center justify-center text-xs font-orbitron font-bold text-cyber-pink">
+          <div className="w-7 h-7 rounded-lg bg-cyber-pink/20 border border-cyber-pink flex items-center justify-center text-xs font-orbitron font-bold text-cyber-pink shrink-0">
             P2
           </div>
         </div>
@@ -243,76 +246,38 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
       <div className="w-full flex-1 flex flex-col items-center justify-center my-3 relative z-10">
         {/* State: LOBBY */}
         {isLobby && (
-          <div className="text-center space-y-3 py-6">
+          <div className="text-center space-y-3 py-4">
             <div className="w-16 h-16 rounded-2xl bg-purple-500/15 border border-purple-500/40 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(168,85,247,0.3)]">
               <Handshake className="w-8 h-8 text-purple-400 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-base font-orbitron font-bold text-white">LOBBY SPLIT OR STEAL</h3>
+              <h3 className="text-base font-orbitron font-bold text-white tracking-wider">
+                {t('split.lobbyTitle')}
+              </h3>
               <p className="text-xs font-chakra text-slate-300 max-w-xs mx-auto mt-1">
                 {!hasPlayerB
-                  ? 'In attesa che un secondo duellante si unisca alla stanza...'
-                  : 'Entrambi i duellanti devono confermare READY per avviare la finestra scommesse (30s) e il duello.'}
+                  ? t('split.lobbyWaitingDesc')
+                  : t('split.lobbyReadyDesc')}
               </p>
             </div>
-
-            {/* Join as Player 2 button */}
-            {!hasPlayerB && role === 'spectator' && onJoinAsPlayer && (
-              <button
-                onClick={() => {
-                  triggerImpact('medium');
-                  onJoinAsPlayer();
-                }}
-                className="px-6 py-3 bg-cyber-cyan text-cyber-bg font-orbitron font-bold text-xs uppercase tracking-wider rounded-xl shadow-neon-cyan active:scale-95 transition-all"
-              >
-                UNISCITI COME GIOCATORE ({wagerTon} GRAM)
-              </button>
-            )}
-
-            {/* Ready Toggle for duelists */}
-            {role === 'player' && hasPlayerB && onReady && (
-              <button
-                onClick={() => {
-                  triggerImpact('medium');
-                  onReady();
-                }}
-                disabled={isReady}
-                className={`px-8 py-3.5 font-orbitron font-bold text-sm uppercase tracking-wider rounded-xl transition-all shadow-xl ${
-                  isReady
-                    ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/50 cursor-default'
-                    : 'bg-cyber-cyan text-cyber-bg shadow-neon-cyan hover:brightness-110 active:scale-95'
-                }`}
-              >
-                {isReady ? '✓ SEI PRONTO' : 'SONO PRONTO (READY)'}
-              </button>
-            )}
-
-            {/* Creator Cancel button */}
-            {isCreator && onCancelMatch && (
-              <div className="pt-2">
-                <button
-                  onClick={onCancelMatch}
-                  className="text-xs font-chakra text-slate-400 hover:text-cyber-pink transition-colors underline"
-                >
-                  Annulla stanza e rimborsa puntata
-                </button>
-              </div>
-            )}
           </div>
         )}
 
         {/* State: BETTING WINDOW */}
         {isBetting && (
-          <div className="text-center space-y-3 py-6">
+          <div className="text-center space-y-3 py-4">
             <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center mx-auto animate-pulse">
               <Clock className="w-7 h-7 text-amber-300" />
             </div>
             <div>
               <h3 className="text-sm font-orbitron font-bold text-amber-300 uppercase tracking-wider">
-                FINESTRA SCOMMESSE APERTA
+                {t('split.bettingWindow')}
               </h3>
+              <div className="text-2xl font-mono font-black text-white mt-1">
+                00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
+              </div>
               <p className="text-xs font-chakra text-slate-300 max-w-xs mx-auto mt-1">
-                Gli spettatori stanno piazzando le scommesse 1-X-2. Il duello inizierà al termine del countdown!
+                {t('split.bettingWindowDesc')}
               </p>
             </div>
           </div>
@@ -331,7 +296,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                 </div>
               </div>
               <span className="text-[11px] font-chakra text-purple-300 font-bold tracking-widest uppercase mt-2">
-                SECONDI RIMASTI
+                {t('split.secondsLeft')}
               </span>
             </div>
 
@@ -341,38 +306,35 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                 <div className="bg-purple-950/40 border border-purple-500/50 rounded-2xl p-4 text-center max-w-sm w-full space-y-2">
                   <Lock className="w-6 h-6 text-purple-400 mx-auto animate-bounce" />
                   <h4 className="text-sm font-orbitron font-bold text-white uppercase tracking-wider">
-                    DECISIONE REGISTRATA
+                    {t('split.choiceLocked')}
                   </h4>
                   <p className="text-xs font-chakra text-slate-300">
-                    Hai scelto in segreto: <strong className="text-purple-300">{localChoice || myChoice || 'IN ATTESA'}</strong>.
-                  </p>
-                  <p className="text-[10px] font-chakra text-slate-400">
-                    Le scelte saranno svelate simultaneamente allo scadere del tempo!
+                    {t('split.choiceLockedDesc', { choice: localChoice || myChoice || '...' })}
                   </p>
                 </div>
               ) : (
                 <div className="w-full max-w-md space-y-2">
                   <p className="text-center text-xs font-chakra text-slate-300 mb-2">
-                    Tocca per fare la tua scelta in segreto:
+                    {t('split.pickPrompt')}
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     {/* SPLIT BUTTON */}
                     <button
                       type="button"
                       onClick={() => handlePickChoice('SPLIT')}
-                      className="p-4 rounded-2xl bg-gradient-to-b from-cyber-cyan/20 to-cyber-cyan/5 border-2 border-cyber-cyan text-left shadow-[0_0_20px_rgba(0,240,255,0.25)] hover:brightness-110 active:scale-95 transition-all group flex flex-col justify-between"
+                      className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-cyber-cyan/20 to-cyber-cyan/5 border-2 border-cyber-cyan text-left shadow-[0_0_20px_rgba(0,240,255,0.25)] hover:brightness-110 active:scale-95 transition-all group flex flex-col justify-between"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="w-8 h-8 rounded-xl bg-cyber-cyan/20 flex items-center justify-center">
                           <Handshake className="w-5 h-5 text-cyber-cyan" />
                         </div>
                         <span className="text-[9px] font-orbitron font-extrabold text-cyber-cyan bg-cyber-cyan/15 px-2 py-0.5 rounded-full border border-cyber-cyan/40">
-                          COOPERA
+                          {t('split.btnSplitTag')}
                         </span>
                       </div>
-                      <div className="text-base font-orbitron font-black text-white">SPLIT</div>
+                      <div className="text-base font-orbitron font-black text-white">{t('split.btnSplit')}</div>
                       <p className="text-[10px] font-rajdhani text-slate-300 mt-1 leading-tight">
-                        Se entrambi fate Split, vi rimborsate la puntata + 20% Jackpot della Fiducia!
+                        {t('split.btnSplitDesc')}
                       </p>
                     </button>
 
@@ -380,19 +342,19 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                     <button
                       type="button"
                       onClick={() => handlePickChoice('STEAL')}
-                      className="p-4 rounded-2xl bg-gradient-to-b from-cyber-pink/20 to-cyber-pink/5 border-2 border-cyber-pink text-left shadow-[0_0_20px_rgba(255,0,85,0.25)] hover:brightness-110 active:scale-95 transition-all group flex flex-col justify-between"
+                      className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-cyber-pink/20 to-cyber-pink/5 border-2 border-cyber-pink text-left shadow-[0_0_20px_rgba(255,0,85,0.25)] hover:brightness-110 active:scale-95 transition-all group flex flex-col justify-between"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="w-8 h-8 rounded-xl bg-cyber-pink/20 flex items-center justify-center">
                           <Swords className="w-5 h-5 text-cyber-pink" />
                         </div>
                         <span className="text-[9px] font-orbitron font-extrabold text-cyber-pink bg-cyber-pink/15 px-2 py-0.5 rounded-full border border-cyber-pink/40">
-                          TRADISCI
+                          {t('split.btnStealTag')}
                         </span>
                       </div>
-                      <div className="text-base font-orbitron font-black text-white">STEAL</div>
+                      <div className="text-base font-orbitron font-black text-white">{t('split.btnSteal')}</div>
                       <p className="text-[10px] font-rajdhani text-slate-300 mt-1 leading-tight">
-                        Se l'altro fa Split, incassi il 100% del piatto! Ma se ruba anche lui, perdi tutto!
+                        {t('split.btnStealDesc')}
                       </p>
                     </button>
                   </div>
@@ -402,10 +364,10 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
               <div className="bg-cyber-bg/60 border border-cyber-border rounded-2xl p-4 text-center max-w-sm w-full space-y-2">
                 <Flame className="w-6 h-6 text-purple-400 mx-auto animate-pulse" />
                 <h4 className="text-xs font-orbitron font-bold text-white uppercase tracking-wider">
-                  SCELTA SEGRETA DEI DUELLANTI
+                  {t('split.spectatorWatching')}
                 </h4>
                 <p className="text-xs font-chakra text-slate-300">
-                  I giocatori stanno scegliendo tra cooperare o tradire. I risultati verranno mostrati a breve!
+                  {t('split.spectatorWatchingDesc')}
                 </p>
               </div>
             )}
@@ -422,16 +384,16 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                   <Handshake className="w-7 h-7 text-cyber-green" />
                 </div>
                 <h3 className="text-base font-orbitron font-black text-white tracking-wider">
-                  🤝 PACE ASSOLUTA (SPLIT / SPLIT)
+                  {t('split.outcomePeace')}
                 </h3>
                 <p className="text-xs font-chakra text-slate-200">
-                  Entrambi i duellanti hanno scelto la cooperazione!
+                  {t('split.outcomePeaceDesc')}
                 </p>
                 <div className="text-xs font-chakra font-bold text-cyber-green pt-1">
-                  Puntata rimborsata ({wagerTon} GRAM)
+                  {t('split.outcomePeaceRefund', { amount: wagerTon })}
                   {bonusPerPlayerGram && bonusPerPlayerGram > 0 && (
                     <span className="block text-amber-300 text-sm font-orbitron mt-0.5">
-                      + {bonusPerPlayerGram.toFixed(2)} GRAM BONUS JACKPOT DELLA FIDUCIA!
+                      {t('split.outcomePeaceBonus', { amount: bonusPerPlayerGram.toFixed(2) })}
                     </span>
                   )}
                 </div>
@@ -444,13 +406,13 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                   <Swords className="w-7 h-7 text-cyber-pink" />
                 </div>
                 <h3 className="text-base font-orbitron font-black text-white tracking-wider">
-                  🗡️ TRADIMENTO VINCENTE!
+                  {t('split.outcomeSteal')}
                 </h3>
                 <p className="text-xs font-chakra text-slate-200">
-                  {outcome === 'P1_STEAL' ? playerAName : playerBName} ha scelto <strong>STEAL</strong> mentre l'avversario ha scelto <strong>SPLIT</strong>!
+                  {t('split.outcomeStealDesc', { winner: outcome === 'P1_STEAL' ? playerAName : playerBName })}
                 </p>
                 <div className="text-xs font-chakra font-bold text-cyber-pink pt-1">
-                  {outcome === 'P1_STEAL' ? playerAName : playerBName} incassa l'intero piatto!
+                  {t('split.outcomeStealPot', { winner: outcome === 'P1_STEAL' ? playerAName : playerBName })}
                 </div>
               </div>
             )}
@@ -461,13 +423,13 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                   <Skull className="w-7 h-7 text-red-400" />
                 </div>
                 <h3 className="text-base font-orbitron font-black text-white tracking-wider">
-                  💀 DOPPIO TRADIMENTO (STEAL / STEAL)
+                  {t('split.outcomeDoubleSteal')}
                 </h3>
                 <p className="text-xs font-chakra text-slate-200">
-                  Entrambi i duellanti hanno provato a rubare! Nessun vincitore.
+                  {t('split.outcomeDoubleStealDesc')}
                 </p>
                 <div className="text-xs font-chakra text-amber-300 pt-1">
-                  100% del piatto perso: 50% alla Piattaforma e 50% alimenta il Jackpot della Fiducia!
+                  {t('split.outcomeDoubleStealPot')}
                 </div>
               </div>
             )}
@@ -481,7 +443,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                     : 'bg-cyber-pink/15 border-cyber-pink text-white'
                 }`}
               >
-                <span className="text-[10px] font-mono text-slate-400 uppercase block">{playerAName}</span>
+                <span className="text-[10px] font-mono text-slate-400 uppercase block truncate">{playerAName}</span>
                 <span className="text-lg font-orbitron font-black block mt-0.5">{choiceA}</span>
               </div>
 
@@ -492,7 +454,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                     : 'bg-cyber-pink/15 border-cyber-pink text-white'
                 }`}
               >
-                <span className="text-[10px] font-mono text-slate-400 uppercase block">{playerBName}</span>
+                <span className="text-[10px] font-mono text-slate-400 uppercase block truncate">{playerBName}</span>
                 <span className="text-lg font-orbitron font-black block mt-0.5">{choiceB}</span>
               </div>
             </div>
@@ -500,58 +462,125 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
         )}
       </div>
 
-      {/* Bottom Actions: Rematch / Return to Lobby */}
-      {isSettled && (
-        <div className="w-full z-10 pt-2 border-t border-cyber-border/60 space-y-2">
-          {/* Rematch Offer Received */}
-          {rematchOffer && !isRematchProposer && (
-            <div className="bg-purple-950/40 border border-purple-500/50 p-2.5 rounded-xl flex items-center justify-between text-xs font-chakra">
-              <span className="text-white">
-                <strong>{rematchOffer.proposerName}</strong> ha proposto una rivincita ({rematchOffer.newWagerTon} GRAM)!
-              </span>
-              <div className="flex space-x-1.5">
-                <button
-                  onClick={onAcceptRematch}
-                  className="px-3 py-1 bg-cyber-green text-cyber-bg font-orbitron font-bold text-[10px] rounded-lg"
-                >
-                  ACCETTA
-                </button>
-                <button
-                  onClick={onDeclineRematch}
-                  className="px-2 py-1 bg-black/40 text-slate-400 font-chakra text-[10px] rounded-lg"
-                >
-                  RIFIUTA
-                </button>
-              </div>
+      {/* Bottom Controls: Lobby Ready or Rematch/Return */}
+      <div className="w-full z-10 pt-3 border-t border-cyber-border/60 flex flex-col items-center">
+        {isLobby ? (
+          role === 'player' ? (
+            <button
+              onClick={() => {
+                triggerImpact('medium');
+                onReady?.();
+              }}
+              disabled={isReady || !hasPlayerB}
+              className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
+                isReady
+                  ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
+                  : !hasPlayerB
+                  ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
+                  : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
+              }`}
+            >
+              {isReady ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
+                  <span>{t('arena.readyWaiting')}</span>
+                </>
+              ) : !hasPlayerB ? (
+                <span>{t('arena.waitingForOpponentBtn')}</span>
+              ) : (
+                <span>{t('arena.readyToDuel')}</span>
+              )}
+            </button>
+          ) : (
+            <div className="w-full flex flex-col items-center">
+              {!hasPlayerB ? (
+                <div className="w-full flex flex-col space-y-2">
+                  <div className="w-full py-2.5 px-3 bg-black/60 border border-cyber-cyan/30 rounded-xl text-center">
+                    <span className="text-xs font-chakra font-bold text-cyber-cyan">
+                      {t('arena.spectatorWaitingOpponent')}
+                    </span>
+                  </div>
+                  {onJoinAsPlayer && (
+                    <button
+                      onClick={() => {
+                        triggerImpact('medium');
+                        onJoinAsPlayer();
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                    >
+                      <Swords className="w-4 h-4" />
+                      <span>{t('arena.joinAsPlayer', { amount: wagerTon })}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
+                  <span className="text-xs font-chakra font-bold text-cyber-pink">
+                    {t('arena.spectatorWaitingReady')}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-
-          <div className="flex space-x-2">
-            {role === 'player' && opponentConnected && onRequestRematch && !rematchOffer && (
-              <button
-                onClick={() => {
-                  triggerImpact('medium');
-                  onRequestRematch();
-                }}
-                disabled={isRematchProposer}
-                className="flex-1 py-2.5 bg-purple-600/30 border border-purple-500/60 hover:bg-purple-600/50 text-white font-orbitron font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center space-x-1.5"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{isRematchProposer ? 'RIVINCITA RICHIESTA...' : 'CHIEDI RIVINCITA'}</span>
-              </button>
-            )}
-
-            {onReturnToLobby && (
-              <button
-                onClick={onReturnToLobby}
-                className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border text-slate-300 hover:text-white font-chakra font-bold text-xs uppercase rounded-xl transition-all"
-              >
-                TORNA ALL'ARENA
-              </button>
-            )}
+          )
+        ) : isBetting ? (
+          <div className="w-full py-3 px-4 rounded-xl bg-black/60 border border-cyber-amber/60 text-center flex items-center justify-center space-x-2">
+            <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
+            <span className="text-xs font-chakra font-bold text-cyber-amber">
+              {t('split.bettingWindow')} ({countdownSeconds ?? 30}s)
+            </span>
           </div>
-        </div>
-      )}
+        ) : isSettled ? (
+          <div className="w-full space-y-2">
+            {/* Rematch Offer Received */}
+            {rematchOffer && !isRematchProposer && (
+              <div className="bg-purple-950/40 border border-purple-500/50 p-2.5 rounded-xl flex items-center justify-between text-xs font-chakra">
+                <span className="text-white">
+                  {t('split.rematchOffer', { name: rematchOffer.proposerName, amount: rematchOffer.newWagerTon })}
+                </span>
+                <div className="flex space-x-1.5">
+                  <button
+                    onClick={onAcceptRematch}
+                    className="px-3 py-1 bg-cyber-green text-cyber-bg font-orbitron font-bold text-[10px] rounded-lg"
+                  >
+                    {t('rematch.accept')}
+                  </button>
+                  <button
+                    onClick={onDeclineRematch}
+                    className="px-2 py-1 bg-black/40 text-slate-400 font-chakra text-[10px] rounded-lg"
+                  >
+                    {t('rematch.decline')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex space-x-2 w-full">
+              {role === 'player' && opponentConnected && onRequestRematch && !rematchOffer && (
+                <button
+                  onClick={() => {
+                    triggerImpact('medium');
+                    onRequestRematch();
+                  }}
+                  disabled={isRematchProposer}
+                  className="flex-1 py-2.5 bg-purple-600/30 border border-purple-500/60 hover:bg-purple-600/50 text-white font-orbitron font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center space-x-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{isRematchProposer ? t('split.rematchRequested') : t('split.rematchRequest')}</span>
+                </button>
+              )}
+
+              {onReturnToLobby && (
+                <button
+                  onClick={onReturnToLobby}
+                  className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border text-slate-300 hover:text-white font-chakra font-bold text-xs uppercase rounded-xl transition-all"
+                >
+                  {t('split.returnToArena')}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 };
