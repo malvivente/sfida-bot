@@ -360,7 +360,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
 
       {/* Pinned User Rank Bar (if user is connected) */}
       {(userAddress || userId) && userEntry && (
-        <div className="sticky bottom-2 z-20 bg-cyber-bg/95 border-2 border-cyber-cyan/70 rounded-xl p-3 shadow-2xl backdrop-blur-md">
+        <div className="sticky bottom-3 z-30 bg-cyber-card/95 border-2 border-cyber-cyan/80 rounded-2xl p-3 shadow-[0_4px_24px_rgba(0,240,255,0.25)] backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5 min-w-0">
               <div className="w-10 h-8 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan flex items-center justify-center font-orbitron font-extrabold text-xs text-cyber-cyan shrink-0">

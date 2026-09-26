@@ -138,8 +138,10 @@ export const App: React.FC = () => {
   }, []);
 
   // Floating controls (Language on bottom-left and ToS on bottom-right)
-  // are hidden during active game matches to keep the battle screen completely clean
-  const showFloatingButtons = activeTab !== 'arena' || !isInsideMatch;
+  // are hidden during active game matches or when viewing the Leaderboard
+  // to avoid overlapping the pinned user rank bar and keep the view completely clean
+  const showFloatingButtons =
+    activeTab !== 'leaderboard' && (activeTab !== 'arena' || !isInsideMatch);
 
   return (
     <div
