@@ -221,7 +221,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         </div>
 
         {/* Game Filter Tabs */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center space-x-2 overflow-x-auto py-3 -my-3 px-1.5 -mx-1.5 scrollbar-none">
           {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono'].map((gKey) => {
             const isSelected = filterGameType === gKey;
             const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
@@ -232,9 +232,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   triggerImpact('light');
                   setFilterGameType(gKey);
                 }}
-                className={`px-3 py-1 rounded-xl text-[11px] font-chakra font-bold uppercase transition-all whitespace-nowrap border ${
+                className={`px-3 py-1 rounded-xl text-[11px] font-chakra font-bold uppercase transition-all whitespace-nowrap border shrink-0 ${
                   isSelected
-                    ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
+                    ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.45)] drop-shadow-[0_0_4px_rgba(0,240,255,0.4)]'
                     : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
                 }`}
               >

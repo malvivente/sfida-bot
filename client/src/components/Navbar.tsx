@@ -3,14 +3,16 @@ import { TonConnectButton } from '@tonconnect/ui-react';
 import { Swords, User, Users } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
+import { JackpotCard } from './JackpotCard.js';
 
 interface NavbarProps {
+  isDesktop?: boolean;
   activeTab: 'arena' | 'leaderboard' | 'referrals' | 'profile';
   onTabChange: (tab: 'arena' | 'leaderboard' | 'referrals' | 'profile') => void;
   onOpenRules: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onOpenRules }) => {
+export const Navbar: React.FC<NavbarProps> = ({ isDesktop = false, activeTab, onTabChange, onOpenRules }) => {
   const { triggerSelection } = useHaptics();
   const { t } = useI18n();
 
@@ -23,17 +25,21 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onOpenRu
     <header className="w-full max-w-md mx-auto mb-4">
       {/* Top Header Row */}
       <div className="flex items-center justify-between py-3 px-1">
-        <div className="flex items-center space-x-2">
-          <div className="w-9 h-9 rounded-xl bg-cyber-cyan/15 border border-cyber-cyan flex items-center justify-center shadow-neon-cyan">
-            <Swords className="w-5 h-5 text-cyber-cyan" />
+        {isDesktop ? (
+          <JackpotCard />
+        ) : (
+          <div className="flex items-center space-x-2">
+            <div className="w-9 h-9 rounded-xl bg-cyber-cyan/15 border border-cyber-cyan flex items-center justify-center shadow-neon-cyan">
+              <Swords className="w-5 h-5 text-cyber-cyan" />
+            </div>
+            <div>
+              <h1 className="text-sm font-orbitron font-extrabold tracking-wider text-white">SFIDA ARENA</h1>
+              <p className="text-[10px] font-chakra text-cyber-cyan tracking-widest uppercase">
+                {t('nav.subtitle')}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-orbitron font-extrabold tracking-wider text-white">SFIDA ARENA</h1>
-            <p className="text-[10px] font-chakra text-cyber-cyan tracking-widest uppercase">
-              {t('nav.subtitle')}
-            </p>
-          </div>
-        </div>
+        )}
 
         <div className="flex items-center space-x-2">
           <TonConnectButton />

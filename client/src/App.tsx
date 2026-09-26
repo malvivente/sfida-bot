@@ -6,13 +6,14 @@ import { Profile } from './pages/Profile.js';
 import { Leaderboard } from './pages/Leaderboard.js';
 import { RulesModal } from './components/RulesModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
-import { ShieldCheck, HelpCircle } from 'lucide-react';
+import { Swords, ShieldCheck, HelpCircle } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
 import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
 import { requestTelegramFullscreen, exitTelegramFullscreen, getTelegramWebApp } from './utils/telegram.js';
+import { JackpotCard } from './components/JackpotCard.js';
 
 export const App: React.FC = () => {
-  const { isFullscreen, topInset } = useTelegramViewport();
+  const { isFullscreen, isDesktop, topInset } = useTelegramViewport();
   const [activeTab, setActiveTab] = useState<'arena' | 'leaderboard' | 'profile' | 'referrals'>('arena');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepInviteCode, setDeepInviteCode] = useState<string | undefined>(undefined);
@@ -121,9 +122,31 @@ export const App: React.FC = () => {
       }`}
     >
       {/* Top clearance & Jackpot Slot for Telegram Fullscreen mode */}
-      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset} />
+      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset}>
+        <JackpotCard />
+      </TelegramTopSlot>
+
+      {/* Desktop Top Title (Centered) */}
+      {isDesktop && (
+        <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center pt-2 pb-1">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-cyber-cyan/15 border border-cyber-cyan flex items-center justify-center shadow-[0_0_12px_rgba(0,240,255,0.35)]">
+              <Swords className="w-4 h-4 text-cyber-cyan" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-base font-orbitron font-extrabold tracking-wider text-white drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
+                SFIDA ARENA
+              </h1>
+              <p className="text-[9px] font-chakra text-cyber-cyan tracking-widest uppercase">
+                {t('nav.subtitle')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Navbar
+        isDesktop={isDesktop}
         activeTab={activeTab}
         onTabChange={(tab) => {
           if (tab !== 'arena') {

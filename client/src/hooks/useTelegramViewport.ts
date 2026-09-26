@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 export interface TelegramViewportState {
   isFullscreen: boolean;
+  isDesktop: boolean;
   topInset: number;
 }
 
@@ -24,12 +25,15 @@ export function isHorizontalScreen(): boolean {
 export function useTelegramViewport(): TelegramViewportState {
   const getViewportState = (): TelegramViewportState => {
     if (typeof window === 'undefined') {
-      return { isFullscreen: false, topInset: 0 };
+      return { isFullscreen: false, isDesktop: false, topInset: 0 };
     }
 
+    const isDesktop = isDesktopPlatform();
+    const isHorizontal = isHorizontalScreen();
+
     // Never enable fullscreen mode on desktop or horizontal / landscape screens
-    if (isDesktopPlatform() || isHorizontalScreen()) {
-      return { isFullscreen: false, topInset: 0 };
+    if (isDesktop || isHorizontal) {
+      return { isFullscreen: false, isDesktop, topInset: 0 };
     }
 
     const tg = (window as any).Telegram?.WebApp;
@@ -39,7 +43,7 @@ export function useTelegramViewport(): TelegramViewportState {
     const isFullscreen = Boolean(tg?.isFullscreen);
 
     if (!isFullscreen) {
-      return { isFullscreen: false, topInset: 0 };
+      return { isFullscreen: false, isDesktop: false, topInset: 0 };
     }
 
     let cssContentTop = 0;
@@ -63,6 +67,7 @@ export function useTelegramViewport(): TelegramViewportState {
 
     return {
       isFullscreen: true,
+      isDesktop: false,
       topInset,
     };
   };
