@@ -198,6 +198,7 @@ export const translations: Translations = {
   'split.rematchRequest': { it: 'CHIEDI RIVINCITA', en: 'REQUEST REMATCH' },
   'split.rematchRequested': { it: 'RIVINCITA RICHIESTA...', en: 'REMATCH REQUESTED...' },
   'split.returnToArena': { it: 'TORNA ALL\'ARENA', en: 'RETURN TO ARENA' },
+  'split.chargingTag': { it: 'IN CARICA', en: 'CHARGING' },
   'rematch.offerTitle': { it: 'PROPOSTA DI RIVINCITA (2X)', en: '2X REMATCH OFFER' },
   'rematch.offeredBy': { it: '{name} ti sfida a una rivincita 2X per {amount} GRAM!', en: '{name} challenges you to a 2X Rematch for {amount} GRAM!' },
   'rematch.accept': { it: 'ACCETTA 2X', en: 'ACCEPT 2X' },

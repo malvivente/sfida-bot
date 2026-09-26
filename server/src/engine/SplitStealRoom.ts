@@ -19,7 +19,7 @@ export class SplitStealRoom extends BaseGameRoom {
   public message?: string;
 
   private countdownTimer?: NodeJS.Timeout;
-  private secondsLeft: number = 5;
+  private secondsLeft: number = 10;
 
   constructor(
     config: RoomConfig,
@@ -32,7 +32,7 @@ export class SplitStealRoom extends BaseGameRoom {
     return {
       phase: this.phase,
       secondsLeft: this.secondsLeft,
-      durationSeconds: 5,
+      durationSeconds: 10,
       choicesRevealed: this.choicesRevealed,
       choiceA: this.choicesRevealed ? this.choiceA : undefined,
       choiceB: this.choicesRevealed ? this.choiceB : undefined,
@@ -60,16 +60,17 @@ export class SplitStealRoom extends BaseGameRoom {
     this.outcome = undefined;
     this.bonusAwardedGram = undefined;
     this.bonusPerPlayerGram = undefined;
-    this.secondsLeft = 5;
+    this.secondsLeft = 10;
 
     // Fetch live Trust Jackpot
     this.jackpotGram = await dbService.getTrustJackpot();
     this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
 
-    this.message = 'Decisione in segreto! Scegli SPLIT (coopera) o STEAL (tradisci) entro 5 secondi!';
+    this.message = 'Decisione in segreto! Scegli SPLIT (coopera) o STEAL (tradisci) entro 10 secondi!';
     this.broadcast({
       type: 'SPLIT_STEAL_START',
-      durationSeconds: 5,
+      durationSeconds: 10,
+      secondsLeft: 10,
       message: this.message,
       gameData: this.getGamePayload(),
     });
@@ -89,6 +90,7 @@ export class SplitStealRoom extends BaseGameRoom {
         secondsLeft: this.secondsLeft,
         hasChosenA: this.hasChosenA,
         hasChosenB: this.hasChosenB,
+        gameData: this.getGamePayload(),
       });
 
       if (this.secondsLeft <= 0) {
@@ -150,6 +152,7 @@ export class SplitStealRoom extends BaseGameRoom {
       hasChosenA: this.hasChosenA,
       hasChosenB: this.hasChosenB,
       message: `${side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B')} ha preso la sua decisione!`,
+      gameData: this.getGamePayload(),
     });
 
     if (this.hasChosenA && this.hasChosenB) {

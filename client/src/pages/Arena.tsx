@@ -165,10 +165,21 @@ export const Arena: React.FC<ArenaProps> = ({
     return () => clearInterval(interval);
   }, [serverUrl, activeMatchId]);
 
+  const currentActiveMatch = matches.find((m) => m.matchId === activeMatchId);
+  const isMatchPlayer = Boolean(
+    currentActiveMatch &&
+    (
+      (userAddress && (areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress) || (currentActiveMatch.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, userAddress)))) ||
+      (userId && (String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId) || (currentActiveMatch.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)))) ||
+      (username && (currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) || currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())))
+    )
+  );
+  const effectiveRole: 'player' | 'spectator' = isMatchPlayer ? 'player' : role;
+
   const socketData = useSocket({
     matchId: activeMatchId || '',
     wallet: userAddress,
-    role,
+    role: effectiveRole,
     telegramId: userId,
     username: displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior'),
     serverUrl,
@@ -472,18 +483,17 @@ export const Arena: React.FC<ArenaProps> = ({
         setActiveMatchId(initialMatchId);
         setRole('player');
       } else if (!m.playerB && initialRole === 'player') {
-        // If private, only join automatically if inviteCode is present
-        if (!m.isPrivate || initialInviteCode) {
-          if (!userAddress) {
-            // TonConnect is still establishing/restoring connection.
-            // Do NOT open wallet modal automatically on deep link resolution!
-            return;
-          }
-          handleJoinMatch(m, initialInviteCode, false);
-        } else {
-          setActiveMatchId(initialMatchId);
-          setRole('spectator');
+        // Do NOT automatically deduct user's balance upon link opening!
+        // Save invite code and enter match in spectator view so user can review and approve joining.
+        if (initialInviteCode) {
+          try {
+            const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+            stored[initialMatchId] = initialInviteCode;
+            localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
+          } catch {}
         }
+        setActiveMatchId(initialMatchId);
+        setRole('spectator');
       } else {
         // Duel is full or spectator requested
         setActiveMatchId(initialMatchId);
@@ -583,7 +593,6 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   };
 
-  const currentActiveMatch = matches.find((m) => m.matchId === activeMatchId);
   const activeWagerTon = currentActiveMatch
     ? (parseFloat(currentActiveMatch.wagerAmountNano) / 1e9).toString()
     : '1';
@@ -605,17 +614,8 @@ export const Arena: React.FC<ArenaProps> = ({
     )
   );
 
-  const isMatchPlayer = Boolean(
-    currentActiveMatch &&
-    (
-      (userAddress && (areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress) || areAddressesEqual(currentActiveMatch.playerB?.wallet, userAddress))) ||
-      (userId && (String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId) || String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId))) ||
-      (username && (currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) || currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())))
-    )
-  );
-
   const canCancelCurrentMatch = Boolean(
-    role === 'player' &&
+    effectiveRole === 'player' &&
     isCurrentCreator &&
     currentActiveMatch &&
     (
@@ -884,7 +884,7 @@ export const Arena: React.FC<ArenaProps> = ({
           {effectiveGameType === 'blackjack' ? (
             <BlackjackArena
               gameData={socketData.gameData}
-              role={role}
+              role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
               onHit={() => socketData.sendBlackjackAction('HIT')}
               onStand={() => socketData.sendBlackjackAction('STAND')}
@@ -928,7 +928,7 @@ export const Arena: React.FC<ArenaProps> = ({
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
               gameData={socketData.gameData}
-              role={role}
+              role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
               onStep={socketData.sendBridgeStep}
               onPass={socketData.sendBridgePass}
@@ -972,7 +972,7 @@ export const Arena: React.FC<ArenaProps> = ({
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
               gameData={socketData.gameData}
-              role={role}
+              role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
               onStop={socketData.sendChronoStop}
               playerAName={playerA_Name}
@@ -1015,7 +1015,7 @@ export const Arena: React.FC<ArenaProps> = ({
           ) : effectiveGameType === 'split' ? (
             <SplitStealArena
               gameData={socketData.gameData as any}
-              role={role}
+              role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
               onChoice={socketData.sendSplitStealChoice}
               playerAName={playerA_Name}
@@ -1058,7 +1058,7 @@ export const Arena: React.FC<ArenaProps> = ({
           ) : (
             <RussianRouletteArena
               gameData={socketData.gameData}
-              role={role}
+              role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
               onShoot={socketData.sendRouletteShoot}
               playerAName={playerA_Name}

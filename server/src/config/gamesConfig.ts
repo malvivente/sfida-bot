@@ -31,7 +31,7 @@ export const GAMES_CONFIG = {
   split: {
     name: 'Split or Steal',
     description: 'Prisoner\'s dilemma casino showdown. Cooperate for peace & shared jackpot, or betray to steal it all.',
-    choiceCountdownSeconds: 5,
+    choiceCountdownSeconds: 10,
     jackpotThresholdGram: 5.0,
     jackpotBonusPercent: 20,
   },
