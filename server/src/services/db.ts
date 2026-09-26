@@ -1036,8 +1036,18 @@ export class DatabaseService {
   }
 
   // --- Trust Jackpot Methods ---
-  public async getTrustJackpot(): Promise<number> {
+  public getTrustJackpotSync(): number {
     return parseFloat(this.jackpot.trustJackpotGram || '0.00');
+  }
+
+  public isTrustJackpotActiveSync(): boolean {
+    const cur = parseFloat(this.jackpot.trustJackpotGram || '0.00');
+    const threshold = parseFloat(this.jackpot.thresholdGram || '5.00');
+    return cur >= threshold;
+  }
+
+  public async getTrustJackpot(): Promise<number> {
+    return this.getTrustJackpotSync();
   }
 
   public async getJackpotInfo(): Promise<{

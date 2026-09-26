@@ -92,7 +92,23 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const hasChosenA = gameData?.hasChosenA ?? false;
   const hasChosenB = gameData?.hasChosenB ?? false;
   const outcome = gameData?.outcome;
-  const jackpotGram = gameData?.jackpotGram ?? 5.0;
+  const [liveJackpotFallback, setLiveJackpotFallback] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (gameData?.jackpotGram !== undefined) return;
+    const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+    const url = serverUrl ? `${serverUrl}/api/jackpot` : `/api/jackpot`;
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.trustJackpotGram) {
+          setLiveJackpotFallback(parseFloat(data.trustJackpotGram));
+        }
+      })
+      .catch(() => {});
+  }, [gameData?.jackpotGram]);
+
+  const jackpotGram = gameData?.jackpotGram ?? (liveJackpotFallback ?? 5.0);
   const jackpotStatus = gameData?.jackpotStatus ?? (jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING');
   const bonusPerPlayerGram = gameData?.bonusPerPlayerGram;
 
@@ -129,15 +145,13 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
       {/* Top Banner: Trust Jackpot Counter */}
       <div className="w-full z-10 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between shadow-lg gap-2">
         <div className="flex items-center space-x-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
             <Trophy className="w-4 h-4 text-amber-300" />
+            <Sparkles className="w-2.5 h-2.5 text-amber-300 absolute -top-1 -right-1 animate-pulse" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center space-x-1">
-              <span className="text-[10px] sm:text-[11px] font-orbitron font-extrabold tracking-wider text-amber-300 uppercase whitespace-nowrap">
-                {t('split.trustJackpot')}
-              </span>
-              <Sparkles className="w-3 h-3 text-amber-300 shrink-0 animate-pulse" />
+            <div className="text-[10px] sm:text-[11px] font-orbitron font-extrabold tracking-wider text-amber-300 uppercase whitespace-nowrap">
+              {t('split.trustJackpot')}
             </div>
             <div className="text-xs sm:text-sm font-chakra font-bold text-white flex items-center space-x-1">
               <span>{jackpotGram.toFixed(2)} GRAM</span>
@@ -145,7 +159,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
           </div>
         </div>
 
-        <div className="text-right shrink-0">
+        <div className="text-right shrink-0 pl-2">
           <span
             className={`text-[8.5px] sm:text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider inline-block ${
               isJackpotActive

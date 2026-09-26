@@ -26,9 +26,16 @@ export class SplitStealRoom extends BaseGameRoom {
     onSettled?: (room: BaseGameRoom, winner: string) => Promise<void>
   ) {
     super(config, 'split', onSettled);
+    this.jackpotGram = dbService.getTrustJackpotSync();
+    this.jackpotStatus = dbService.isTrustJackpotActiveSync() ? 'ACTIVE' : 'CHARGING';
   }
 
   public getGamePayload(): SplitStealState {
+    const liveJackpot = dbService.getTrustJackpotSync();
+    const liveStatus = dbService.isTrustJackpotActiveSync() ? 'ACTIVE' : 'CHARGING';
+    this.jackpotGram = liveJackpot;
+    this.jackpotStatus = liveStatus;
+
     return {
       phase: this.phase,
       secondsLeft: this.secondsLeft,
@@ -39,8 +46,8 @@ export class SplitStealRoom extends BaseGameRoom {
       hasChosenA: this.hasChosenA,
       hasChosenB: this.hasChosenB,
       outcome: this.outcome,
-      jackpotGram: this.jackpotGram,
-      jackpotStatus: this.jackpotStatus,
+      jackpotGram: liveJackpot,
+      jackpotStatus: liveStatus,
       bonusAwardedGram: this.bonusAwardedGram,
       bonusPerPlayerGram: this.bonusPerPlayerGram,
       message: this.message,
