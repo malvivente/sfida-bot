@@ -82,9 +82,10 @@ export const Arena: React.FC<ArenaProps> = ({
   const [payoutClaimed, setPayoutClaimed] = useState(false);
 
   const fetchUserBalance = async () => {
-    if (!userAddress || !serverUrl) return;
+    const targetKey = userAddress || (userId ? `tg_${userId}` : '');
+    if (!targetKey || !serverUrl) return;
     try {
-      const res = await fetch(`${serverUrl}/api/users/${userAddress}/balance?telegramId=${userId || ''}&username=${username || ''}`);
+      const res = await fetch(`${serverUrl}/api/users/${targetKey}/balance?telegramId=${userId || ''}&username=${encodeURIComponent(username || '')}&fullName=${encodeURIComponent(fullName || '')}`);
       if (res.ok) {
         const data = await res.json();
         if (data?.account) {
@@ -116,7 +117,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
   useEffect(() => {
     fetchUserBalance();
-  }, [userAddress, serverUrl]);
+  }, [userAddress, userId, serverUrl]);
 
   // Persistent match feed: restored from localStorage and/or synced with backend API
   const [matches, setMatches] = useState<MatchData[]>(() => {

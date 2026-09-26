@@ -19,7 +19,7 @@ export class SplitStealRoom extends BaseGameRoom {
   public message?: string;
 
   private countdownTimer?: NodeJS.Timeout;
-  private secondsLeft: number = 10;
+  private secondsLeft: number = 30;
 
   constructor(
     config: RoomConfig,
@@ -39,7 +39,7 @@ export class SplitStealRoom extends BaseGameRoom {
     return {
       phase: this.phase,
       secondsLeft: this.secondsLeft,
-      durationSeconds: 10,
+      durationSeconds: 30,
       choicesRevealed: this.choicesRevealed,
       choiceA: this.choicesRevealed ? this.choiceA : undefined,
       choiceB: this.choicesRevealed ? this.choiceB : undefined,
@@ -67,17 +67,17 @@ export class SplitStealRoom extends BaseGameRoom {
     this.outcome = undefined;
     this.bonusAwardedGram = undefined;
     this.bonusPerPlayerGram = undefined;
-    this.secondsLeft = 10;
+    this.secondsLeft = 30;
 
     // Fetch live Trust Jackpot
     this.jackpotGram = await dbService.getTrustJackpot();
     this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
 
-    this.message = 'Decisione in segreto! Scegli SPLIT (coopera) o STEAL (tradisci) entro 10 secondi!';
+    this.message = 'Decisione in segreto! Scegli SPLIT (coopera) o STEAL (tradisci) entro 30 secondi!';
     this.broadcast({
       type: 'SPLIT_STEAL_START',
-      durationSeconds: 10,
-      secondsLeft: 10,
+      durationSeconds: 30,
+      secondsLeft: 30,
       message: this.message,
       gameData: this.getGamePayload(),
     });
@@ -183,11 +183,9 @@ export class SplitStealRoom extends BaseGameRoom {
     const pB = this.choiceB;
     const wagerNum = Number(this.config.wagerAmountNano) / 1e9;
     const totalPot = wagerNum * 2;
-    const { duelRakePercent, spectatorRakePercent } = feeConfig.getConfig();
-    const rakeShare = (duelRakePercent || 0) / 100;
-    const winnerShare = 1 - rakeShare;
-    const duelPayoutGram = (totalPot * winnerShare).toFixed(2);
-    const duelRakeGram = (totalPot * rakeShare).toFixed(2);
+    // Steal vs Split: Betrayer wins 100% of the entire pot (2.00 GRAM on 1.00 wager), zero house rake!
+    const duelPayoutGram = totalPot.toFixed(2);
+    const duelRakeGram = '0.00';
 
     this.jackpotGram = await dbService.getTrustJackpot();
     const isJackpotActive = this.jackpotGram >= 5.0;
@@ -324,6 +322,7 @@ export class SplitStealRoom extends BaseGameRoom {
         console.log(`[SplitSteal] Double Steal: Spectator pool of ${totalSpecPoolGram} GRAM divided: ${specHalf} to treasury, ${specHalf} to Jackpot.`);
       } else {
         // Winning side is 'A', 'B', or 'X'
+        const { spectatorRakePercent } = feeConfig.getConfig();
         const specRakeRate = (spectatorRakePercent || 0) / 100;
         const specRakeGram = totalSpecPoolGram * specRakeRate;
         const distributableSpecGram = totalSpecPoolGram - specRakeGram;
@@ -395,6 +394,8 @@ export class SplitStealRoom extends BaseGameRoom {
       wagerAmountNano: this.config.wagerAmountNano.toString(),
       wagerTon: wagerNum.toFixed(2),
       wagerGram: wagerNum.toFixed(2),
+      payoutTon: duelPayoutGram,
+      payoutGram: duelPayoutGram,
       playerAAddress: this.playerA.walletAddress,
       playerAName: this.playerA.username,
       playerATelegramId: this.playerA.telegramId,

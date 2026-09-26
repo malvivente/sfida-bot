@@ -85,7 +85,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const phase = gameData?.phase ?? 'COUNTDOWN';
   const secondsLeft = countdownSeconds !== null && countdownSeconds !== undefined
     ? countdownSeconds
-    : (gameData?.secondsLeft ?? 10);
+    : (gameData?.secondsLeft ?? 30);
   const choicesRevealed = gameData?.choicesRevealed ?? false;
   const choiceA = gameData?.choiceA;
   const choiceB = gameData?.choiceB;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -552,25 +552,56 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             : 'bg-black/50 border-cyber-border hover:border-slate-600 opacity-60'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center space-x-1.5">
-                            <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/70 font-bold ${game.accentColor}`}>
-                              {game.badge}
-                            </span>
-                            {isSplit && (
-                              <span className="text-[8px] font-chakra font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40 flex items-center space-x-1">
-                                <span>🏆 TRUST JACKPOT</span>
-                              </span>
-                            )}
+                        {isSplit ? (
+                          <div className="flex items-center justify-between w-full gap-2.5">
+                            {/* Left: Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-1.5 mb-1">
+                                <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                                  {game.badge}
+                                </span>
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
+                              </div>
+                              <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                                {game.title}
+                              </div>
+                              <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
+                                {game.tagline}
+                              </div>
+                            </div>
+
+                            {/* Right: Adapted Trust Jackpot Mini-Card */}
+                            <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                              <div className="w-7 h-7 rounded-lg bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
+                                <Trophy className="w-3.5 h-3.5 text-amber-300" />
+                                <Sparkles className="w-2 h-2 text-amber-300 absolute -top-0.5 -right-0.5 animate-pulse" />
+                              </div>
+                              <div className="text-left">
+                                <div className="text-[8px] font-orbitron font-extrabold text-amber-300 tracking-wider">
+                                  TRUST JACKPOT
+                                </div>
+                                <div className="text-[10px] font-chakra font-bold text-cyber-green flex items-center space-x-1">
+                                  <span>+20% BONUS</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
-                        </div>
-                        <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                          {game.title}
-                        </div>
-                        <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
-                          {game.tagline}
-                        </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                                {game.badge}
+                              </span>
+                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
+                            </div>
+                            <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                              {game.title}
+                            </div>
+                            <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
+                              {game.tagline}
+                            </div>
+                          </>
+                        )}
                       </button>
                     );
                   })}

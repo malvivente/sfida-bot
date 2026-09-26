@@ -223,13 +223,15 @@ export async function matchRoutes(fastify: FastifyInstance) {
       body.playerAAddress,
       wagerGram.toFixed(2),
       'MATCH_BET',
-      `Wager for match #${matchId}`
+      `Wager for match #${matchId}`,
+      body.telegramUserId
     );
     await dbService.debitUserBalance(
       body.playerAAddress,
       creationFeeGram.toFixed(2),
       'CREATION_FEE',
-      `Creation fee for match #${matchId}`
+      `Creation fee for match #${matchId}`,
+      body.telegramUserId
     );
 
     // Credit creation fee to Treasury
@@ -362,7 +364,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       body.playerBAddress,
       wagerGram.toFixed(2),
       'MATCH_BET',
-      `Wager for match #${id}`
+      `Wager for match #${id}`,
+      body.telegramUserId
     );
 
     // Debit join fee from Player B and credit to Treasury
@@ -370,7 +373,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       body.playerBAddress,
       joinFeeGram.toFixed(2),
       'CREATION_FEE',
-      `Participation fee for match #${id}`
+      `Participation fee for match #${id}`,
+      body.telegramUserId
     );
     await dbService.creditTreasury(joinFeeGram.toFixed(2), 'CREATION_FEE', id);
 
@@ -427,17 +431,56 @@ export async function matchRoutes(fastify: FastifyInstance) {
   fastify.get('/api/leaderboard', async (req, reply) => {
     const query = req.query as { sortBy?: 'wins' | 'streak' | 'profits'; limit?: string; userAddress?: string; telegramId?: string };
     const sortBy = query.sortBy || 'wins';
-    const limit = parseInt(query.limit || '50', 10);
+    const limit = parseInt(query.limit || '100', 10);
     const result = await dbService.getLeaderboard(sortBy, limit, query.userAddress, query.telegramId);
     return reply.send({ success: true, ...result });
+  });
+
+  // Sync Telegram profile (display name, photo, username) on app launch
+  fastify.post('/api/users/sync', async (req, reply) => {
+    const body = req.body as {
+      telegramId?: string;
+      username?: string;
+      displayName?: string;
+      fullName?: string;
+      firstName?: string;
+      lastName?: string;
+      photoUrl?: string;
+      walletAddress?: string;
+    };
+    if (!body?.telegramId && !body?.walletAddress) {
+      return reply.status(400).send({ error: 'telegramId or walletAddress is required' });
+    }
+    const disp = body.displayName || body.fullName || [body.firstName, body.lastName].filter(Boolean).join(' ');
+    const account = await dbService.syncUserProfile({
+      telegramId: body.telegramId || '',
+      username: body.username,
+      displayName: disp,
+      photoUrl: body.photoUrl,
+      walletAddress: body.walletAddress,
+    });
+    return reply.send({ success: true, account });
   });
 
   // User internal balance
   fastify.get('/api/users/:wallet/balance', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };
-    const query = req.query as { telegramId?: string; username?: string };
+    const query = req.query as {
+      telegramId?: string;
+      username?: string;
+      fullName?: string;
+      displayName?: string;
+      photoUrl?: string;
+    };
     await dbService.restoreUnsentWithdrawals(wallet);
-    const account = await dbService.getUserAccount(wallet, query.telegramId, query.username);
+    const disp = query.displayName || query.fullName;
+    const account = await dbService.getUserAccount(
+      wallet,
+      query.telegramId,
+      query.username,
+      disp,
+      query.photoUrl
+    );
     const transactions = await dbService.getUserTransactions(wallet);
     return reply.send({ success: true, account, transactions });
   });

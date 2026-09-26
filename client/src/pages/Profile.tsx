@@ -53,10 +53,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
   // Fetch permanent database data, active matches, and internal balance
   const fetchUserData = async () => {
-    if (!userAddress || !serverUrl) return;
+    const targetKey = userAddress || (userId ? `tg_${userId}` : '');
+    if (!targetKey || !serverUrl) return;
     try {
       // 1. Fetch user history
-      const historyRes = await fetch(`${serverUrl}/api/users/${userAddress}/history?telegramId=${userId || ''}`);
+      const historyRes = await fetch(`${serverUrl}/api/users/${targetKey}/history?telegramId=${userId || ''}`);
       if (historyRes.ok) {
         const data = await historyRes.json();
         if (data?.history) {
@@ -66,7 +67,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
       }
 
       // 2. Fetch server user stats
-      const statsRes = await fetch(`${serverUrl}/api/users/${userAddress}/stats?telegramId=${userId || ''}`);
+      const statsRes = await fetch(`${serverUrl}/api/users/${targetKey}/stats?telegramId=${userId || ''}`);
       if (statsRes.ok) {
         const data = await statsRes.json();
         if (data?.stats) {
@@ -75,7 +76,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
       }
 
       // 3. Fetch user internal balance
-      const balRes = await fetch(`${serverUrl}/api/users/${userAddress}/balance?telegramId=${userId || ''}&username=${username || ''}`);
+      const balRes = await fetch(
+        `${serverUrl}/api/users/${targetKey}/balance?telegramId=${userId || ''}&username=${encodeURIComponent(username || '')}&fullName=${encodeURIComponent(fullName || '')}&photoUrl=${encodeURIComponent(photoUrl || '')}`
+      );
       if (balRes.ok) {
         const data = await balRes.json();
         if (data?.account) {
@@ -86,12 +89,14 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
         }
       }
 
-      // 4. Fetch user active matches (duels where user is Player A or B)
-      const activeRes = await fetch(`${serverUrl}/api/users/${userAddress}/active-matches`);
-      if (activeRes.ok) {
-        const data = await activeRes.json();
-        if (data?.matches) {
-          setActiveMatches(data.matches);
+      // 4. Fetch user active matches (if wallet is connected)
+      if (userAddress) {
+        const activeRes = await fetch(`${serverUrl}/api/users/${userAddress}/active-matches`);
+        if (activeRes.ok) {
+          const data = await activeRes.json();
+          if (data?.matches) {
+            setActiveMatches(data.matches);
+          }
         }
       }
     } catch (err) {
@@ -100,11 +105,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
   };
 
   useEffect(() => {
-    if (!userAddress) return;
+    if (!userAddress && !userId) return;
     fetchUserData();
     const interval = setInterval(fetchUserData, 10000);
     return () => clearInterval(interval);
-  }, [userAddress, serverUrl]);
+  }, [userAddress, userId, serverUrl]);
 
   // Real Deposit handler via TonConnect
   const handleDeposit = async () => {

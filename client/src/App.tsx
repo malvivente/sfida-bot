@@ -11,6 +11,8 @@ import { useI18n } from './i18n/index.js';
 import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
 import { requestTelegramFullscreen, exitTelegramFullscreen, getTelegramWebApp } from './utils/telegram.js';
 import { JackpotCard } from './components/JackpotCard.js';
+import { useTelegram } from './hooks/useTelegram.js';
+import { useTonClashContract } from './hooks/useTonClashContract.js';
 
 export const App: React.FC = () => {
   const { isFullscreen, isDesktop, topInset } = useTelegramViewport();
@@ -22,6 +24,30 @@ export const App: React.FC = () => {
   const [isInsideMatch, setIsInsideMatch] = useState(false);
   const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<'arena' | 'profile'>('profile');
   const { language, toggleLanguage, t } = useI18n();
+
+  const { userId, username, firstName, lastName, fullName, photoUrl } = useTelegram();
+  const { userAddress } = useTonClashContract();
+
+  // Automatic profile & avatar synchronization with server on app launch
+  useEffect(() => {
+    if (!userId) return;
+    const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+    if (!serverUrl) return;
+
+    fetch(`${serverUrl}/api/users/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegramId: userId,
+        username,
+        firstName,
+        lastName,
+        fullName,
+        photoUrl,
+        walletAddress: userAddress,
+      }),
+    }).catch(() => {});
+  }, [userId, username, firstName, lastName, fullName, photoUrl, userAddress]);
 
   useEffect(() => {
     // Automatically request fullscreen on mobile portrait, or exit fullscreen on desktop/horizontal

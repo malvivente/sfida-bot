@@ -254,6 +254,7 @@ export interface LeaderboardEntry {
   walletAddress: string;
   telegramId?: string;
   username: string;
+  photoUrl?: string;
   duelsPlayed: number;
   duelsWon: number;
   winRate: number;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Flame, TrendingUp, Medal, Crown, Sparkles, RefreshCw, Loader2, User } from 'lucide-react';
+import { Trophy, Flame, Crown, Sparkles, RefreshCw, Loader2, User } from 'lucide-react';
 import { GramIcon } from '../components/GramIcon.js';
 import { LeaderboardEntry } from '../types/index.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
@@ -9,6 +9,17 @@ import { useI18n } from '../i18n/index.js';
 
 interface LeaderboardProps {
   onBack?: () => void;
+}
+
+/**
+ * Format rank: displays #1 to #100.
+ * For ranks beyond 100, groups into tiers: 100+, 200+, ... up to 999+.
+ */
+export function formatRank(rank: number): string {
+  if (rank <= 100) return `#${rank}`;
+  const tier = Math.floor(rank / 100) * 100;
+  if (tier >= 1000) return '999+';
+  return `${tier}+`;
 }
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
@@ -32,7 +43,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
     }
     if (isManual) setIsRefreshing(true);
     try {
-      const url = `${serverUrl}/api/leaderboard?sortBy=${sortBy}&limit=50${
+      const url = `${serverUrl}/api/leaderboard?sortBy=${sortBy}&limit=100${
         userAddress ? `&userAddress=${userAddress}` : ''
       }${userId ? `&telegramId=${userId}` : ''}`;
       const res = await fetch(url);
@@ -93,6 +104,27 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
         </span>
       );
     }
+  };
+
+  const renderAvatar = (entry: LeaderboardEntry, sizeClass: string = 'w-8 h-8', textClass: string = 'text-xs') => {
+    const initial = (entry.username?.replace('@', '').trim()[0] || 'W').toUpperCase();
+    return (
+      <div className={`${sizeClass} rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center shrink-0 overflow-hidden relative shadow-inner`}>
+        {entry.photoUrl ? (
+          <img
+            src={entry.photoUrl}
+            alt={entry.username}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.currentTarget as HTMLElement).style.display = 'none';
+            }}
+          />
+        ) : null}
+        <span className={`${textClass} font-chakra font-bold text-slate-300 absolute select-none pointer-events-none`}>
+          {initial}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -189,12 +221,15 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
       ) : (
         <>
           {/* Top 3 Podium Cards */}
-          <div className="grid grid-cols-3 gap-2 items-end pt-3 pb-2">
+          <div className="grid grid-cols-3 gap-2 items-end pt-4 pb-2">
             {/* 2nd Place */}
             {top2 ? (
               <div className="bg-gradient-to-b from-slate-700/30 to-cyber-card/60 border border-slate-500/40 rounded-2xl p-2.5 text-center flex flex-col items-center relative shadow-lg">
-                <div className="w-8 h-8 rounded-full bg-slate-400/20 border border-slate-400 flex items-center justify-center text-xs font-bold text-slate-200 mb-1">
-                  🥈
+                <div className="relative mb-1 flex items-center justify-center">
+                  {renderAvatar(top2, 'w-10 h-10', 'text-sm')}
+                  <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-300 text-black font-bold text-[9px] flex items-center justify-center shadow-md">
+                    🥈
+                  </span>
                 </div>
                 <span className="text-xs font-chakra font-bold text-white truncate max-w-full">
                   {top2.username}
@@ -214,8 +249,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
             {top1 ? (
               <div className="bg-gradient-to-b from-amber-500/20 to-cyber-card border-2 border-amber-400 rounded-2xl p-3 text-center flex flex-col items-center relative shadow-neon-amber -translate-y-2">
                 <Crown className="w-5 h-5 text-amber-400 absolute -top-3" />
-                <div className="w-10 h-10 rounded-full bg-amber-400/20 border-2 border-amber-400 flex items-center justify-center text-sm font-bold text-amber-300 mb-1">
-                  🥇
+                <div className="relative mb-1 flex items-center justify-center mt-1">
+                  {renderAvatar(top1, 'w-12 h-12', 'text-base')}
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-black font-extrabold text-[10px] flex items-center justify-center shadow-md">
+                    🥇
+                  </span>
                 </div>
                 <span className="text-xs font-chakra font-black text-white truncate max-w-full">
                   {top1.username}
@@ -232,8 +270,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
             {/* 3rd Place */}
             {top3 ? (
               <div className="bg-gradient-to-b from-amber-900/30 to-cyber-card/60 border border-amber-700/40 rounded-2xl p-2.5 text-center flex flex-col items-center relative shadow-lg">
-                <div className="w-8 h-8 rounded-full bg-amber-700/20 border border-amber-700 flex items-center justify-center text-xs font-bold text-amber-500 mb-1">
-                  🥉
+                <div className="relative mb-1 flex items-center justify-center">
+                  {renderAvatar(top3, 'w-10 h-10', 'text-sm')}
+                  <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-700 text-amber-100 font-bold text-[9px] flex items-center justify-center shadow-md">
+                    🥉
+                  </span>
                 </div>
                 <span className="text-xs font-chakra font-bold text-white truncate max-w-full">
                   {top3.username}
@@ -262,26 +303,27 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                 return (
                   <div
                     key={entry.telegramId ? `tg_${entry.telegramId}` : entry.walletAddress}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border transition-all ${
                       isCurrentUser
                         ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-sm'
                         : 'bg-cyber-card/70 border-cyber-border hover:border-slate-600'
                     }`}
                   >
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <span className="text-xs font-orbitron font-bold text-slate-400 w-6 text-center">
-                        #{entry.rank}
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      <span className="text-xs font-orbitron font-bold text-slate-400 w-9 text-center shrink-0">
+                        {formatRank(entry.rank)}
                       </span>
+                      {renderAvatar(entry, 'w-8 h-8', 'text-xs')}
                       <div className="min-w-0">
                         <div className="flex items-center space-x-1.5">
                           <span
-                            className={`text-xs font-chakra font-bold truncate max-w-[130px] sm:max-w-[160px] ${
+                            className={`text-xs font-chakra font-bold truncate max-w-[120px] sm:max-w-[150px] ${
                               isCurrentUser ? 'text-cyber-cyan' : 'text-white'
                             }`}
                           >
                             {entry.username}
                           </span>
-                          {entry.dailyStreak > 0 && (
+                          {sortBy !== 'streak' && entry.dailyStreak > 0 && (
                             <span className="flex items-center space-x-0.5 text-[10px] text-orange-400 bg-orange-500/10 px-1 py-0.2 rounded border border-orange-500/20 font-chakra">
                               <Flame className="w-2.5 h-2.5 fill-orange-400" />
                               <span>{entry.dailyStreak}d</span>
@@ -294,13 +336,18 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 pl-2">
                       <div className="text-xs font-chakra font-bold">
                         {getPrimaryStatDisplay(entry)}
                       </div>
                       <div className="text-[10px] text-slate-500 font-chakra flex items-center justify-end space-x-0.5">
-                        <span>{parseFloat(entry.totalProfitsGram || '0').toFixed(1)}</span>
-                        <GramIcon className="w-2.5 h-2.5 text-slate-500" />
+                        {sortBy === 'streak' ? (
+                          <span>{entry.duelsWon}W • {entry.winRate}% WR</span>
+                        ) : sortBy === 'wins' ? (
+                          <span>{entry.winRate}% WR</span>
+                        ) : (
+                          <span>{entry.duelsWon}W</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -316,9 +363,10 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
         <div className="sticky bottom-2 z-20 bg-cyber-bg/95 border-2 border-cyber-cyan/70 rounded-xl p-3 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan flex items-center justify-center font-orbitron font-extrabold text-xs text-cyber-cyan shrink-0">
-                #{userEntry.rank}
+              <div className="w-10 h-8 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan flex items-center justify-center font-orbitron font-extrabold text-xs text-cyber-cyan shrink-0">
+                {formatRank(userEntry.rank)}
               </div>
+              {renderAvatar(userEntry, 'w-8 h-8', 'text-xs')}
               <div className="min-w-0">
                 <span className="text-[10px] font-chakra font-bold text-cyber-cyan uppercase tracking-wider block">
                   {t('leaderboard.yourRank')}
@@ -329,8 +377,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 text-right shrink-0">
-              {userEntry.dailyStreak > 0 && (
+            <div className="flex items-center space-x-3 text-right shrink-0 pl-2">
+              {sortBy !== 'streak' && userEntry.dailyStreak > 0 && (
                 <div className="flex items-center space-x-0.5 text-orange-400 font-chakra text-xs font-bold">
                   <Flame className="w-3 h-3 fill-orange-400" />
                   <span>{userEntry.dailyStreak}d</span>

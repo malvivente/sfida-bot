@@ -488,6 +488,8 @@ export abstract class BaseGameRoom {
       wagerAmountNano: this.config.wagerAmountNano.toString(),
       wagerTon: wagerNum.toFixed(2),
       wagerGram: wagerNum.toFixed(2),
+      payoutTon: winnerPayoutGram,
+      payoutGram: winnerPayoutGram,
       playerAAddress: this.playerA.walletAddress,
       playerAName: this.playerA.username,
       playerATelegramId: this.playerA.telegramId,
