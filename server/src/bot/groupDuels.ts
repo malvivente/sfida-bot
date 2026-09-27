@@ -284,7 +284,7 @@ export async function handleConfirmGroupDuelCallback(ctx: Context, pendingId: st
       groupAdminAddress,
       groupChatId: pending.chatId,
       escrowAddress,
-      isPrivate: true,
+      isPrivate: false,
     },
     async (settledRoom, winner) => {
       console.log(`[Group Duel] Match #${settledRoom.matchId} settled with winner: ${winner}`);

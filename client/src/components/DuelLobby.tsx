@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -193,9 +193,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       // 2. Visibility (Public / Private)
       if (filterVisibility === 'PUBLIC' && m.isPrivate) return false;
       if (filterVisibility === 'PRIVATE' && !m.isPrivate) return false;
-
-      // Group-exclusive match: when waiting for Player B in a Telegram group, it is not available for public lobby browsing
-      if (m.groupChatId && !m.playerB) return false;
 
       // 3. Open Rooms Only (Waiting for Player B)
       if (filterOpenOnly && (m.playerB !== null || m.state !== 'LOBBY')) return false;
@@ -653,6 +650,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           <span className="text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border border-purple-500/50 bg-purple-500/15 text-purple-300 flex items-center space-x-1">
                             <Lock className="w-2.5 h-2.5" />
                             <span>{t('lobby.privateBadge')}</span>
+                          </span>
+                        )}
+                        {m.groupChatId && (
+                          <span className="text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border border-cyber-cyan/50 bg-cyber-cyan/15 text-cyber-cyan flex items-center space-x-1">
+                            <MessageSquare className="w-2.5 h-2.5" />
+                            <span>COMMUNITY</span>
                           </span>
                         )}
                       </div>

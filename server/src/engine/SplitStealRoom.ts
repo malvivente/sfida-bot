@@ -285,23 +285,54 @@ export class SplitStealRoom extends BaseGameRoom {
       }
     } else {
       // 4. Double Betrayal: Both Steal -> Both lose 100%!
-      // 50% to Platform Profit, 50% feeds the Trust Jackpot!
+      // 50% feeds the Trust Jackpot
+      // 10% Affiliate Bounty: 5% to Group Affiliate + 5% to Referrers (2.5% Ref A, 2.5% Ref B)
+      // Remaining 40% (plus unallocated shares) to Platform Treasury
       this.outcome = 'DOUBLE_STEAL';
       winningSpectatorSide = 'NONE';
       winnerAddress = '';
       winnerName = 'Doppio Tradimento (Nessun Vincitore)';
 
-      const halfPot = Number((totalPot / 2).toFixed(2));
-
-      // 50% to platform treasury
-      await dbService.creditTreasury(halfPot.toFixed(2), 'DOUBLE_STEAL_HOUSE_SHARE', this.matchId.toString());
-
-      // 50% to Trust Jackpot
-      await dbService.addTrustJackpot(halfPot);
+      const jackpotShare = Number((totalPot * 0.50).toFixed(4));
+      await dbService.addTrustJackpot(jackpotShare);
       this.jackpotGram = await dbService.getTrustJackpot();
       this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
 
-      outcomeMessage = `💀 DOPPIO TRADIMENTO! Entrambi hanno scelto STEAL! 100% del piatto bruciato: 50% alla piattaforma (+${halfPot.toFixed(2)} GRAM) e 50% al Jackpot della Fiducia (+${halfPot.toFixed(2)} GRAM)!`;
+      // 10% Affiliate Bounty Pool
+      const groupShare = Number((totalPot * 0.05).toFixed(4));
+      const refShareEach = Number((totalPot * 0.025).toFixed(4));
+      let treasuryShare = Number((totalPot * 0.40).toFixed(4));
+
+      // Fetch accounts to check affiliates/referrers
+      const accA = await dbService.getUserAccount(this.playerA.walletAddress, this.playerA.telegramId);
+      const accB = this.playerB ? await dbService.getUserAccount(this.playerB.walletAddress, this.playerB.telegramId) : null;
+      const groupAffiliate = this.config.groupChatId ? await dbService.getGroupAffiliate(this.config.groupChatId) : null;
+
+      // Group share (5%)
+      if (groupAffiliate && this.config.groupChatId) {
+        await dbService.recordGroupMatchRevenue(this.config.groupChatId, wagerNum, groupShare);
+      } else {
+        treasuryShare += groupShare;
+      }
+
+      // Player A referrer share (2.5%)
+      if (accA?.referredBy) {
+        await dbService.creditReferralEarnings(accA.referredBy, refShareEach, this.matchId.toString());
+      } else {
+        treasuryShare += refShareEach;
+      }
+
+      // Player B referrer share (2.5%)
+      if (accB?.referredBy) {
+        await dbService.creditReferralEarnings(accB.referredBy, refShareEach, this.matchId.toString());
+      } else {
+        treasuryShare += refShareEach;
+      }
+
+      // Credit remaining net share to Treasury
+      await dbService.creditTreasury(treasuryShare.toFixed(2), 'DOUBLE_STEAL_HOUSE_SHARE', this.matchId.toString());
+
+      outcomeMessage = `💀 DOPPIO TRADIMENTO! Entrambi hanno scelto STEAL! 100% del piatto bruciato: 50% al Jackpot della Fiducia (+${jackpotShare.toFixed(2)} GRAM), 10% Taglia Affiliati & Ref, e il resto alla Treasury!`;
     }
 
     this.message = outcomeMessage;
