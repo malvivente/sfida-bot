@@ -141,8 +141,8 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   <span>{t('rules.cbRule')}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
-                  <strong className="text-yellow-400 block mb-0.5">5. Split or Steal (Trust Dilemma & Shared Jackpot)</strong>
-                  <span>{t('rules.ssRule')}</span>
+                  <strong className="text-yellow-400 block mb-1">5. Split or Steal (Trust Dilemma & Shared Jackpot)</strong>
+                  <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[11.5px]">{t('rules.ssRule')}</div>
                 </div>
                 <div className="p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border">
                   <strong className="text-slate-300 block mb-0.5">6. Automated Prize Settlement & Rematches</strong>

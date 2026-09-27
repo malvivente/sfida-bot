@@ -183,9 +183,9 @@ export const translations: Translations = {
   'split.lobbyWaitingDesc': { it: 'In attesa che un secondo duellante si unisca alla stanza...', en: 'Waiting for an opponent to join the match...' },
   'split.lobbyReadyDesc': { it: 'Entrambi i duellanti devono confermare READY per avviare la finestra scommesse (30s) e il duello.', en: 'Both duelists must confirm READY to start the 30s betting window and duel.' },
   'split.trustJackpot': { it: 'JACKPOT DELLA FIDUCIA', en: 'TRUST JACKPOT' },
-  'split.jackpotActive': { it: 'ATTIVO (+20%)', en: 'ACTIVE (+20%)' },
+  'split.jackpotActive': { it: 'ATTIVO (LUCKY DROP 30%)', en: 'ACTIVE (30% LUCKY DROP)' },
   'split.jackpotCharging': { it: 'IN CARICA (< 5G)', en: 'CHARGING (< 5G)' },
-  'split.bonusUnlockedDesc': { it: 'Bonus +20% se entrambi Split', en: '+20% bonus if both Split' },
+  'split.bonusUnlockedDesc': { it: 'Lucky Drop: +12.5% a testa se Split, +20% taglia se Steal', en: 'Lucky Drop: +12.5% each on Split, +20% bounty on Steal' },
   'split.refundOnlyDesc': { it: 'Solo rimborso se entrambi Split', en: 'Refund only if both Split' },
   'split.bettingWindow': { it: 'FINESTRA SCOMMESSE APERTA', en: 'BETTING WINDOW OPEN' },
   'split.bettingWindowDesc': { it: 'Gli spettatori stanno piazzando le scommesse 1-X-2. Il duello inizierà al termine del countdown!', en: 'Spectators are placing 1-X-2 bets. The duel will begin after countdown!' },
@@ -195,10 +195,10 @@ export const translations: Translations = {
   'split.pickPrompt': { it: 'Fai la tua scelta in segreto:', en: 'Make your secret choice:' },
   'split.btnSplit': { it: 'SPLIT', en: 'SPLIT' },
   'split.btnSplitTag': { it: 'COOPERA', en: 'COOPERATE' },
-  'split.btnSplitDesc': { it: 'Se entrambi fate Split, vi rimborsate la puntata + 20% Jackpot della Fiducia!', en: 'If both Split, wagers are refunded + 20% Trust Jackpot bonus!' },
+  'split.btnSplitDesc': { it: 'Se entrambi fate Split, vi rimborsate la puntata + fino al 12.5% dal Jackpot della Fiducia!', en: 'If both Split, wagers are refunded + up to 12.5% from the Trust Jackpot!' },
   'split.btnSteal': { it: 'STEAL', en: 'STEAL' },
   'split.btnStealTag': { it: 'TRADISCI', en: 'BETRAY' },
-  'split.btnStealDesc': { it: 'Se l\'altro fa Split, incassi il 100% del piatto! Ma se ruba anche lui, perdi tutto!', en: 'If the other Splits, you take 100%! But if both Steal, you lose all!' },
+  'split.btnStealDesc': { it: 'Se l\'altro fa Split, incassi il 100% del piatto + 20% Taglia Tentazione! Se rubate entrambi, perdete tutto!', en: 'If the other Splits, take 100% of the pot + 20% Temptation Bounty! If both Steal, you lose all!' },
   'split.thinking': { it: 'STA SCEGLIENDO...', en: 'THINKING...' },
   'split.secretLocked': { it: 'SCELTA BLOCCATA', en: 'CHOICE LOCKED' },
   'split.spectatorWatching': { it: 'SCELTA SEGRETA DEI DUELLANTI', en: 'SECRET DUELIST CHOICES' },
@@ -255,7 +255,7 @@ export const translations: Translations = {
   'affiliates.groupCommission': { it: 'Commissione', en: 'Commission' },
   'affiliates.groupEarnings': { it: 'Guadagni', en: 'Earnings' },
   'affiliates.noGroupsTitle': { it: 'POSSIEDI UNA COMMUNITY TELEGRAM?', en: 'MANAGE A TELEGRAM COMMUNITY?' },
-  'affiliates.noGroupsDesc': { it: 'Aggiungi il bot nel tuo gruppo e contatta l\'amministratore per attivare le commissioni affiliate (20% del rake su ogni sfida in chat).', en: 'Add the bot to your community and contact the admin to activate affiliate commissions (20% of platform rake on every in-chat duel).' },
+  'affiliates.noGroupsDesc': { it: 'Aggiungi il bot nel tuo gruppo e contatta l\'amministratore per attivare le commissioni affiliate sulle partite giocate nella community (fino al 15% delle quote fisse di partecipazione e taglie del 5% su Split or Steal).', en: 'Add the bot to your community and contact the admin to activate affiliate commissions on matches played in your group (up to 15% of fixed participation fees and 5% bounties on Split or Steal).' },
   'affiliates.contactAdminBtn': { it: 'CONTATTA ADMIN', en: 'CONTACT ADMIN' },
 
   // Rules & ToS Modal
@@ -276,7 +276,46 @@ export const translations: Translations = {
   'rules.bjRule': { it: 'Le carte vengono distribuite scoperte da un mazzo comune condiviso visibile a entrambi i duellanti e agli spettatori. Scegli HIT o STAND. Vince la puntata chi si avvicina di più a 21 senza sballare.', en: 'Cards are dealt face-up from a shared common deck visible to both duelists and spectators. Choose HIT or STAND. Closest to 21 without busting wins the wager.' },
   'rules.gbRule': { it: 'Attraversa un ponte infinito di lastre di vetro temperato o fragile. 2 vite a testa. Ogni giocatore può usare 1 singolo PASS per cedere l\'iniziativa all\'avversario. Infrangi tutte le vite e precipita nell\'abisso: l\'ultimo guerriero in piedi vince!', en: 'Step across an endless bridge of tempered vs fragile glass tiles. 2 lives each. Each player can use 1 single PASS to shift the lead to the opponent. Shatter all lives and fall into the abyss—last warrior standing wins!' },
   'rules.cbRule': { it: 'Un timer casuale sprofonda nella Blind Zone buia tra 2.0s e 4.0s. Premi STOP più vicino possibile a 0.000s. Fermare dopo lo 0.000s è BUST. I pareggi attivano il Sudden Death overtime! Il primo a conquistare 2 round vince il match.', en: 'A random timer plunges into the dark Blind Zone between 2.0s and 4.0s. Hit STOP as close to 0.000s as you dare. Stopping past 0.000s is a BUST. Ties trigger Sudden Death overtime! First to secure 2 rounds wins the match.' },
-  'rules.ssRule': { it: 'Dilemma del Prigioniero rivisitato (puntata min. 5.0 GRAM): 30 secondi per scegliere in segreto tra SPLIT (Coopera) o STEAL (Tradisci). Nelle partite pubbliche, se entrambi scegliete Split, recuperate il 100% della puntata e attivate la Ruota del Jackpot (Lucky Drop 30% per vincere il bonus del 25%). Se uno ruba e l\'altro coopera, chi ruba vince l\'intero piatto (100% pot)! Se entrambi tradite (Doppio Tradimento), perdete entrambi: il 50% alimenta il Jackpot, il 10% va in taglie affiliati/referrer e il resto alla Treasury.', en: 'Revisited Prisoner\'s Dilemma (min. wager 5.0 GRAM): 30 seconds to secretly choose SPLIT (Cooperate) or STEAL (Betray). In public matches, mutual Split grants 100% wager refund and spins the Jackpot Wheel (30% Lucky Drop with 25% bonus). If one steals and the other cooperates, the thief wins the entire pot (100% pot)! If both Steal (Double Betrayal), both lose: 50% feeds the Trust Jackpot, 10% affiliate/referrer bounties, and remainder to Treasury.' },
+  'rules.ssRule': {
+    it: `Dilemma del Prigioniero ad alta tensione (puntata min. 5.00 GRAM):
+⏱️ Decisione Segreta (30s): Entrambi i duellanti scelgono in segreto tra SPLIT (Coopera) o STEAL (Tradisci). Le scelte rimangono crittografate fino allo scadere del tempo.
+
+🤝 Doppio Split (Pace Assoluta):
+• Rimborso 100% della puntata a entrambi i giocatori.
+• Nelle partite pubbliche della lobby, se il Trust Jackpot è attivo (≥ 5.0 GRAM), gira la Ruota Lucky Drop (30% probabilità) con un Bonus del 25% della puntata diviso equamente (12.5% a testa) prelevato dal Jackpot!
+
+🗡️ Steal vs Split (Tradimento & Taglia Tentazione):
+• Chi sceglie STEAL vince il 100% del piatto (2x la puntata). Chi ha scelto SPLIT perde la puntata.
+• Nelle partite pubbliche con Jackpot attivo, chi ruba gira la Ruota Lucky Drop (30% probabilità) per una Taglia Tentazione extra del 20% della propria puntata dal Trust Jackpot!
+
+💀 Doppio Steal (Avidità & Distruzione):
+• Se entrambi scelgono STEAL, nessuno vince ed entrambi perdono il 100% della puntata.
+• Il piatto bruciato alimenta per il 50% il Trust Jackpot, il 10% va in taglie per la community/referrer (5% gruppo e 2.5% a ciascun referrer) e il 40% alla Treasury.
+
+🛡️ Regole Anti-Abuso & Limiti:
+• Bonus Jackpot validi SOLO nelle stanze pubbliche della lobby (non disponibili nelle stanze private).
+• Cooldown 48 ore: la stessa coppia di giocatori può riscuotere il bonus Jackpot una sola volta ogni 48 ore.
+• Blocco Referral: due utenti legati da invito diretto non possono incassare bonus Jackpot sfidandosi tra loro.`,
+    en: `High-stakes Prisoner's Dilemma showdown (min. wager 5.00 GRAM):
+⏱️ Secret Decision Window (30s): Both duelists secretly choose SPLIT (Cooperate) or STEAL (Betray). Choices remain encrypted until the timer expires.
+
+🤝 Mutual Split (Absolute Peace):
+• 100% full wager refund to both players.
+• In open public lobby matches with an active Trust Jackpot (≥ 5.0 GRAM), the 30% Lucky Drop Wheel spins for a 25% wager bonus shared equally (12.5% each) from the Jackpot!
+
+🗡️ Steal vs Split (Betrayal & Temptation Bounty):
+• The stealer wins the entire pot (100% pot / 2x wager). The cooperating player loses their stake.
+• In public matches with active Jackpot, the stealer also spins the 30% Lucky Drop Wheel for an extra 20% Temptation Bounty on their wager taken from the Trust Jackpot!
+
+💀 Double Steal (Greed & Total Loss):
+• If both duelists choose STEAL, zero winners and both lose 100% of their stakes.
+• The burned pot is redistributed: 50% feeds the Trust Jackpot, 10% to community & referrers (5% group & 2.5% to each referrer), and 40% to Platform Treasury.
+
+🛡️ Anti-Collusion Rules & Safeguards:
+• Jackpot bonuses trigger ONLY in public lobby matches (unavailable in private rooms).
+• 48-Hour Cooldown: The same pair of players can only trigger a Jackpot bonus once every 48 hours.
+• Referral Lock: Players connected by direct invite/referral cannot trigger Jackpot bonuses against each other.`
+  },
   'rules.settleRule': { it: 'I premi vengono accreditati automaticamente sul saldo in-app al termine del duello. Alla fine di ogni match, entrambi i giocatori possono proporre una rivincita immediata 2X!', en: 'Prizes are automatically credited to your in-bot balance upon duel settlement. At the end of any duel, either player can propose an immediate 2X rematch!' },
   'rules.feesTitle': { it: 'COME FUNZIONANO VINCITE E COMMISSIONI', en: 'HOW WINNINGS & FEES WORK' },
   'rules.feesDesc': { it: 'Nessun margine nascosto. Il vincitore del duello 1v1 riscuote il 100% del montepremi generato dalle puntate di entrambi i giocatori (0% commissione trattenuta dal banco). È prevista solo una quota fissa di partecipazione di 0.05 GRAM per giocatore. Prelievo minimo consentito: 1.00 GRAM (per evitare lo spreco di fee di rete).', en: 'Zero hidden rake. The 1v1 winner collects 100% of the prize pool generated by both players\' wagers (0% platform rake). There is only a fixed participation fee of 0.05 GRAM per player. Minimum withdrawal allowed: 1.00 GRAM (to avoid network fee waste).' },

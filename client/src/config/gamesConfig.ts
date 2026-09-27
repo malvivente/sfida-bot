@@ -62,7 +62,7 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     title: 'Split or Steal',
     badge: 'MIND GAME',
     tagline: 'Cooperate or Betray · Shared Jackpot',
-    description: 'Two duelists choose in secret: SPLIT to cooperate or STEAL to betray. In public matches, mutual split can unlock the +25% Trust Jackpot bonus (30% Lucky Drop)! But if both steal, all is lost.',
+    description: 'Two duelists choose in secret: SPLIT to cooperate (refund + 12.5% bonus each) or STEAL to betray (full pot + 20% Temptation Bounty). Both steal loses all and feeds the Jackpot.',
     spectatorAppeal: '3-way 1-X-2 betting: P1 Steal, P2 Steal, or mutual Peace! If both steal, the house and the Trust Jackpot take all!',
     accentColor: 'text-purple-400',
     borderColor: 'border-purple-500/60 hover:border-purple-400',

@@ -13,8 +13,7 @@ export const GAMES_CONFIG = {
   },
   bridge: {
     name: 'Glass Bridge',
-    description: '6 perilous steps over the abyss. Choose tempered glass or shatter and lose a life.',
-    totalSteps: 6,
+    description: 'Endless perilous steps over the abyss. Choose tempered glass or shatter and lose a life.',
     initialLives: 2,
     turnTimeoutSeconds: 20,
   },
@@ -30,9 +29,10 @@ export const GAMES_CONFIG = {
   },
   split: {
     name: 'Split or Steal',
-    description: 'Prisoner\'s dilemma casino showdown. Cooperate for peace & shared jackpot, or betray to steal it all.',
+    description: 'Prisoner\'s dilemma casino showdown. Cooperate for peace & shared 25% jackpot (12.5% each), or betray to steal 100% pot plus 20% temptation bounty.',
     choiceCountdownSeconds: 30,
     jackpotThresholdGram: 5.0,
-    jackpotBonusPercent: 20,
+    jackpotSplitBonusPercent: 25,
+    jackpotStealBonusPercent: 20,
   },
 } as const;
