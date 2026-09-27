@@ -55,7 +55,7 @@ export async function seedLeaderboard(userCount: number = 150) {
     const duelsPlayed = Math.max(duelsWon, Math.round(duelsWon / winRate));
     const losses = duelsPlayed - duelsWon;
     const streak = i < 10 ? (12 - i) : i % 5 === 0 ? Math.floor(Math.random() * 5) + 1 : 0;
-    const profitGram = (duelsWon * 2.00 - losses * 1.0).toFixed(2);
+    const profitGram = (duelsWon * 1.92 - losses * 1.0).toFixed(2);
 
     const userAccount = {
       walletAddress: `UQ${tgId.padStart(46, '0')}`,
@@ -92,8 +92,8 @@ export async function seedLeaderboard(userCount: number = 150) {
         wagerAmountNano: '1000000000',
         wagerTon: '1.00',
         wagerGram: '1.00',
-        payoutTon: isWin ? '2.00' : '0.00',
-        payoutGram: isWin ? '2.00' : '0.00',
+        payoutTon: isWin ? '1.92' : '0.00',
+        payoutGram: isWin ? '1.92' : '0.00',
         playerAAddress: userAccount.walletAddress,
         playerAName: fullName,
         playerATelegramId: tgId,

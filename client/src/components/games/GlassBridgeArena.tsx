@@ -95,8 +95,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
   const myPassesRemaining = userSide === 'A' ? passesRemainingA : passesRemainingB;
   const canPassLead = myCurrentStep > 0 && myPassesRemaining > 0;
 
-  const TOTAL_STEPS = 6;
-  const bridgeSteps = [1, 2, 3, 4, 5, 6];
+  // Window of 5 steps around the activeStep
+  const minStep = Math.max(1, activeStep - 2);
+  const visibleSteps = Array.from({ length: 5 }, (_, idx) => minStep + idx);
 
   return (
     <div className="w-full flex flex-col items-center justify-between p-3.5 sm:p-4 bg-cyber-card/90 border border-cyber-green/40 rounded-3xl backdrop-blur-xl shadow-[0_0_40px_rgba(0,255,102,0.15)] relative overflow-hidden min-h-[560px]">
@@ -140,9 +141,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
         <div className="flex flex-col items-center shrink-0 px-1 text-center">
           <span className="text-[8px] text-cyber-green uppercase font-chakra font-bold tracking-widest flex items-center space-x-1">
             <Compass className="w-3 h-3 text-cyber-green inline shrink-0" />
-            <span>GLASS BRIDGE</span>
+            <span>ENDLESS BRIDGE</span>
           </span>
-          <span className="text-xs font-mono font-black text-white">STEP #{Math.min(activeStep, TOTAL_STEPS)} / {TOTAL_STEPS}</span>
+          <span className="text-xs font-mono font-black text-white">STEP #{activeStep}</span>
         </div>
 
         {/* Player B */}
@@ -181,8 +182,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
       <div className="my-auto w-full flex flex-col items-center justify-center py-2 z-10">
         {roomState !== 'MATCH_SETTLED' ? (
           <div className="w-full max-w-xs flex flex-col-reverse space-y-reverse space-y-1.5">
-            {/* Step 1 to 6 - Step 1 at bottom, Step 6 at top */}
-            {bridgeSteps.map((stepNum) => {
+            {visibleSteps.map((stepNum) => {
               const isCurrentTarget = roomState === 'GAME_ACTIVE' && stepNum === activeStep;
               const revealed = revealedSteps[stepNum];
               const hasPassed = roomState === 'GAME_ACTIVE' && stepNum < activeStep;
@@ -235,15 +235,6 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                 </div>
               );
             })}
-
-            {/* Finish Platform at the top */}
-            <div className={`w-full py-1.5 rounded-xl border text-center font-orbitron font-extrabold text-[10px] tracking-wider transition-all ${
-              activeStep >= TOTAL_STEPS && Object.keys(revealedSteps).length >= TOTAL_STEPS
-                ? 'bg-cyber-green/30 border-cyber-green text-cyber-green shadow-neon-green'
-                : 'bg-cyber-cyan/10 border-cyber-cyan/30 text-cyber-cyan/80'
-            }`}>
-              🏁 FINISH PLATFORM
-            </div>
           </div>
         ) : null}
 
@@ -450,7 +441,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
             isPlayerTurn ? (
               <div className="w-full flex flex-col space-y-2">
                 <span className="text-[11px] font-orbitron font-bold text-cyber-green uppercase tracking-wider text-center animate-pulse">
-                  ⚡ STEP #{Math.min(activeStep, TOTAL_STEPS)} / {TOTAL_STEPS} • {activeStep === TOTAL_STEPS ? 'FINAL LEAP TO VICTORY!' : 'TAKE THE LEAP OR PASS'}
+                  ⚡ STEP #{activeStep} • TAKE THE LEAP OR PASS
                 </span>
 
                 <div className="flex space-x-2 w-full">
@@ -499,14 +490,14 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               <div className="w-full py-3.5 rounded-xl bg-black/50 border border-cyber-border text-center flex items-center justify-center space-x-2">
                 <Loader2 className="w-4 h-4 animate-spin text-cyber-green" />
                 <span className="text-xs font-chakra font-bold text-slate-300">
-                  {activeTurnName} is preparing for Step #{Math.min(activeStep, TOTAL_STEPS)} / {TOTAL_STEPS}...
+                  {activeTurnName} is preparing for Step #{activeStep}...
                 </span>
               </div>
             )
           ) : (
             <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
               <span className="text-xs font-chakra font-bold text-cyber-green">
-                👁️ SPECTATOR VIEW • 6-STEP GLASS RUN • PLACE BETS BELOW
+                👁️ SPECTATOR VIEW • ENDLESS GLASS RUN • PLACE BETS BELOW
               </span>
             </div>
           )

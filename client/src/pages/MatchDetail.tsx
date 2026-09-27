@@ -35,9 +35,9 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ matchId }) => {
           <h3 className="text-base font-bold text-white">CyberNeo Reigns Supreme</h3>
           <p className="text-xs text-slate-400 font-mono mt-1">Won 2 - 1 • Reaction: 194.2ms</p>
           <div className="mt-2 text-xs font-mono text-cyber-cyan font-extrabold flex items-center justify-center space-x-1">
-            <span>+2.00</span>
+            <span>+1.92</span>
             <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
-            <span>Payout (100% Pot)</span>
+            <span>Payout (96% Pot)</span>
           </div>
         </div>
 

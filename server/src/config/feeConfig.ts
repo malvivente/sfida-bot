@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: FeeConfig = {
   minWagerGram: 0.1,
   maxWagerGram: 100.0,
   minDepositGram: 0.1,
-  minWithdrawGram: 1.0,
+  minWithdrawGram: 0.1,
   presetsWagerGram: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
   bettingWindowSeconds: process.env.BETTING_WINDOW_SECONDS ? parseInt(process.env.BETTING_WINDOW_SECONDS, 10) : 30,
 };

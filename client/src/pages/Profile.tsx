@@ -189,10 +189,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
   const handleWithdraw = async () => {
     if (!userAddress || !serverUrl) return;
     const amt = parseFloat(withdrawAmount);
-    if (isNaN(amt) || amt < 1.0) {
-      setBalanceMsg({ type: 'error', text: 'Minimum withdrawal is 1.00 GRAM.' });
-      return;
-    }
+    if (isNaN(amt) || amt <= 0) return;
 
     const currentBal = parseFloat(userBalance?.balanceGram || userBalance?.balanceTon || '0');
     if (currentBal < amt) {
@@ -654,7 +651,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-xs font-chakra text-slate-400">
-                <span>Amount (Min 1.00 GRAM):</span>
+                <span>Amount (GRAM):</span>
                 <span>Available: {displayBalance} GRAM</span>
               </div>
               <div className="flex items-center space-x-2 bg-cyber-bg border border-cyber-border rounded-xl px-3 py-2">

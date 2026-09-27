@@ -183,7 +183,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 <div className="flex justify-between items-center border-t border-cyber-border pt-1 text-cyber-green font-bold">
                   <span>{t('rules.netPrize')}</span>
                   <span className="flex items-center space-x-1">
-                    <span>+2.00</span>
+                    <span>+1.92</span>
                     <GramIcon className="w-3 h-3 text-cyber-green" />
                   </span>
                 </div>
