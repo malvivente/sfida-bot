@@ -10,6 +10,7 @@ interface TrustJackpotWheelProps {
   wagerGram: string;
   onFinish?: () => void;
   autoSpin?: boolean;
+  mode?: 'peace' | 'steal';
 }
 
 export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
@@ -18,6 +19,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
   wagerGram,
   onFinish,
   autoSpin = true,
+  mode = 'peace',
 }) => {
   const { triggerImpact } = useHaptics();
   const [hasSpun, setHasSpun] = useState<boolean>(false);
@@ -148,7 +150,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
           <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
           <span className="text-[10px] font-orbitron font-extrabold uppercase tracking-wider">
-            Trust Jackpot Lucky Drop
+            {mode === 'steal' ? 'Temptation Bounty Drop' : 'Trust Jackpot Lucky Drop'}
           </span>
           <span className="text-[9px] font-mono font-bold bg-amber-400/30 px-1 rounded text-amber-200">
             30% DROP
@@ -156,10 +158,14 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
         </div>
         <p className="text-[11px] font-chakra text-slate-300 mt-1">
           {isSpinning
-            ? 'La ruota sta girando... Buona fortuna!'
+            ? (mode === 'steal' ? 'La ruota sta girando per il bonus 20%...' : 'La ruota sta girando... Buona fortuna!')
             : showResult
-            ? (isWon ? '🎉 Drop 30% Assegnato!' : '🤝 Rimborso 100% Confermato')
-            : 'Entrambi avete scelto SPLIT! Estrazione in corso...'}
+            ? (isWon
+                ? (mode === 'steal' ? '🗡️ Bonus Tentazione Assegnato!' : '🎉 Drop 30% Assegnato (+12.5% a testa)!')
+                : (mode === 'steal' ? '🗡️ Piatto 100% Confermato' : '🤝 Rimborso 100% Confermato'))
+            : (mode === 'steal'
+                ? 'Tradimento riuscito! Estrazione bonus tentazione in corso...'
+                : 'Entrambi avete scelto SPLIT! Estrazione in corso...')}
         </p>
       </div>
 
@@ -215,7 +221,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
                       dominantBaseline="middle"
                       className="text-[8px] font-orbitron font-extrabold fill-slate-950 font-black tracking-tight"
                     >
-                      🏆 +25%
+                      {mode === 'steal' ? '🗡️ +20%' : '🏆 +12.5%'}
                     </text>
                   ) : (
                     <text
@@ -223,7 +229,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
                       dominantBaseline="middle"
                       className="text-[7.5px] font-chakra font-bold fill-slate-400 tracking-tight"
                     >
-                      100% REF
+                      {mode === 'steal' ? 'POT 2X' : '100% REF'}
                     </text>
                   )}
                 </g>
@@ -257,7 +263,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
               dominantBaseline="middle"
               className="text-[9px] font-orbitron font-black fill-amber-300 tracking-wider select-none"
             >
-              TRUST
+              {mode === 'steal' ? 'BOUNTY' : 'TRUST'}
             </text>
           </svg>
         </motion.div>
@@ -281,26 +287,30 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
               <div className="space-y-1">
                 <div className="flex items-center justify-center space-x-1.5 text-amber-300 font-orbitron font-black text-sm">
                   <Trophy className="w-4 h-4 text-amber-300 animate-bounce" />
-                  <span>JACKPOT DROP VINTO!</span>
+                  <span>{mode === 'steal' ? 'BOUNTY TENTAZIONE VINTO!' : 'JACKPOT DROP VINTO!'}</span>
                   <Sparkles className="w-4 h-4 text-amber-300" />
                 </div>
                 <p className="text-xs font-chakra text-slate-200">
-                  Entrambi ricevete il rimborso del 100% della puntata ({wagerGram} GRAM) + Bonus del 25%:
+                  {mode === 'steal'
+                    ? `Hai vinto l'intero piatto (${(parseFloat(wagerGram) * 2).toFixed(2)} GRAM) + Bonus Tentazione del 20%:`
+                    : `Entrambi ricevete il rimborso del 100% della puntata (${wagerGram} GRAM) + Bonus del 12.5%:`}
                 </p>
                 <div className="inline-flex items-center space-x-1 px-3 py-1 bg-amber-400/20 border border-amber-400/60 rounded-lg text-amber-300 font-orbitron font-extrabold text-sm mt-1">
                   <span>+{bonusPerPlayerGram.toFixed(2)}</span>
                   <GramIcon className="w-3.5 h-3.5 text-amber-300" />
-                  <span>A TESTA</span>
+                  <span>{mode === 'steal' ? 'BONUS EXTRA' : 'A TESTA'}</span>
                 </div>
               </div>
             ) : (
               <div className="space-y-1">
                 <div className="flex items-center justify-center space-x-1.5 text-cyber-green font-orbitron font-bold text-xs">
                   <CheckCircle2 className="w-4 h-4 text-cyber-green" />
-                  <span>PUNTATA RIMBORSATA AL 100%</span>
+                  <span>{mode === 'steal' ? 'PIATTO 100% CONQUISTATO!' : 'PUNTATA RIMBORSATA AL 100%'}</span>
                 </div>
                 <p className="text-[11px] font-chakra text-slate-300">
-                  Lucky Drop 30% non estratto questa volta. Capitale interamente preservato (+{wagerGram} GRAM).
+                  {mode === 'steal'
+                    ? `Hai incassato l'intero montepremi di ${(parseFloat(wagerGram) * 2).toFixed(2)} GRAM. (Drop 20% non estratto).`
+                    : `Lucky Drop 30% non estratto questa volta. Capitale interamente preservato (+${wagerGram} GRAM).`}
                 </p>
               </div>
             )}

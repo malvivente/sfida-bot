@@ -1017,7 +1017,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 {selectedGameType === 'split' && isPrivateRoom && (
                   <div className="mt-2 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-2.5 py-1.5 font-chakra flex items-center space-x-1.5">
                     <span>ℹ️</span>
-                    <span>Nelle stanze private il Bonus Trust Jackpot non è attivo (riservato alle partite pubbliche).</span>
+                    <span>{t('lobby.splitPrivateJackpotNotice')}</span>
                   </div>
                 )}
               </div>

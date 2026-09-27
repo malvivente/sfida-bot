@@ -413,19 +413,13 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             )}
 
             {(outcome === 'P1_STEAL' || outcome === 'P2_STEAL') && (
-              <div className="w-full bg-gradient-to-r from-cyber-pink/20 via-purple-900/20 to-cyber-pink/20 border-2 border-cyber-pink rounded-2xl p-4 text-center shadow-[0_0_30px_rgba(255,0,85,0.25)] space-y-1.5">
-                <div className="w-12 h-12 rounded-2xl bg-cyber-pink/20 border border-cyber-pink flex items-center justify-center mx-auto">
-                  <Swords className="w-7 h-7 text-cyber-pink" />
-                </div>
-                <h3 className="text-base font-orbitron font-black text-white tracking-wider">
-                  {t('split.outcomeSteal')}
-                </h3>
-                <p className="text-xs font-chakra text-slate-200">
-                  {t('split.outcomeStealDesc', { winner: outcome === 'P1_STEAL' ? playerAName : playerBName })}
-                </p>
-                <div className="text-xs font-chakra font-bold text-cyber-pink pt-1">
-                  {t('split.outcomeStealPot', { winner: outcome === 'P1_STEAL' ? playerAName : playerBName })}
-                </div>
+              <div className="w-full flex flex-col items-center">
+                <TrustJackpotWheel
+                  mode="steal"
+                  isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
+                  bonusPerPlayerGram={bonusPerPlayerGram}
+                  wagerGram={wagerTon}
+                />
               </div>
             )}
 

@@ -17,7 +17,9 @@ export interface FeeConfig {
   minDepositGram: number;
   minWithdrawGram: number;
   minWagerSplitGram: number;
-  splitJackpotBonusPercent: number;
+  splitJackpotBonusPercent: number; // legacy alias
+  splitPeaceBonusPercent: number;
+  splitStealBonusPercent: number;
   splitJackpotProbabilityPercent: number;
   splitJackpotCooldownHours: number;
   presetsWagerGram: string[];
@@ -37,6 +39,8 @@ const DEFAULT_CONFIG: FeeConfig = {
   minWithdrawGram: 1.0,
   minWagerSplitGram: 5.0,
   splitJackpotBonusPercent: 25,
+  splitPeaceBonusPercent: 25,
+  splitStealBonusPercent: 20,
   splitJackpotProbabilityPercent: 30,
   splitJackpotCooldownHours: 48,
   presetsWagerGram: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],

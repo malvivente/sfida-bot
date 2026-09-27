@@ -196,15 +196,21 @@ export class SplitStealRoom extends BaseGameRoom {
     let outcomeMessage: string = '';
     let winningSpectatorSide: 'A' | 'B' | 'X' | 'NONE' = 'NONE';
 
+    const {
+      splitPeaceBonusPercent = 25,
+      splitStealBonusPercent = 20,
+      splitJackpotProbabilityPercent = 30,
+    } = feeConfig.getConfig();
+    const isPublicMatch = !this.isPrivate && !this.config.groupChatId;
+
     if (pA === 'STEAL' && pB === 'SPLIT') {
-      // 1. Player 1 Steals, Player 2 Splits -> Player 1 wins entire pot
+      // 1. Player 1 Steals, Player 2 Splits -> Player 1 wins entire pot + chance of 20% Steal Temptation Jackpot Bounty!
       this.outcome = 'P1_STEAL';
       winnerAddress = this.playerA.walletAddress;
       winnerName = this.playerA.username;
       winningSpectatorSide = 'A';
-      outcomeMessage = `🗡️ TRADIMENTO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
 
-      // Credit winner
+      // Credit winner with full pot
       await dbService.creditUserBalance(
         winnerAddress,
         duelPayoutGram,
@@ -214,15 +220,62 @@ export class SplitStealRoom extends BaseGameRoom {
       if (parseFloat(duelRakeGram) > 0) {
         await dbService.creditTreasury(duelRakeGram, 'DUEL_RAKE', this.matchId.toString());
       }
+
+      // Check Steal Temptation Bounty (20% of winner's wager from Trust Jackpot)
+      if (isPublicMatch && isJackpotActive) {
+        const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
+        if (luckyDrop) {
+          const pairEligibility = await dbService.canPairReceiveJackpot(
+            this.playerA.walletAddress,
+            this.playerB?.walletAddress || '',
+            this.playerA.telegramId,
+            this.playerB?.telegramId
+          );
+          if (pairEligibility.eligible) {
+            const maxBonusFromJackpot = Number((this.jackpotGram * 0.25).toFixed(2));
+            const stealBonus = Math.min(
+              Number((wagerNum * (splitStealBonusPercent / 100)).toFixed(2)),
+              maxBonusFromJackpot
+            );
+            if (stealBonus > 0) {
+              this.bonusAwardedGram = stealBonus;
+              this.bonusPerPlayerGram = stealBonus;
+
+              await dbService.creditUserBalance(
+                winnerAddress,
+                stealBonus.toFixed(2),
+                'MATCH_WIN',
+                `Steal Temptation Jackpot Bounty (${splitStealBonusPercent}%) in match #${this.matchId}`
+              );
+              await dbService.deductTrustJackpot(stealBonus);
+              await dbService.recordJackpotAward(
+                this.playerA.walletAddress,
+                this.playerB?.walletAddress || '',
+                stealBonus,
+                this.matchId.toString(),
+                this.playerA.telegramId,
+                this.playerB?.telegramId
+              );
+              this.jackpotGram = await dbService.getTrustJackpot();
+              this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
+            }
+          }
+        }
+      }
+
+      if (this.bonusAwardedGram && this.bonusAwardedGram > 0) {
+        outcomeMessage = `🗡️ TRADIMENTO RIUSCITO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM) + BONUS TENTAZIONE JACKPOT ${splitStealBonusPercent}% (+${this.bonusAwardedGram.toFixed(2)} GRAM)!`;
+      } else {
+        outcomeMessage = `🗡️ TRADIMENTO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
+      }
     } else if (pB === 'STEAL' && pA === 'SPLIT') {
-      // 2. Player 2 Steals, Player 1 Splits -> Player 2 wins entire pot
+      // 2. Player 2 Steals, Player 1 Splits -> Player 2 wins entire pot + chance of 20% Steal Temptation Jackpot Bounty!
       this.outcome = 'P2_STEAL';
       winnerAddress = this.playerB?.walletAddress || '';
       winnerName = this.playerB?.username || 'Player B';
       winningSpectatorSide = 'B';
-      outcomeMessage = `🗡️ TRADIMENTO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
 
-      // Credit winner
+      // Credit winner with full pot
       await dbService.creditUserBalance(
         winnerAddress,
         duelPayoutGram,
@@ -231,6 +284,54 @@ export class SplitStealRoom extends BaseGameRoom {
       );
       if (parseFloat(duelRakeGram) > 0) {
         await dbService.creditTreasury(duelRakeGram, 'DUEL_RAKE', this.matchId.toString());
+      }
+
+      // Check Steal Temptation Bounty (20% of winner's wager from Trust Jackpot)
+      if (isPublicMatch && isJackpotActive) {
+        const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
+        if (luckyDrop) {
+          const pairEligibility = await dbService.canPairReceiveJackpot(
+            this.playerA.walletAddress,
+            this.playerB?.walletAddress || '',
+            this.playerA.telegramId,
+            this.playerB?.telegramId
+          );
+          if (pairEligibility.eligible) {
+            const maxBonusFromJackpot = Number((this.jackpotGram * 0.25).toFixed(2));
+            const stealBonus = Math.min(
+              Number((wagerNum * (splitStealBonusPercent / 100)).toFixed(2)),
+              maxBonusFromJackpot
+            );
+            if (stealBonus > 0) {
+              this.bonusAwardedGram = stealBonus;
+              this.bonusPerPlayerGram = stealBonus;
+
+              await dbService.creditUserBalance(
+                winnerAddress,
+                stealBonus.toFixed(2),
+                'MATCH_WIN',
+                `Steal Temptation Jackpot Bounty (${splitStealBonusPercent}%) in match #${this.matchId}`
+              );
+              await dbService.deductTrustJackpot(stealBonus);
+              await dbService.recordJackpotAward(
+                this.playerA.walletAddress,
+                this.playerB?.walletAddress || '',
+                stealBonus,
+                this.matchId.toString(),
+                this.playerA.telegramId,
+                this.playerB?.telegramId
+              );
+              this.jackpotGram = await dbService.getTrustJackpot();
+              this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
+            }
+          }
+        }
+      }
+
+      if (this.bonusAwardedGram && this.bonusAwardedGram > 0) {
+        outcomeMessage = `🗡️ TRADIMENTO RIUSCITO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM) + BONUS TENTAZIONE JACKPOT ${splitStealBonusPercent}% (+${this.bonusAwardedGram.toFixed(2)} GRAM)!`;
+      } else {
+        outcomeMessage = `🗡️ TRADIMENTO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
       }
     } else if (pA === 'SPLIT' && pB === 'SPLIT') {
       // 3. Peace: Both Split -> Refund original wagers + Trust Jackpot bonus if qualified
@@ -252,14 +353,6 @@ export class SplitStealRoom extends BaseGameRoom {
           `Wager refund for Peace in Split or Steal match #${this.matchId}`
         );
       }
-
-      const {
-        splitJackpotBonusPercent = 25,
-        splitJackpotProbabilityPercent = 30,
-      } = feeConfig.getConfig();
-
-      // Check Trust Jackpot qualifications
-      const isPublicMatch = !this.isPrivate && !this.config.groupChatId;
 
       if (!isPublicMatch) {
         outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Il Bonus Trust Jackpot è attivo solo nelle partite pubbliche del Lobby).`;
@@ -289,13 +382,12 @@ export class SplitStealRoom extends BaseGameRoom {
               outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%.`;
             }
           } else {
-            // Qualified! Bonus: 25% of wager per player, capped at half of 25% of the total jackpot
-            const maxBonusFromJackpot = Number((this.jackpotGram * (splitJackpotBonusPercent / 100)).toFixed(2));
-            const bonusPerPlayer = Math.min(
-              Number((wagerNum * (splitJackpotBonusPercent / 100)).toFixed(2)),
-              Number((maxBonusFromJackpot / 2).toFixed(2))
-            );
-            const totalBonus = Number((bonusPerPlayer * 2).toFixed(2));
+            // Qualified! Bonus: 25% total pool divided equally (12.5% each)
+            const maxBonusFromJackpot = Number((this.jackpotGram * (splitPeaceBonusPercent / 100)).toFixed(2));
+            const totalBonusFromWager = Number((wagerNum * (splitPeaceBonusPercent / 100)).toFixed(2));
+            const totalBonus = Math.min(totalBonusFromWager, maxBonusFromJackpot);
+            const bonusPerPlayer = Number((totalBonus / 2).toFixed(2));
+            const eachPercent = (splitPeaceBonusPercent / 2).toFixed(1);
 
             if (bonusPerPlayer > 0) {
               this.bonusAwardedGram = totalBonus;
@@ -305,14 +397,14 @@ export class SplitStealRoom extends BaseGameRoom {
                 this.playerA.walletAddress,
                 bonusPerPlayer.toFixed(2),
                 'MATCH_WIN',
-                `Trust Jackpot Bonus (${splitJackpotBonusPercent}%) in match #${this.matchId}`
+                `Trust Jackpot Bonus (${eachPercent}%) in match #${this.matchId}`
               );
               if (this.playerB) {
                 await dbService.creditUserBalance(
                   this.playerB.walletAddress,
                   bonusPerPlayer.toFixed(2),
                   'MATCH_WIN',
-                  `Trust Jackpot Bonus (${splitJackpotBonusPercent}%) in match #${this.matchId}`
+                  `Trust Jackpot Bonus (${eachPercent}%) in match #${this.matchId}`
                 );
               }
 
@@ -329,7 +421,7 @@ export class SplitStealRoom extends BaseGameRoom {
               this.jackpotGram = await dbService.getTrustJackpot();
               this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
 
-              outcomeMessage = `🎉 TRUST JACKPOT ATTIVATO (DROP ${splitJackpotProbabilityPercent}%)! Entrambi hanno scelto SPLIT! Puntata rimborsata + BONUS JACKPOT (+${bonusPerPlayer.toFixed(2)} GRAM a testa)!`;
+              outcomeMessage = `🎉 TRUST JACKPOT ATTIVATO (DROP ${splitJackpotProbabilityPercent}%)! Entrambi hanno scelto SPLIT! Puntata rimborsata + BONUS JACKPOT ${eachPercent}% (+${bonusPerPlayer.toFixed(2)} GRAM a testa)!`;
             } else {
               outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%.`;
             }
