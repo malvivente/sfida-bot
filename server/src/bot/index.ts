@@ -1,4 +1,7 @@
 import { Bot, InlineKeyboard } from 'grammy';
+import { dbService } from '../services/db.js';
+import { botT, resolveLanguage, SUPPORTED_LANGUAGES, BotLanguage } from './i18n.js';
+import { handleBroadcastCommand } from './broadcast.js';
 
 export interface DeepLinkPayload {
   mode: 'duel' | 'spectate' | 'ref';
@@ -48,32 +51,99 @@ export function createTelegramBot(token?: string): Bot {
   const bot = new Bot(botToken);
   const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
 
-  // /start command with deep linking
+  // Helper to resolve user's active language
+  const getUserLang = async (user?: { id?: number; language_code?: string }): Promise<BotLanguage> => {
+    if (!user) return 'en';
+    const customLang = await dbService.getUserLanguage(user.id);
+    return resolveLanguage(customLang || user.language_code);
+  };
+
+  // /start command with deep linking and multi-language support
   bot.command('start', async (ctx) => {
+    const user = ctx.from;
     const payload = ctx.match;
     const parsed = parseDeepLink(payload);
 
-    let welcomeText = `⚡️ *WELCOME TO SFIDA CYBER QUICKDRAW ARENA* ⚡️\n\n` +
-      `🔥 *1v1 High-Stakes PvP Reflex Arena on TON*\n` +
-      `👁 *Live Spectator Pari-Mutuel Betting Totalizer*\n` +
-      `🛡 *Anti-Cheat Authoritative Server & Tact Smart Contracts*\n\n`;
+    // Register / update user in database with their client language
+    if (user) {
+      await dbService.registerBotUser({
+        telegramId: user.id,
+        username: user.username,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        languageCode: user.language_code,
+      });
+    }
+
+    const lang = await getUserLang(user);
+
+    let welcomeText = `${botT(lang, 'welcome_header')}\n\n${botT(lang, 'welcome_body')}\n\n`;
 
     if (parsed.recruiterWallet) {
-      welcomeText += `🤝 Recruited by: \`${parsed.recruiterWallet.slice(0, 8)}...${parsed.recruiterWallet.slice(-6)}\`\n\n`;
+      const truncatedRecruiter = `${parsed.recruiterWallet.slice(0, 8)}...${parsed.recruiterWallet.slice(-6)}`;
+      welcomeText += botT(lang, 'welcome_recruited', { recruiter: truncatedRecruiter });
     }
 
     const keyboard = new InlineKeyboard()
-      .webApp('⚔️ Enter Arena', `${webAppUrl}?startapp=${payload || 'lobby'}`)
+      .webApp(botT(lang, 'btn_enter_arena'), `${webAppUrl}?startapp=${payload || 'lobby'}`)
       .row()
-      .url('📢 Official Telegram Channel', 'https://t.me/toncoin');
+      .url(botT(lang, 'btn_official_channel'), 'https://t.me/toncoin');
 
     await ctx.reply(welcomeText, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: keyboard,
     });
   });
 
-  // Configure Telegram Menu Button
+  // /help command
+  bot.command('help', async (ctx) => {
+    const lang = await getUserLang(ctx.from);
+    const botInfo = await bot.api.getMe().catch(() => ({ username: 'sfida_bot' }));
+    const botUsername = botInfo.username || 'sfida_bot';
+
+    await ctx.reply(botT(lang, 'help_text', { botUsername }), {
+      parse_mode: 'HTML',
+    });
+  });
+
+  // /lang or /language command to manually switch interface language
+  bot.command(['lang', 'language'], async (ctx) => {
+    const lang = await getUserLang(ctx.from);
+    const keyboard = new InlineKeyboard();
+
+    SUPPORTED_LANGUAGES.forEach((l, index) => {
+      keyboard.text(`${l.flag} ${l.label}`, `setlang_${l.code}`);
+      if (index % 2 === 1) keyboard.row();
+    });
+
+    await ctx.reply(botT(lang, 'lang_select_title'), {
+      parse_mode: 'HTML',
+      reply_markup: keyboard,
+    });
+  });
+
+  // Callback query for language selection
+  bot.callbackQuery(/^setlang_(.+)$/, async (ctx) => {
+    const targetCode = ctx.match[1] as BotLanguage;
+    const fromId = ctx.from.id;
+
+    await dbService.updateUserLanguage(fromId, targetCode);
+    await ctx.answerCallbackQuery();
+
+    const selected = SUPPORTED_LANGUAGES.find((l) => l.code === targetCode);
+    const label = selected ? `${selected.flag} ${selected.label}` : targetCode;
+
+    await ctx.editMessageText(botT(targetCode, 'lang_changed', { language: label }), {
+      parse_mode: 'HTML',
+    });
+  });
+
+  // /broadcast command (Administrator only, by replying to any message)
+  bot.command('broadcast', async (ctx) => {
+    await handleBroadcastCommand(ctx);
+  });
+
+  // Configure Telegram Menu Button to launch Mini App
   bot.api.setChatMenuButton({
     menu_button: {
       type: 'web_app',
@@ -87,12 +157,16 @@ export function createTelegramBot(token?: string): Bot {
   // Inline query handler: @yourbot duel <amount>
   bot.on('inline_query', async (ctx) => {
     const query = ctx.inlineQuery.query.trim();
+    const lang = await getUserLang(ctx.from);
     let wager = '1';
 
     const match = query.match(/^duel\s*([0-9]+(\.[0-9]+)?)/i);
     if (match && match[1]) {
       wager = match[1];
     }
+
+    const parsedWager = parseFloat(wager) || 1;
+    const netWinnerPayout = (parsedWager * 2).toFixed(2); // 100% of pot (2x wager)
 
     const matchId = (Date.now() % 1000000).toString();
     const userWallet = `user_${ctx.from.id}`;
@@ -105,19 +179,17 @@ export function createTelegramBot(token?: string): Bot {
     const spectateUrl = `${webAppUrl}?startapp=${spectatePayload}`;
 
     const keyboard = new InlineKeyboard()
-      .webApp(`⚔️ Accept Challenge (${wager} TON)`, duelUrl)
+      .webApp(botT(lang, 'inline_accept_btn', { wager }), duelUrl)
       .row()
-      .webApp(`👁️ Watch & Bet (Totalizer)`, spectateUrl);
+      .webApp(botT(lang, 'inline_watch_btn'), spectateUrl);
 
-    const title = `⚔️ Cyber Quickdraw Duel - ${wager} TON Stake`;
-    const description = `1v1 Reaction Duel. Best of 3 rounds. Winner takes ${(parseFloat(wager) * 1.92).toFixed(2)} TON (96%)!`;
-    const messageText =
-      `⚔️ *CYBER QUICKDRAW DUEL INITIATED* ⚔️\n\n` +
-      `👤 *Challenger*: @${ctx.from.username || ctx.from.first_name}\n` +
-      `💰 *Wager*: *${wager} TON*\n` +
-      `🏆 *Winner Payout*: *${(parseFloat(wager) * 1.92).toFixed(2)} TON* (96% Pot)\n` +
-      `👁 *Live Spectators*: Pari-Mutuel Betting Window Open (6% Rake)\n\n` +
-      `_Tap faster than your opponent across 3 rounds. Watch out for decoy HOLD signals!_`;
+    const title = botT(lang, 'inline_challenge_title', { wager });
+    const description = botT(lang, 'inline_challenge_desc', { payout: netWinnerPayout });
+    const messageText = botT(lang, 'inline_challenge_msg', {
+      challenger: ctx.from.username || ctx.from.first_name,
+      wager,
+      payout: netWinnerPayout,
+    });
 
     await ctx.answerInlineQuery([
       {
@@ -127,7 +199,7 @@ export function createTelegramBot(token?: string): Bot {
         description,
         input_message_content: {
           message_text: messageText,
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
         },
         reply_markup: keyboard,
       },

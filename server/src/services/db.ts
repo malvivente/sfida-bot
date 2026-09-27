@@ -77,6 +77,9 @@ export interface UserAccount {
   username?: string;
   displayName?: string; // Real Telegram display name (first_name + last_name)
   photoUrl?: string; // Telegram profile picture url
+  languageCode?: string; // Telegram user client language (e.g. 'it', 'en', 'ru')
+  isBotBlocked?: boolean; // Whether user has blocked the bot
+  botStartedAt?: number; // Timestamp when user first launched the bot
   balanceNano: string;
   balanceTon: string; // for backward compatibility
   balanceGram: string; // primary GRAM balance
@@ -610,6 +613,83 @@ export class DatabaseService {
       params.displayName,
       params.photoUrl
     );
+  }
+
+  public async registerBotUser(user: {
+    telegramId: string | number;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    languageCode?: string;
+  }): Promise<UserAccount> {
+    const cleanTgId = String(user.telegramId).trim();
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined;
+    const account = await this.getUserAccount(
+      undefined,
+      cleanTgId,
+      user.username,
+      fullName
+    );
+
+    let changed = false;
+    if (user.languageCode && account.languageCode !== user.languageCode) {
+      account.languageCode = user.languageCode;
+      changed = true;
+    }
+    if (!account.botStartedAt) {
+      account.botStartedAt = Date.now();
+      changed = true;
+    }
+    if (account.isBotBlocked) {
+      account.isBotBlocked = false;
+      changed = true;
+    }
+
+    if (changed) {
+      account.updatedAt = Date.now();
+      this.persistData();
+    }
+
+    return account;
+  }
+
+  public async getAllBotTelegramIds(): Promise<string[]> {
+    const ids = new Set<string>();
+    for (const u of this.users.values()) {
+      if (u.telegramId && String(u.telegramId).trim() && !u.isBotBlocked) {
+        ids.add(String(u.telegramId).trim());
+      }
+    }
+    return Array.from(ids);
+  }
+
+  public async setBotUserBlocked(telegramId: string | number, blocked: boolean = true): Promise<void> {
+    const cleanTg = String(telegramId).trim();
+    const user = this.usersByTg.get(cleanTg);
+    if (user && user.isBotBlocked !== blocked) {
+      user.isBotBlocked = blocked;
+      user.updatedAt = Date.now();
+      this.persistData();
+    }
+  }
+
+  public async updateUserLanguage(telegramId: string | number, languageCode: string): Promise<UserAccount | null> {
+    const cleanTg = String(telegramId).trim();
+    const user = this.usersByTg.get(cleanTg);
+    if (user) {
+      user.languageCode = languageCode;
+      user.updatedAt = Date.now();
+      this.persistData();
+      return user;
+    }
+    return null;
+  }
+
+  public async getUserLanguage(telegramId?: string | number): Promise<string | undefined> {
+    if (!telegramId) return undefined;
+    const cleanTg = String(telegramId).trim();
+    const user = this.usersByTg.get(cleanTg);
+    return user?.languageCode;
   }
 
   public async setUserBalanceDirect(
