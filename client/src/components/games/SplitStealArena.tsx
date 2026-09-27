@@ -17,6 +17,7 @@ import { SplitStealState, SplitStealChoice } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
+import { TrustJackpotWheel } from './TrustJackpotWheel.js';
 
 interface SplitStealArenaProps {
   gameData?: SplitStealState;
@@ -402,24 +403,12 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
           <div className="w-full flex flex-col items-center justify-center space-y-3 py-2 animate-in fade-in zoom-in-95 duration-300">
             {/* Outcome Big Banner */}
             {outcome === 'PEACE' && (
-              <div className="w-full bg-gradient-to-r from-cyber-green/20 via-cyber-green/10 to-cyber-green/20 border-2 border-cyber-green rounded-2xl p-4 text-center shadow-[0_0_30px_rgba(0,255,102,0.25)] space-y-1.5">
-                <div className="w-12 h-12 rounded-2xl bg-cyber-green/20 border border-cyber-green flex items-center justify-center mx-auto">
-                  <Handshake className="w-7 h-7 text-cyber-green" />
-                </div>
-                <h3 className="text-base font-orbitron font-black text-white tracking-wider">
-                  {t('split.outcomePeace')}
-                </h3>
-                <p className="text-xs font-chakra text-slate-200">
-                  {t('split.outcomePeaceDesc')}
-                </p>
-                <div className="text-xs font-chakra font-bold text-cyber-green pt-1">
-                  {t('split.outcomePeaceRefund', { amount: wagerTon })}
-                  {bonusPerPlayerGram && bonusPerPlayerGram > 0 && (
-                    <span className="block text-amber-300 text-sm font-orbitron mt-0.5">
-                      {t('split.outcomePeaceBonus', { amount: bonusPerPlayerGram.toFixed(2) })}
-                    </span>
-                  )}
-                </div>
+              <div className="w-full flex flex-col items-center">
+                <TrustJackpotWheel
+                  isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
+                  bonusPerPlayerGram={bonusPerPlayerGram}
+                  wagerGram={wagerTon}
+                />
               </div>
             )}
 
