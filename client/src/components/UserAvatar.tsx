@@ -35,6 +35,7 @@ interface UserAvatarProps {
   textClass?: string;
   roundedClass?: string;
   className?: string;
+  children?: React.ReactNode;
 }
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({
@@ -44,6 +45,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   textClass = 'text-xs',
   roundedClass = 'rounded-full',
   className = '',
+  children,
 }) => {
   const [hasError, setHasError] = useState(false);
   const initial = getInitial(name);
@@ -61,6 +63,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
           className="w-full h-full object-cover"
           onError={() => setHasError(true)}
         />
+        {children}
       </div>
     );
   }
@@ -68,9 +71,10 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   // Fallback: colorful deterministic background with initial letter (NO letter on top of photos)
   return (
     <div
-      className={`${sizeClass} ${roundedClass} bg-gradient-to-br ${gradient} border border-white/20 flex items-center justify-center shrink-0 font-orbitron font-bold ${textClass} shadow-md select-none ${className}`}
+      className={`${sizeClass} ${roundedClass} bg-gradient-to-br ${gradient} border border-white/20 flex items-center justify-center shrink-0 font-orbitron font-bold ${textClass} shadow-md select-none relative overflow-hidden ${className}`}
     >
       {initial}
+      {children}
     </div>
   );
 };

@@ -272,12 +272,16 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
               textClass="text-xl"
               roundedClass="rounded-2xl"
               className="border border-cyber-cyan shadow-neon-cyan"
-            />
-            {isPremium && (
-              <div className="absolute top-0 right-0 bg-cyber-amber text-cyber-bg p-0.5 rounded-bl-md" title="Telegram Premium">
-                <Sparkles className="w-2.5 h-2.5" />
-              </div>
-            )}
+            >
+              {isPremium && (
+                <div
+                  className="absolute top-0 right-0 bg-cyber-amber text-cyber-bg p-1 rounded-bl-lg flex items-center justify-center shadow-sm"
+                  title="Telegram Premium"
+                >
+                  <Sparkles className="w-2.5 h-2.5 fill-current" />
+                </div>
+              )}
+            </UserAvatar>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-1.5">
