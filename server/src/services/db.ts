@@ -78,6 +78,7 @@ export interface UserAccount {
   displayName?: string; // Real Telegram display name (first_name + last_name)
   photoUrl?: string; // Telegram profile picture url
   languageCode?: string; // Telegram user client language (e.g. 'it', 'en', 'ru')
+  referredBy?: string; // Telegram ID or wallet of recruiter
   isBotBlocked?: boolean; // Whether user has blocked the bot
   botStartedAt?: number; // Timestamp when user first launched the bot
   balanceNano: string;
@@ -142,6 +143,21 @@ export interface JackpotData {
   lastUpdated: number;
 }
 
+export interface GroupAffiliate {
+  chatId: string;
+  title: string;
+  walletAddress: string;
+  managerTelegramId?: string;
+  managerUsername?: string;
+  commissionRatePercent: number;
+  totalMatchesHosted: number;
+  totalVolumeGram: string;
+  totalEarningsGram: string;
+  configuredByAdminId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export class DatabaseService {
   private static instance: DatabaseService;
   private matches: Map<string, StoredMatch> = new Map();
@@ -152,6 +168,7 @@ export class DatabaseService {
   private usersByTg: Map<string, UserAccount> = new Map();
   private usersByWallet: Map<string, UserAccount> = new Map();
   private usersByUsername: Map<string, UserAccount> = new Map();
+  private groupAffiliates: Map<string, GroupAffiliate> = new Map();
   private transactions: BalanceTransaction[] = [];
   private treasury: TreasuryData;
   private jackpot: JackpotData;
@@ -161,6 +178,7 @@ export class DatabaseService {
   private txFilePath: string;
   private treasuryFilePath: string;
   private jackpotFilePath: string;
+  private groupsFilePath: string;
   private initialized: boolean = false;
 
   private constructor() {
@@ -170,6 +188,7 @@ export class DatabaseService {
     this.txFilePath = path.join(this.dataDir, 'transactions.json');
     this.treasuryFilePath = path.join(this.dataDir, 'treasury.json');
     this.jackpotFilePath = path.join(this.dataDir, 'jackpot.json');
+    this.groupsFilePath = path.join(this.dataDir, 'groups.json');
 
     const defaultTreasuryWallet =
       process.env.TREASURY_ADDRESS ||
@@ -301,6 +320,18 @@ export class DatabaseService {
         this.persistData();
       }
 
+      if (fs.existsSync(this.groupsFilePath)) {
+        const rawGroups = fs.readFileSync(this.groupsFilePath, 'utf-8');
+        const groupList: GroupAffiliate[] = JSON.parse(rawGroups);
+        this.groupAffiliates.clear();
+        for (const g of groupList) {
+          this.groupAffiliates.set(String(g.chatId), g);
+        }
+        console.log(`[DatabaseService] Loaded ${this.groupAffiliates.size} affiliate groups.`);
+      } else {
+        this.persistData();
+      }
+
       this.initialized = true;
     } catch (err) {
       console.warn('[DatabaseService] Warning loading database file:', err);
@@ -323,6 +354,9 @@ export class DatabaseService {
       fs.writeFileSync(this.treasuryFilePath, JSON.stringify(this.treasury, null, 2), 'utf-8');
 
       fs.writeFileSync(this.jackpotFilePath, JSON.stringify(this.jackpot, null, 2), 'utf-8');
+
+      const groupList = Array.from(this.groupAffiliates.values());
+      fs.writeFileSync(this.groupsFilePath, JSON.stringify(groupList, null, 2), 'utf-8');
     } catch (err) {
       console.error('[DatabaseService] Failed to persist data to file:', err);
     }
@@ -621,6 +655,7 @@ export class DatabaseService {
     firstName?: string;
     lastName?: string;
     languageCode?: string;
+    referredBy?: string;
   }): Promise<UserAccount> {
     const cleanTgId = String(user.telegramId).trim();
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined;
@@ -634,6 +669,10 @@ export class DatabaseService {
     let changed = false;
     if (user.languageCode && account.languageCode !== user.languageCode) {
       account.languageCode = user.languageCode;
+      changed = true;
+    }
+    if (user.referredBy && !account.referredBy && user.referredBy !== cleanTgId) {
+      account.referredBy = user.referredBy;
       changed = true;
     }
     if (!account.botStartedAt) {
@@ -651,6 +690,18 @@ export class DatabaseService {
     }
 
     return account;
+  }
+
+  public async getReferredCount(identifier?: string): Promise<number> {
+    if (!identifier) return 0;
+    const clean = identifier.replace(/^ref_/, '').trim();
+    let count = 0;
+    for (const u of this.users.values()) {
+      if (u.referredBy && (u.referredBy === clean || u.referredBy === `ref_${clean}` || u.referredBy === identifier)) {
+        count++;
+      }
+    }
+    return count;
   }
 
   public async getAllBotTelegramIds(): Promise<string[]> {
@@ -690,6 +741,106 @@ export class DatabaseService {
     const cleanTg = String(telegramId).trim();
     const user = this.usersByTg.get(cleanTg);
     return user?.languageCode;
+  }
+
+  public async setGroupAffiliate(config: {
+    chatId: string | number;
+    title?: string;
+    walletAddress: string;
+    managerTelegramId?: string | number;
+    managerUsername?: string;
+    commissionRatePercent?: number;
+    configuredByAdminId: string | number;
+  }): Promise<GroupAffiliate> {
+    const cleanChatId = String(config.chatId).trim();
+    const existing = this.groupAffiliates.get(cleanChatId);
+
+    const friendlyWallet = this.toFriendlyAddress(config.walletAddress) || config.walletAddress.trim();
+    const rate = config.commissionRatePercent !== undefined ? config.commissionRatePercent : (existing?.commissionRatePercent ?? 20);
+
+    const record: GroupAffiliate = {
+      chatId: cleanChatId,
+      title: config.title || existing?.title || `Group ${cleanChatId}`,
+      walletAddress: friendlyWallet,
+      managerTelegramId: config.managerTelegramId ? String(config.managerTelegramId).trim() : existing?.managerTelegramId,
+      managerUsername: config.managerUsername || existing?.managerUsername,
+      commissionRatePercent: rate,
+      totalMatchesHosted: existing?.totalMatchesHosted || 0,
+      totalVolumeGram: existing?.totalVolumeGram || '0.00',
+      totalEarningsGram: existing?.totalEarningsGram || '0.00',
+      configuredByAdminId: String(config.configuredByAdminId),
+      createdAt: existing?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    this.groupAffiliates.set(cleanChatId, record);
+    this.persistData();
+    console.log(`[DatabaseService] Configured group affiliate for ${record.title} (${cleanChatId}): wallet=${record.walletAddress}, rate=${record.commissionRatePercent}%`);
+    return record;
+  }
+
+  public async getGroupAffiliate(chatId: string | number): Promise<GroupAffiliate | null> {
+    const cleanId = String(chatId).trim();
+    return this.groupAffiliates.get(cleanId) || null;
+  }
+
+  public async getAllGroupAffiliates(): Promise<GroupAffiliate[]> {
+    return Array.from(this.groupAffiliates.values());
+  }
+
+  public async getGroupAffiliatesByManager(telegramId?: string | number, walletAddress?: string): Promise<GroupAffiliate[]> {
+    const cleanTg = telegramId ? String(telegramId).trim() : '';
+    const normWallet = walletAddress ? this.normalizeAddress(walletAddress) : '';
+
+    return Array.from(this.groupAffiliates.values()).filter((g) => {
+      if (cleanTg && g.managerTelegramId && String(g.managerTelegramId).trim() === cleanTg) return true;
+      if (normWallet && g.walletAddress && this.normalizeAddress(g.walletAddress) === normWallet) return true;
+      return false;
+    });
+  }
+
+  public async removeGroupAffiliate(chatId: string | number): Promise<boolean> {
+    const cleanId = String(chatId).trim();
+    const deleted = this.groupAffiliates.delete(cleanId);
+    if (deleted) {
+      this.persistData();
+    }
+    return deleted;
+  }
+
+  public async recordGroupMatchRevenue(
+    chatId: string | number,
+    wagerGram: number,
+    platformRakeGram: number
+  ): Promise<{ commissionGram: string } | null> {
+    const cleanId = String(chatId).trim();
+    const group = this.groupAffiliates.get(cleanId);
+    if (!group) return null;
+
+    const totalMatchVolume = wagerGram * 2;
+    const commissionShare = (group.commissionRatePercent || 20) / 100;
+    const groupCut = platformRakeGram * commissionShare;
+    const groupCutGram = groupCut.toFixed(2);
+
+    group.totalMatchesHosted += 1;
+    group.totalVolumeGram = (parseFloat(group.totalVolumeGram || '0') + totalMatchVolume).toFixed(2);
+    group.totalEarningsGram = (parseFloat(group.totalEarningsGram || '0') + groupCut).toFixed(2);
+    group.updatedAt = Date.now();
+
+    // Credit the group manager's balance if greater than 0
+    if (groupCut > 0 && group.walletAddress) {
+      await this.creditUserBalance(
+        group.walletAddress,
+        groupCutGram,
+        'MATCH_WIN',
+        `Group affiliate revenue from match in ${group.title} (#${cleanId})`,
+        group.managerTelegramId
+      );
+    }
+
+    this.persistData();
+    console.log(`[DatabaseService] Credited ${groupCutGram} GRAM to group affiliate ${group.title} (${group.walletAddress})`);
+    return { commissionGram: groupCutGram };
   }
 
   public async setUserBalanceDirect(

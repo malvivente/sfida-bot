@@ -2,6 +2,17 @@ import { Bot, InlineKeyboard } from 'grammy';
 import { dbService } from '../services/db.js';
 import { botT, resolveLanguage, SUPPORTED_LANGUAGES, BotLanguage } from './i18n.js';
 import { handleBroadcastCommand } from './broadcast.js';
+import {
+  handleSetGroupCommand,
+  handleGetGroupCommand,
+  handleListGroupsCommand,
+  handleDelGroupCommand,
+} from './adminGroups.js';
+import {
+  handleGroupDuelCommand,
+  handleConfirmGroupDuelCallback,
+  handleCancelGroupDuelCallback,
+} from './groupDuels.js';
 
 export interface DeepLinkPayload {
   mode: 'duel' | 'spectate' | 'ref';
@@ -72,6 +83,7 @@ export function createTelegramBot(token?: string): Bot {
         firstName: user.first_name,
         lastName: user.last_name,
         languageCode: user.language_code,
+        referredBy: parsed.recruiterWallet,
       });
     }
 
@@ -141,6 +153,33 @@ export function createTelegramBot(token?: string): Bot {
   // /broadcast command (Administrator only, by replying to any message)
   bot.command('broadcast', async (ctx) => {
     await handleBroadcastCommand(ctx);
+  });
+
+  // Admin Group Affiliation Commands (Superadmin only)
+  bot.command('setgroup', async (ctx) => {
+    await handleSetGroupCommand(ctx);
+  });
+  bot.command('getgroup', async (ctx) => {
+    await handleGetGroupCommand(ctx);
+  });
+  bot.command('listgroups', async (ctx) => {
+    await handleListGroupsCommand(ctx);
+  });
+  bot.command('delgroup', async (ctx) => {
+    await handleDelGroupCommand(ctx);
+  });
+
+  // In-Chat Group Duel Commands (/duel, /sfida, /challenge)
+  bot.command(['duel', 'sfida', 'challenge'], async (ctx) => {
+    await handleGroupDuelCommand(ctx);
+  });
+
+  // Callback queries for confirming/cancelling in-chat group duels
+  bot.callbackQuery(/^confirm_gduel_(.+)$/, async (ctx) => {
+    await handleConfirmGroupDuelCallback(ctx, ctx.match[1]);
+  });
+  bot.callbackQuery(/^cancel_gduel_(.+)$/, async (ctx) => {
+    await handleCancelGroupDuelCallback(ctx, ctx.match[1]);
   });
 
   // Configure Telegram Menu Button to launch Mini App

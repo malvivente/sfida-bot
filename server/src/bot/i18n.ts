@@ -95,10 +95,38 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     broadcast_finished:
       `{{emoji.check}} <b>BROADCAST COMPLETED!</b>\n\n` +
       `• <b>Total Recipients</b>: <code>{total}</code>\n` +
-      `• {{emoji.check}} <b>Delivered</b>: <code>{delivered}</code> ({successRate}%)\n` +
       `• {{emoji.cross}} <b>Blocked/Deactivated</b>: <code>{failed}</code>\n` +
       `• {{emoji.clock}} <b>Time Taken</b>: <code>{duration}s</code>\n` +
       `• {{emoji.chart}} <b>Average Speed</b>: <code>{speed} msg/s</code>`,
+
+    // Group In-Chat Duel Messages
+    group_duel_private_hint: `{{emoji.swords}} <b>CREATE DUEL</b>\n\nYou can use <code>/duel &lt;amount&gt; [game]</code> directly in any Telegram group to challenge members! Or tap below to enter the Arena:`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>Invalid Wager</b>: Stake must be between 0.1 and 100 GRAM. Example: <code>/duel 2</code>`,
+    group_duel_insufficient: `{{emoji.warning}} <b>INSUFFICIENT BALANCE</b>\n\nHey @{username}, to create this <b>{wager} GRAM</b> duel you need <b>{total} GRAM</b> (including 0.05 GRAM creation fee).\n\n💳 Your balance: <b>{balance} GRAM</b> (need {missing} GRAM more).`,
+    group_duel_deposit_btn: `{{emoji.gem}} Deposit GRAM`,
+    group_duel_confirm_title: `{{emoji.swords}} <b>CONFIRM DUEL CREATION</b>`,
+    group_duel_confirm_desc:
+      `👤 <b>Challenger</b>: @{creator}\n` +
+      `🎮 <b>Discipline</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>Wager Stake</b>: <b>{wager} GRAM</b>\n` +
+      `🏷️ <b>Creation Fee</b>: <b>0.05 GRAM</b>\n` +
+      `💳 <b>Total to Deduct</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Tap Confirm below to deduct funds and publish the open duel challenge to the group!</i>`,
+    group_duel_confirm_btn: `{{emoji.check}} Confirm & Create`,
+    group_duel_cancel_btn: `{{emoji.cross}} Cancel`,
+    group_duel_cancelled: `{{emoji.cross}} Duel creation cancelled by @{creator}.`,
+    group_duel_not_author_alert: `⛔️ Only the creator of this duel (@{creator}) can confirm or cancel!`,
+    group_duel_expired: `{{emoji.warning}} This duel creation request has expired. Type /duel again.`,
+    group_duel_card_title: `{{emoji.swords}} <b>NEW CYBER DUEL ACTIVE IN GROUP!</b> {{emoji.swords}}`,
+    group_duel_card_desc:
+      `👤 <b>Challenger</b>: @{creator}\n` +
+      `🎮 <b>Discipline</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>Wager</b>: <b>{wager} GRAM</b> each\n` +
+      `🏆 <b>Winner Pot</b>: <b>{payout} GRAM</b> (100%)\n` +
+      `👁️ <b>Spectators</b>: Pari-Mutuel totalizer window open\n\n` +
+      `<i>Who dares to challenge @{creator}? Tap below to fight!</i>`,
+    group_duel_accept_btn: `{{emoji.swords}} Accept Challenge ({wager} GRAM)`,
+    group_duel_spectate_btn: `{{emoji.eye}} Watch & Bet`,
   },
 
   // -------------------------------------------------------------
@@ -174,6 +202,35 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• {{emoji.cross}} <b>Bloccati/Inattivi</b>: <code>{failed}</code>\n` +
       `• {{emoji.clock}} <b>Tempo Impiegato</b>: <code>{duration}s</code>\n` +
       `• {{emoji.chart}} <b>Velocità Media</b>: <code>{speed} msg/s</code>`,
+
+    // Group In-Chat Duel Messages
+    group_duel_private_hint: `{{emoji.swords}} <b>CREA DUELLO</b>\n\nPuoi usare <code>/duel &lt;importo&gt; [gioco]</code> direttamente in qualsiasi gruppo Telegram per sfidare i membri! Oppure tocca in basso per entrare nell'Arena:`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>Puntata non valida</b>: La puntata deve essere compresa tra 0.1 e 100 GRAM. Esempio: <code>/duel 2</code>`,
+    group_duel_insufficient: `{{emoji.warning}} <b>SALDO INSUFFICIENTE</b>\n\nEhi @{username}, per creare questo duello da <b>{wager} GRAM</b> hai bisogno di <b>{total} GRAM</b> (inclusa la commissione di creazione di 0.05 GRAM).\n\n💳 Il tuo saldo: <b>{balance} GRAM</b> (mancano {missing} GRAM).`,
+    group_duel_deposit_btn: `{{emoji.gem}} Deposita GRAM`,
+    group_duel_confirm_title: `{{emoji.swords}} <b>CONFERMA CREAZIONE DUELLO</b>`,
+    group_duel_confirm_desc:
+      `👤 <b>Sfidante</b>: @{creator}\n` +
+      `🎮 <b>Disciplina</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>Puntata</b>: <b>{wager} GRAM</b>\n` +
+      `🏷️ <b>Costo Creazione</b>: <b>0.05 GRAM</b>\n` +
+      `💳 <b>Totale da Addebitare</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Tocca Conferma in basso per scalare il saldo e pubblicare la sfida aperta nel gruppo!</i>`,
+    group_duel_confirm_btn: `{{emoji.check}} Conferma & Crea`,
+    group_duel_cancel_btn: `{{emoji.cross}} Annulla`,
+    group_duel_cancelled: `{{emoji.cross}} Creazione duello annullata da @{creator}.`,
+    group_duel_not_author_alert: `⛔️ Solo il creatore di questo duello (@{creator}) può confermare o annullare!`,
+    group_duel_expired: `{{emoji.warning}} Questa richiesta di duello è scaduta. Digita nuovamente /duel.`,
+    group_duel_card_title: `{{emoji.swords}} <b>NUOVO DUELLO ATTIVO NEL GRUPPO!</b> {{emoji.swords}}`,
+    group_duel_card_desc:
+      `👤 <b>Sfidante</b>: @{creator}\n` +
+      `🎮 <b>Disciplina</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>Puntata</b>: <b>{wager} GRAM</b> ciascuno\n` +
+      `🏆 <b>Montepremi Vincitore</b>: <b>{payout} GRAM</b> (100%)\n` +
+      `👁️ <b>Spettatori</b>: Finestra totalizzatore Pari-Mutuel aperta\n\n` +
+      `<i>Chi ha il coraggio di sfidare @{creator}? Tocca sotto per combattere!</i>`,
+    group_duel_accept_btn: `{{emoji.swords}} Accetta Sfida ({wager} GRAM)`,
+    group_duel_spectate_btn: `{{emoji.eye}} Guarda & Scommetti`,
   },
 
   // -------------------------------------------------------------
@@ -241,6 +298,35 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• {{emoji.cross}} <b>Заблокировали/Неактивны</b>: <code>{failed}</code>\n` +
       `• {{emoji.clock}} <b>Время выполнения</b>: <code>{duration}s</code>\n` +
       `• {{emoji.chart}} <b>Средняя скорость</b>: <code>{speed} сообщ./сек</code>`,
+
+    // Group In-Chat Duel Messages
+    group_duel_private_hint: `{{emoji.swords}} <b>СОЗДАТЬ ДУЭЛЬ</b>\n\nВы можете использовать <code>/duel &lt;сумма&gt; [игра]</code> прямо в любой группе Telegram для вызова участников! Или нажмите кнопку ниже для входа на Арену:`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>Неверная ставка</b>: Ставка должна быть от 0.1 до 100 GRAM. Пример: <code>/duel 2</code>`,
+    group_duel_insufficient: `{{emoji.warning}} <b>НЕДОСТАТОЧНО СРЕДСТВ</b>\n\nПривет, @{username}! Чтобы создать эту дуэль на <b>{wager} GRAM</b>, вам необходимо <b>{total} GRAM</b> (включая комиссию за создание 0.05 GRAM).\n\n💳 Ваш баланс: <b>{balance} GRAM</b> (не хватает {missing} GRAM).`,
+    group_duel_deposit_btn: `{{emoji.gem}} Пополнить GRAM`,
+    group_duel_confirm_title: `{{emoji.swords}} <b>ПОДТВЕРЖДЕНИЕ СОЗДАНИЯ ДУЭЛИ</b>`,
+    group_duel_confirm_desc:
+      `👤 <b>Инициатор</b>: @{creator}\n` +
+      `🎮 <b>Дисциплина</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>Ставка</b>: <b>{wager} GRAM</b>\n` +
+      `🏷️ <b>Комиссия создания</b>: <b>0.05 GRAM</b>\n` +
+      `💳 <b>Сумма списания</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Нажмите «Подтвердить» ниже, чтобы списать средства и опубликовать открытый вызов в группе!</i>`,
+    group_duel_confirm_btn: `{{emoji.check}} Подтвердить и создать`,
+    group_duel_cancel_btn: `{{emoji.cross}} Отмена`,
+    group_duel_cancelled: `{{emoji.cross}} Создание дуэли отменено пользователем @{creator}.`,
+    group_duel_not_author_alert: `⛔️ Только создатель дуэли (@{creator}) может подтвердить или отменить её!`,
+    group_duel_expired: `{{emoji.warning}} Срок действия заявки на дуэль истек. Введите /duel снова.`,
+    group_duel_card_title: `{{emoji.swords}} <b>НОВАЯ ДУЭЛЬ В ГРУППЕ!</b> {{emoji.swords}}`,
+    group_duel_card_desc:
+      `👤 <b>Инициатор</b>: @{creator}\n` +
+      `🎮 <b>Дисциплина</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>Ставка</b>: <b>{wager} GRAM</b> с каждого\n` +
+      `🏆 <b>Банк победителя</b>: <b>{payout} GRAM</b> (100%)\n` +
+      `👁️ <b>Зрители</b>: Окно ставок пари-мютюэль открыто\n\n` +
+      `<i>Кто осмелится бросить вызов @{creator}? Нажмите ниже для битвы!</i>`,
+    group_duel_accept_btn: `{{emoji.swords}} Принять вызов ({wager} GRAM)`,
+    group_duel_spectate_btn: `{{emoji.eye}} Смотреть и ставить`,
   },
 
   // -------------------------------------------------------------
@@ -309,6 +395,35 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• {{emoji.cross}} <b>已封锁/失效</b>: <code>{failed}</code>\n` +
       `• {{emoji.clock}} <b>总耗时</b>: <code>{duration}s</code>\n` +
       `• {{emoji.chart}} <b>平均速度</b>: <code>{speed} 条/秒</code>`,
+
+    // Group In-Chat Duel Messages
+    group_duel_private_hint: `{{emoji.swords}} <b>发起对决</b>\n\n您可以在任何 Telegram 群组中使用 <code>/duel &lt;金额&gt; [游戏]</code> 直接向群友发起挑战！或者点击下方进入竞技场：`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>赌注金额无效</b>: 赌注必须在 0.1 到 100 GRAM 之间。示例: <code>/duel 2</code>`,
+    group_duel_insufficient: `{{emoji.warning}} <b>余额不足</b>\n\n你好 @{username}，创建这场 <b>{wager} GRAM</b> 的对决需要 <b>{total} GRAM</b>（包含 0.05 GRAM 创建费）。\n\n💳 您的当前余额: <b>{balance} GRAM</b>（还差 {missing} GRAM）。`,
+    group_duel_deposit_btn: `{{emoji.gem}} 充值 GRAM`,
+    group_duel_confirm_title: `{{emoji.swords}} <b>确认创建对决</b>`,
+    group_duel_confirm_desc:
+      `👤 <b>挑战者</b>: @{creator}\n` +
+      `🎮 <b>竞技项目</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>对决赌注</b>: <b>{wager} GRAM</b>\n` +
+      `🏷️ <b>创建费用</b>: <b>0.05 GRAM</b>\n` +
+      `💳 <b>扣除总额</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>点击下方确认扣除余额并在群组中发布公开挑战！</i>`,
+    group_duel_confirm_btn: `{{emoji.check}} 确认并创建`,
+    group_duel_cancel_btn: `{{emoji.cross}} 取消`,
+    group_duel_cancelled: `{{emoji.cross}} @{creator} 已取消对决创建。`,
+    group_duel_not_author_alert: `⛔️ 仅限对决发起人 (@{creator}) 进行确认或取消！`,
+    group_duel_expired: `{{emoji.warning}} 该对决创建请求已过期。请重新输入 /duel。`,
+    group_duel_card_title: `{{emoji.swords}} <b>群内新对决已开启！</b> {{emoji.swords}}`,
+    group_duel_card_desc:
+      `👤 <b>挑战者</b>: @{creator}\n` +
+      `🎮 <b>竞技项目</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>每人赌注</b>: <b>{wager} GRAM</b>\n` +
+      `🏆 <b>胜者奖池</b>: <b>{payout} GRAM</b> (100%)\n` +
+      `👁️ <b>观众模式</b>: 彩池博彩通道已开启\n\n` +
+      `<i>谁敢应战 @{creator}？点击下方迎战！</i>`,
+    group_duel_accept_btn: `{{emoji.swords}} 接受挑战 ({wager} GRAM)`,
+    group_duel_spectate_btn: `{{emoji.eye}} 观战并下注`,
   },
 
   // -------------------------------------------------------------
@@ -377,6 +492,35 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• {{emoji.cross}} <b>محظور/غير نشط</b>: <code>{failed}</code>\n` +
       `• {{emoji.clock}} <b>الوقت الإجمالي</b>: <code>{duration}s</code>\n` +
       `• {{emoji.chart}} <b>متوسط السرعة</b>: <code>{speed} رسالة/ثانية</code>`,
+
+    // Group In-Chat Duel Messages
+    group_duel_private_hint: `{{emoji.swords}} <b>إنشاء مبارزة</b>\n\nيمكنك استخدام <code>/duel &lt;المبلغ&gt; [اللعبة]</code> مباشرة في أي مجموعة تيليجرام لتحدي الأعضاء! أو اضغط بالأسفل لدخول الساحة:`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>رهان غير صالح</b>: يجب أن يكون الرهان بين 0.1 و 100 GRAM. مثال: <code>/duel 2</code>`,
+    group_duel_insufficient: `{{emoji.warning}} <b>الرصيد غير كافٍ</b>\n\nمرحبًا @{username}، لإنشاء مبارزة بقيمة <b>{wager} GRAM</b> تحتاج إلى <b>{total} GRAM</b> (شاملة رسوم الإنشاء 0.05 GRAM).\n\n💳 رصيدك الحالي: <b>{balance} GRAM</b> (ينقصك {missing} GRAM).`,
+    group_duel_deposit_btn: `{{emoji.gem}} إيداع GRAM`,
+    group_duel_confirm_title: `{{emoji.swords}} <b>تأكيد إنشاء المبارزة</b>`,
+    group_duel_confirm_desc:
+      `👤 <b>المتحدي</b>: @{creator}\n` +
+      `🎮 <b>اللعبة</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>الرهان</b>: <b>{wager} GRAM</b>\n` +
+      `🏷️ <b>رسوم الإنشاء</b>: <b>0.05 GRAM</b>\n` +
+      `💳 <b>الإجمالي المخصوم</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>اضغط تأكيد أدناه لخصم الرصيد ونشر بطاقة التحدي في المجموعة!</i>`,
+    group_duel_confirm_btn: `{{emoji.check}} تأكيد وإنشاء`,
+    group_duel_cancel_btn: `{{emoji.cross}} إلغاء`,
+    group_duel_cancelled: `{{emoji.cross}} تم إلغاء إنشاء المبارزة بواسطة @{creator}.`,
+    group_duel_not_author_alert: `⛔️ فقط منشئ هذا التحدي (@{creator}) يمكنه التأكيد أو الإلغاء!`,
+    group_duel_expired: `{{emoji.warning}} انتهت صلاحية طلب إنشاء التحدي. يرجى كتابة /duel مجددًا.`,
+    group_duel_card_title: `{{emoji.swords}} <b>تحدي مبارزة جديد في المجموعة!</b> {{emoji.swords}}`,
+    group_duel_card_desc:
+      `👤 <b>المتحدي</b>: @{creator}\n` +
+      `🎮 <b>اللعبة</b>: <b>{gameTitle}</b>\n` +
+      `💰 <b>الرهان</b>: <b>{wager} GRAM</b> لكل طرف\n` +
+      `🏆 <b>جائزة الفائز</b>: <b>{payout} GRAM</b> (100%)\n` +
+      `👁️ <b>المشاهدون</b>: نافذة المراهنات مفتوحة الآن\n\n` +
+      `<i>من يجرؤ على تحدي @{creator}؟ اضغط بالأسفل للنزال!</i>`,
+    group_duel_accept_btn: `{{emoji.swords}} قبول التحدي ({wager} GRAM)`,
+    group_duel_spectate_btn: `{{emoji.eye}} مشاهدة ومراهنة`,
   },
 };
 

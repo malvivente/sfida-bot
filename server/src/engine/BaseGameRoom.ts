@@ -13,6 +13,7 @@ export interface RoomConfig {
   playerBAddress?: string;
   recruiterA?: string;
   groupAdminAddress?: string;
+  groupChatId?: string;
   escrowAddress?: string;
   bettingWindowSeconds?: number;
   isPrivate?: boolean;
@@ -432,6 +433,13 @@ export abstract class BaseGameRoom {
       dbService.creditTreasury(rakeGram, 'DUEL_RAKE', this.matchId.toString()).catch((err) => {
         console.error(`[BaseGameRoom] Error crediting duel rake:`, err);
       });
+
+      // Credit group affiliate commission if match was hosted in an affiliated group
+      if (this.config.groupChatId) {
+        dbService.recordGroupMatchRevenue(this.config.groupChatId, wagerNum, parseFloat(rakeGram)).catch((err) => {
+          console.error(`[BaseGameRoom] Error crediting group affiliate revenue:`, err);
+        });
+      }
     }
 
     // Settle spectator bets

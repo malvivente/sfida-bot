@@ -247,6 +247,15 @@ export const translations: Translations = {
   'affiliates.step2Desc': { it: 'Aggiungi il bot nella tua community Telegram. Quando i membri si sfidano in chat, l\'admin del gruppo guadagna automaticamente su ogni partita.', en: 'Add the bot to your Telegram community. When members challenge each other in chat, the group admin automatically earns affiliate yields on every match.' },
   'affiliates.step3Title': { it: '3. Pagamenti Diretti su Smart Contract', en: '3. Direct Smart Contract Payouts' },
   'affiliates.step3Desc': { it: 'Nessun blocco: le ricompense vengono calcolate e saldate in modo trasparente sulla blockchain TON direttamente al tuo indirizzo.', en: 'Zero lockups: rewards are calculated and settled transparently on the TON blockchain directly to your address.' },
+  'affiliates.groupsTitle': { it: 'COMMUNITY & GRUPPI AFFILIATI', en: 'AFFILIATED COMMUNITIES & GROUPS' },
+  'affiliates.groupsSubtitle': { it: 'Statistiche delle community che gestisci come manager', en: 'Live statistics for communities you manage' },
+  'affiliates.groupMatches': { it: 'Partite', en: 'Matches' },
+  'affiliates.groupVolume': { it: 'Volume', en: 'Volume' },
+  'affiliates.groupCommission': { it: 'Commissione', en: 'Commission' },
+  'affiliates.groupEarnings': { it: 'Guadagni', en: 'Earnings' },
+  'affiliates.noGroupsTitle': { it: 'POSSIEDI UNA COMMUNITY TELEGRAM?', en: 'MANAGE A TELEGRAM COMMUNITY?' },
+  'affiliates.noGroupsDesc': { it: 'Aggiungi il bot nel tuo gruppo e contatta l\'amministratore per attivare le commissioni affiliate (20% del rake su ogni sfida in chat).', en: 'Add the bot to your community and contact the admin to activate affiliate commissions (20% of platform rake on every in-chat duel).' },
+  'affiliates.contactAdminBtn': { it: 'CONTATTA ADMIN', en: 'CONTACT ADMIN' },
 
   // Rules & ToS Modal
   'rules.title': { it: 'REGOLAMENTO & TERMINI (ToS)', en: 'RULES & TERMS (ToS)' },
