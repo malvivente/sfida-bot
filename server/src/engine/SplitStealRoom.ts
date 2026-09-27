@@ -233,7 +233,7 @@ export class SplitStealRoom extends BaseGameRoom {
         await dbService.creditTreasury(duelRakeGram, 'DUEL_RAKE', this.matchId.toString());
       }
     } else if (pA === 'SPLIT' && pB === 'SPLIT') {
-      // 3. Peace: Both Split -> Refund original wagers + 20% Trust Jackpot bonus if active!
+      // 3. Peace: Both Split -> Refund original wagers + Trust Jackpot bonus if qualified
       this.outcome = 'PEACE';
       winningSpectatorSide = 'X';
       winnerAddress = ''; // Draw / Peace
@@ -253,35 +253,88 @@ export class SplitStealRoom extends BaseGameRoom {
         );
       }
 
-      // Check Trust Jackpot bonus
-      if (isJackpotActive) {
-        const totalBonus = Number((this.jackpotGram * 0.20).toFixed(2));
-        const bonusEach = Number((totalBonus / 2).toFixed(2));
-        this.bonusAwardedGram = totalBonus;
-        this.bonusPerPlayerGram = bonusEach;
+      const {
+        splitJackpotBonusPercent = 25,
+        splitJackpotProbabilityPercent = 30,
+      } = feeConfig.getConfig();
 
-        await dbService.creditUserBalance(
-          this.playerA.walletAddress,
-          bonusEach.toFixed(2),
-          'MATCH_WIN',
-          `20% Trust Jackpot Bonus in match #${this.matchId}`
-        );
-        if (this.playerB) {
-          await dbService.creditUserBalance(
-            this.playerB.walletAddress,
-            bonusEach.toFixed(2),
-            'MATCH_WIN',
-            `20% Trust Jackpot Bonus in match #${this.matchId}`
-          );
-        }
+      // Check Trust Jackpot qualifications
+      const isPublicMatch = !this.isPrivate && !this.config.groupChatId;
 
-        await dbService.deductTrustJackpot(totalBonus);
-        this.jackpotGram = await dbService.getTrustJackpot();
-        this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
-
-        outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntata rimborsata + BONUS JACKPOT del 20% (+${bonusEach.toFixed(2)} GRAM a testa)!`;
+      if (!isPublicMatch) {
+        outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Il Bonus Trust Jackpot è attivo solo nelle partite pubbliche del Lobby).`;
+      } else if (!isJackpotActive) {
+        outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Jackpot in carica < 5.0 GRAM, nessun bonus erogato).`;
       } else {
-        outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate (Jackpot in carica < 5.0 GRAM, nessun bonus erogato).`;
+        // Roll for Lucky Drop (e.g. 30% probability)
+        const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
+
+        if (!luckyDrop) {
+          outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Jackpot Lucky Drop ${splitJackpotProbabilityPercent}% non estratto questa volta).`;
+        } else {
+          // Check anti-collusion eligibility (48h pair cooldown & referral lock)
+          const pairEligibility = await dbService.canPairReceiveJackpot(
+            this.playerA.walletAddress,
+            this.playerB?.walletAddress || '',
+            this.playerA.telegramId,
+            this.playerB?.telegramId
+          );
+
+          if (!pairEligibility.eligible) {
+            if (pairEligibility.reason === 'COOLDOWN_48H') {
+              outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Bonus Jackpot in cooldown: max 1 bonus ogni 48 ore tra gli stessi giocatori).`;
+            } else if (pairEligibility.reason === 'REFERRAL_CONNECTED') {
+              outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Bonus Jackpot non applicabile: giocatori collegati da referral).`;
+            } else {
+              outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%.`;
+            }
+          } else {
+            // Qualified! Bonus: 25% of wager per player, capped at half of 25% of the total jackpot
+            const maxBonusFromJackpot = Number((this.jackpotGram * (splitJackpotBonusPercent / 100)).toFixed(2));
+            const bonusPerPlayer = Math.min(
+              Number((wagerNum * (splitJackpotBonusPercent / 100)).toFixed(2)),
+              Number((maxBonusFromJackpot / 2).toFixed(2))
+            );
+            const totalBonus = Number((bonusPerPlayer * 2).toFixed(2));
+
+            if (bonusPerPlayer > 0) {
+              this.bonusAwardedGram = totalBonus;
+              this.bonusPerPlayerGram = bonusPerPlayer;
+
+              await dbService.creditUserBalance(
+                this.playerA.walletAddress,
+                bonusPerPlayer.toFixed(2),
+                'MATCH_WIN',
+                `Trust Jackpot Bonus (${splitJackpotBonusPercent}%) in match #${this.matchId}`
+              );
+              if (this.playerB) {
+                await dbService.creditUserBalance(
+                  this.playerB.walletAddress,
+                  bonusPerPlayer.toFixed(2),
+                  'MATCH_WIN',
+                  `Trust Jackpot Bonus (${splitJackpotBonusPercent}%) in match #${this.matchId}`
+                );
+              }
+
+              await dbService.deductTrustJackpot(totalBonus);
+              await dbService.recordJackpotAward(
+                this.playerA.walletAddress,
+                this.playerB?.walletAddress || '',
+                totalBonus,
+                this.matchId.toString(),
+                this.playerA.telegramId,
+                this.playerB?.telegramId
+              );
+
+              this.jackpotGram = await dbService.getTrustJackpot();
+              this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
+
+              outcomeMessage = `🎉 TRUST JACKPOT ATTIVATO (DROP ${splitJackpotProbabilityPercent}%)! Entrambi hanno scelto SPLIT! Puntata rimborsata + BONUS JACKPOT (+${bonusPerPlayer.toFixed(2)} GRAM a testa)!`;
+            } else {
+              outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%.`;
+            }
+          }
+        }
       }
     } else {
       // 4. Double Betrayal: Both Steal -> Both lose 100%!

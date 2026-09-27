@@ -191,6 +191,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
     const amt = parseFloat(withdrawAmount);
     if (isNaN(amt) || amt <= 0) return;
 
+    if (amt < 1.0) {
+      setBalanceMsg({ type: 'error', text: 'Prelievo minimo: 1.00 GRAM (per evitare lo spreco di fee di rete).' });
+      return;
+    }
+
     const currentBal = parseFloat(userBalance?.balanceGram || userBalance?.balanceTon || '0');
     if (currentBal < amt) {
       setBalanceMsg({ type: 'error', text: `Insufficient balance! You have ${currentBal.toFixed(2)} GRAM.` });
@@ -651,7 +656,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-xs font-chakra text-slate-400">
-                <span>Amount (GRAM):</span>
+                <span>Amount (Min 1.00 GRAM):</span>
                 <span>Available: {displayBalance} GRAM</span>
               </div>
               <div className="flex items-center space-x-2 bg-cyber-bg border border-cyber-border rounded-xl px-3 py-2">

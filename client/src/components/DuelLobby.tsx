@@ -71,9 +71,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
 
+  const effectiveMinWager = selectedGameType === 'split' ? 5.0 : GAME_CONFIG.MIN_WAGER;
   const parsedWager = parseFloat(wagerChoice || '0');
   const isOverMax = parsedWager > GAME_CONFIG.MAX_WAGER;
-  const isBelowMin = parsedWager > 0 && parsedWager < GAME_CONFIG.MIN_WAGER;
+  const isBelowMin = parsedWager > 0 && parsedWager < effectiveMinWager;
   const netWinnerPayout = (parsedWager * 2).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
   const totalRequired = parsedWager > 0 ? (parsedWager + creationFeeGram).toFixed(2) : '0.00';
@@ -103,7 +104,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   };
 
   const handleCreate = async () => {
-    if (parsedWager < GAME_CONFIG.MIN_WAGER || isOverMax || isSubmitting) return;
+    if (parsedWager < effectiveMinWager || isOverMax || isSubmitting) return;
     if (isInsufficient) {
       triggerImpact('heavy');
       setShowCreateModal(false);
@@ -897,6 +898,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         onClick={() => {
                           triggerImpact('light');
                           setSelectedGameType(game.id);
+                          if (game.id === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
+                            setWagerChoice('5');
+                          }
                         }}
                         className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
                           isSplit ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
@@ -935,7 +939,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                                   TRUST JACKPOT
                                 </div>
                                 <div className="text-[10px] font-chakra font-bold text-cyber-green flex items-center space-x-1">
-                                  <span>+20% BONUS</span>
+                                  <span>+25% BONUS</span>
                                 </div>
                               </div>
                             </div>
@@ -1010,6 +1014,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </p>
                   </button>
                 </div>
+                {selectedGameType === 'split' && isPrivateRoom && (
+                  <div className="mt-2 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-2.5 py-1.5 font-chakra flex items-center space-x-1.5">
+                    <span>ℹ️</span>
+                    <span>Nelle stanze private il Bonus Trust Jackpot non è attivo (riservato alle partite pubbliche).</span>
+                  </div>
+                )}
               </div>
 
               {/* Error Message Display */}
@@ -1034,7 +1044,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
                 {/* Presets Grid */}
                 <div className="grid grid-cols-4 gap-1.5 mb-2">
-                  {GAME_CONFIG.PRESET_DUEL_WAGERS.map((amt) => (
+                  {(selectedGameType === 'split'
+                    ? GAME_CONFIG.PRESET_DUEL_WAGERS.filter((amt) => parseFloat(amt) >= 5.0)
+                    : GAME_CONFIG.PRESET_DUEL_WAGERS
+                  ).map((amt) => (
                     <button
                       key={amt}
                       onClick={() => {
@@ -1061,7 +1074,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     inputMode="decimal"
                     value={wagerChoice}
                     onChange={handleCustomInput}
-                    placeholder={`${GAME_CONFIG.MIN_WAGER} - ${GAME_CONFIG.MAX_WAGER}`}
+                    placeholder={`${effectiveMinWager} - ${GAME_CONFIG.MAX_WAGER}`}
                     className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
                   />
                   <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
@@ -1069,7 +1082,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
                 {isBelowMin && (
                   <p className="text-[11px] text-cyber-pink font-chakra mt-1.5">
-                    {t('lobby.minWagerWarn')}
+                    {selectedGameType === 'split'
+                      ? 'La puntata minima per Split or Steal è di 5.00 GRAM.'
+                      : t('lobby.minWagerWarn')}
                   </p>
                 )}
                 {isOverMax && (
@@ -1156,9 +1171,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <button
                   type="button"
                   onClick={handleCreate}
-                  disabled={!wagerChoice || parsedWager < GAME_CONFIG.MIN_WAGER || isOverMax || isSubmitting}
+                  disabled={!wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting}
                   className={`flex-1 py-2.5 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${
-                    !wagerChoice || parsedWager <= 0 || isOverMax || isSubmitting
+                    !wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting
                       ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
                       : 'bg-cyber-cyan text-cyber-bg shadow-neon-cyan active:scale-95'
                   }`}

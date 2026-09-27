@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Address } from '@ton/ton';
+import { feeConfig } from '../config/feeConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,6 +136,16 @@ export interface TreasuryData {
   lastUpdated: number;
 }
 
+export interface JackpotAwardRecord {
+  userA: string;
+  userB: string;
+  tgA?: string;
+  tgB?: string;
+  amountGram: number;
+  matchId: string;
+  timestamp: number;
+}
+
 export interface JackpotData {
   trustJackpotGram: string;
   thresholdGram: string;
@@ -142,6 +153,7 @@ export interface JackpotData {
   totalDistributedGram: string;
   totalCollectedGram: string;
   lastUpdated: number;
+  awardsHistory?: JackpotAwardRecord[];
 }
 
 export interface GroupAffiliate {
@@ -199,10 +211,11 @@ export class DatabaseService {
     this.jackpot = {
       trustJackpotGram: '5.00',
       thresholdGram: '5.00',
-      bonusPercentage: 20,
+      bonusPercentage: 25,
       totalDistributedGram: '0.00',
       totalCollectedGram: '0.00',
       lastUpdated: Date.now(),
+      awardsHistory: [],
     };
 
     this.treasury = {
@@ -317,6 +330,9 @@ export class DatabaseService {
       if (fs.existsSync(this.jackpotFilePath)) {
         const rawJackpot = fs.readFileSync(this.jackpotFilePath, 'utf-8');
         this.jackpot = JSON.parse(rawJackpot);
+        if (!this.jackpot.awardsHistory) {
+          this.jackpot.awardsHistory = [];
+        }
       } else {
         this.persistData();
       }
@@ -1525,19 +1541,112 @@ export class DatabaseService {
     isActive: boolean;
     thresholdGram: string;
     bonusPercentage: number;
+    probabilityPercentage: number;
+    minWagerGram: number;
+    cooldownHours: number;
     totalDistributedGram: string;
     totalCollectedGram: string;
   }> {
     const current = parseFloat(this.jackpot.trustJackpotGram || '0.00');
     const threshold = parseFloat(this.jackpot.thresholdGram || '5.00');
+    const {
+      minWagerSplitGram = 5.0,
+      splitJackpotBonusPercent = 25,
+      splitJackpotProbabilityPercent = 30,
+      splitJackpotCooldownHours = 48,
+    } = feeConfig.getConfig();
+
     return {
       trustJackpotGram: current.toFixed(2),
       isActive: current >= threshold,
       thresholdGram: threshold.toFixed(2),
-      bonusPercentage: this.jackpot.bonusPercentage || 20,
+      bonusPercentage: splitJackpotBonusPercent,
+      probabilityPercentage: splitJackpotProbabilityPercent,
+      minWagerGram: minWagerSplitGram,
+      cooldownHours: splitJackpotCooldownHours,
       totalDistributedGram: this.jackpot.totalDistributedGram || '0.00',
       totalCollectedGram: this.jackpot.totalCollectedGram || '0.00',
     };
+  }
+
+  public async canPairReceiveJackpot(
+    walletA: string,
+    walletB: string,
+    tgA?: string,
+    tgB?: string
+  ): Promise<{ eligible: boolean; reason?: 'COOLDOWN_48H' | 'REFERRAL_CONNECTED' | 'INELIGIBLE' }> {
+    // 1. Referral Lock check
+    const accA = await this.getUserAccount(walletA, tgA);
+    const accB = await this.getUserAccount(walletB, tgB);
+
+    const refA = accA?.referredBy?.trim();
+    const refB = accB?.referredBy?.trim();
+    const idA = (tgA || accA?.telegramId)?.trim();
+    const idB = (tgB || accB?.telegramId)?.trim();
+    const wA = walletA?.trim().toLowerCase();
+    const wB = walletB?.trim().toLowerCase();
+
+    // Check if A referred B
+    if (refA && ((idB && refA === idB) || (wB && refA.toLowerCase() === wB))) {
+      return { eligible: false, reason: 'REFERRAL_CONNECTED' };
+    }
+    // Check if B referred A
+    if (refB && ((idA && refB === idA) || (wA && refB.toLowerCase() === wA))) {
+      return { eligible: false, reason: 'REFERRAL_CONNECTED' };
+    }
+    // Check if both share the same referrer
+    if (refA && refB && refA.toLowerCase() === refB.toLowerCase()) {
+      return { eligible: false, reason: 'REFERRAL_CONNECTED' };
+    }
+
+    // 2. 48-hour Cooldown check between the same pair of players
+    const { splitJackpotCooldownHours = 48 } = feeConfig.getConfig();
+    const cooldownMs = splitJackpotCooldownHours * 60 * 60 * 1000;
+    const now = Date.now();
+    const awards = this.jackpot.awardsHistory || [];
+
+    const isMatch = (r: JackpotAwardRecord) => {
+      const matchA =
+        (idA && (r.tgA === idA || r.tgB === idA)) ||
+        (wA && (r.userA.toLowerCase() === wA || r.userB.toLowerCase() === wA));
+      const matchB =
+        (idB && (r.tgA === idB || r.tgB === idB)) ||
+        (wB && (r.userA.toLowerCase() === wB || r.userB.toLowerCase() === wB));
+      return Boolean(matchA && matchB);
+    };
+
+    const recentAward = awards.find((r) => isMatch(r) && now - r.timestamp < cooldownMs);
+    if (recentAward) {
+      return { eligible: false, reason: 'COOLDOWN_48H' };
+    }
+
+    return { eligible: true };
+  }
+
+  public async recordJackpotAward(
+    walletA: string,
+    walletB: string,
+    amountGram: number,
+    matchId: string,
+    tgA?: string,
+    tgB?: string
+  ): Promise<void> {
+    if (!this.jackpot.awardsHistory) {
+      this.jackpot.awardsHistory = [];
+    }
+    this.jackpot.awardsHistory.push({
+      userA: walletA,
+      userB: walletB,
+      tgA,
+      tgB,
+      amountGram,
+      matchId,
+      timestamp: Date.now(),
+    });
+    if (this.jackpot.awardsHistory.length > 1000) {
+      this.jackpot.awardsHistory = this.jackpot.awardsHistory.slice(-1000);
+    }
+    this.persistData();
   }
 
   public async addTrustJackpot(amountGram: number): Promise<number> {

@@ -195,12 +195,16 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const wagerGram = Number(wagerNano) / 1e9;
     const gameType = body.gameType || 'roulette';
 
-    const { creationFeeGram, minWagerGram } = feeConfig.getConfig();
+    const { creationFeeGram, minWagerGram, minWagerSplitGram = 5.0 } = feeConfig.getConfig();
+    const effectiveMinWager = gameType === 'split' ? minWagerSplitGram : minWagerGram;
 
-    if (wagerGram < minWagerGram) {
+    if (wagerGram < effectiveMinWager) {
       return reply.status(400).send({
         error: 'WAGER_TOO_LOW',
-        message: `Minimum wager is ${minWagerGram.toFixed(1)} GRAM, but ${wagerGram.toFixed(2)} GRAM was provided.`,
+        message: gameType === 'split'
+          ? `La puntata minima per Split or Steal è di ${effectiveMinWager.toFixed(1)} GRAM, ma è stato inserito ${wagerGram.toFixed(2)} GRAM.`
+          : `Minimum wager is ${effectiveMinWager.toFixed(1)} GRAM, but ${wagerGram.toFixed(2)} GRAM was provided.`,
+        minWagerGram: effectiveMinWager,
       });
     }
 
@@ -545,6 +549,17 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const account = await dbService.getUserAccount(wallet);
     const currentBal = parseFloat(account.balanceGram || account.balanceTon || '0');
     const withdrawNum = parseFloat(amount);
+
+    const { minWithdrawGram } = feeConfig.getConfig();
+    const minWithdraw = minWithdrawGram !== undefined ? minWithdrawGram : 1.0;
+    if (withdrawNum < minWithdraw) {
+      return reply.status(400).send({
+        error: 'AMOUNT_BELOW_MINIMUM',
+        message: `Il prelievo minimo consentito è di ${minWithdraw.toFixed(2)} GRAM (per evitare lo spreco di fee di rete).`,
+        minWithdrawGram: minWithdraw,
+      });
+    }
+
     if (currentBal < withdrawNum) {
       return reply.status(400).send({
         error: 'INSUFFICIENT_BALANCE',

@@ -104,13 +104,20 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
     }
   }
 
+  const { type: gameType, title: gameTitle } = parseGameType(gameRaw);
+  const minWagerForGame = gameType === 'split' ? 5.0 : 0.1;
+
   // Validate wager range
-  if (isNaN(wager) || wager < 0.1 || wager > 100) {
+  if (isNaN(wager) || wager < minWagerForGame || wager > 100) {
+    if (gameType === 'split' && wager < minWagerForGame) {
+      await ctx.reply(`⚠️ <b>Puntata non valida:</b> La puntata minima per <b>Split or Steal</b> è di <b>5.00 GRAM</b>.`, {
+        parse_mode: 'HTML',
+      });
+      return;
+    }
     await ctx.reply(botT(lang, 'group_duel_invalid_wager'), { parse_mode: 'HTML' });
     return;
   }
-
-  const { type: gameType, title: gameTitle } = parseGameType(gameRaw);
   const creationFee = 0.05;
   const totalRequired = wager + creationFee;
 
