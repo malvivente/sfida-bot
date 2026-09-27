@@ -33,6 +33,7 @@ export interface PlayerSession {
   walletAddress: string;
   telegramId: string;
   username: string;
+  photoUrl?: string;
   ws?: WebSocket;
   connected: boolean;
   ready: boolean;

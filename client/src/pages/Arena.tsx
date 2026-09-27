@@ -73,7 +73,7 @@ export const Arena: React.FC<ArenaProps> = ({
     openWalletModal,
     placeSpectatorBetOnChain,
   } = useTonClashContract();
-  const { userId, username, fullName, displayName, botUsername } = useTelegram();
+  const { userId, username, fullName, displayName, botUsername, photoUrl } = useTelegram();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
@@ -296,7 +296,8 @@ export const Arena: React.FC<ArenaProps> = ({
           wagerAmountNano: (parseFloat(wagerGram) * 1e9).toString(),
           playerAAddress: userAddress,
           telegramUserId: userId,
-          telegramUsername: username,
+          telegramUsername: displayName || fullName || username || 'Player A',
+          photoUrl: photoUrl || '',
           gameType,
           isPrivate: Boolean(isPrivate),
         }),
@@ -415,7 +416,8 @@ export const Arena: React.FC<ArenaProps> = ({
         body: JSON.stringify({
           playerBAddress: userAddress,
           telegramUserId: userId,
-          telegramUsername: displayName || username,
+          telegramUsername: displayName || fullName || username || 'Player B',
+          photoUrl: photoUrl || '',
           inviteCode: resolvedCode,
         }),
       });

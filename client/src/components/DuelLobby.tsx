@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from './GramIcon.js';
+import { UserAvatar } from './UserAvatar.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { areAddressesEqual } from '../utils/ton.js';
@@ -63,6 +64,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [filterGameType, setFilterGameType] = useState<string>('ALL');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
+  const [filterVisibility, setFilterVisibility] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
+  const [filterBetTier, setFilterBetTier] = useState<'ALL' | 'MICRO' | 'MID' | 'HIGH'>('ALL');
+  const [filterOpenOnly, setFilterOpenOnly] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
+  const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
 
   const parsedWager = parseFloat(wagerChoice || '0');
   const isOverMax = parsedWager > GAME_CONFIG.MAX_WAGER;
@@ -160,11 +167,64 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     setWagerChoice(val);
   };
 
-  const filteredMatches = matches.filter((m: MatchData) => {
-    if (filterGameType === 'ALL') return true;
-    const g = m.gameType || 'roulette';
-    return g === filterGameType;
-  });
+  const hasActiveFilters =
+    filterVisibility !== 'ALL' ||
+    filterBetTier !== 'ALL' ||
+    filterOpenOnly ||
+    searchQuery.trim() !== '' ||
+    sortBy !== 'newest';
+
+  const resetFilters = () => {
+    setFilterVisibility('ALL');
+    setFilterBetTier('ALL');
+    setFilterOpenOnly(false);
+    setSearchQuery('');
+    setSortBy('newest');
+  };
+
+  const filteredMatches = matches
+    .filter((m: MatchData) => {
+      // 1. Game Type
+      if (filterGameType !== 'ALL') {
+        const g = m.gameType || 'roulette';
+        if (g !== filterGameType) return false;
+      }
+
+      // 2. Visibility (Public / Private)
+      if (filterVisibility === 'PUBLIC' && m.isPrivate) return false;
+      if (filterVisibility === 'PRIVATE' && !m.isPrivate) return false;
+
+      // 3. Open Rooms Only (Waiting for Player B)
+      if (filterOpenOnly && (m.playerB !== null || m.state !== 'LOBBY')) return false;
+
+      // 4. Bet Tier
+      const wagerGram = parseFloat(m.wagerAmountNano) / 1e9;
+      if (filterBetTier === 'MICRO' && wagerGram > 1) return false;
+      if (filterBetTier === 'MID' && (wagerGram <= 1 || wagerGram > 5)) return false;
+      if (filterBetTier === 'HIGH' && wagerGram <= 5) return false;
+
+      // 5. Search query (matches playerA, playerB, matchId)
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const matchId = (m.matchId || '').toLowerCase();
+        const playerAName = (m.playerA?.name || '').toLowerCase();
+        const playerBName = (m.playerB?.name || '').toLowerCase();
+        if (!matchId.includes(q) && !playerAName.includes(q) && !playerBName.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'bet_desc') {
+        return (parseFloat(b.wagerAmountNano) || 0) - (parseFloat(a.wagerAmountNano) || 0);
+      }
+      if (sortBy === 'bet_asc') {
+        return (parseFloat(a.wagerAmountNano) || 0) - (parseFloat(b.wagerAmountNano) || 0);
+      }
+      return 0;
+    });
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
@@ -248,20 +308,284 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           })}
         </div>
 
+        {/* Search & Advanced Filters Bar */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('lobby.searchPlaceholder')}
+                className="w-full bg-cyber-card/90 border border-cyber-border rounded-xl pl-9 pr-8 py-2 text-xs font-chakra text-white placeholder-slate-500 focus:outline-none focus:border-cyber-cyan/70 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+                  title="Clear"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setShowFiltersPanel(!showFiltersPanel);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs font-chakra font-bold flex items-center space-x-1.5 border transition-all active:scale-95 shrink-0 ${
+                showFiltersPanel || hasActiveFilters
+                  ? 'bg-cyber-cyan/15 border-cyber-cyan text-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                  : 'bg-cyber-card border-cyber-border text-slate-400 hover:text-white hover:border-slate-600'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>{t('lobby.filterBtn')}</span>
+              {hasActiveFilters && (
+                <span className="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse ml-0.5" />
+              )}
+            </button>
+          </div>
+
+          {/* Expandable Filter Drawer */}
+          {showFiltersPanel && (
+            <div className="bg-cyber-card/95 border border-cyber-cyan/30 rounded-2xl p-3.5 space-y-3 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-orbitron font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
+                  <SlidersHorizontal className="w-3 h-3 text-cyber-cyan" />
+                  <span>{t('lobby.filterTitle')}</span>
+                </span>
+                {hasActiveFilters && (
+                  <button
+                    onClick={() => {
+                      triggerImpact('light');
+                      resetFilters();
+                    }}
+                    className="text-[11px] font-chakra text-cyber-cyan hover:underline font-bold"
+                  >
+                    {t('lobby.resetFilters')}
+                  </button>
+                )}
+              </div>
+
+              {/* Access Filter (Public vs Private) */}
+              <div>
+                <span className="text-[10px] font-chakra text-slate-400 uppercase tracking-wider block mb-1.5">
+                  {t('lobby.roomType')}
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['ALL', 'PUBLIC', 'PRIVATE'] as const).map((mode) => {
+                    const active = filterVisibility === mode;
+                    const label = mode === 'ALL' ? t('lobby.filterAll') : mode === 'PUBLIC' ? t('lobby.filterPublic') : t('lobby.filterPrivate');
+                    return (
+                      <button
+                        key={mode}
+                        onClick={() => {
+                          triggerImpact('light');
+                          setFilterVisibility(mode);
+                        }}
+                        className={`py-1.5 px-2 rounded-xl text-[11px] font-chakra font-bold border transition-all text-center flex items-center justify-center space-x-1 ${
+                          active
+                            ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
+                            : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                        }`}
+                      >
+                        {mode === 'PRIVATE' && <Lock className="w-2.5 h-2.5" />}
+                        {mode === 'PUBLIC' && <Globe className="w-2.5 h-2.5" />}
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bet Stake Tier */}
+              <div>
+                <span className="text-[10px] font-chakra text-slate-400 uppercase tracking-wider block mb-1.5">
+                  {t('lobby.wagerLabel')}
+                </span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(['ALL', 'MICRO', 'MID', 'HIGH'] as const).map((tier) => {
+                    const active = filterBetTier === tier;
+                    const label =
+                      tier === 'ALL'
+                        ? t('lobby.filterAllBets')
+                        : tier === 'MICRO'
+                        ? t('lobby.filterMicroBet')
+                        : tier === 'MID'
+                        ? t('lobby.filterMidBet')
+                        : t('lobby.filterHighBet');
+                    return (
+                      <button
+                        key={tier}
+                        onClick={() => {
+                          triggerImpact('light');
+                          setFilterBetTier(tier);
+                        }}
+                        className={`py-1.5 px-1.5 rounded-xl text-[10px] font-chakra font-bold border transition-all text-center truncate ${
+                          active
+                            ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
+                            : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Status & Sorting Row */}
+              <div className="pt-1 border-t border-cyber-border/60 flex items-center justify-between gap-2 flex-wrap">
+                {/* Open Rooms Only Toggle */}
+                <button
+                  onClick={() => {
+                    triggerImpact('light');
+                    setFilterOpenOnly(!filterOpenOnly);
+                  }}
+                  className={`py-1 px-2.5 rounded-xl text-[11px] font-chakra font-bold border transition-all flex items-center space-x-1.5 ${
+                    filterOpenOnly
+                      ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/50'
+                      : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${filterOpenOnly ? 'bg-cyber-green animate-pulse' : 'bg-slate-500'}`} />
+                  <span>{t('lobby.filterOpenOnly')}</span>
+                </button>
+
+                {/* Sort selector */}
+                <div className="flex items-center space-x-1">
+                  <span className="text-[10px] font-chakra text-slate-400">{t('lobby.sortLabel')}</span>
+                  {(['newest', 'bet_desc', 'bet_asc'] as const).map((sort) => {
+                    const active = sortBy === sort;
+                    const label =
+                      sort === 'newest'
+                        ? t('lobby.sortNewest')
+                        : sort === 'bet_desc'
+                        ? '▼ GRAM'
+                        : '▲ GRAM';
+                    return (
+                      <button
+                        key={sort}
+                        onClick={() => {
+                          triggerImpact('light');
+                          setSortBy(sort);
+                        }}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-chakra font-bold border transition-all ${
+                          active
+                            ? 'bg-cyber-cyan/20 text-cyber-cyan border-cyber-cyan/50'
+                            : 'bg-black/30 text-slate-400 border-cyber-border hover:border-slate-600'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Active Filter Chips */}
+          {hasActiveFilters && !showFiltersPanel && (
+            <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-[10px] font-chakra">
+              <span className="text-slate-500 shrink-0">Filtri:</span>
+              {filterVisibility !== 'ALL' && (
+                <button
+                  onClick={() => setFilterVisibility('ALL')}
+                  className="px-2 py-0.5 rounded-full bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40 shrink-0 flex items-center space-x-1"
+                >
+                  <span>{filterVisibility === 'PUBLIC' ? t('lobby.filterPublic') : t('lobby.filterPrivate')}</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+              {filterBetTier !== 'ALL' && (
+                <button
+                  onClick={() => setFilterBetTier('ALL')}
+                  className="px-2 py-0.5 rounded-full bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40 shrink-0 flex items-center space-x-1"
+                >
+                  <span>
+                    {filterBetTier === 'MICRO'
+                      ? t('lobby.filterMicroBet')
+                      : filterBetTier === 'MID'
+                      ? t('lobby.filterMidBet')
+                      : t('lobby.filterHighBet')}
+                  </span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+              {filterOpenOnly && (
+                <button
+                  onClick={() => setFilterOpenOnly(false)}
+                  className="px-2 py-0.5 rounded-full bg-cyber-green/15 text-cyber-green border border-cyber-green/40 shrink-0 flex items-center space-x-1"
+                >
+                  <span>{t('lobby.filterOpenOnly')}</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="px-2 py-0.5 rounded-full bg-cyber-pink/15 text-cyber-pink border border-cyber-pink/40 shrink-0 flex items-center space-x-1"
+                >
+                  <span>"{searchQuery}"</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+              {sortBy !== 'newest' && (
+                <button
+                  onClick={() => setSortBy('newest')}
+                  className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/40 shrink-0 flex items-center space-x-1"
+                >
+                  <span>{sortBy === 'bet_desc' ? t('lobby.sortHighBet') : t('lobby.sortLowBet')}</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+              <button
+                onClick={resetFilters}
+                className="text-[10px] text-slate-400 hover:text-white underline shrink-0 ml-1"
+              >
+                {t('lobby.resetFilters')}
+              </button>
+            </div>
+          )}
+        </div>
+
         {filteredMatches.length === 0 ? (
           <div className="text-center py-10 bg-cyber-card border border-cyber-border rounded-2xl p-6">
-            <Swords className="w-12 h-12 text-cyber-cyan/40 mx-auto mb-3 animate-pulse" />
-            <p className="text-sm text-slate-200 font-bold font-orbitron">{t('lobby.noDuelsTitle')}</p>
-            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-              {t('lobby.noDuelsDesc')}
-            </p>
-            <button
-              onClick={handleOpenModal}
-              className="mt-4 px-5 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all inline-flex items-center space-x-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{t('lobby.createDuelBtn')}</span>
-            </button>
+            {hasActiveFilters ? (
+              <>
+                <Search className="w-10 h-10 text-cyber-cyan/40 mx-auto mb-3" />
+                <p className="text-sm text-slate-200 font-bold font-orbitron">{t('lobby.filteredNoResults')}</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                  {t('lobby.filteredNoResultsDesc')}
+                </p>
+                <button
+                  onClick={resetFilters}
+                  className="mt-4 px-4 py-2 bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40 rounded-xl text-xs font-chakra font-bold uppercase tracking-wider hover:bg-cyber-cyan/25 active:scale-95 transition-all"
+                >
+                  {t('lobby.resetFilters')}
+                </button>
+              </>
+            ) : (
+              <>
+                <Swords className="w-12 h-12 text-cyber-cyan/40 mx-auto mb-3 animate-pulse" />
+                <p className="text-sm text-slate-200 font-bold font-orbitron">{t('lobby.noDuelsTitle')}</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                  {t('lobby.noDuelsDesc')}
+                </p>
+                <button
+                  onClick={handleOpenModal}
+                  className="mt-4 px-5 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all inline-flex items-center space-x-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{t('lobby.createDuelBtn')}</span>
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -329,15 +653,39 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 font-chakra mt-0.5">
-                        Created by <span className="text-slate-200 font-semibold">{m.playerA.name}</span>
-                        {isCreator && <span className="text-[10px] text-cyber-cyan ml-1.5 font-bold font-chakra">(YOUR DUEL)</span>}
-                        {m.playerB && (
-                          <span className="block text-[11px] text-slate-400 mt-0.5">
-                            vs <span className="text-cyber-pink font-semibold">{m.playerB.name}</span>
+                      <div className="text-xs text-slate-400 font-chakra mt-1 space-y-1">
+                        <div className="flex items-center space-x-1.5 flex-wrap">
+                          <span className="text-[11px] text-slate-400">Created by</span>
+                          <span className="inline-flex items-center space-x-1.5 text-slate-200 font-semibold">
+                            <UserAvatar
+                              name={m.playerA.name}
+                              photoUrl={m.playerA.photoUrl}
+                              sizeClass="w-4 h-4"
+                              textClass="text-[8px]"
+                            />
+                            <span>{m.playerA.name}</span>
                           </span>
+                          {isCreator && (
+                            <span className="text-[10px] text-cyber-cyan font-bold font-chakra bg-cyber-cyan/10 border border-cyber-cyan/30 px-1.5 py-0.2 rounded-md">
+                              (YOUR DUEL)
+                            </span>
+                          )}
+                        </div>
+                        {m.playerB && (
+                          <div className="flex items-center space-x-1.5 text-[11px] text-slate-400">
+                            <span>vs</span>
+                            <span className="inline-flex items-center space-x-1.5 text-cyber-pink font-semibold">
+                              <UserAvatar
+                                name={m.playerB.name}
+                                photoUrl={m.playerB.photoUrl}
+                                sizeClass="w-4 h-4"
+                                textClass="text-[8px]"
+                              />
+                              <span>{m.playerB.name}</span>
+                            </span>
+                          </div>
                         )}
-                      </p>
+                      </div>
                     </div>
 
                     <div className="text-right">

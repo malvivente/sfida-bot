@@ -19,6 +19,7 @@ export interface PlayerInfo {
   score: number;
   connected?: boolean;
   telegramUserId?: string;
+  photoUrl?: string;
 }
 
 export interface MatchResolution {

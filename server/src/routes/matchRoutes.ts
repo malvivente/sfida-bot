@@ -55,6 +55,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
           name: r.playerA.username,
           score: r.playerA.score,
           telegramUserId: r.playerA.telegramId,
+          photoUrl: r.playerA.photoUrl,
         },
         playerB: r.playerB
           ? {
@@ -62,6 +63,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
               name: r.playerB.username,
               score: r.playerB.score,
               telegramUserId: r.playerB.telegramId,
+              photoUrl: r.playerB.photoUrl,
             }
           : null,
         wagerAmountNano: r.config.wagerAmountNano.toString(),
@@ -122,6 +124,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         score: room.playerA.score,
         ready: room.playerA.ready,
         telegramUserId: room.playerA.telegramId,
+        photoUrl: room.playerA.photoUrl,
       },
       playerB: room.playerB
         ? {
@@ -130,6 +133,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
             score: room.playerB.score,
             ready: room.playerB.ready,
             telegramUserId: room.playerB.telegramId,
+            photoUrl: room.playerB.photoUrl,
           }
         : null,
       wagerAmountNano: room.config.wagerAmountNano.toString(),
@@ -173,6 +177,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       gameType?: any;
       telegramUserId?: string;
       telegramUsername?: string;
+      photoUrl?: string;
       recruiterA?: string;
       groupAdminAddress?: string;
       isPrivate?: boolean;
@@ -286,6 +291,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.state = 'LOBBY';
     room.playerA.telegramId = body.telegramUserId || '';
     room.playerA.username = body.telegramUsername || 'Player A';
+    room.playerA.photoUrl = body.photoUrl || userAccount.photoUrl || '';
 
     return reply.send({
       success: true,
@@ -307,6 +313,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       playerBAddress: string;
       telegramUserId?: string;
       telegramUsername?: string;
+      photoUrl?: string;
       inviteCode?: string;
     };
 
@@ -383,6 +390,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       walletAddress: body.playerBAddress,
       telegramId: body.telegramUserId || '',
       username: body.telegramUsername || 'Player B',
+      photoUrl: body.photoUrl || userAccount.photoUrl || '',
       connected: false,
       ready: false,
       score: 0,
@@ -398,6 +406,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         name: room.playerB.username,
         score: 0,
         telegramUserId: room.playerB.telegramId,
+        photoUrl: room.playerB.photoUrl,
       },
       message: `${room.playerB.username} has joined the Arena! Ready up to duel!`,
     });

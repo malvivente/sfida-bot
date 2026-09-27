@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Flame, Crown, Sparkles, RefreshCw, Loader2, User } from 'lucide-react';
 import { GramIcon } from '../components/GramIcon.js';
+import { UserAvatar } from '../components/UserAvatar.js';
 import { LeaderboardEntry } from '../types/index.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
@@ -106,26 +107,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
     }
   };
 
-  const renderAvatar = (entry: LeaderboardEntry, sizeClass: string = 'w-8 h-8', textClass: string = 'text-xs') => {
-    const initial = (entry.username?.replace('@', '').trim()[0] || 'W').toUpperCase();
-    return (
-      <div className={`${sizeClass} rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center shrink-0 overflow-hidden relative shadow-inner`}>
-        {entry.photoUrl ? (
-          <img
-            src={entry.photoUrl}
-            alt={entry.username}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.currentTarget as HTMLElement).style.display = 'none';
-            }}
-          />
-        ) : null}
-        <span className={`${textClass} font-chakra font-bold text-slate-300 absolute select-none pointer-events-none`}>
-          {initial}
-        </span>
-      </div>
-    );
-  };
+  const renderAvatar = (entry: LeaderboardEntry, sizeClass: string = 'w-8 h-8', textClass: string = 'text-xs') => (
+    <UserAvatar
+      photoUrl={entry.photoUrl}
+      name={entry.username}
+      sizeClass={sizeClass}
+      textClass={textClass}
+    />
+  );
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani pb-10">

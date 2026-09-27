@@ -4,6 +4,7 @@ import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { GramIcon } from '../components/GramIcon.js';
+import { UserAvatar } from '../components/UserAvatar.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData } from '../types/index.js';
 import { Address } from '@ton/ton';
 import { useI18n } from '../i18n/index.js';
@@ -263,18 +264,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
       {/* Profile Card */}
       <div className="bg-cyber-card border border-cyber-border rounded-2xl p-5 shadow-xl">
         <div className="flex items-center space-x-3.5 mb-4">
-          <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-cyber-bg border border-cyber-cyan shadow-neon-cyan shrink-0 flex items-center justify-center">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={displayName || fullName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-cyber-cyan/15 text-cyber-cyan font-orbitron font-bold text-lg">
-                {(displayName || fullName || 'W').charAt(0).toUpperCase()}
-              </div>
-            )}
+          <div className="relative shrink-0">
+            <UserAvatar
+              photoUrl={photoUrl}
+              name={displayName || fullName || username || ''}
+              sizeClass="w-14 h-14"
+              textClass="text-xl"
+              roundedClass="rounded-2xl"
+              className="border border-cyber-cyan shadow-neon-cyan"
+            />
             {isPremium && (
               <div className="absolute top-0 right-0 bg-cyber-amber text-cyber-bg p-0.5 rounded-bl-md" title="Telegram Premium">
                 <Sparkles className="w-2.5 h-2.5" />

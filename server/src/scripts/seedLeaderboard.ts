@@ -62,7 +62,7 @@ export async function seedLeaderboard(userCount: number = 150) {
       telegramId: tgId,
       username: cleanUsername,
       displayName: fullName,
-      photoUrl: avatarUrl,
+      photoUrl: '',
       balanceNano: BigInt(Math.round(parseFloat(profitGram) * 1e9)).toString(),
       balanceTon: profitGram,
       balanceGram: profitGram,
