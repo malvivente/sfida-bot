@@ -31,7 +31,10 @@ export class GlassBridgeRoom extends BaseGameRoom {
   }
 
   public getGamePayload(): GlassBridgeState {
-    const activeStep = Math.max(1, Math.max(this.currentStepA, this.currentStepB) + 1);
+    const activeStep = Math.min(
+      GAMES_CONFIG.bridge.totalSteps,
+      Math.max(1, Math.max(this.currentStepA, this.currentStepB) + 1)
+    );
     return {
       currentStepA: this.currentStepA,
       currentStepB: this.currentStepB,
@@ -61,7 +64,7 @@ export class GlassBridgeRoom extends BaseGameRoom {
 
     this.broadcast({
       type: 'BRIDGE_START',
-      message: `The Endless Glass Bridge looms over the abyss! ${this.playerA.username} has the first leap!`,
+      message: `The 6-Step Glass Bridge looms over the abyss! ${this.playerA.username} has the first leap!`,
       gameData: this.getGamePayload(),
     });
 
@@ -170,6 +173,7 @@ export class GlassBridgeRoom extends BaseGameRoom {
     const playerName = side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
     const opponentSide = side === 'A' ? 'B' : 'A';
     const opponentWallet = side === 'A' ? (this.playerB?.walletAddress || '') : this.playerA.walletAddress;
+    const opponentName = opponentSide === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
     const correctChoice = this.getSafeChoice(targetStepIndex);
     const isSafe = choice === correctChoice;
@@ -178,6 +182,26 @@ export class GlassBridgeRoom extends BaseGameRoom {
       // Safe tempered glass!
       this.revealedSteps[targetStep] = correctChoice;
       if (side === 'A') this.currentStepA = targetStep; else this.currentStepB = targetStep;
+
+      if (targetStep >= GAMES_CONFIG.bridge.totalSteps) {
+        // Player reached the finish platform and survived all 6 steps!
+        this.lastOutcome = {
+          player: side,
+          step: targetStep,
+          choice,
+          result: 'SAFE',
+          livesRemaining: side === 'A' ? this.livesA : this.livesB,
+          message: `🏆 VICTORY! ${playerName} crossed all ${GAMES_CONFIG.bridge.totalSteps} steps of the Glass Bridge and reached the finish!`,
+        };
+        this.broadcast({
+          type: 'BRIDGE_UPDATE',
+          lastOutcome: this.lastOutcome,
+          gameData: this.getGamePayload(),
+        });
+        const activeWallet = side === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
+        this.settleMatch(activeWallet);
+        return;
+      }
 
       this.lastOutcome = {
         player: side,
@@ -216,6 +240,30 @@ export class GlassBridgeRoom extends BaseGameRoom {
           result: 'SHATTER',
           livesRemaining: 0,
           message: `💥 SHATTER! Glass broke at Step #${targetStep}! ${playerName} fell into the abyss with no lives remaining!`,
+        };
+        this.broadcast({
+          type: 'BRIDGE_UPDATE',
+          lastOutcome: this.lastOutcome,
+          gameData: this.getGamePayload(),
+        });
+        this.settleMatch(opponentWallet);
+        return;
+      }
+
+      // If this was the final step and player fell, the other tile is revealed safe, so opponent automatically crosses to victory!
+      if (targetStep >= GAMES_CONFIG.bridge.totalSteps) {
+        if (opponentSide === 'A') {
+          this.currentStepA = targetStep;
+        } else {
+          this.currentStepB = targetStep;
+        }
+        this.lastOutcome = {
+          player: side,
+          step: targetStep,
+          choice,
+          result: 'SHATTER',
+          livesRemaining: livesLeft,
+          message: `💥 CRASH! The ${choice} glass shattered! ${playerName} fell on Step #${targetStep}! ${opponentName} safely crosses to victory!`,
         };
         this.broadcast({
           type: 'BRIDGE_UPDATE',

@@ -539,12 +539,21 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'INVALID_AMOUNT', message: 'Invalid withdrawal amount' });
     }
 
+    const { minWithdrawGram } = feeConfig.getConfig();
+    const withdrawNum = parseFloat(amount);
+    const minWithdraw = minWithdrawGram ?? 1.0;
+    if (withdrawNum < minWithdraw) {
+      return reply.status(400).send({
+        error: 'BELOW_MIN_WITHDRAWAL',
+        message: `Minimum withdrawal amount is ${minWithdraw.toFixed(2)} GRAM.`
+      });
+    }
+
     // Auto-restore any previously failed/unsent withdrawals first
     await dbService.restoreUnsentWithdrawals(wallet);
 
     const account = await dbService.getUserAccount(wallet);
     const currentBal = parseFloat(account.balanceGram || account.balanceTon || '0');
-    const withdrawNum = parseFloat(amount);
     if (currentBal < withdrawNum) {
       return reply.status(400).send({
         error: 'INSUFFICIENT_BALANCE',
