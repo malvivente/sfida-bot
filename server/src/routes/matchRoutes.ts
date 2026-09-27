@@ -6,6 +6,7 @@ import { signerService } from '../services/signer.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
 import { dbService } from '../services/db.js';
 import { feeConfig } from '../config/feeConfig.js';
+import { isTelegramChatMember } from '../bot/index.js';
 import { TonClient, WalletContractV4, WalletContractV5R1, SendMode, internal, toNano, Address } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 
@@ -47,6 +48,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         escrowAddress,
         state: r.state,
         isPrivate: r.isPrivate || false,
+        groupChatId: r.config.groupChatId,
         winnerAddress: r.winnerAddress,
         winnerName: r.winnerName,
         resolution: r.resolution,
@@ -114,6 +116,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       escrowAddress,
       state: room.state,
       isPrivate: room.isPrivate || false,
+      groupChatId: room.config.groupChatId,
       winnerAddress: room.winnerAddress,
       winnerName: room.winnerName,
       resolution: room.resolution,
@@ -332,8 +335,24 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'You cannot duel against yourself' });
     }
 
-    // Private match check: require valid invite code
-    if (room.isPrivate) {
+    // Group-exclusive check: if room was created in a Telegram group, player must be a member of that group
+    if (room.config.groupChatId) {
+      if (!body.telegramUserId) {
+        return reply.status(403).send({
+          error: 'GROUP_MEMBERSHIP_REQUIRED',
+          message: 'Questa sfida è riservata ai membri del gruppo Telegram in cui è stata creata. Devi effettuare l\'accesso con Telegram per partecipare.',
+        });
+      }
+
+      const isMember = await isTelegramChatMember(room.config.groupChatId, body.telegramUserId);
+      if (!isMember) {
+        return reply.status(403).send({
+          error: 'NOT_GROUP_MEMBER',
+          message: 'Non puoi partecipare a questa sfida: è riservata esclusivamente ai membri del gruppo Telegram in cui è stata lanciata!',
+        });
+      }
+    } else if (room.isPrivate) {
+      // Regular private match check: require valid invite code
       if (!body.inviteCode || body.inviteCode.trim().toUpperCase() !== room.inviteCode?.toUpperCase()) {
         return reply.status(403).send({
           error: 'PRIVATE_MATCH',

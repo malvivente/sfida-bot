@@ -194,6 +194,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       if (filterVisibility === 'PUBLIC' && m.isPrivate) return false;
       if (filterVisibility === 'PRIVATE' && !m.isPrivate) return false;
 
+      // Group-exclusive match: when waiting for Player B in a Telegram group, it is not available for public lobby browsing
+      if (m.groupChatId && !m.playerB) return false;
+
       // 3. Open Rooms Only (Waiting for Player B)
       if (filterOpenOnly && (m.playerB !== null || m.state !== 'LOBBY')) return false;
 

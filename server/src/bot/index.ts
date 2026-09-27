@@ -57,9 +57,46 @@ export function parseDeepLink(payload: string): DeepLinkPayload {
   return { mode: 'duel' };
 }
 
+let activeBotInstance: Bot | null = null;
+
+export function getTelegramBot(): Bot | null {
+  return activeBotInstance;
+}
+
+/**
+ * Checks whether a given Telegram user ID is an active member or admin of a Telegram group/chat.
+ */
+export async function isTelegramChatMember(
+  chatId: string | number,
+  telegramUserId: string | number
+): Promise<boolean> {
+  const bot = getTelegramBot();
+  if (!bot) {
+    // If bot not running (mock / local dev), allow pass
+    return true;
+  }
+  try {
+    const member = await bot.api.getChatMember(chatId, Number(telegramUserId));
+    if (!member) return false;
+    // Valid active statuses: 'creator', 'administrator', 'member'
+    if (['creator', 'administrator', 'member'].includes(member.status)) {
+      return true;
+    }
+    // Restricted members that are still in the group
+    if (member.status === 'restricted' && (member as any).is_member) {
+      return true;
+    }
+    return false;
+  } catch (err: any) {
+    console.warn(`[Bot GroupCheck] Could not verify membership of user ${telegramUserId} in chat ${chatId}:`, err?.message || err);
+    return false;
+  }
+}
+
 export function createTelegramBot(token?: string): Bot {
   const botToken = token || process.env.TELEGRAM_BOT_TOKEN || 'MOCK_TELEGRAM_BOT_TOKEN';
   const bot = new Bot(botToken);
+  activeBotInstance = bot;
   const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
 
   // Helper to resolve user's active language

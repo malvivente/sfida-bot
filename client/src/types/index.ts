@@ -53,6 +53,7 @@ export interface MatchData {
   spectatorCount?: number;
   gameData?: any;
   isPrivate?: boolean;
+  groupChatId?: string;
   inviteCode?: string;
 }
 

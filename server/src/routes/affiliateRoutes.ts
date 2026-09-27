@@ -27,21 +27,26 @@ export async function affiliateRoutes(fastify: FastifyInstance) {
       totalGroupVolume += parseFloat(g.totalVolumeGram || '0');
     }
 
+    const userAccount = await dbService.getUserAccount(wallet, resolvedTgId);
+    const personalEarnings = parseFloat(userAccount?.referralEarningsGram || '0');
+    const totalEarned = totalGroupEarnings + personalEarnings;
+
     return reply.send({
       identifier,
       telegramId: resolvedTgId,
       walletAddress: wallet,
       referralLink: `https://t.me/${botUsername}?start=${refParam}`,
-      personalEarningsGram: '0.00',
+      personalEarningsGram: personalEarnings.toFixed(2),
       groupEarningsGram: totalGroupEarnings.toFixed(2),
-      totalEarnedGram: totalGroupEarnings.toFixed(2),
+      totalEarnedGram: totalEarned.toFixed(2),
       hostedMatchesCount: totalGroupMatches,
       totalGroupVolumeGram: totalGroupVolume.toFixed(2),
       friendsInvited: friendsCount,
       groups: managedGroups,
       rules: {
-        recruiterShare: '15% of Platform Duel Rake',
-        groupAffiliateShare: '20% of Platform Duel Rake',
+        commissionPool: '30% of Room Creation (0.05) & Join (0.05) Fees',
+        recruiterShare: '15% to 30% of match fees',
+        groupAffiliateShare: '15% to 30% of match fees',
         payoutMethod: 'Instant credit to in-app GRAM balance / TON wallet',
       },
     });

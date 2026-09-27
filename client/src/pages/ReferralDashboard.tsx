@@ -21,6 +21,7 @@ import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { useI18n } from '../i18n/index.js';
+import { APP_CONFIG } from '../config/appConfig.js';
 
 interface ManagedGroup {
   chatId: string;
@@ -251,7 +252,7 @@ export const ReferralDashboard: React.FC = () => {
               {t('affiliates.noGroupsDesc')}
             </p>
             <a
-              href="https://t.me/toncoin"
+              href={APP_CONFIG.ADMIN_TELEGRAM_LINK}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center space-x-1.5 text-xs font-orbitron font-bold text-cyber-cyan hover:underline pt-1"

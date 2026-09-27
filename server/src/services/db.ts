@@ -79,6 +79,7 @@ export interface UserAccount {
   photoUrl?: string; // Telegram profile picture url
   languageCode?: string; // Telegram user client language (e.g. 'it', 'en', 'ru')
   referredBy?: string; // Telegram ID or wallet of recruiter
+  referralEarningsGram?: string; // Total lifetime referral earnings in GRAM
   isBotBlocked?: boolean; // Whether user has blocked the bot
   botStartedAt?: number; // Timestamp when user first launched the bot
   balanceNano: string;
@@ -811,16 +812,15 @@ export class DatabaseService {
   public async recordGroupMatchRevenue(
     chatId: string | number,
     wagerGram: number,
-    platformRakeGram: number
+    commissionGram: number
   ): Promise<{ commissionGram: string } | null> {
     const cleanId = String(chatId).trim();
     const group = this.groupAffiliates.get(cleanId);
     if (!group) return null;
 
     const totalMatchVolume = wagerGram * 2;
-    const commissionShare = (group.commissionRatePercent || 20) / 100;
-    const groupCut = platformRakeGram * commissionShare;
-    const groupCutGram = groupCut.toFixed(2);
+    const groupCut = commissionGram;
+    const groupCutGram = groupCut.toFixed(4);
 
     group.totalMatchesHosted += 1;
     group.totalVolumeGram = (parseFloat(group.totalVolumeGram || '0') + totalMatchVolume).toFixed(2);
@@ -833,7 +833,7 @@ export class DatabaseService {
         group.walletAddress,
         groupCutGram,
         'MATCH_WIN',
-        `Group affiliate revenue from match in ${group.title} (#${cleanId})`,
+        `Group affiliate commission from match in ${group.title} (#${cleanId})`,
         group.managerTelegramId
       );
     }
@@ -841,6 +841,33 @@ export class DatabaseService {
     this.persistData();
     console.log(`[DatabaseService] Credited ${groupCutGram} GRAM to group affiliate ${group.title} (${group.walletAddress})`);
     return { commissionGram: groupCutGram };
+  }
+
+  public async creditReferralEarnings(
+    recruiterId: string,
+    amountGram: number,
+    matchId: string
+  ): Promise<void> {
+    if (amountGram <= 0) return;
+    const cleanId = recruiterId.replace(/^ref_/, '').trim();
+    const recruiterAccount = await this.getUserAccount(undefined, cleanId);
+    const amountStr = amountGram.toFixed(4);
+
+    const targetWallet = recruiterAccount.walletAddress || `tg_${cleanId}`;
+    await this.creditUserBalance(
+      targetWallet,
+      amountStr,
+      'MATCH_WIN',
+      `Referral commission (15%-30%) from duel #${matchId}`,
+      recruiterAccount.telegramId
+    );
+
+    recruiterAccount.referralEarningsGram = (
+      parseFloat(recruiterAccount.referralEarningsGram || '0') + amountGram
+    ).toFixed(4);
+    recruiterAccount.updatedAt = Date.now();
+    this.persistData();
+    console.log(`[DatabaseService] Credited ${amountStr} GRAM referral commission to ${recruiterAccount.displayName || cleanId}`);
   }
 
   public async setUserBalanceDirect(

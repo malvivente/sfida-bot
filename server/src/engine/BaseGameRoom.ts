@@ -433,14 +433,64 @@ export abstract class BaseGameRoom {
       dbService.creditTreasury(rakeGram, 'DUEL_RAKE', this.matchId.toString()).catch((err) => {
         console.error(`[BaseGameRoom] Error crediting duel rake:`, err);
       });
-
-      // Credit group affiliate commission if match was hosted in an affiliated group
-      if (this.config.groupChatId) {
-        dbService.recordGroupMatchRevenue(this.config.groupChatId, wagerNum, parseFloat(rakeGram)).catch((err) => {
-          console.error(`[BaseGameRoom] Error crediting group affiliate revenue:`, err);
-        });
-      }
     }
+
+    // Distribute affiliate commissions from creation + join fees (0.05 GRAM each, total 0.10 GRAM)
+    // 30% of fees pool is allocated to affiliates:
+    // If player has referrer AND match is in affiliated group: 15% to referrer, 15% to group.
+    // If player has only group: 30% to group.
+    // If player has only referrer: 30% to referrer.
+    const { creationFeeGram, joinFeeGram } = feeConfig.getConfig();
+    const feeA = creationFeeGram || 0.05;
+    const feeB = joinFeeGram || 0.05;
+
+    (async () => {
+      try {
+        const groupAffiliate = this.config.groupChatId ? await dbService.getGroupAffiliate(this.config.groupChatId) : null;
+        const hasAffiliatedGroup = Boolean(groupAffiliate);
+
+        // Fetch user accounts to check referrers
+        const accA = await dbService.getUserAccount(this.playerA.walletAddress, this.playerA.telegramId);
+        const accB = this.playerB ? await dbService.getUserAccount(this.playerB.walletAddress, this.playerB.telegramId) : null;
+
+        let totalGroupCommission = 0;
+
+        // Process Player A's fee
+        const commissionPoolA = feeA * 0.30;
+        if (hasAffiliatedGroup && accA?.referredBy) {
+          const refShareA = commissionPoolA * 0.50; // 15% of fee
+          const groupShareA = commissionPoolA * 0.50; // 15% of fee
+          totalGroupCommission += groupShareA;
+          await dbService.creditReferralEarnings(accA.referredBy, refShareA, this.matchId.toString());
+        } else if (hasAffiliatedGroup) {
+          totalGroupCommission += commissionPoolA; // 30% of fee
+        } else if (accA?.referredBy) {
+          await dbService.creditReferralEarnings(accA.referredBy, commissionPoolA, this.matchId.toString());
+        }
+
+        // Process Player B's fee
+        if (accB) {
+          const commissionPoolB = feeB * 0.30;
+          if (hasAffiliatedGroup && accB?.referredBy) {
+            const refShareB = commissionPoolB * 0.50; // 15% of fee
+            const groupShareB = commissionPoolB * 0.50; // 15% of fee
+            totalGroupCommission += groupShareB;
+            await dbService.creditReferralEarnings(accB.referredBy, refShareB, this.matchId.toString());
+          } else if (hasAffiliatedGroup) {
+            totalGroupCommission += commissionPoolB; // 30% of fee
+          } else if (accB?.referredBy) {
+            await dbService.creditReferralEarnings(accB.referredBy, commissionPoolB, this.matchId.toString());
+          }
+        }
+
+        // Record group match revenue & volume
+        if (this.config.groupChatId) {
+          await dbService.recordGroupMatchRevenue(this.config.groupChatId, wagerNum, totalGroupCommission);
+        }
+      } catch (err) {
+        console.error(`[BaseGameRoom] Error distributing match affiliate commissions:`, err);
+      }
+    })();
 
     // Settle spectator bets
     const winningSide = winnerAddress === this.playerA.walletAddress ? 'A' : 'B';
