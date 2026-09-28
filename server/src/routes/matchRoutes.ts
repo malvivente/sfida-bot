@@ -581,7 +581,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     if (withdrawNum < minWithdraw) {
       return reply.status(400).send({
         error: 'AMOUNT_BELOW_MINIMUM',
-        message: `Il prelievo minimo consentito è di ${minWithdraw.toFixed(2)} GRAM (per evitare lo spreco di fee di rete).`,
+        message: `Il prelievo minimo consentito è di ${minWithdraw.toFixed(2)} GRAM.`,
         minWithdrawGram: minWithdraw,
       });
     }

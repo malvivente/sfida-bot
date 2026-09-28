@@ -47,7 +47,7 @@ const renderSuitIcon = (suit: string) => {
     case '♥':
       return <span className="text-rose-500 font-black">♥</span>;
     case '♦':
-      return <span className="text-amber-500 font-black">♦</span>;
+      return <span className="text-rose-500 font-black">♦</span>;
     case '♣':
       return <span className="text-cyan-400 font-black">♣</span>;
     case '♠':

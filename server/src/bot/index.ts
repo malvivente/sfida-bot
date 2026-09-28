@@ -147,10 +147,21 @@ export function createTelegramBot(token?: string): Bot {
       ? (lang === 'it' ? '⚔️ ENTRA NEL DUELLO' : '⚔️ ENTER DUEL')
       : botT(lang, 'btn_enter_arena');
 
-    const keyboard = new InlineKeyboard()
-      .webApp(buttonLabel, `${webAppUrl}?startapp=${payload || 'lobby'}`)
+    const isPrivateChat = ctx.chat?.type === 'private';
+    const botInfo = await bot.api.getMe().catch(() => ({ username: 'sfida_bot' }));
+    const botUsername = botInfo.username || 'sfida_bot';
+
+    const keyboard = new InlineKeyboard();
+    if (isPrivateChat) {
+      keyboard.webApp(buttonLabel, `${webAppUrl}?startapp=${payload || 'lobby'}`);
+    } else {
+      // In groups/supergroups/channels, web_app buttons fail with 400 BUTTON_TYPE_INVALID
+      // Telegram requires a deep link URL to open the Web App
+      keyboard.url(buttonLabel, `https://t.me/${botUsername}?startapp=${payload || 'lobby'}`);
+    }
+    keyboard
       .row()
-      .url(botT(lang, 'btn_official_channel'), 'https://t.me/toncoin');
+      .url(botT(lang, 'btn_official_channel'), 'https://t.me/sfida');
 
     await ctx.reply(welcomeText, {
       parse_mode: 'HTML',

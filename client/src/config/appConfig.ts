@@ -11,6 +11,6 @@ export const APP_CONFIG = {
   },
 
   // Official Channel & Community links
-  OFFICIAL_CHANNEL_LINK: (import.meta as any).env?.VITE_OFFICIAL_CHANNEL_LINK || 'https://t.me/toncoin',
+  OFFICIAL_CHANNEL_LINK: (import.meta as any).env?.VITE_OFFICIAL_CHANNEL_LINK || 'https://t.me/sfida',
   BOT_USERNAME: (import.meta as any).env?.VITE_BOT_USERNAME || 'sfida_bot',
 };

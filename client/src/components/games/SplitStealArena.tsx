@@ -78,6 +78,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   userSide = 'A',
   hasPlayerB = true,
   onJoinAsPlayer,
+  isWinner,
 }) => {
   const { t } = useI18n();
   const { triggerImpact } = useHaptics();
@@ -93,6 +94,11 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const hasChosenA = gameData?.hasChosenA ?? false;
   const hasChosenB = gameData?.hasChosenB ?? false;
   const outcome = gameData?.outcome;
+  const isUserStealWinner = role === 'player'
+    ? (isWinner !== undefined ? isWinner : ((outcome === 'P1_STEAL' && userSide === 'A') || (outcome === 'P2_STEAL' && userSide === 'B')))
+    : false;
+  const isUserStealLoser = role === 'player' && ((outcome === 'P1_STEAL' || outcome === 'P2_STEAL') && !isUserStealWinner);
+  const stealWinnerName = outcome === 'P1_STEAL' ? playerAName : playerBName;
   const [liveJackpotFallback, setLiveJackpotFallback] = useState<number | null>(null);
 
   React.useEffect(() => {
@@ -413,14 +419,31 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             )}
 
             {(outcome === 'P1_STEAL' || outcome === 'P2_STEAL') && (
-              <div className="w-full flex flex-col items-center">
-                <TrustJackpotWheel
-                  mode="steal"
-                  isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
-                  bonusPerPlayerGram={bonusPerPlayerGram}
-                  wagerGram={wagerTon}
-                />
-              </div>
+              isUserStealLoser ? (
+                <div className="w-full bg-gradient-to-r from-rose-950/40 via-red-900/30 to-rose-950/40 border-2 border-rose-500/70 rounded-2xl p-4 text-center shadow-[0_0_30px_rgba(244,63,94,0.25)] space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mx-auto text-2xl">
+                    🗡️
+                  </div>
+                  <h3 className="text-base font-orbitron font-black text-rose-300 tracking-wider">
+                    {t('split.betrayedTitle')}
+                  </h3>
+                  <p className="text-xs font-chakra text-slate-200">
+                    {t('split.betrayedDesc', { winner: stealWinnerName })}
+                  </p>
+                  <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 font-heading font-black text-xs mt-1">
+                    <span>{t('split.betrayedLoss', { amount: wagerTon })}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full flex flex-col items-center">
+                  <TrustJackpotWheel
+                    mode="steal"
+                    isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
+                    bonusPerPlayerGram={bonusPerPlayerGram}
+                    wagerGram={wagerTon}
+                  />
+                </div>
+              )
             )}
 
             {outcome === 'DOUBLE_STEAL' && (

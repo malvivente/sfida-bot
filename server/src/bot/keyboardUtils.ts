@@ -15,42 +15,34 @@ export function parseButtonEmoji(text: string, overrideEmojiId?: string): Parsed
   let icon_custom_emoji_id: string | undefined = overrideEmojiId;
   let cleanText = text;
 
-  // 1. Check for <tg-emoji emoji-id="...">...</tg-emoji> tag
-  const tagMatch = cleanText.match(/<tg-emoji emoji-id="([^"]+)">([^<]*)<\/tg-emoji>\s*(.*)/s);
-  if (tagMatch) {
-    if (!icon_custom_emoji_id) {
-      icon_custom_emoji_id = tagMatch[1]?.trim();
+  // 1. Replace <tg-emoji emoji-id="...">FALLBACK</tg-emoji> with the fallback emoji
+  cleanText = cleanText.replace(/<tg-emoji emoji-id="([^"]+)">([^<]*)<\/tg-emoji>/gi, (_match, id, fallback) => {
+    if (!icon_custom_emoji_id && id) {
+      icon_custom_emoji_id = id.trim();
     }
-    const rest = tagMatch[3]?.trim();
-    const fallback = tagMatch[2]?.trim();
-    // If there's text after the emoji, use the clean text without the emoji symbol (Telegram will show the custom emoji icon)
-    // If there's no rest text, use fallback
-    cleanText = rest || fallback || '';
-  }
+    return fallback ? fallback.trim() : '';
+  });
 
-  // 2. Check for {{emoji.<name>}} placeholder
-  const placeholderMatch = cleanText.match(/\{\{emoji\.([a-zA-Z0-9_]+)\}\}\s*(.*)/s);
-  if (placeholderMatch) {
-    const key = placeholderMatch[1];
-    const rest = placeholderMatch[2]?.trim();
+  // 2. Replace {{emoji.<name>}} with the fallback emoji from BOT_EMOJIS
+  cleanText = cleanText.replace(/\{\{emoji\.([a-zA-Z0-9_]+)\}\}/gi, (_match, key) => {
     const emojiConfig = BOT_EMOJIS[key];
-
-    if (emojiConfig?.id && emojiConfig.id.trim()) {
-      if (!icon_custom_emoji_id) {
-        icon_custom_emoji_id = emojiConfig.id.trim();
-      }
-      cleanText = rest || emojiConfig.fallback;
-    } else if (emojiConfig?.fallback) {
-      cleanText = `${emojiConfig.fallback} ${rest}`.trim();
+    if (emojiConfig?.id && !icon_custom_emoji_id) {
+      icon_custom_emoji_id = emojiConfig.id.trim();
     }
-  }
+    return emojiConfig?.fallback || '';
+  });
 
-  // 3. Remove any other remaining HTML tags
-  cleanText = cleanText.replace(/<[^>]*>/g, '').trim();
+  // 3. Remove any remaining HTML tags (Telegram buttons do NOT parse HTML)
+  cleanText = cleanText.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+  // Telegram Bot API rejects icon_custom_emoji_id with BUTTON_TYPE_INVALID if the bot
+  // does not have a purchased username from Fragment or Telegram Premium.
+  // By default, keep buttons 100% compliant with standard Unicode emojis in text.
+  const enableCustomEmoji = process.env.ENABLE_CUSTOM_EMOJI_BUTTONS === 'true';
 
   return {
     text: cleanText,
-    icon_custom_emoji_id: icon_custom_emoji_id && icon_custom_emoji_id.trim() ? icon_custom_emoji_id.trim() : undefined,
+    icon_custom_emoji_id: enableCustomEmoji && icon_custom_emoji_id ? icon_custom_emoji_id : undefined,
   };
 }
 

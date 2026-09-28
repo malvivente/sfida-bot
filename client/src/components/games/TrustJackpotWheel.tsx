@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Sparkles, Handshake, CheckCircle2, RotateCcw, FastForward } from 'lucide-react';
+import { Trophy, Sparkles, Handshake, CheckCircle2, FastForward } from 'lucide-react';
 import { GramIcon } from '../GramIcon.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useLanguage } from '../../i18n/index.js';
@@ -316,18 +316,6 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
                 </p>
               </div>
             )}
-
-            <div className="mt-3 pt-2 border-t border-white/10 flex justify-center">
-              <button
-                type="button"
-                onClick={startSpin}
-                disabled={isSpinning}
-                className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/15 hover:border-amber-400/50 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 active:scale-95"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{t('wheel.replaySpin')}</span>
-              </button>
-            </div>
           </motion.div>
         ) : (
           <div className="flex items-center space-x-2 mt-2">
