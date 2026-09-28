@@ -8,6 +8,7 @@ import { DepositModal } from './components/DepositModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { EpicHeader } from './components/EpicHeader.js';
 import { EpicBottomNav, EpicTab } from './components/EpicBottomNav.js';
+import { ActivityView } from './components/ActivityView.js';
 import { ShieldCheck } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
 import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
@@ -160,12 +161,12 @@ export const App: React.FC = () => {
         } catch {}
       }
       setDeepRole('player');
-      setActiveTab('duels');
+      setActiveTab('home');
     } else if (startParam.startsWith('spectate_')) {
       const parts = startParam.split('_');
       setDeepMatchId(parts[1]);
       setDeepRole('spectator');
-      setActiveTab('duels');
+      setActiveTab('home');
     } else if (startParam.startsWith('ref_')) {
       setActiveTab('referrals');
     } else if (startParam.startsWith('lead_') || params.get('tab') === 'leaderboard') {
@@ -223,25 +224,20 @@ export const App: React.FC = () => {
             }}
             onMatchActiveChange={setIsInsideMatch}
             onOpenAffiliates={() => setActiveTab('referrals')}
-            onOpenJackpotModal={() => setActiveTab('duels')}
+            onOpenJackpotModal={() => setShowRulesModal(true)}
             onBalanceUpdated={setUserBalanceGram}
           />
         )}
 
-        {/* Tab 2: DUELS (Focused Open Duels Lobby & Advanced Filters) */}
-        {activeTab === 'duels' && (
-          <Arena
-            showBanners={false}
-            initialMatchId={deepMatchId}
-            initialInviteCode={deepInviteCode}
-            role={deepRole}
-            onClearDeepMatch={() => {
-              setDeepMatchId(undefined);
-              setDeepInviteCode(undefined);
+        {/* Tab 2: ACTIVITY / I MIEI DUELLI */}
+        {activeTab === 'activity' && (
+          <ActivityView
+            onResumeMatch={(matchId) => {
+              setDeepMatchId(matchId);
+              setDeepRole('player');
+              setActiveTab('home');
             }}
-            onMatchActiveChange={setIsInsideMatch}
-            onOpenAffiliates={() => setActiveTab('referrals')}
-            onBalanceUpdated={setUserBalanceGram}
+            onGoToHome={() => setActiveTab('home')}
           />
         )}
 
@@ -259,7 +255,7 @@ export const App: React.FC = () => {
             onResumeDuel={(matchId) => {
               setDeepMatchId(matchId);
               setDeepRole('player');
-              setActiveTab('duels');
+              setActiveTab('home');
             }}
             onOpenLeaderboard={() => {
               setLastTabBeforeLeaderboard('profile');
@@ -282,12 +278,12 @@ export const App: React.FC = () => {
         <EpicBottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
-            if (tab !== 'home' && tab !== 'duels') {
+            if (tab !== 'home') {
               setDeepMatchId(undefined);
               setDeepInviteCode(undefined);
             }
             if (tab === 'leaderboard' && activeTab !== 'leaderboard') {
-              setLastTabBeforeLeaderboard(activeTab === 'duels' ? 'duels' : 'profile');
+              setLastTabBeforeLeaderboard(activeTab === 'profile' ? 'profile' : 'home');
             }
             setActiveTab(tab);
           }}

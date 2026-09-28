@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare } from 'lucide-react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare, ArrowLeft } from 'lucide-react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -13,6 +13,7 @@ import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { EpicBanners } from './EpicBanners.js';
 import { LiveActivityTicker } from './LiveActivityTicker.js';
+import { PlayHubView } from './PlayHubView.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -78,6 +79,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
+  const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp'>('hub');
 
   const effectiveMinWager = selectedGameType === 'split' ? 5.0 : GAME_CONFIG.MIN_WAGER;
   const parsedWager = parseFloat(wagerChoice || '0');
@@ -167,11 +169,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       } catch {}
     }
     if (isPrivate && code) {
-      const text = `⚔️ Ti ho invitato a un duello PRIVATO su ${meta.title} per ${wager} GRAM! Entra con questo link unico:`;
+      const text = t('lobby.sharePrivateText', { title: meta.title, wager });
       const url = `https://t.me/${botUsername}?start=duel_${matchId}_${code}`;
       shareToTelegram(url, text);
     } else {
-      const text = `⚔️ I challenge you to a ${meta.title} duel for ${wager} GRAM! ${meta.tagline}`;
+      const text = t('lobby.sharePublicText', { title: meta.title, wager, tagline: meta.tagline });
       const url = `https://t.me/${botUsername}?start=duel_${matchId}`;
       shareToTelegram(url, text);
     }
@@ -241,26 +243,69 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       return 0;
     });
 
-  return (
-    <div className="w-full max-w-md mx-auto space-y-4 font-sans">
-      {/* Epic Gift-Style Banners & Live Activity Strip */}
-      {showBanners && (
-        <div className="space-y-3">
-          <LiveActivityTicker
-            matches={matches}
-            onSelectGame={(g) => setFilterGameType(g)}
-            onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
-          />
+  if (sectionView === 'play_hub') {
+    return (
+      <PlayHubView
+        onBack={() => setSectionView('hub')}
+        matches={matches}
+        onSelectGame={(g) => {
+          setFilterGameType(g);
+          setSectionView('pvp');
+        }}
+        onCreateMatchForGame={(g) => handleOpenModal(g)}
+      />
+    );
+  }
 
-          <EpicBanners
-            matches={matches}
-            onOpenCreateModal={(g) => handleOpenModal(g)}
-            onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
-            onSelectGame={(g) => setFilterGameType(g)}
-            onOpenAffiliates={onOpenAffiliates}
-            onOpenJackpotModal={onOpenJackpotModal}
-          />
+  return (
+    <div className="w-full max-w-md mx-auto space-y-4 font-sans pb-10">
+      {/* If inside PVP Section, show Back to Hub header */}
+      {sectionView === 'pvp' && (
+        <div className="flex items-center justify-between px-1 mb-2">
+          <button
+            onClick={() => {
+              triggerImpact('light');
+              setSectionView('hub');
+            }}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-heading font-bold text-xs uppercase tracking-wider active:scale-95 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4 text-cyan-400" />
+            <span>{t('epic.back')}</span>
+          </button>
+          <div className="flex items-center space-x-1.5">
+            <Swords className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-heading font-black text-white uppercase tracking-wider">
+              {t('epic.pvpTitle')}
+            </h2>
+          </div>
+          <div className="w-16" />
         </div>
+      )}
+
+      {/* Live Activity Ticker (Real-time and previous victories ticker) */}
+      <LiveActivityTicker
+        matches={matches}
+        onSelectGame={(g) => {
+          setFilterGameType(g);
+          setSectionView('pvp');
+        }}
+      />
+
+      {/* Epic Banners only in Hub mode */}
+      {showBanners && sectionView === 'hub' && (
+        <EpicBanners
+          matches={matches}
+          onOpenCreateModal={(g) => handleOpenModal(g)}
+          onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
+          onSelectGame={(g) => {
+            setFilterGameType(g);
+            setSectionView('pvp');
+          }}
+          onOpenPlayHub={() => setSectionView('play_hub')}
+          onOpenPvpSection={() => setSectionView('pvp')}
+          onOpenAffiliates={onOpenAffiliates}
+          onOpenJackpotModal={onOpenJackpotModal}
+        />
       )}
 
       {/* Active Matches Feed Section Header */}
@@ -307,7 +352,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         </div>
 
         {/* Game Filter Tabs */}
-        <div className="flex items-center space-x-2 overflow-x-auto py-3 -my-3 px-1.5 -mx-1.5 scrollbar-none">
+        <div className="flex items-center space-x-2 overflow-x-auto py-2 px-1 -mx-1 scrollbar-none">
           {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split'].map((gKey) => {
             const isSelected = filterGameType === gKey;
             const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
@@ -318,10 +363,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   triggerImpact('light');
                   setFilterGameType(gKey);
                 }}
-                className={`px-3 py-1 rounded-xl text-[11px] font-chakra font-bold uppercase transition-all whitespace-nowrap border shrink-0 ${
+                className={`px-3.5 py-1.5 rounded-2xl text-xs font-heading font-extrabold uppercase transition-all whitespace-nowrap border shrink-0 active:scale-95 ${
                   isSelected
-                    ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.45)] drop-shadow-[0_0_4px_rgba(0,240,255,0.4)]'
-                    : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-purple-500/50 shadow-epic-purple'
+                    : 'bg-white/5 text-slate-300 border-white/10 hover:border-white/25'
                 }`}
               >
                 {label}
@@ -334,13 +379,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('lobby.searchPlaceholder')}
-                className="w-full bg-cyber-card/90 border border-cyber-border rounded-xl pl-9 pr-8 py-2 text-xs font-chakra text-white placeholder-slate-500 focus:outline-none focus:border-cyber-cyan/70 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-9 pr-8 py-2 text-xs font-sans text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all font-medium"
               />
               {searchQuery && (
                 <button
@@ -358,26 +403,26 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 triggerImpact('light');
                 setShowFiltersPanel(!showFiltersPanel);
               }}
-              className={`px-3 py-2 rounded-xl text-xs font-chakra font-bold flex items-center space-x-1.5 border transition-all active:scale-95 shrink-0 ${
+              className={`px-3 py-2 rounded-2xl text-xs font-heading font-extrabold flex items-center space-x-1.5 border transition-all active:scale-95 shrink-0 ${
                 showFiltersPanel || hasActiveFilters
-                  ? 'bg-cyber-cyan/15 border-cyber-cyan text-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
-                  : 'bg-cyber-card border-cyber-border text-slate-400 hover:text-white hover:border-slate-600'
+                  ? 'bg-purple-600/20 border-purple-500/50 text-purple-300 shadow-epic-purple'
+                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>{t('lobby.filterBtn')}</span>
               {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse ml-0.5" />
+                <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse ml-0.5" />
               )}
             </button>
           </div>
 
           {/* Expandable Filter Drawer */}
           {showFiltersPanel && (
-            <div className="bg-cyber-card/95 border border-cyber-cyan/30 rounded-2xl p-3.5 space-y-3 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="bg-[#121520]/95 border border-white/15 rounded-3xl p-4 space-y-3 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-orbitron font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
-                  <SlidersHorizontal className="w-3 h-3 text-cyber-cyan" />
+                <span className="text-xs font-heading font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-purple-400" />
                   <span>{t('lobby.filterTitle')}</span>
                 </span>
                 {hasActiveFilters && (
@@ -386,7 +431,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       triggerImpact('light');
                       resetFilters();
                     }}
-                    className="text-[11px] font-chakra text-cyber-cyan hover:underline font-bold"
+                    className="text-[11px] font-heading font-bold text-purple-300 hover:underline"
                   >
                     {t('lobby.resetFilters')}
                   </button>
@@ -395,7 +440,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {/* Access Filter (Public vs Private) */}
               <div>
-                <span className="text-[10px] font-chakra text-slate-400 uppercase tracking-wider block mb-1.5">
+                <span className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
                   {t('lobby.roomType')}
                 </span>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -409,10 +454,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           triggerImpact('light');
                           setFilterVisibility(mode);
                         }}
-                        className={`py-1.5 px-2 rounded-xl text-[11px] font-chakra font-bold border transition-all text-center flex items-center justify-center space-x-1 ${
+                        className={`py-1.5 px-2 rounded-xl text-xs font-heading font-bold border transition-all text-center flex items-center justify-center space-x-1 active:scale-95 ${
                           active
-                            ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
-                            : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-epic-purple border-purple-500/40'
+                            : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
                         }`}
                       >
                         {mode === 'PRIVATE' && <Lock className="w-2.5 h-2.5" />}
@@ -426,7 +471,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {/* Bet Stake Tier */}
               <div>
-                <span className="text-[10px] font-chakra text-slate-400 uppercase tracking-wider block mb-1.5">
+                <span className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
                   {t('lobby.wagerLabel')}
                 </span>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -447,10 +492,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           triggerImpact('light');
                           setFilterBetTier(tier);
                         }}
-                        className={`py-1.5 px-1.5 rounded-xl text-[10px] font-chakra font-bold border transition-all text-center truncate ${
+                        className={`py-1.5 px-1.5 rounded-xl text-[10px] font-heading font-extrabold border transition-all text-center truncate active:scale-95 ${
                           active
-                            ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
-                            : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-epic-purple border-purple-500/40'
+                            : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
                         }`}
                       >
                         {label}
@@ -461,26 +506,26 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               </div>
 
               {/* Status & Sorting Row */}
-              <div className="pt-1 border-t border-cyber-border/60 flex items-center justify-between gap-2 flex-wrap">
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap">
                 {/* Open Rooms Only Toggle */}
                 <button
                   onClick={() => {
                     triggerImpact('light');
                     setFilterOpenOnly(!filterOpenOnly);
                   }}
-                  className={`py-1 px-2.5 rounded-xl text-[11px] font-chakra font-bold border transition-all flex items-center space-x-1.5 ${
+                  className={`py-1 px-2.5 rounded-xl text-xs font-heading font-bold border transition-all flex items-center space-x-1.5 active:scale-95 ${
                     filterOpenOnly
-                      ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/50'
-                      : 'bg-black/40 text-slate-400 border-cyber-border hover:border-slate-600'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                      : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${filterOpenOnly ? 'bg-cyber-green animate-pulse' : 'bg-slate-500'}`} />
+                  <span className={`w-2 h-2 rounded-full ${filterOpenOnly ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
                   <span>{t('lobby.filterOpenOnly')}</span>
                 </button>
 
                 {/* Sort selector */}
                 <div className="flex items-center space-x-1">
-                  <span className="text-[10px] font-chakra text-slate-400">{t('lobby.sortLabel')}</span>
+                  <span className="text-[10px] text-slate-400 font-medium">{t('lobby.sortLabel')}</span>
                   {(['newest', 'bet_desc', 'bet_asc'] as const).map((sort) => {
                     const active = sortBy === sort;
                     const label =
@@ -496,10 +541,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           triggerImpact('light');
                           setSortBy(sort);
                         }}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-chakra font-bold border transition-all ${
+                        className={`px-2 py-1 rounded-xl text-[10px] font-heading font-bold border transition-all active:scale-95 ${
                           active
-                            ? 'bg-cyber-cyan/20 text-cyber-cyan border-cyber-cyan/50'
-                            : 'bg-black/30 text-slate-400 border-cyber-border hover:border-slate-600'
+                            ? 'bg-purple-600/20 text-purple-300 border-purple-500/50'
+                            : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
                         }`}
                       >
                         {label}
@@ -513,12 +558,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
           {/* Active Filter Chips */}
           {hasActiveFilters && !showFiltersPanel && (
-            <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-[10px] font-chakra">
-              <span className="text-slate-500 shrink-0">Filtri:</span>
+            <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-[10px] font-sans">
+              <span className="text-slate-500 shrink-0">{t('lobby.filtersLabel')}</span>
               {filterVisibility !== 'ALL' && (
                 <button
                   onClick={() => setFilterVisibility('ALL')}
-                  className="px-2 py-0.5 rounded-full bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40 shrink-0 flex items-center space-x-1"
+                  className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 shrink-0 flex items-center space-x-1"
                 >
                   <span>{filterVisibility === 'PUBLIC' ? t('lobby.filterPublic') : t('lobby.filterPrivate')}</span>
                   <X className="w-2.5 h-2.5" />
@@ -527,7 +572,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               {filterBetTier !== 'ALL' && (
                 <button
                   onClick={() => setFilterBetTier('ALL')}
-                  className="px-2 py-0.5 rounded-full bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40 shrink-0 flex items-center space-x-1"
+                  className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0 flex items-center space-x-1"
                 >
                   <span>
                     {filterBetTier === 'MICRO'
@@ -542,7 +587,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               {filterOpenOnly && (
                 <button
                   onClick={() => setFilterOpenOnly(false)}
-                  className="px-2 py-0.5 rounded-full bg-cyber-green/15 text-cyber-green border border-cyber-green/40 shrink-0 flex items-center space-x-1"
+                  className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0 flex items-center space-x-1"
                 >
                   <span>{t('lobby.filterOpenOnly')}</span>
                   <X className="w-2.5 h-2.5" />
@@ -551,7 +596,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="px-2 py-0.5 rounded-full bg-cyber-pink/15 text-cyber-pink border border-cyber-pink/40 shrink-0 flex items-center space-x-1"
+                  className="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 shrink-0 flex items-center space-x-1"
                 >
                   <span>"{searchQuery}"</span>
                   <X className="w-2.5 h-2.5" />
@@ -577,31 +622,31 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         </div>
 
         {filteredMatches.length === 0 ? (
-          <div className="text-center py-10 bg-cyber-card border border-cyber-border rounded-2xl p-6">
+          <div className="text-center py-10 bg-[#141724]/90 border border-white/10 rounded-3xl p-6 shadow-xl">
             {hasActiveFilters ? (
               <>
-                <Search className="w-10 h-10 text-cyber-cyan/40 mx-auto mb-3" />
-                <p className="text-sm text-slate-200 font-bold font-orbitron">{t('lobby.filteredNoResults')}</p>
+                <Search className="w-10 h-10 text-purple-400/60 mx-auto mb-3" />
+                <p className="text-sm text-slate-200 font-heading font-black">{t('lobby.filteredNoResults')}</p>
                 <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
                   {t('lobby.filteredNoResultsDesc')}
                 </p>
                 <button
                   onClick={resetFilters}
-                  className="mt-4 px-4 py-2 bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40 rounded-xl text-xs font-chakra font-bold uppercase tracking-wider hover:bg-cyber-cyan/25 active:scale-95 transition-all"
+                  className="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-200 border border-white/15 rounded-xl text-xs font-heading font-bold uppercase tracking-wider active:scale-95 transition-all"
                 >
                   {t('lobby.resetFilters')}
                 </button>
               </>
             ) : (
               <>
-                <Swords className="w-12 h-12 text-cyber-cyan/40 mx-auto mb-3 animate-pulse" />
-                <p className="text-sm text-slate-200 font-bold font-orbitron">{t('lobby.noDuelsTitle')}</p>
+                <Swords className="w-12 h-12 text-purple-400/60 mx-auto mb-3 animate-pulse" />
+                <p className="text-sm text-slate-200 font-heading font-black">{t('lobby.noDuelsTitle')}</p>
                 <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
                   {t('lobby.noDuelsDesc')}
                 </p>
                 <button
                   onClick={() => handleOpenModal()}
-                  className="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-bold rounded-xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all inline-flex items-center space-x-1.5"
+                  className="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-bold rounded-2xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all inline-flex items-center space-x-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   <span>{t('lobby.createDuelBtn')}</span>
@@ -646,44 +691,44 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               return (
                 <div
                   key={m.matchId}
-                  className="bg-cyber-card border border-cyber-border hover:border-cyber-cyan/50 rounded-2xl p-4 transition-all shadow-lg"
+                  className="bg-gradient-to-b from-[#181b29] to-[#121420] border border-white/10 hover:border-purple-500/40 rounded-3xl p-4 transition-all shadow-xl hover:shadow-purple-900/10"
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                        <span className="text-xs font-orbitron font-bold text-white">
+                        <span className="text-xs font-heading font-extrabold text-white tracking-wide">
                           MATCH #{m.matchId}
                         </span>
                         <span
-                          className={`text-[10px] font-chakra px-2 py-0.5 rounded-full border ${
+                          className={`text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border ${
                             m.state === 'LOBBY'
-                              ? 'bg-cyber-amber/15 text-cyber-amber border-cyber-amber/30'
-                              : 'bg-cyber-green/15 text-cyber-green border-cyber-green/30'
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                           }`}
                         >
                           {m.state}
                         </span>
                         <span
-                          className={`text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border ${gameMeta.borderColor.split(' ')[0]} ${gameMeta.accentColor} bg-black/60`}
+                          className={`text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border ${gameMeta.borderColor.split(' ')[0]} ${gameMeta.accentColor} bg-black/60`}
                         >
                           {gameMeta.title}
                         </span>
                         {m.isPrivate && (
-                          <span className="text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border border-purple-500/50 bg-purple-500/15 text-purple-300 flex items-center space-x-1">
+                          <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/15 text-purple-300 flex items-center space-x-1">
                             <Lock className="w-2.5 h-2.5" />
                             <span>{t('lobby.privateBadge')}</span>
                           </span>
                         )}
                         {m.groupChatId && (
-                          <span className="text-[10px] font-chakra font-bold px-2 py-0.5 rounded-full border border-cyber-cyan/50 bg-cyber-cyan/15 text-cyber-cyan flex items-center space-x-1">
+                          <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/15 text-cyan-300 flex items-center space-x-1">
                             <MessageSquare className="w-2.5 h-2.5" />
                             <span>COMMUNITY</span>
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-400 font-chakra mt-1 space-y-1">
+                      <div className="text-xs text-slate-400 font-sans mt-1.5 space-y-1">
                         <div className="flex items-center space-x-1.5 flex-wrap">
-                          <span className="text-[11px] text-slate-400">Created by</span>
+                          <span className="text-[11px] text-slate-400">{t('lobby.createdByName')}</span>
                           <span className="inline-flex items-center space-x-1.5 text-slate-200 font-semibold">
                             <UserAvatar
                               name={m.playerA.name}
@@ -694,15 +739,15 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             <span>{m.playerA.name}</span>
                           </span>
                           {isCreator && (
-                            <span className="text-[10px] text-cyber-cyan font-bold font-chakra bg-cyber-cyan/10 border border-cyber-cyan/30 px-1.5 py-0.2 rounded-md">
-                              (YOUR DUEL)
+                            <span className="text-[10px] text-purple-300 font-bold font-sans bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded-md">
+                              {t('lobby.yourDuelTag')}
                             </span>
                           )}
                         </div>
                         {m.playerB && (
                           <div className="flex items-center space-x-1.5 text-[11px] text-slate-400">
                             <span>vs</span>
-                            <span className="inline-flex items-center space-x-1.5 text-cyber-pink font-semibold">
+                            <span className="inline-flex items-center space-x-1.5 text-purple-300 font-semibold">
                               <UserAvatar
                                 name={m.playerB.name}
                                 photoUrl={m.playerB.photoUrl}
@@ -717,20 +762,20 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[11px] text-slate-400 font-chakra block">{t('lobby.poolLabel')}</span>
-                      <span className="text-sm font-chakra font-extrabold text-cyber-cyan flex items-center justify-end space-x-1">
+                      <span className="text-[11px] text-slate-400 font-sans block">{t('lobby.poolLabel')}</span>
+                      <span className="text-sm font-heading font-black text-amber-300 flex items-center justify-end space-x-1">
                         <span>{totalPotGram}</span>
-                        <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
+                        <GramIcon className="w-3.5 h-3.5 text-amber-400" />
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between bg-cyber-bg/60 border border-cyber-border rounded-xl p-2.5 mb-3 text-xs font-chakra">
+                  <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-2xl p-2.5 mb-3 text-xs font-sans">
                     <span className="text-slate-400">{t('lobby.wagerLabel')}:</span>
                     <span className="text-white font-bold flex items-center space-x-1">
                       <span>{wagerGram}</span>
                       <GramIcon className="w-3 h-3 text-white" />
-                      <span className="text-slate-400 text-[10px]">each</span>
+                      <span className="text-slate-400 text-[10px]">{t('lobby.eachLabel')}</span>
                     </span>
                   </div>
 
@@ -739,7 +784,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     {isAlreadyPlayer ? (
                       <button
                         onClick={() => onJoinMatch(m)}
-                        className="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-heading font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-md active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                        className="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider hover:brightness-110 shadow-md active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                       >
                         <Swords className="w-3.5 h-3.5" />
                         <span>{t('profile.resume')}</span>
@@ -748,7 +793,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       m.isPrivate && !effectiveInviteCode ? (
                         <button
                           onClick={() => onSpectateMatch(m.matchId)}
-                          className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                          className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                         >
                           <Eye className="w-3.5 h-3.5 text-purple-400" />
                           <span>{t('lobby.spectatePrivate')}</span>
@@ -757,7 +802,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <>
                           <button
                             onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
-                            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center justify-center space-x-1"
                           >
                             <Swords className="w-3.5 h-3.5" />
                             <span className="flex items-center space-x-1">
@@ -769,7 +814,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           <button
                             onClick={() => onSpectateMatch(m.matchId)}
                             title={t('lobby.spectateBtn')}
-                            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 font-heading font-bold rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
                           >
                             <Eye className="w-3.5 h-3.5 text-cyan-400" />
                             <span>{t('lobby.spectateBtn')}</span>
@@ -779,7 +824,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     ) : (
                       <button
                         onClick={() => onSpectateMatch(m.matchId)}
-                        className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-200 font-heading font-bold rounded-xl text-xs uppercase tracking-wider hover:border-white/20 active:scale-95 transition-all flex items-center justify-center space-x-1"
+                        className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-white/20 active:scale-95 transition-all flex items-center justify-center space-x-1"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyan-400" />
                         <span>{t('lobby.spectateBtn')}</span>
@@ -789,7 +834,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     <button
                       onClick={() => handleShare(m.matchId, wagerGram, m.gameType, m.isPrivate, effectiveInviteCode)}
                       title="Share to Telegram"
-                      className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl transition-all active:scale-95 shrink-0"
+                      className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-2xl transition-all active:scale-95 shrink-0"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
@@ -802,7 +847,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           onCancelMatch(m);
                         }}
                         title="Cancel duel and refund balance"
-                        className="p-2.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 hover:text-rose-300 rounded-xl transition-all active:scale-95 shrink-0"
+                        className="p-2.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 hover:text-rose-300 rounded-2xl transition-all active:scale-95 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -823,32 +868,32 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         >
           <div
             style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            className="bg-[#181b29] border border-rose-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
           >
-            <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
-              <AlertCircle className="w-4 h-4 text-cyber-pink" />
+            <h3 className="text-sm font-heading font-extrabold text-white flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-rose-400" />
               <span>{t('lobby.insufficientModalTitle')}</span>
             </h3>
 
-            <p className="text-xs text-slate-300 font-chakra">
+            <p className="text-xs text-slate-300 font-sans leading-relaxed">
               {t('lobby.insufficientJoinDesc', {
                 required: insufficientJoinMatch.required,
                 current: currentBal.toFixed(2),
               })}
             </p>
 
-            <div className="p-3 bg-cyber-bg/70 border border-cyber-border rounded-xl flex items-center justify-between text-xs font-chakra">
+            <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between text-xs font-sans">
               <span className="text-slate-400">{t('lobby.missingDeposit')}</span>
-              <span className="font-bold text-cyber-pink flex items-center space-x-1">
+              <span className="font-bold text-rose-400 flex items-center space-x-1">
                 <span>{insufficientJoinMatch.missing}</span>
-                <GramIcon className="w-3.5 h-3.5 text-cyber-pink" />
+                <GramIcon className="w-3.5 h-3.5 text-rose-400" />
               </span>
             </div>
 
             <div className="flex space-x-2">
               <button
                 onClick={() => setInsufficientJoinMatch(null)}
-                className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border rounded-xl text-xs font-orbitron font-semibold text-slate-400 hover:text-white"
+                className="flex-1 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-heading font-bold text-slate-400 hover:text-white"
               >
                 {t('lobby.cancelBtn')}
               </button>
@@ -858,7 +903,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   setInsufficientJoinMatch(null);
                   onOpenDeposit?.(missing);
                 }}
-                className="flex-1 py-2.5 bg-cyber-pink text-white font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-pink hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
+                className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
               >
                 <ArrowDownLeft className="w-4 h-4" />
                 <span>{t('lobby.depositGram')}</span>
@@ -876,16 +921,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         >
           <div
             style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-cyber-card border border-cyber-border rounded-2xl max-w-sm w-full shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            className="bg-[#161826] border border-white/10 rounded-3xl max-w-sm w-full shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           >
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 pb-3 border-b border-cyber-border/60 flex items-start justify-between shrink-0 bg-cyber-bg/40">
+            <div className="p-4 sm:p-5 pb-3 border-b border-white/10 flex items-start justify-between shrink-0 bg-white/[0.02]">
               <div>
-                <h3 className="text-base font-orbitron font-bold text-white flex items-center space-x-2">
-                  <Flame className="w-5 h-5 text-cyber-cyan" />
+                <h3 className="text-base font-heading font-extrabold text-white flex items-center space-x-2">
+                  <Flame className="w-5 h-5 text-amber-400" />
                   <span>{t('lobby.createModalTitle')}</span>
                 </h3>
-                <p className="text-xs text-slate-400 font-chakra mt-1">
+                <p className="text-xs text-slate-400 font-sans mt-1">
                   {t('lobby.createModalDesc')}
                 </p>
               </div>
@@ -895,7 +940,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   triggerImpact('light');
                   setShowCreateModal(false);
                 }}
-                className="p-1.5 rounded-lg bg-cyber-border/40 hover:bg-cyber-border text-slate-400 hover:text-white transition-all ml-2 shrink-0"
+                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all ml-2 shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -905,7 +950,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
             <div className="p-4 sm:p-5 pt-3 overflow-y-auto custom-scrollbar flex-1 space-y-3">
               {/* Game Mode Selection */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
+                <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
                   {t('lobby.gameMode')}
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -923,12 +968,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             setWagerChoice('5');
                           }
                         }}
-                        className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
                           isSplit ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
                         } ${
                           isSelected
-                            ? `bg-cyber-bg border-2 ${game.borderColor.split(' ')[0]} shadow-[0_0_12px_rgba(0,240,255,0.2)]`
-                            : 'bg-black/50 border-cyber-border hover:border-slate-600 opacity-60'
+                            ? `bg-purple-950/60 border-2 border-purple-500 shadow-epic-purple`
+                            : 'bg-white/[0.03] border-white/10 hover:border-white/20 opacity-70'
                         }`}
                       >
                         {isSplit ? (
@@ -936,30 +981,30 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             {/* Left: Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-1.5 mb-1">
-                                <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                                <span className={`text-[8px] font-heading font-extrabold px-1.5 py-0.5 rounded-md bg-black/60 ${game.accentColor}`}>
                                   {game.badge}
                                 </span>
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />}
                               </div>
-                              <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                              <div className={`text-[11px] font-heading font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
                                 {game.title}
                               </div>
-                              <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
+                              <div className="text-[9px] font-sans text-slate-400 mt-0.5 truncate">
                                 {game.tagline}
                               </div>
                             </div>
 
                             {/* Right: Adapted Trust Jackpot Mini-Card */}
-                            <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
-                              <div className="w-7 h-7 rounded-lg bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
+                            <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                              <div className="w-7 h-7 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
                                 <Trophy className="w-3.5 h-3.5 text-amber-300" />
                                 <Sparkles className="w-2 h-2 text-amber-300 absolute -top-0.5 -right-0.5 animate-pulse" />
                               </div>
                               <div className="text-left">
-                                <div className="text-[8px] font-orbitron font-extrabold text-amber-300 tracking-wider">
+                                <div className="text-[8px] font-heading font-extrabold text-amber-300 tracking-wider">
                                   TRUST JACKPOT
                                 </div>
-                                <div className="text-[10px] font-chakra font-bold text-cyber-green flex items-center space-x-1">
+                                <div className="text-[10px] font-sans font-bold text-emerald-400 flex items-center space-x-1">
                                   <span>+25% BONUS</span>
                                 </div>
                               </div>
@@ -968,15 +1013,15 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         ) : (
                           <>
                             <div className="flex items-center justify-between mb-1">
-                              <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/70 font-bold ${game.accentColor}`}>
+                              <span className={`text-[8px] font-heading font-extrabold px-1.5 py-0.5 rounded-md bg-black/60 ${game.accentColor}`}>
                                 {game.badge}
                               </span>
-                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyber-cyan animate-pulse" />}
+                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />}
                             </div>
-                            <div className={`text-[11px] font-orbitron font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                            <div className={`text-[11px] font-heading font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
                               {game.title}
                             </div>
-                            <div className="text-[9px] font-rajdhani text-slate-400 mt-0.5 truncate">
+                            <div className="text-[9px] font-sans text-slate-400 mt-0.5 truncate">
                               {game.tagline}
                             </div>
                           </>
@@ -989,7 +1034,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {/* Room Access Selection: Public vs Private */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-chakra text-slate-400 uppercase tracking-wider block">
+                <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
                   {t('lobby.roomType')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -999,17 +1044,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       triggerImpact('light');
                       setIsPrivateRoom(false);
                     }}
-                    className={`p-2 rounded-xl border text-left transition-all ${
+                    className={`p-2.5 rounded-2xl border text-left transition-all ${
                       !isPrivateRoom
-                        ? 'bg-cyber-cyan/15 border-cyber-cyan text-white shadow-[0_0_10px_rgba(0,240,255,0.15)]'
-                        : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
+                        ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-lg'
+                        : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center space-x-1.5 mb-0.5">
-                      <Globe className="w-3.5 h-3.5 text-cyber-cyan" />
-                      <span className="text-xs font-orbitron font-bold text-white">{t('lobby.public')}</span>
+                      <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-xs font-heading font-bold text-white">{t('lobby.public')}</span>
                     </div>
-                    <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
+                    <p className="text-[9px] font-sans text-slate-400 leading-tight">
                       {t('lobby.publicDesc')}
                     </p>
                   </button>
@@ -1020,23 +1065,23 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       triggerImpact('light');
                       setIsPrivateRoom(true);
                     }}
-                    className={`p-2 rounded-xl border text-left transition-all ${
+                    className={`p-2.5 rounded-2xl border text-left transition-all ${
                       isPrivateRoom
-                        ? 'bg-purple-500/20 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.2)]'
-                        : 'bg-black/40 border-cyber-border text-slate-400 hover:border-slate-600'
+                        ? 'bg-purple-500/20 border-purple-400 text-white shadow-epic-purple'
+                        : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center space-x-1.5 mb-0.5">
                       <Lock className="w-3.5 h-3.5 text-purple-400" />
-                      <span className="text-xs font-orbitron font-bold text-white">{t('lobby.private')}</span>
+                      <span className="text-xs font-heading font-bold text-white">{t('lobby.private')}</span>
                     </div>
-                    <p className="text-[9px] font-rajdhani text-slate-400 leading-tight">
+                    <p className="text-[9px] font-sans text-slate-400 leading-tight">
                       {t('lobby.privateDesc')}
                     </p>
                   </button>
                 </div>
                 {selectedGameType === 'split' && isPrivateRoom && (
-                  <div className="mt-2 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-2.5 py-1.5 font-chakra flex items-center space-x-1.5">
+                  <div className="mt-2 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-2.5 py-1.5 font-sans flex items-center space-x-1.5">
                     <span>ℹ️</span>
                     <span>{t('lobby.splitPrivateJackpotNotice')}</span>
                   </div>
@@ -1045,7 +1090,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {/* Error Message Display */}
               {createError && (
-                <div className="bg-cyber-pink/15 border border-cyber-pink/50 text-cyber-pink rounded-xl p-3 text-xs font-chakra flex items-start space-x-2">
+                <div className="bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-2xl p-3 text-xs font-sans flex items-start space-x-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <div className="flex-1 text-[11px] leading-relaxed">
                     <span className="font-bold block text-white mb-0.5">{t('lobby.creationError')}</span>
@@ -1055,7 +1100,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               )}
 
               <div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra mb-1.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans mb-1.5">
                   <span>{t('lobby.presetAmount')}</span>
                   <span className="flex items-center space-x-1">
                     <span>{t('lobby.maxWagerLabel', { max: GAME_CONFIG.MAX_WAGER })}</span>
@@ -1075,48 +1120,48 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         triggerImpact('light');
                         setWagerChoice(amt);
                       }}
-                      className={`py-2 rounded-xl font-chakra text-xs font-bold border transition-all flex items-center justify-center space-x-0.5 ${
+                      className={`py-2 rounded-2xl font-heading text-xs font-bold border transition-all flex items-center justify-center space-x-0.5 active:scale-95 ${
                         wagerChoice === amt
-                          ? 'bg-cyber-cyan text-cyber-bg border-cyber-cyan shadow-neon-cyan'
-                          : 'bg-cyber-bg border-cyber-border text-slate-300 hover:border-cyber-cyan/50'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-500/50 shadow-epic-purple'
+                          : 'bg-white/[0.04] border-white/10 text-slate-300 hover:border-white/20'
                       }`}
                     >
                       <span>{amt}</span>
-                      <GramIcon className={`w-3 h-3 ${wagerChoice === amt ? 'text-cyber-bg' : 'text-slate-300'}`} />
+                      <GramIcon className={`w-3 h-3 ${wagerChoice === amt ? 'text-white' : 'text-slate-300'}`} />
                     </button>
                   ))}
                 </div>
 
                 {/* Custom Input */}
-                <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5">
-                  <span className="text-xs text-slate-400 font-chakra">{t('lobby.customStake')}</span>
+                <div className="flex items-center space-x-2 bg-black/40 border border-white/10 rounded-2xl px-3.5 py-2">
+                  <span className="text-xs text-slate-400 font-sans">{t('lobby.customStake')}</span>
                   <input
                     type="text"
                     inputMode="decimal"
                     value={wagerChoice}
                     onChange={handleCustomInput}
                     placeholder={`${effectiveMinWager} - ${GAME_CONFIG.MAX_WAGER}`}
-                    className="flex-1 bg-transparent text-sm font-chakra font-bold text-white text-right focus:outline-none"
+                    className="flex-1 bg-transparent text-sm font-heading font-bold text-white text-right focus:outline-none"
                   />
-                  <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
+                  <GramIcon className="w-3.5 h-3.5 text-purple-400" />
                 </div>
 
                 {isBelowMin && (
-                  <p className="text-[11px] text-cyber-pink font-chakra mt-1.5">
+                  <p className="text-[11px] text-rose-400 font-sans mt-1.5">
                     {selectedGameType === 'split'
-                      ? 'La puntata minima per Split or Steal è di 5.00 GRAM.'
+                      ? t('lobby.splitMinWagerWarn')
                       : t('lobby.minWagerWarn')}
                   </p>
                 )}
                 {isOverMax && (
-                  <p className="text-[11px] text-cyber-pink font-chakra mt-1.5">
+                  <p className="text-[11px] text-rose-400 font-sans mt-1.5">
                     {t('lobby.maxWagerWarn', { max: GAME_CONFIG.MAX_WAGER })}
                   </p>
                 )}
               </div>
 
               {/* Stake Breakdown */}
-              <div className="bg-cyber-bg/70 border border-cyber-border rounded-xl p-3 text-xs font-chakra text-slate-300 space-y-1.5">
+              <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3 text-xs font-sans text-slate-300 space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span>{t('lobby.yourWager')}</span>
                   <span className="text-white font-bold flex items-center space-x-1">
@@ -1126,28 +1171,28 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span>{t('lobby.creationFee')}</span>
-                  <span className="text-cyber-amber flex items-center space-x-1">
+                  <span className="text-amber-400 flex items-center space-x-1">
                     <span>+{creationFeeGram.toFixed(2)}</span>
-                    <GramIcon className="w-3 h-3 text-cyber-amber" />
+                    <GramIcon className="w-3 h-3 text-amber-400" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>{t('lobby.winnerTakes')}</span>
-                  <span className="text-cyber-green font-bold flex items-center space-x-1">
+                  <span className="text-emerald-400 font-bold flex items-center space-x-1">
                     <span>+{netWinnerPayout}</span>
-                    <GramIcon className="w-3 h-3 text-cyber-green" />
+                    <GramIcon className="w-3 h-3 text-emerald-400" />
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-t border-cyber-border pt-1 font-bold text-white">
+                <div className="flex justify-between items-center border-t border-white/10 pt-1 font-bold text-white">
                   <span>{t('lobby.totalNeeded')}</span>
-                  <span className="text-cyber-cyan flex items-center space-x-1">
+                  <span className="text-purple-300 flex items-center space-x-1">
                     <span>{totalRequired}</span>
-                    <GramIcon className="w-3.5 h-3.5 text-cyber-cyan" />
+                    <GramIcon className="w-3.5 h-3.5 text-purple-400" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-slate-400">
                   <span>{t('lobby.availableBalance')}</span>
-                  <span className={isInsufficient ? 'text-cyber-pink font-bold' : 'text-cyber-green font-bold'}>
+                  <span className={isInsufficient ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
                     {currentBal.toFixed(2)} GRAM
                   </span>
                 </div>
@@ -1155,7 +1200,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {/* Insufficient Balance Notice */}
               {isInsufficient && (
-                <div className="p-2.5 rounded-xl bg-cyber-pink/15 border border-cyber-pink/40 text-xs font-chakra text-cyber-pink flex items-center space-x-2">
+                <div className="p-2.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-xs font-sans text-rose-300 flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{t('lobby.insufficientShort', { total: totalRequired, missing: missingAmount })}</span>
                 </div>
@@ -1163,14 +1208,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
             </div>
 
             {/* Modal Sticky Footer Action Buttons */}
-            <div className="p-4 sm:p-5 pt-3 border-t border-cyber-border/60 bg-cyber-card shrink-0 flex space-x-2">
+            <div className="p-4 sm:p-5 pt-3 border-t border-white/10 bg-[#161826] shrink-0 flex space-x-2">
               <button
                 type="button"
                 onClick={() => {
                   triggerImpact('light');
                   setShowCreateModal(false);
                 }}
-                className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border rounded-xl text-xs font-orbitron font-semibold text-slate-400 hover:text-white"
+                className="flex-1 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-heading font-bold text-slate-400 hover:text-white"
               >
                 {t('lobby.cancelBtn')}
               </button>
@@ -1183,7 +1228,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     setShowCreateModal(false);
                     onOpenDeposit?.(missingAmount);
                   }}
-                  className="flex-1 py-2.5 bg-cyber-pink text-white font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-pink hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
                 >
                   <ArrowDownLeft className="w-4 h-4" />
                   <span>{t('lobby.depositMissingBtn', { missing: missingAmount })}</span>
@@ -1193,10 +1238,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   type="button"
                   onClick={handleCreate}
                   disabled={!wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting}
-                  className={`flex-1 py-2.5 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${
+                  className={`flex-1 py-2.5 font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${
                     !wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting
-                      ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
-                      : 'bg-cyber-cyan text-cyber-bg shadow-neon-cyan active:scale-95'
+                      ? 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-epic-purple active:scale-95'
                   }`}
                 >
                   {isSubmitting ? (

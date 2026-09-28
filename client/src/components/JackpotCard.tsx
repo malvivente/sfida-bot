@@ -73,18 +73,18 @@ export const JackpotCard: React.FC<JackpotCardProps> = ({
 
       <div className="flex flex-col justify-center text-left leading-none min-w-0">
         <div className="flex items-center space-x-1 min-w-0">
-          <span className="text-[8px] font-orbitron font-extrabold tracking-widest text-amber-300 uppercase truncate">
+          <span className="text-[8px] font-heading font-extrabold tracking-widest text-amber-300 uppercase truncate">
             {label}
           </span>
           <Sparkles className="w-2.5 h-2.5 text-amber-300 shrink-0 animate-pulse" />
         </div>
         <div className="flex items-center space-x-1 mt-0.5">
-          <div className="text-[11px] font-orbitron font-black text-white tracking-wide">
+          <div className="text-[11px] font-heading font-black text-white tracking-wide">
             <span>{displayAmount}</span>{' '}
-            <span className="text-[9px] font-chakra text-amber-300 font-bold">{currency}</span>
+            <span className="text-[9px] font-heading text-amber-300 font-bold">{currency}</span>
           </div>
           {!isActive && (
-            <span className="text-[7.5px] font-chakra font-bold text-amber-400/90 uppercase tracking-tighter bg-amber-500/20 px-1 py-0.2 rounded border border-amber-400/40">
+            <span className="text-[7.5px] font-sans font-bold text-amber-400/90 uppercase tracking-tighter bg-amber-500/20 px-1 py-0.5 rounded border border-amber-400/40">
               {t('split.chargingTag')}
             </span>
           )}

@@ -36,8 +36,8 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
       <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-[11px]">
         <div className="flex items-center space-x-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-bold text-slate-300 tracking-wide uppercase text-[10px]">
-            SFIDA CYBER ARENA
+          <span className="font-heading font-extrabold text-slate-300 tracking-wider uppercase text-[10px]">
+            SFIDA ARENA
           </span>
         </div>
 

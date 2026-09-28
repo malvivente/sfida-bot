@@ -215,14 +215,40 @@ export function useTonClashContract() {
 
   // Send Real Deposit to Platform Smart Contract / Cassa
   const sendDepositTransaction = async (
-    targetAddress: string,
-    amountGram: string,
+    targetOrAmount: string,
+    amountOrTarget?: string,
     comment?: string
   ) => {
     if (!wallet) {
       tonConnectUI.openModal();
       throw new Error('Please connect your Tonkeeper wallet first');
     }
+
+    let targetAddress = targetOrAmount;
+    let amountGram = amountOrTarget || '';
+
+    // If only 1 argument provided, it's amountGram:
+    if (!amountOrTarget) {
+      amountGram = targetOrAmount;
+      try {
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        const res = await fetch(`${serverUrl}/api/config/fees`);
+        if (res.ok) {
+          const data = await res.json();
+          targetAddress = data?.config?.treasuryAddress || data?.treasuryAddress || '';
+        }
+      } catch {}
+      if (!targetAddress) {
+        targetAddress = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
+      }
+    } else {
+      // If first is numeric and second looks like TON address
+      if (!isNaN(Number(targetOrAmount)) && (amountOrTarget.startsWith('EQ') || amountOrTarget.startsWith('UQ') || amountOrTarget.startsWith('0:'))) {
+        amountGram = targetOrAmount;
+        targetAddress = amountOrTarget;
+      }
+    }
+
     if (!targetAddress) {
       throw new Error('Deposit destination address not available');
     }

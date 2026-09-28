@@ -721,8 +721,8 @@ export const Arena: React.FC<ArenaProps> = ({
     <div className="w-full max-w-md mx-auto space-y-4">
       {/* Toast Confirmation Banner */}
       {cancelSuccessMsg && (
-        <div className="bg-cyber-green/15 border border-cyber-green/50 text-cyber-green rounded-xl p-3.5 flex items-center space-x-2 text-xs font-chakra animate-fade-in shadow-neon-green">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-cyber-green" />
+        <div className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-2xl p-3.5 flex items-center space-x-2 text-xs font-sans animate-fade-in shadow-lg">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
           <span className="font-semibold">{cancelSuccessMsg}</span>
         </div>
       )}
@@ -735,52 +735,52 @@ export const Arena: React.FC<ArenaProps> = ({
         >
           <div
             style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-cyber-card border border-cyber-pink/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            className="bg-[#181b29] border border-rose-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
           >
-            <h3 className="text-base font-orbitron font-bold text-white flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-cyber-pink animate-pulse" />
-              <span>CANCEL DUEL & REFUND</span>
+            <h3 className="text-base font-heading font-extrabold text-white flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-rose-400 animate-pulse" />
+              <span>{t('arena.cancelModalTitle')}</span>
             </h3>
 
-            <p className="text-xs text-slate-300 font-chakra leading-relaxed">
-              Are you sure you want to cancel room <strong className="text-white font-orbitron">#{matchToCancel.matchId}</strong>?
+            <p className="text-xs text-slate-300 font-sans leading-relaxed">
+              {t('arena.cancelModalDesc', { matchId: matchToCancel.matchId })}
             </p>
 
-            <div className="p-3 bg-cyber-bg/80 border border-cyber-border rounded-xl flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-chakra">Amount to Refund:</span>
-              <span className="text-sm font-chakra font-black text-cyber-cyan flex items-center space-x-1">
+            <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-sans">{t('arena.amountToRefund')}</span>
+              <span className="text-sm font-heading font-black text-amber-300 flex items-center space-x-1">
                 <span>{(parseFloat(matchToCancel.wagerAmountNano) / 1e9 + (feeConfigData?.creationFeeGram || 0.02)).toFixed(2)}</span>
-                <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
+                <GramIcon className="w-3.5 h-3.5 text-amber-400 inline" />
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-400 font-rajdhani">
-              The wager and creation fee will be refunded immediately back to your in-bot balance (0 gas).
-              {matchToCancel.playerB && ' Since an opponent joined, their wager will also be refunded.'}
+            <p className="text-[11px] text-slate-400 font-sans">
+              {t('arena.cancelRefundNotice')}
+              {matchToCancel.playerB && t('arena.cancelOpponentRefundNotice')}
             </p>
 
             <div className="flex space-x-2.5 pt-1">
               <button
                 disabled={isCancelling}
                 onClick={() => setMatchToCancel(null)}
-                className="flex-1 py-2.5 bg-cyber-border text-slate-300 rounded-xl font-chakra font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-heading font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50"
               >
-                BACK
+                {t('lobby.cancelBtn')}
               </button>
               <button
                 disabled={isCancelling}
                 onClick={confirmCancelMatch}
-                className="flex-1 py-2.5 bg-cyber-pink hover:bg-cyber-pink/90 text-white rounded-xl font-orbitron font-bold text-xs uppercase shadow-[0_0_15px_rgba(255,0,85,0.4)] transition-all active:scale-95 flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-2xl font-heading font-extrabold text-xs uppercase shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-1.5 disabled:opacity-50"
               >
                 {isCancelling ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>REFUNDING...</span>
+                    <span>{t('arena.refundingBtn')}</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>CONFIRM CANCEL</span>
+                    <span>{t('arena.confirmCancelBtn')}</span>
                   </>
                 )}
               </button>
@@ -797,20 +797,20 @@ export const Arena: React.FC<ArenaProps> = ({
         >
           <div
             style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-cyber-card border border-cyber-cyan/60 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            className="bg-[#181b29] border border-cyan-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
           >
-            <h3 className="text-sm font-orbitron font-bold text-white flex items-center space-x-2">
-              <ArrowDownLeft className="w-4 h-4 text-cyber-cyan" />
-              <span>DEPOSIT GRAM TO IN-BOT BALANCE</span>
+            <h3 className="text-sm font-heading font-extrabold text-white flex items-center space-x-2">
+              <ArrowDownLeft className="w-4 h-4 text-cyan-400" />
+              <span>{t('arena.depositModalTitle')}</span>
             </h3>
 
-            <p className="text-xs text-slate-300 font-chakra">
-              Deposit GRAM via Tonkeeper into your balance for instant duels and 2X rematches.
+            <p className="text-xs text-slate-300 font-sans">
+              {t('arena.depositModalDesc')}
             </p>
 
             {depositMsg && (
-              <div className={`p-2.5 rounded-xl border text-xs font-chakra flex items-center space-x-2 ${
-                depositMsg.type === 'success' ? 'bg-cyber-green/20 border-cyber-green text-cyber-green' : 'bg-cyber-pink/20 border-cyber-pink text-cyber-pink'
+              <div className={`p-2.5 rounded-2xl border text-xs font-sans flex items-center space-x-2 ${
+                depositMsg.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-rose-500/20 border-rose-500/40 text-rose-300'
               }`}>
                 {depositMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                 <span>{depositMsg.text}</span>
@@ -818,35 +818,35 @@ export const Arena: React.FC<ArenaProps> = ({
             )}
 
             <div className="space-y-1.5">
-              <div className="flex justify-between text-xs text-slate-400 font-chakra">
-                <span>Amount (GRAM):</span>
-                <span>Current: {availableBalanceGram} GRAM</span>
+              <div className="flex justify-between text-xs text-slate-400 font-sans">
+                <span>{t('arena.depositAmountLabel')}</span>
+                <span>{t('arena.currentBalLabel', { amount: availableBalanceGram })}</span>
               </div>
-              <div className="flex items-center space-x-2 bg-cyber-bg border border-cyber-border rounded-xl px-3 py-2">
+              <div className="flex items-center space-x-2 bg-black/40 border border-white/10 rounded-2xl px-3.5 py-2">
                 <input
                   type="text"
                   inputMode="decimal"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                  className="flex-1 bg-transparent text-sm font-chakra font-bold text-white focus:outline-none"
+                  className="flex-1 bg-transparent text-sm font-heading font-bold text-white focus:outline-none"
                 />
-                <GramIcon className="w-4 h-4 text-cyber-cyan" />
+                <GramIcon className="w-4 h-4 text-cyan-400" />
               </div>
             </div>
 
             <div className="flex space-x-2 pt-1">
               <button
                 onClick={() => setShowDepositModal(false)}
-                className="flex-1 py-2.5 bg-cyber-bg border border-cyber-border text-xs font-chakra font-bold text-slate-400 hover:text-white rounded-xl"
+                className="flex-1 py-2.5 bg-white/5 border border-white/10 text-xs font-heading font-bold text-slate-400 hover:text-white rounded-2xl"
               >
-                CANCEL
+                {t('lobby.cancelBtn')}
               </button>
               <button
                 onClick={handleQuickDeposit}
                 disabled={depositLoading}
-                className="flex-1 py-2.5 bg-cyber-cyan text-cyber-bg text-xs font-orbitron font-bold rounded-xl shadow-neon-cyan hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
+                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white text-xs font-heading font-extrabold rounded-2xl shadow-epic-purple hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
               >
-                {depositLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>CONFIRM DEPOSIT</span>}
+                {depositLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>{t('arena.confirmDepositBtn')}</span>}
               </button>
             </div>
           </div>
@@ -862,7 +862,7 @@ export const Arena: React.FC<ArenaProps> = ({
                 setActiveMatchId(null);
                 onClearDeepMatch?.();
               }}
-              className="flex items-center space-x-1.5 text-xs font-orbitron font-bold text-slate-400 hover:text-cyber-cyan transition-all"
+              className="flex items-center space-x-1.5 text-xs font-heading font-bold text-slate-400 hover:text-cyan-400 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{t('arena.backToLobby')}</span>
@@ -872,20 +872,20 @@ export const Arena: React.FC<ArenaProps> = ({
               <button
                 type="button"
                 onClick={handleInGameShare}
-                className="flex items-center space-x-1.5 text-[11px] font-orbitron font-bold text-cyber-cyan hover:text-white bg-cyber-cyan/15 hover:bg-cyber-cyan/30 border border-cyber-cyan/40 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-[0_0_10px_rgba(0,240,255,0.15)]"
-                title="Condividi Stanza"
+                className="flex items-center space-x-1.5 text-[11px] font-heading font-bold text-cyan-300 hover:text-white bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/30 px-2.5 py-1 rounded-xl transition-all active:scale-95 shadow-sm"
+                title={t('arena.shareDuel')}
               >
-                <Share2 className="w-3.5 h-3.5 text-cyber-cyan" />
+                <Share2 className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{t('arena.shareDuel')}</span>
               </button>
 
               {canCancelCurrentMatch && currentActiveMatch && (
                 <button
                   onClick={() => handleCancelMatch(currentActiveMatch)}
-                  className="flex items-center space-x-1.5 text-[11px] font-orbitron font-bold text-cyber-pink hover:text-white bg-cyber-pink/15 hover:bg-cyber-pink/30 border border-cyber-pink/40 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-[0_0_10px_rgba(255,0,85,0.15)]"
-                  title="Annulla duello e rimborsa"
+                  className="flex items-center space-x-1.5 text-[11px] font-heading font-bold text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 px-2.5 py-1 rounded-xl transition-all active:scale-95 shadow-sm"
+                  title={t('arena.cancelDuel')}
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-cyber-pink" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                   <span>{t('arena.cancelDuel')}</span>
                 </button>
               )}

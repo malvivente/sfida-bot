@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { UserAvatar } from './UserAvatar.js';
 import { GramIcon } from './GramIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
-import { Swords, Plus, Flame, Sparkles, Trophy, Users, Shield, ArrowRight, Zap, Target } from 'lucide-react';
+import { Swords, Plus, Flame, Sparkles, Trophy, Users, Shield, ArrowRight, Zap, ChevronRight } from 'lucide-react';
 
 interface EpicBannersProps {
   matches: MatchData[];
   onOpenCreateModal: (defaultGame?: GameType) => void;
   onJoinMatch: (match: MatchData) => void;
   onSelectGame: (gameType: GameType) => void;
+  onOpenPlayHub?: () => void;
+  onOpenPvpSection?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   jackpotAmountGram?: string;
@@ -22,6 +24,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
   onOpenCreateModal,
   onJoinMatch,
   onSelectGame,
+  onOpenPlayHub,
+  onOpenPvpSection,
   onOpenAffiliates,
   onOpenJackpotModal,
   jackpotAmountGram = '24.50',
@@ -36,16 +40,17 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
     <div className="w-full space-y-3 select-none">
       
       {/* ------------------------------------------------------------- */}
-      {/* 1. HERO BANNER: FEATURED GAME (Electric Sky Blue / Indigo)     */}
+      {/* 1. HERO BANNER: SPLIT OR STEAL (#1 Position)                   */}
       {/* ------------------------------------------------------------- */}
       <div
         onClick={() => {
           triggerImpact('medium');
           onSelectGame('split');
+          onOpenCreateModal('split');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 p-4 sm:p-5 shadow-lg border border-sky-400/30 cursor-pointer group active:scale-[0.99] transition-all"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 p-4 sm:p-5 shadow-xl border border-sky-400/30 cursor-pointer group active:scale-[0.99] transition-all"
       >
-        {/* Background glow effects */}
+        {/* Ambient glow & backdrop icon */}
         <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-cyan-400/25 blur-3xl pointer-events-none" />
         <div className="absolute right-4 bottom-2 opacity-15 text-8xl pointer-events-none select-none font-black text-white">
           🤝
@@ -68,7 +73,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
 
             {/* Description */}
             <p className="text-xs text-sky-100/90 font-medium leading-tight">
-              Dilemma ad alta tensione con Jackpot Condiviso della Fiducia.
+              {t('epic.splitHeroDesc')}
             </p>
 
             {/* Action pill */}
@@ -81,31 +86,37 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
                 }}
                 className="px-3.5 py-1.5 rounded-xl bg-white text-blue-700 hover:bg-sky-50 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
               >
-                <span>SFIDA ORA</span>
+                <span>{t('epic.fastJoin')}</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
           </div>
 
-          {/* Right Floating Stats & Multipliers */}
+          {/* Right Floating Badges */}
           <div className="flex flex-col items-end space-y-1.5">
             <div className="px-2.5 py-1 rounded-xl bg-emerald-500/90 text-white font-heading font-black text-xs shadow-md border border-emerald-300/40">
-              +12.5% PACE
+              {t('epic.splitPeaceBadge')}
             </div>
             <div className="px-2.5 py-1 rounded-xl bg-amber-500/90 text-white font-heading font-black text-xs shadow-md border border-amber-300/40">
-              +20% STEAL
+              {t('epic.splitStealBadge')}
             </div>
             <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
-              0% RAKE
+              {t('epic.zeroRake')}
             </div>
           </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 2. PVP DUELS HUB (Warm Sunset Amber / Flame Orange)           */}
+      {/* 2. PVP DUELS HUB (Opens dedicated PVP Section)                */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 p-4 sm:p-5 shadow-lg border border-amber-400/30">
+      <div
+        onClick={() => {
+          triggerImpact('medium');
+          onOpenPvpSection?.();
+        }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 p-4 sm:p-5 shadow-xl border border-amber-400/30 cursor-pointer active:scale-[0.99] transition-all group"
+      >
         <div className="flex items-center justify-between gap-3">
           
           {/* Left Title & Create Action */}
@@ -122,7 +133,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             </p>
 
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 triggerImpact('medium');
                 onOpenCreateModal();
               }}
@@ -144,7 +156,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
                   return (
                     <div
                       key={duel.matchId}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         triggerImpact('medium');
                         onJoinMatch(duel);
                       }}
@@ -176,7 +189,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       triggerImpact('medium');
                       onOpenCreateModal(item.type);
                     }}
@@ -202,9 +216,15 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 3. PLAY HUB (Electric Violet / Indigo / Purple)              */}
+      {/* 3. PLAY HUB (Opens dedicated Play Hub Section Page)            */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-800 p-4 sm:p-5 shadow-lg border border-purple-400/30">
+      <div
+        onClick={() => {
+          triggerImpact('medium');
+          onOpenPlayHub?.();
+        }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-800 p-4 sm:p-5 shadow-xl border border-purple-400/30 cursor-pointer active:scale-[0.99] transition-all group"
+      >
         <div className="flex items-center justify-between gap-3">
           
           <div className="space-y-1.5 max-w-[50%]">
@@ -218,7 +238,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             </h3>
 
             <p className="text-xs text-purple-100/90 font-medium leading-tight">
-              Scegli la tua disciplina: revolver, 21 cyber, ponte di vetro, riflessi e fiducia.
+              {t('epic.playHubCardDesc')}
             </p>
           </div>
 
@@ -232,9 +252,12 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             ].map((game) => (
               <button
                 key={game.id}
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
                   triggerImpact('light');
                   onSelectGame(game.id);
+                  onOpenPlayHub?.();
                 }}
                 className={`w-18 sm:w-20 p-2.5 rounded-2xl bg-gradient-to-b ${game.color} border border-white/20 text-center flex flex-col items-center justify-center shrink-0 active:scale-95 transition-all shadow-md hover:brightness-110`}
               >
@@ -260,7 +283,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             triggerImpact('medium');
             onOpenJackpotModal?.();
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1917] via-[#292524] to-[#171412] p-3.5 sm:p-4 border border-amber-500/40 shadow-lg cursor-pointer group active:scale-95 transition-all"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1917] via-[#292524] to-[#171412] p-3.5 sm:p-4 border border-amber-500/40 shadow-xl cursor-pointer group active:scale-95 transition-all"
         >
           <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-amber-500/15 blur-2xl pointer-events-none" />
           
@@ -284,7 +307,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           </div>
 
           <p className="text-[10px] text-slate-400 mt-1 leading-tight">
-            Gira la Ruota nei duelli Split or Steal!
+            {t('epic.jackpotCardDesc')}
           </p>
         </div>
 
@@ -294,13 +317,13 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             triggerImpact('medium');
             onOpenAffiliates?.();
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#500724] via-[#701a75] to-[#3b0764] p-3.5 sm:p-4 border border-pink-500/40 shadow-lg cursor-pointer group active:scale-95 transition-all"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#500724] via-[#701a75] to-[#3b0764] p-3.5 sm:p-4 border border-pink-500/40 shadow-xl cursor-pointer group active:scale-95 transition-all"
         >
           <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-pink-500/20 blur-2xl pointer-events-none" />
           
           <div className="flex items-center justify-between mb-2">
             <span className="px-2 py-0.5 rounded-lg bg-pink-500/20 border border-pink-400/40 text-pink-300 font-heading font-black text-[9px] uppercase tracking-wider">
-              FINO AL 30%
+              {t('epic.earnCardPill')}
             </span>
             <Users className="w-4 h-4 text-pink-400 group-hover:scale-110 transition-transform" />
           </div>
@@ -312,12 +335,12 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           <div className="mt-1 flex items-center space-x-1 text-pink-200">
             <Zap className="w-4 h-4 text-pink-400" />
             <span className="text-sm font-heading font-black text-white">
-              GRUPPI TELEGRAM
+              {t('epic.earnCardChat')}
             </span>
           </div>
 
           <p className="text-[10px] text-slate-300 mt-1 leading-tight">
-            Guadagna commissioni continue su ogni sfida in chat!
+            {t('epic.earnCardDesc')}
           </p>
         </div>
 
