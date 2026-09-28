@@ -91,6 +91,19 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
   const hasEnoughForRematch = currentBal >= rematchWager;
   const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
+  const [showSettledModal, setShowSettledModal] = React.useState(false);
+
+  React.useEffect(() => {
+    if (roomState === 'MATCH_SETTLED') {
+      const timer = setTimeout(() => {
+        setShowSettledModal(true);
+      }, 2600);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSettledModal(false);
+    }
+  }, [roomState]);
+
   return (
     <div className="w-full flex flex-col items-center justify-between p-3.5 sm:p-4 bg-cyber-card/90 border border-cyber-pink/40 rounded-3xl backdrop-blur-xl shadow-[0_0_40px_rgba(255,0,85,0.15)] relative overflow-hidden min-h-[520px]">
       {/* Background Ambience */}
@@ -161,80 +174,96 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
 
       {/* Center Revolver Drum & Lethal Probability (Always Visible) */}
       <div className="my-auto w-full flex flex-col items-center justify-center py-3 z-10 text-center">
-        {roomState !== 'MATCH_SETTLED' ? (
-          <div className="flex flex-col items-center space-y-3">
-            {/* Animated Revolver Cylinder */}
-            <motion.div
-              animate={{ rotate: [0, 360 * (8 - chambers)] }}
-              transition={{ duration: 0.6, type: 'spring', damping: 15 }}
-              className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full border-4 border-cyber-pink/80 bg-cyber-bg/90 shadow-[0_0_30px_rgba(255,0,85,0.3)] flex items-center justify-center"
-            >
-              {/* 8 Chamber Dots around circle */}
-              {Array.from({ length: 8 }).map((_, idx) => {
-                const angle = (idx * 360) / 8;
-                const isLoaded = idx < chambers;
-                return (
-                  <div
-                    key={idx}
-                    className={`absolute w-4 h-4 sm:w-5 sm:h-5 rounded-full border transform -translate-x-1/2 -translate-y-1/2 transition-all ${
-                      isLoaded
-                        ? 'bg-cyber-pink/30 border-cyber-pink shadow-neon-pink'
-                        : 'bg-black/80 border-slate-700 opacity-40'
-                    }`}
-                    style={{
-                      top: `${50 - 38 * Math.cos((angle * Math.PI) / 180)}%`,
-                      left: `${50 + 38 * Math.sin((angle * Math.PI) / 180)}%`,
-                    }}
-                  />
-                );
-              })}
+        <div className="flex flex-col items-center space-y-3">
+          {/* Animated Revolver Cylinder */}
+          <motion.div
+            animate={{ rotate: [0, 360 * (8 - chambers)] }}
+            transition={{ duration: 0.6, type: 'spring', damping: 15 }}
+            className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full border-4 border-cyber-pink/80 bg-cyber-bg/90 shadow-[0_0_30px_rgba(255,0,85,0.3)] flex items-center justify-center"
+          >
+            {/* 8 Chamber Dots around circle */}
+            {Array.from({ length: 8 }).map((_, idx) => {
+              const angle = (idx * 360) / 8;
+              const isLoaded = idx < chambers;
+              return (
+                <div
+                  key={idx}
+                  className={`absolute w-4 h-4 sm:w-5 sm:h-5 rounded-full border transform -translate-x-1/2 -translate-y-1/2 transition-all ${
+                    isLoaded
+                      ? 'bg-cyber-pink/30 border-cyber-pink shadow-neon-pink'
+                      : 'bg-black/80 border-slate-700 opacity-40'
+                  }`}
+                  style={{
+                    top: `${50 - 38 * Math.cos((angle * Math.PI) / 180)}%`,
+                    left: `${50 + 38 * Math.sin((angle * Math.PI) / 180)}%`,
+                  }}
+                />
+              );
+            })}
 
-              {/* Center Crosshair */}
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-cyber-pink flex items-center justify-center text-cyber-pink">
-                <Crosshair className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+            {/* Center Crosshair */}
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-cyber-pink flex items-center justify-center text-cyber-pink">
+              <Crosshair className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+            </div>
+          </motion.div>
+
+          {/* Lethal Odds Meter / Status Feed */}
+          {roomState === 'GAME_ACTIVE' ? (
+            <div className="flex flex-col items-center space-y-0.5">
+              <span className="text-[10px] font-chakra uppercase tracking-widest text-slate-300">
+                FATAL PROBABILITY
+              </span>
+              <span className={`text-2xl font-mono font-black ${
+                lethalOdds >= 50 ? 'text-cyber-pink animate-pulse' : lethalOdds >= 25 ? 'text-cyber-amber' : 'text-cyber-cyan'
+              }`}>
+                {lethalOdds}%
+              </span>
+              <span className="text-[11px] font-rajdhani text-slate-400">
+                1 Live Bullet in {chambers} remaining chambers
+              </span>
+            </div>
+          ) : roomState === 'BETTING_WINDOW' ? (
+            <div className="flex flex-col items-center space-y-0.5">
+              <span className="text-xs font-mono font-bold text-cyber-amber uppercase tracking-wider animate-pulse flex items-center space-x-1">
+                <Clock className="w-3.5 h-3.5" />
+                <span>PARI-MUTUEL BETTING WINDOW</span>
+              </span>
+              <span className="text-2xl font-mono font-black text-white">
+                00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
+              </span>
+              <span className="text-[10px] font-rajdhani text-slate-400">
+                Both duelists confirmed. Round 1 initiating!
+              </span>
+            </div>
+          ) : roomState === 'MATCH_SETTLED' ? (
+            /* Clear Outcome Banner so players can clearly digest the final shot */
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`p-3 rounded-2xl border text-center font-chakra shadow-xl max-w-xs w-full ${
+                lastOutcome?.result === 'BANG'
+                  ? 'bg-rose-950/85 border-rose-500 text-white shadow-[0_0_25px_rgba(244,63,94,0.5)] animate-pulse'
+                  : 'bg-emerald-950/85 border-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+              }`}
+            >
+              <div className="text-sm font-orbitron font-black text-rose-400 flex items-center justify-center space-x-1.5">
+                <span>{lastOutcome?.result === 'BANG' ? '💥 BANG! FATAL SHOT' : '🎯 DUEL CONCLUDED'}</span>
+              </div>
+              <div className="text-xs text-slate-200 mt-1 font-medium">
+                {lastOutcome?.message || 'Eliminazione confermata!'}
               </div>
             </motion.div>
-
-            {/* Lethal Odds Meter / Status Feed */}
-            {roomState === 'GAME_ACTIVE' ? (
-              <div className="flex flex-col items-center space-y-0.5">
-                <span className="text-[10px] font-chakra uppercase tracking-widest text-slate-300">
-                  FATAL PROBABILITY
-                </span>
-                <span className={`text-2xl font-mono font-black ${
-                  lethalOdds >= 50 ? 'text-cyber-pink animate-pulse' : lethalOdds >= 25 ? 'text-cyber-amber' : 'text-cyber-cyan'
-                }`}>
-                  {lethalOdds}%
-                </span>
-                <span className="text-[11px] font-rajdhani text-slate-400">
-                  1 Live Bullet in {chambers} remaining chambers
-                </span>
-              </div>
-            ) : roomState === 'BETTING_WINDOW' ? (
-              <div className="flex flex-col items-center space-y-0.5">
-                <span className="text-xs font-mono font-bold text-cyber-amber uppercase tracking-wider animate-pulse flex items-center space-x-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>PARI-MUTUEL BETTING WINDOW</span>
-                </span>
-                <span className="text-2xl font-mono font-black text-white">
-                  00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
-                </span>
-                <span className="text-[10px] font-rajdhani text-slate-400">
-                  Both duelists confirmed. Round 1 initiating!
-                </span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center space-y-0.5">
-                <span className="text-xs font-orbitron font-bold text-cyber-cyan uppercase tracking-wider">
-                  8-CHAMBER REVOLVER ARMED
-                </span>
-                <span className="text-[11px] font-chakra text-slate-300">
-                  1 server-side randomized live bullet. Press READY below!
-                </span>
-              </div>
-            )}
-          </div>
-        ) : null}
+          ) : (
+            <div className="flex flex-col items-center space-y-0.5">
+              <span className="text-xs font-orbitron font-bold text-cyber-cyan uppercase tracking-wider">
+                8-CHAMBER REVOLVER ARMED
+              </span>
+              <span className="text-[11px] font-chakra text-slate-300">
+                1 server-side randomized live bullet. Press READY below!
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Outcome Feed Banner */}
         <AnimatePresence>
@@ -259,17 +288,18 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Match Settled Modal */}
-        {roomState === 'MATCH_SETTLED' && (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center p-5 bg-cyber-bg/95 border border-cyber-cyan rounded-3xl shadow-2xl max-w-xs w-full text-center"
-          >
-            <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
-            <h2 className="text-lg font-orbitron font-black text-white">DUEL CONCLUDED</h2>
-            <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
-              <span className="text-slate-400">Winner Prize:</span>
+        {/* Match Settled Modal (Appears after 2.6s delay as overlay) */}
+        {showSettledModal && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex flex-col items-center p-5 bg-[#121520] border border-cyber-cyan rounded-3xl shadow-2xl max-w-xs w-full text-center"
+            >
+              <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
+              <h2 className="text-lg font-orbitron font-black text-white">DUEL CONCLUDED</h2>
+              <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
+                <span className="text-slate-400">Winner Prize:</span>
               <span className="font-bold text-cyber-cyan flex items-center space-x-1">
                 <span>{winnerPayoutTon}</span>
                 <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
@@ -370,7 +400,8 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
               </button>
             )}
           </motion.div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Bottom Controls: Lobby Ready or Game Actions */}

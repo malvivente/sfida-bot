@@ -34,6 +34,8 @@ interface ArenaProps {
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   onBalanceUpdated?: (balance: string) => void;
+  initialCreateGame?: GameType | null;
+  onClearInitialCreateGame?: () => void;
 }
 
 export const Arena: React.FC<ArenaProps> = ({
@@ -48,6 +50,8 @@ export const Arena: React.FC<ArenaProps> = ({
   onOpenAffiliates,
   onOpenJackpotModal,
   onBalanceUpdated,
+  initialCreateGame,
+  onClearInitialCreateGame,
 }) => {
   const { isFullscreen, topInset } = useTelegramViewport();
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
@@ -1112,6 +1116,8 @@ export const Arena: React.FC<ArenaProps> = ({
           onOpenSpectate={onOpenSpectate}
           onOpenAffiliates={onOpenAffiliates}
           onOpenJackpotModal={onOpenJackpotModal}
+          initialCreateGame={initialCreateGame}
+          onClearInitialCreateGame={onClearInitialCreateGame}
         />
       )}
     </div>

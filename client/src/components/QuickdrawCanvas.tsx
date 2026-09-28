@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, Zap, AlertTriangle, Trophy, Clock, WifiOff, Trash2, ArrowLeft, Loader2, CheckCircle2, RotateCcw, ArrowDownLeft } from 'lucide-react';
 import { RoomState } from '../types/index.js';
@@ -82,6 +82,19 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 }) => {
   const { triggerImpact, triggerNotification } = useHaptics();
   const isHoldingPrematurely = useRef(false);
+
+  const [showSettledModal, setShowSettledModal] = useState(false);
+
+  useEffect(() => {
+    if (roomState === 'MATCH_SETTLED') {
+      const timer = setTimeout(() => {
+        setShowSettledModal(true);
+      }, 2600);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSettledModal(false);
+    }
+  }, [roomState]);
 
   // Reset premature hold flag whenever round state transitions
   useEffect(() => {
@@ -341,7 +354,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
       {/* Cyberpunk Victory Overlay Modal */}
       <AnimatePresence>
-        {roomState === 'MATCH_SETTLED' && (
+        {roomState === 'MATCH_SETTLED' && showSettledModal && (
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}

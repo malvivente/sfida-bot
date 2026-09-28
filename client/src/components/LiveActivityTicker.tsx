@@ -86,6 +86,11 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
       } catch {}
       return updated;
     });
+
+    const timer = setTimeout(() => {
+      setWinsList((prev) => prev.map((w) => (w.id === newWinEvent.id ? { ...w, isNew: false } : w)));
+    }, 15000);
+    return () => clearTimeout(timer);
   }, [newWinEvent]);
 
   // Color styles for game types matching the jewel-toned look
@@ -131,7 +136,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
   };
 
   return (
-    <div className="w-full flex items-center space-x-2 overflow-hidden py-1 select-none">
+    <div className="w-full flex items-center space-x-2 py-1 select-none">
       {/* Fixed 'Live 🟢' Pill */}
       <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
@@ -141,15 +146,16 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
       </div>
 
       {/* Horizontal Scrolling Stream of User Winnings */}
-      <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none py-1 -my-1 pr-2 flex-1">
+      <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none py-2 px-1 -my-2 flex-1">
         {winsList.length === 0 ? (
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-slate-400 font-sans italic w-full">
             <span>{t('epic.noRecentWins')}</span>
           </div>
         ) : (
-          winsList.map((win) => {
+          winsList.map((win, idx) => {
             const style = getGameStyle(win.gameType);
             const meta = GAMES_METADATA[win.gameType] || GAMES_METADATA.roulette;
+            const isLatest = idx === 0 && win.isNew;
 
             return (
               <button
@@ -159,7 +165,9 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
                   onSelectGame?.(win.gameType);
                 }}
                 className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl ${style.bg} border ${style.border} shrink-0 text-white active:scale-95 transition-all shadow-sm hover:brightness-110 group ${
-                  win.isNew ? 'ring-2 ring-amber-400 animate-bounce' : ''
+                  isLatest
+                    ? 'ring-2 ring-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.7)] animate-pulse'
+                    : ''
                 }`}
                 title={`${win.winnerName} ${t('epic.won')} ${win.payoutGram} GRAM su ${meta.title}`}
               >

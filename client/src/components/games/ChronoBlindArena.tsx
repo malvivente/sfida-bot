@@ -89,6 +89,18 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
 
   const [syncedNow, setSyncedNow] = useState(Date.now());
   const clockOffsetRef = useRef<number>(0);
+  const [showSettledModal, setShowSettledModal] = useState(false);
+
+  useEffect(() => {
+    if (roomState === 'MATCH_SETTLED') {
+      const timer = setTimeout(() => {
+        setShowSettledModal(true);
+      }, 2600);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSettledModal(false);
+    }
+  }, [roomState]);
 
   useEffect(() => {
     if (gameData?.serverTime) {
@@ -219,9 +231,9 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               Both duelists confirmed. Round 1 countdown starts at 00:00!
             </span>
           </div>
-        ) : roomState === 'GAME_ACTIVE' ? (
+        ) : (roomState === 'GAME_ACTIVE' || roomState === 'MATCH_SETTLED') ? (
           <div className="flex flex-col items-center space-y-3 w-full max-w-xs">
-            {!hasStarted ? (
+            {!hasStarted && roomState === 'GAME_ACTIVE' ? (
               /* Pre-round Countdown */
               <div className="flex flex-col items-center space-y-2">
                 <span className="text-xs font-chakra text-slate-400 uppercase tracking-widest">GET READY IN</span>
@@ -233,11 +245,11 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                 </span>
               </div>
             ) : (
-              /* Timer Running */
+              /* Timer Running or Concluded */
               <div className="flex flex-col items-center space-y-3 w-full">
                 {/* Blind Zone / Ticker Container */}
                 <div className={`w-full py-8 px-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center relative overflow-hidden ${
-                  isBlindZone && role === 'player'
+                  isBlindZone && role === 'player' && roomState === 'GAME_ACTIVE'
                     ? 'bg-black border-cyber-pink/80 shadow-[0_0_30px_rgba(255,0,85,0.4)] animate-pulse'
                     : isBlindZone && role === 'spectator'
                     ? 'bg-cyber-bg/95 border-cyber-amber shadow-neon-amber'
@@ -245,7 +257,12 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                 }`}>
                   {/* Status Indicator */}
                   <div className="flex items-center space-x-1.5 mb-2">
-                    {isBlindZone ? (
+                    {roomState === 'MATCH_SETTLED' ? (
+                      <div className="flex items-center space-x-1 text-cyber-amber text-xs font-chakra font-bold">
+                        <Trophy className="w-4 h-4 text-cyber-amber" />
+                        <span>ROUND 3 CONCLUDED</span>
+                      </div>
+                    ) : isBlindZone ? (
                       role === 'player' ? (
                         <div className="flex items-center space-x-1 text-cyber-pink text-xs font-chakra font-bold animate-bounce">
                           <EyeOff className="w-4 h-4 text-cyber-pink" />
@@ -266,7 +283,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   </div>
 
                   {/* Millisecond Digits */}
-                  {isBlindZone && role === 'player' ? (
+                  {isBlindZone && role === 'player' && roomState === 'GAME_ACTIVE' ? (
                     <div className="flex flex-col items-center py-2">
                       <span className="text-4xl font-mono font-black text-cyber-pink tracking-widest animate-pulse">
                         ??.???s
@@ -291,22 +308,45 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   )}
                 </div>
 
-                {/* Spectator Tracking Info */}
-                {role === 'spectator' && (
-                  <div className="w-full flex items-center justify-between text-xs font-chakra p-2 bg-black/50 border border-cyber-border rounded-xl">
-                    <span className={stoppedA ? 'text-cyber-green' : 'text-slate-400'}>
-                      {playerAName}: {stoppedA ? `STOPPED (${diffA}ms)` : 'WAITING'}
-                    </span>
-                    <span className={stoppedB ? 'text-cyber-green' : 'text-slate-400'}>
-                      {playerBName}: {stoppedB ? `STOPPED (${diffB}ms)` : 'WAITING'}
-                    </span>
-                  </div>
-                )}
+                {/* Tracking & Differences Info */}
+                <div className="w-full flex items-center justify-between text-xs font-chakra p-2 bg-black/50 border border-cyber-border rounded-xl">
+                  <span className={stoppedA || roomState === 'MATCH_SETTLED' ? 'text-cyber-cyan font-bold' : 'text-slate-400'}>
+                    {playerAName}: {diffA !== undefined ? `${diffA}ms diff` : stoppedA ? 'STOPPED' : 'WAITING'}
+                  </span>
+                  <span className={stoppedB || roomState === 'MATCH_SETTLED' ? 'text-cyber-pink font-bold' : 'text-slate-400'}>
+                    {playerBName}: {diffB !== undefined ? `${diffB}ms diff` : stoppedB ? 'STOPPED' : 'WAITING'}
+                  </span>
+                </div>
               </div>
             )}
 
+            {/* Duel Result Comparison Banner while awaiting modal */}
+            {roomState === 'MATCH_SETTLED' && !showSettledModal && (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-full p-3 rounded-2xl bg-black/85 border border-cyber-amber text-center shadow-xl space-y-1.5 animate-pulse"
+              >
+                <div className="text-xs font-orbitron font-black text-cyber-amber">
+                  ⏱️ SFIDA CHRONO CONCLUSA
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs font-chakra pt-1">
+                  <div className={`p-2 rounded-xl border ${scoreA > scoreB ? 'bg-cyber-cyan/20 border-cyber-cyan text-white' : 'bg-black/50 border-slate-700 text-slate-300'}`}>
+                    <div className="font-bold truncate">{playerAName}</div>
+                    <div className="text-[11px] font-mono mt-0.5">{diffA !== undefined ? `Diff: ${diffA}ms` : 'Bust'}</div>
+                    <div className="text-xs font-bold text-cyber-cyan">{scoreA} PTS</div>
+                  </div>
+                  <div className={`p-2 rounded-xl border ${scoreB > scoreA ? 'bg-cyber-pink/20 border-cyber-pink text-white' : 'bg-black/50 border-slate-700 text-slate-300'}`}>
+                    <div className="font-bold truncate">{playerBName}</div>
+                    <div className="text-[11px] font-mono mt-0.5">{diffB !== undefined ? `Diff: ${diffB}ms` : 'Bust'}</div>
+                    <div className="text-xs font-bold text-cyber-pink">{scoreB} PTS</div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Round End Message */}
-            {roundEndMessage && (
+            {roundEndMessage && roomState === 'GAME_ACTIVE' && (
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -318,117 +358,119 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
           </div>
         ) : null}
 
-        {/* Match Settled Modal */}
-        {roomState === 'MATCH_SETTLED' && (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center p-5 bg-cyber-bg/95 border border-cyber-amber rounded-3xl shadow-2xl max-w-xs w-full text-center mx-auto"
-          >
-            <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
-            <h2 className="text-lg font-orbitron font-black text-white">DUEL CONCLUDED</h2>
-            <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
-              <span className="text-slate-400">Winner Prize:</span>
-              <span className="font-bold text-cyber-cyan flex items-center space-x-1">
-                <span>{winnerPayoutTon}</span>
-                <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
-              </span>
-            </div>
-
-            {/* Rematch Offer Received */}
-            {rematchOffer && isRematchProposer && (
-              <div className="w-full p-2.5 rounded-xl bg-cyber-pink/20 border border-cyber-pink/60 flex flex-col space-y-1.5 mb-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
-                    <span>REMATCH OFFER SENT (2X)</span>
-                  </span>
-                  <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} GRAM</span>
-                </div>
-                <span className="text-[11px] text-slate-300 font-chakra">
-                  Waiting for opponent to accept the 2X challenge...
+        {/* Match Settled Modal (Appears as overlay after 2.6s delay) */}
+        {showSettledModal && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex flex-col items-center p-5 bg-cyber-bg/95 border border-cyber-amber rounded-3xl shadow-2xl max-w-xs w-full text-center mx-auto"
+            >
+              <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
+              <h2 className="text-lg font-orbitron font-black text-white">DUEL CONCLUDED</h2>
+              <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
+                <span className="text-slate-400">Winner Prize:</span>
+                <span className="font-bold text-cyber-cyan flex items-center space-x-1">
+                  <span>{winnerPayoutTon}</span>
+                  <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
                 </span>
-                {onDeclineRematch && (
-                  <button
-                    onClick={onDeclineRematch}
-                    className="w-full py-1.5 rounded-lg bg-black/60 border border-slate-600 text-xs text-slate-300 hover:text-white font-chakra"
-                  >
-                    WITHDRAW OFFER
-                  </button>
-                )}
               </div>
-            )}
-            {rematchOffer && !isRematchProposer && (
-              <div className="w-full p-2.5 rounded-xl bg-cyber-pink/25 border border-cyber-pink flex flex-col space-y-2 mb-2 animate-pulse">
-                <span className="text-xs font-orbitron font-bold text-white">🔥 2X REMATCH OFFER!</span>
-                <span className="text-[11px] text-slate-200 font-chakra">
-                  {rematchOffer.proposerName} challenges you to a 2X Rematch for {rematchOffer.newWagerTon} GRAM!
-                </span>
-                {!hasEnoughForRematch ? (
-                  <div className="flex flex-col space-y-1.5 pt-1">
-                    <div className="p-2 rounded-lg bg-black/70 border border-cyber-pink/50 text-[10px] text-cyber-pink font-chakra flex items-center justify-between">
-                      <span>Saldo: {currentBal.toFixed(2)} GRAM</span>
-                      <span className="font-bold">Mancano: {missingForRematch} GRAM</span>
+
+              {/* Rematch Offer Received */}
+              {rematchOffer && isRematchProposer && (
+                <div className="w-full p-2.5 rounded-xl bg-cyber-pink/20 border border-cyber-pink/60 flex flex-col space-y-1.5 mb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
+                      <span>REMATCH OFFER SENT (2X)</span>
+                    </span>
+                    <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} GRAM</span>
+                  </div>
+                  <span className="text-[11px] text-slate-300 font-chakra">
+                    Waiting for opponent to accept the 2X challenge...
+                  </span>
+                  {onDeclineRematch && (
+                    <button
+                      onClick={onDeclineRematch}
+                      className="w-full py-1.5 rounded-lg bg-black/60 border border-slate-600 text-xs text-slate-300 hover:text-white font-chakra"
+                    >
+                      WITHDRAW OFFER
+                    </button>
+                  )}
+                </div>
+              )}
+              {rematchOffer && !isRematchProposer && (
+                <div className="w-full p-2.5 rounded-xl bg-cyber-pink/25 border border-cyber-pink flex flex-col space-y-2 mb-2 animate-pulse">
+                  <span className="text-xs font-orbitron font-bold text-white">🔥 2X REMATCH OFFER!</span>
+                  <span className="text-[11px] text-slate-200 font-chakra">
+                    {rematchOffer.proposerName} challenges you to a 2X Rematch for {rematchOffer.newWagerTon} GRAM!
+                  </span>
+                  {!hasEnoughForRematch ? (
+                    <div className="flex flex-col space-y-1.5 pt-1">
+                      <div className="p-2 rounded-lg bg-black/70 border border-cyber-pink/50 text-[10px] text-cyber-pink font-chakra flex items-center justify-between">
+                        <span>Saldo: {currentBal.toFixed(2)} GRAM</span>
+                        <span className="font-bold">Mancano: {missingForRematch} GRAM</span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
+                        <button
+                          onClick={() => onOpenDeposit?.(missingForRematch)}
+                          className="flex-1 py-1.5 rounded-lg bg-cyber-cyan text-cyber-bg text-xs font-bold font-orbitron flex items-center justify-center space-x-1 shadow-neon-cyan hover:brightness-110 active:scale-95"
+                        >
+                          <ArrowDownLeft className="w-3.5 h-3.5" />
+                          <span>DEPOSITA ({missingForRematch})</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex space-x-2">
+                  ) : (
+                    <div className="flex space-x-2 pt-1">
                       <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
-                      <button
-                        onClick={() => onOpenDeposit?.(missingForRematch)}
-                        className="flex-1 py-1.5 rounded-lg bg-cyber-cyan text-cyber-bg text-xs font-bold font-orbitron flex items-center justify-center space-x-1 shadow-neon-cyan hover:brightness-110 active:scale-95"
-                      >
-                        <ArrowDownLeft className="w-3.5 h-3.5" />
-                        <span>DEPOSITA ({missingForRematch})</span>
-                      </button>
+                      <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron shadow-neon-pink hover:brightness-110 active:scale-95">ACCEPT 2X</button>
                     </div>
+                  )}
+                  {socketError && (
+                    <div className="p-1.5 rounded-lg bg-cyber-pink/20 border border-cyber-pink/60 text-[10px] text-cyber-pink font-chakra text-center">
+                      {socketError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Rematch Button */}
+              {!rematchOffer && onRequestRematch && role === 'player' && (
+                !opponentConnected ? (
+                  <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
+                    OPPONENT LEFT ROOM (REMATCH UNAVAILABLE)
                   </div>
                 ) : (
-                  <div className="flex space-x-2 pt-1">
-                    <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
-                    <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron shadow-neon-pink hover:brightness-110 active:scale-95">ACCEPT 2X</button>
-                  </div>
-                )}
-                {socketError && (
-                  <div className="p-1.5 rounded-lg bg-cyber-pink/20 border border-cyber-pink/60 text-[10px] text-cyber-pink font-chakra text-center">
-                    {socketError}
-                  </div>
-                )}
-              </div>
-            )}
+                  <button
+                    onClick={onRequestRematch}
+                    className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-cyber-pink to-cyber-cyan text-white shadow-neon-pink hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>REMATCH (2X BET)</span>
+                  </button>
+                )
+              )}
 
-            {/* Rematch Button */}
-            {!rematchOffer && onRequestRematch && role === 'player' && (
-              !opponentConnected ? (
-                <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
-                  OPPONENT LEFT ROOM (REMATCH UNAVAILABLE)
+              {isWinner && (
+                <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
+                  <span className="text-xs font-orbitron font-bold text-cyber-green">
+                    ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} GRAM)
+                  </span>
                 </div>
-              ) : (
+              )}
+
+              {onReturnToLobby && (
                 <button
-                  onClick={onRequestRematch}
-                  className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-cyber-pink to-cyber-cyan text-white shadow-neon-pink hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
+                  onClick={onReturnToLobby}
+                  className="w-full py-2 rounded-xl bg-cyber-border text-slate-300 text-xs font-chakra font-bold hover:text-white"
                 >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>REMATCH (2X BET)</span>
+                  BACK TO LOBBY
                 </button>
-              )
-            )}
-
-            {isWinner && (
-              <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
-                <span className="text-xs font-orbitron font-bold text-cyber-green">
-                  ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} GRAM)
-                </span>
-              </div>
-            )}
-
-            {onReturnToLobby && (
-              <button
-                onClick={onReturnToLobby}
-                className="w-full py-2 rounded-xl bg-cyber-border text-slate-300 text-xs font-chakra font-bold hover:text-white"
-              >
-                BACK TO LOBBY
-              </button>
-            )}
-          </motion.div>
+              )}
+            </motion.div>
+          </div>
         )}
       </div>
 

@@ -15,6 +15,7 @@ import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './ho
 import { requestTelegramFullscreen, exitTelegramFullscreen, getTelegramWebApp } from './utils/telegram.js';
 import { useTelegram } from './hooks/useTelegram.js';
 import { useTonClashContract } from './hooks/useTonClashContract.js';
+import { GameType } from './types/index.js';
 
 export const App: React.FC = () => {
   const { isFullscreen, topInset } = useTelegramViewport();
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [isInsideMatch, setIsInsideMatch] = useState(false);
   const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<EpicTab>('profile');
+  const [pendingCreateGame, setPendingCreateGame] = useState<GameType | null>(null);
   const { t } = useI18n();
 
   // Periodic Trust Jackpot fetch from server
@@ -307,6 +309,8 @@ export const App: React.FC = () => {
             onOpenAffiliates={() => setActiveTab('referrals')}
             onOpenJackpotModal={() => setShowJackpotModal(true)}
             onBalanceUpdated={setUserBalanceGram}
+            initialCreateGame={pendingCreateGame}
+            onClearInitialCreateGame={() => setPendingCreateGame(null)}
           />
         )}
 
@@ -327,6 +331,8 @@ export const App: React.FC = () => {
             onOpenAffiliates={() => setActiveTab('referrals')}
             onOpenJackpotModal={() => setShowJackpotModal(true)}
             onBalanceUpdated={setUserBalanceGram}
+            initialCreateGame={pendingCreateGame}
+            onClearInitialCreateGame={() => setPendingCreateGame(null)}
           />
         )}
 
@@ -395,6 +401,12 @@ export const App: React.FC = () => {
         onPlaySplitSteal={() => {
           setShowJackpotModal(false);
           setActiveTab('home');
+          setPendingCreateGame('split');
+          setTimeout(() => {
+            try {
+              window.dispatchEvent(new CustomEvent('sfida_open_create_game', { detail: { game: 'split' } }));
+            } catch {}
+          }, 50);
         }}
       />
 

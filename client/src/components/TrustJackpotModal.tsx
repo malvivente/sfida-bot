@@ -203,6 +203,9 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
                 triggerImpact('medium');
                 onClose();
                 onPlaySplitSteal();
+                try {
+                  window.dispatchEvent(new CustomEvent('sfida_open_create_game', { detail: { game: 'split' } }));
+                } catch {}
               }}
               className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-black font-heading font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
             >

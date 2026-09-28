@@ -38,6 +38,8 @@ interface DuelLobbyProps {
   onOpenSpectate?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
+  initialCreateGame?: GameType | null;
+  onClearInitialCreateGame?: () => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -63,6 +65,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onOpenSpectate,
   onOpenAffiliates,
   onOpenJackpotModal,
+  initialCreateGame,
+  onClearInitialCreateGame,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
@@ -149,6 +153,25 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     triggerImpact('medium');
     setShowCreateModal(true);
   };
+
+  // Handle programmatic create duel trigger (e.g. from Trust Jackpot modal or external button)
+  React.useEffect(() => {
+    if (initialCreateGame) {
+      handleOpenModal(initialCreateGame, true);
+      onClearInitialCreateGame?.();
+    }
+  }, [initialCreateGame]);
+
+  React.useEffect(() => {
+    const handleCustomOpen = (e: any) => {
+      const g = e?.detail?.game as GameType | undefined;
+      if (g) {
+        handleOpenModal(g, true);
+      }
+    };
+    window.addEventListener('sfida_open_create_game', handleCustomOpen);
+    return () => window.removeEventListener('sfida_open_create_game', handleCustomOpen);
+  }, []);
 
   const handleCreate = async () => {
     if (parsedWager < effectiveMinWager || isOverMax || isSubmitting) return;

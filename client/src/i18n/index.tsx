@@ -73,13 +73,20 @@ export const translations: Translations = {
   'activity.playNow': { it: 'GIOCA ORA', en: 'PLAY NOW' },
   'epic.openPlayHub': { it: 'APRI HUB', en: 'OPEN HUB' },
 
-  // Play Hub Games Descriptions
   'playHub.rouletteDesc': { it: '8 colpi tattici, 1 proiettile mortale. Spara all\'avversario o tenta la sorte.', en: '8 tactical shots, 1 live round. Shoot your foe or test your luck.' },
   'playHub.blackjackDesc': { it: 'Carte scoperte da un mazzo comune visibile a tutti.', en: 'Cards revealed from a public shared deck.' },
   'playHub.bridgeDesc': { it: 'Passi infiniti su vetro. 2 vite a testa o cedi il passo.', en: 'Endless glass bridge. 2 lives each or yield the step.' },
   'playHub.chronoDesc': { it: 'Timer al buio. Ferma più vicino possibile allo 0.000s!', en: 'Blind countdown. Stop as close to 0.000s as possible!' },
   'playHub.openRooms': { it: '{count} stanze aperte', en: '{count} open rooms' },
   'playHub.rouletteBadge': { it: '8 COLPI', en: '8 SHOTS' },
+  'playHub.badgeRoulette': { it: 'REVOLVER', en: 'REVOLVER' },
+  'playHub.badgeBlackjack': { it: '21 SCOPERTO', en: '21 FACE-UP' },
+  'playHub.badgeBridge': { it: '12 PANNELLI', en: '12 PANELS' },
+  'playHub.badgeChrono': { it: 'RIFLESSI', en: 'REFLEXES' },
+  'epic.pvpArenaTag': { it: 'ARENA PVP 1V1', en: '1V1 PVP ARENA' },
+  'epic.fiveDisciplines': { it: '5 DISCIPLINE', en: '5 DISCIPLINES' },
+  'epic.pariMutuel': { it: 'PARI-MUTUEL', en: 'PARI-MUTUEL' },
+  'epic.zeroFee': { it: '0% COMMISSIONI', en: '0% FEE' },
 
   // Trust Jackpot Wheel
   'wheel.peaceDropTitle': { it: 'Ruota Jackpot della Fiducia', en: 'Trust Jackpot Lucky Drop' },

@@ -112,7 +112,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           <div className="max-w-[62%] space-y-1.5">
             <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/95 text-orange-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
               <Swords className="w-3 h-3 text-orange-600" />
-              <span>1V1 PVP ARENA</span>
+              <span>{t('epic.pvpArenaTag')}</span>
             </div>
 
             <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
@@ -142,7 +142,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Right Static Badges (No carousel, ready for PNG) */}
           <div className="flex flex-col items-end space-y-1.5 shrink-0">
             <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-white font-heading font-black text-xs shadow-md border border-white/20">
-              5 DISCIPLINE
+              {t('epic.fiveDisciplines')}
             </div>
             <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
               {t('epic.allGames')}
@@ -201,13 +201,13 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Right Static Badges (No carousel, ready for PNG) */}
           <div className="flex flex-col items-end space-y-1.5 shrink-0">
             <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-cyan-300 font-heading font-black text-xs shadow-md border border-cyan-400/40">
-              PARI-MUTUEL
+              {t('epic.pariMutuel')}
             </div>
             <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
               {t('epic.spectateOddsBadge')}
             </div>
             <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-emerald-300 font-heading font-bold text-[10px] border border-white/20">
-              0% FEE
+              {t('epic.zeroFee')}
             </div>
           </div>
         </div>

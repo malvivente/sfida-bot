@@ -133,7 +133,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
 
           <div className="space-y-1">
             <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-              REVOLVER
+              {t('playHub.badgeRoulette')}
             </span>
             <h4 className="text-base font-heading font-black text-white">
               ROULETTE
@@ -170,7 +170,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
 
           <div className="space-y-1">
             <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-              21 FACE-UP
+              {t('playHub.badgeBlackjack')}
             </span>
             <h4 className="text-base font-heading font-black text-white">
               BLACKJACK
@@ -207,7 +207,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
 
           <div className="space-y-1">
             <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-              12 PANNELLI
+              {t('playHub.badgeBridge')}
             </span>
             <h4 className="text-base font-heading font-black text-white">
               GLASS BRIDGE
@@ -244,7 +244,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
 
           <div className="space-y-1">
             <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-              RIFLESSI
+              {t('playHub.badgeChrono')}
             </span>
             <h4 className="text-base font-heading font-black text-white">
               CHRONO BLIND

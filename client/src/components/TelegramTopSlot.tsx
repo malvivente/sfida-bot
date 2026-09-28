@@ -22,11 +22,13 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
   topInset,
   children,
 }) => {
-  const height = isFullscreen ? Math.max(topInset, 56) : 42;
+  const totalHeight = isFullscreen ? Math.max(topInset, 56) : 42;
+  const barHeight = 44;
+  const paddingTop = isFullscreen ? Math.max(0, totalHeight - barHeight) : 0;
 
   return (
     <div
-      style={{ height: `${height}px` }}
+      style={{ height: `${totalHeight}px`, paddingTop: `${paddingTop}px` }}
       className="w-full max-w-md mx-auto flex items-center justify-between relative select-none pointer-events-none transition-all duration-200 shrink-0"
     >
       {/* Left zone: Reserved empty space underneath Telegram's floating '✕ Close' button */}
@@ -38,7 +40,7 @@ export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
         className="flex-1 h-full flex items-center justify-center px-1 pointer-events-auto min-w-0"
       >
         {children || (
-          <div className="flex items-center space-x-1.5 py-1 px-3.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 shadow-md">
+          <div className="flex items-center space-x-1.5 py-1 px-3.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 shadow-md translate-y-0.5">
             <Swords className="w-4 h-4 text-cyan-400" />
             <span className="font-heading font-black text-xs sm:text-sm tracking-widest text-white uppercase drop-shadow">
               SFIDA
