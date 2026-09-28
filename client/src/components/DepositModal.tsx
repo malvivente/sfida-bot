@@ -75,23 +75,42 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       );
       const boc = txResult?.boc;
 
-      // Step 2: Inform backend server to immediately credit user's in-bot balance
-      const depRes = await fetch(`${serverUrl}/api/users/${userAddress}/deposit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amountGram: amt.toString(),
-          boc,
-          telegramId: userId,
-        }),
-      });
+      // Step 2: Request backend to scan and verify the on-chain deposit
+      const initialBalNum = parseFloat(currentBalanceGram || '0');
+      let finalAccount: any = null;
+      let confirmed = false;
 
-      const depData = await depRes.json();
-
-      if (depRes.ok && depData?.account) {
-        const newBal = depData.account.balanceGram || depData.account.balanceTon || amt.toFixed(2);
+      // Poll sync-deposit up to 4 times (every 2.5s) to allow TON block inclusion
+      for (let attempt = 0; attempt < 4; attempt++) {
         try {
-          localStorage.setItem('sfidabot_user_balance', JSON.stringify(depData.account));
+          const syncRes = await fetch(`${serverUrl}/api/users/${userAddress}/sync-deposit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              boc,
+              telegramId: userId,
+            }),
+          });
+          const syncData = await syncRes.json();
+          if (syncData?.account) {
+            finalAccount = syncData.account;
+            const balNow = parseFloat(syncData.account.balanceGram || syncData.account.balanceTon || '0');
+            if (balNow > initialBalNum) {
+              confirmed = true;
+              break;
+            }
+          }
+        } catch {}
+
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500));
+        }
+      }
+
+      if (finalAccount) {
+        const newBal = finalAccount.balanceGram || finalAccount.balanceTon || (initialBalNum + amt).toFixed(2);
+        try {
+          localStorage.setItem('sfidabot_user_balance', JSON.stringify(finalAccount));
         } catch {}
 
         // Fire global balance update event so header and all views update instantly
@@ -102,7 +121,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         onSuccess?.(newBal);
         setMsg({
           type: 'success',
-          text: t('depositModal.successMsg', { amount: amt.toFixed(2) }),
+          text: confirmed
+            ? t('depositModal.successMsg', { amount: amt.toFixed(2) })
+            : `Transazione inviata! L'accredito di ${amt.toFixed(2)} GRAM avviene in automatico appena validato dal blocco.`,
         });
 
         triggerImpact('heavy');
@@ -110,7 +131,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           onClose();
         }, 2200);
       } else {
-        throw new Error(depData?.error || t('depositModal.verifyFailed'));
+        // Fallback reassurance: on-chain tx succeeded
+        setMsg({
+          type: 'success',
+          text: `Transazione confermata nel wallet! Il deposito verrà accreditato automaticamente sul tuo saldo tra pochi istanti.`,
+        });
+        setTimeout(() => {
+          onClose();
+        }, 2800);
       }
     } catch (err: any) {
       triggerImpact('heavy');

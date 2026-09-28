@@ -300,6 +300,7 @@ export const App: React.FC = () => {
             showBanners={false}
             showMatchesList={true}
             initialGameFilter={duelFilterGame}
+            onClearInitialGameFilter={() => setDuelFilterGame('ALL')}
             initialMatchId={deepMatchId}
             initialInviteCode={deepInviteCode}
             role={deepRole}
@@ -386,6 +387,9 @@ export const App: React.FC = () => {
             if (tab !== 'home' && tab !== 'duels') {
               setDeepMatchId(undefined);
               setDeepInviteCode(undefined);
+            }
+            if (tab === 'duels') {
+              setDuelFilterGame('ALL');
             }
             if (tab === 'leaderboard' && activeTab !== 'leaderboard') {
               setLastTabBeforeLeaderboard(activeTab === 'profile' ? 'profile' : 'home');

@@ -34,49 +34,92 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Filter out any mock or seed examples
-          const realOnly = parsed.filter((w: WinItem) => w && w.id && !w.id.startsWith('seed-'));
-          return realOnly;
+          return parsed;
         }
       }
     } catch {}
     return [];
   });
 
-  // Extract settled matches from real matches feed and add to wins list
+  // Fetch real global platform wins from server
   useEffect(() => {
-    const settledMatches = matches.filter(
-      (m) => (m.state === 'MATCH_SETTLED' || Boolean(m.winnerAddress) || Boolean(m.winnerName)) && m.playerA
-    );
+    const fetchRecentWins = async () => {
+      try {
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        const res = await fetch(`${serverUrl}/api/recent-wins`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data?.wins) && data.wins.length > 0) {
+            setWinsList((prev) => {
+              const incoming: WinItem[] = data.wins.map((w: any) => ({
+                id: w.id,
+                winnerName: w.winnerName,
+                gameType: (w.gameType || 'roulette') as GameType,
+                payoutGram: w.payoutGram,
+                timestamp: w.timestamp,
+                isNew: false,
+              }));
 
-    if (settledMatches.length > 0) {
-      setWinsList((prev) => {
-        const updated = [...prev];
-        for (const m of settledMatches) {
-          const winId = `match-win-${m.matchId}`;
-          if (!updated.some((w) => w.id === winId)) {
-            const winnerName = (m as any).winnerName || m.playerA.name || 'Warrior';
-            const payout = (parseFloat(m.wagerAmountNano) * 2 / 1e9).toFixed(2);
-            updated.unshift({
-              id: winId,
-              winnerName: winnerName.replace(/^@/, ''),
-              gameType: m.gameType || 'roulette',
-              payoutGram: payout,
-              timestamp: Date.now(),
-              isNew: true,
+              const map = new Map<string, WinItem>();
+              for (const item of incoming) {
+                map.set(item.id, item);
+              }
+              // Preserve any unexpired fresh live wins at the top
+              for (const item of prev) {
+                if (item.isNew) {
+                  map.set(item.id, item);
+                }
+              }
+
+              const merged = Array.from(map.values()).slice(0, 15);
+              try {
+                localStorage.setItem('sfidabot_recent_wins', JSON.stringify(merged));
+              } catch {}
+              return merged;
             });
           }
         }
-        const trimmed = updated.slice(0, 15);
-        try {
-          localStorage.setItem('sfidabot_recent_wins', JSON.stringify(trimmed));
-        } catch {}
-        return trimmed;
-      });
-    }
-  }, [matches]);
+      } catch {}
+    };
 
-  // When a live win socket event comes in
+    fetchRecentWins();
+    const interval = setInterval(fetchRecentWins, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Listen to live global win event from WebSocket
+  useEffect(() => {
+    const handleGlobalWin = (e: any) => {
+      const winData = e?.detail;
+      if (!winData?.winnerName) return;
+
+      const newWin: WinItem = {
+        id: winData.id || `win_${Date.now()}`,
+        winnerName: winData.winnerName.replace(/^@/, ''),
+        gameType: (winData.gameType || 'roulette') as GameType,
+        payoutGram: winData.payoutGram || '1.92',
+        timestamp: winData.timestamp || Date.now(),
+        isNew: true,
+      };
+
+      setWinsList((prev) => {
+        const updated = [newWin, ...prev.filter((w) => w.id !== newWin.id)].slice(0, 15);
+        try {
+          localStorage.setItem('sfidabot_recent_wins', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      setTimeout(() => {
+        setWinsList((prev) => prev.map((w) => (w.id === newWin.id ? { ...w, isNew: false } : w)));
+      }, 15000);
+    };
+
+    window.addEventListener('sfida_global_win', handleGlobalWin);
+    return () => window.removeEventListener('sfida_global_win', handleGlobalWin);
+  }, []);
+
+  // When a live win prop event comes in
   useEffect(() => {
     if (!newWinEvent) return;
     setWinsList((prev) => {

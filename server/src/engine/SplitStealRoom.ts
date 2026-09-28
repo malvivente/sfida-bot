@@ -616,6 +616,10 @@ export class SplitStealRoom extends BaseGameRoom {
 
     this.broadcastRoomState();
 
+    if (this.onMatchSettledCallback && winnerAddress) {
+      this.onMatchSettledCallback(this, winnerAddress);
+    }
+
     // Auto cleanup after 90s
     if (this.settleCleanupTimer) clearTimeout(this.settleCleanupTimer);
     this.settleCleanupTimer = setTimeout(async () => {

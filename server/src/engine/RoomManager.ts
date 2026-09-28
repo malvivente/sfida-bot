@@ -25,23 +25,49 @@ export class RoomManager {
     const key = config.matchId.toString();
     const gameType = config.gameType || 'roulette';
 
+    const onSettledWrapped = async (r: BaseGameRoom, winner: string) => {
+      if (onSettled) {
+        try {
+          await onSettled(r, winner);
+        } catch (e) {
+          console.error('[RoomManager] Error in onSettled callback:', e);
+        }
+      }
+
+      if (winner && r.winnerName && !r.winnerName.includes('Nessun Vincitore') && !r.winnerName.includes('Pace')) {
+        const wagerNum = Number(r.config.wagerAmountNano) / 1e9;
+        const totalPot = wagerNum * 2;
+        const payout = (r.gameType === 'split' ? totalPot : totalPot * 0.96).toFixed(2);
+        this.broadcastGlobal({
+          type: 'GLOBAL_WIN',
+          data: {
+            id: `win_${r.matchId}`,
+            winnerName: r.winnerName.replace(/^@/, ''),
+            gameType: r.gameType || 'roulette',
+            payoutGram: payout,
+            timestamp: Date.now(),
+          },
+        });
+      }
+    };
+
     let room: BaseGameRoom;
     switch (gameType) {
       case 'blackjack':
-        room = new BlackjackRoom(config, onSettled);
+        room = new BlackjackRoom(config, onSettledWrapped);
         break;
       case 'bridge':
-        room = new GlassBridgeRoom(config, onSettled);
+        room = new GlassBridgeRoom(config, onSettledWrapped);
         break;
       case 'chrono':
-        room = new ChronoBlindRoom(config, onSettled);
+        room = new ChronoBlindRoom(config, onSettledWrapped);
         break;
       case 'split':
-        room = new SplitStealRoom(config, onSettled);
+        room = new SplitStealRoom(config, onSettledWrapped);
         break;
       case 'roulette':
       default:
-        room = new RussianRouletteRoom(config, onSettled);
+        room = new RussianRouletteRoom(config, onSettledWrapped);
         break;
     }
 
@@ -59,5 +85,13 @@ export class RoomManager {
 
   public removeRoom(matchId: string | bigint): boolean {
     return this.rooms.delete(matchId.toString());
+  }
+
+  public broadcastGlobal(message: any): void {
+    for (const room of this.rooms.values()) {
+      try {
+        room.broadcast(message);
+      } catch {}
+    }
   }
 }

@@ -88,10 +88,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [filterGameType, setFilterGameType] = useState<string>(initialGameFilter || 'ALL');
 
   React.useEffect(() => {
-    if (initialGameFilter) {
+    if (initialGameFilter && initialGameFilter !== 'ALL') {
       setFilterGameType(initialGameFilter);
+      onClearInitialGameFilter?.();
     }
-  }, [initialGameFilter]);
+  }, [initialGameFilter, onClearInitialGameFilter]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
@@ -310,8 +311,44 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       return 0;
     });
 
+  const userActiveMatch = matches.find((m) => {
+    if (m.state === 'MATCH_SETTLED' || m.state === 'FORFEITED') return false;
+    const isA = (userAddress && m.playerA && m.playerA.wallet && userAddress.toLowerCase() === m.playerA.wallet.toLowerCase()) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
+    const isB = m.playerB && ((userAddress && m.playerB.wallet && userAddress.toLowerCase() === m.playerB.wallet.toLowerCase()) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
+    return isA || isB;
+  });
+
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-sans pb-10">
+      {/* Pinned Ongoing Duel Alert Card */}
+      {userActiveMatch && (
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-between gap-2 animate-pulse">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-400/30 border border-amber-400/50 flex items-center justify-center shrink-0 text-amber-300">
+              <Swords className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-heading font-black text-amber-200 block truncate">
+                {t('lobby.ongoingDuelNotice')}
+              </span>
+              <span className="text-[10px] text-slate-300 block truncate">
+                #{userActiveMatch.matchId} • {(parseFloat(userActiveMatch.wagerAmountNano) / 1e9).toFixed(2)} GRAM
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              triggerImpact('heavy');
+              onSpectateMatch(userActiveMatch.matchId);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-400 text-amber-950 font-heading font-black text-xs uppercase tracking-wider shrink-0 shadow-md hover:bg-amber-300 active:scale-95 transition-all"
+          >
+            {t('lobby.resumeDuel')}
+          </button>
+        </div>
+      )}
+
       {sectionView === 'play_hub' ? (
         <PlayHubView
           onBack={() => setSectionView('hub')}
@@ -330,29 +367,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         />
       ) : (
         <>
-          {/* If inside PVP Section, show Back to Hub header */}
-          {sectionView === 'pvp' && (
-            <div className="flex items-center justify-between px-1 mb-2">
-              <button
-                onClick={() => {
-                  triggerImpact('light');
-                  setSectionView(previousView);
-                }}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-heading font-bold text-xs uppercase tracking-wider active:scale-95 transition-all"
-              >
-                <ArrowLeft className="w-4 h-4 text-cyan-400" />
-                <span>{t('epic.back')}</span>
-              </button>
-              <div className="flex items-center space-x-1.5">
-                <Swords className="w-4 h-4 text-amber-400" />
-                <h2 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                  {t('epic.pvpTitle')}
-                </h2>
-              </div>
-              <div className="w-16" />
-            </div>
-          )}
-
           {/* Live Activity Ticker (Real-time and previous victories ticker) */}
           <LiveActivityTicker
             matches={matches}

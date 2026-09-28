@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, RotateCcw, Loader2, Sparkles, Layers, Clock, Flame, ArrowDownLeft, Swords } from 'lucide-react';
 import { BlackjackState, Card } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
+import { useI18n } from '../../i18n/index.js';
 
 interface BlackjackArenaProps {
   gameData?: BlackjackState;
@@ -44,14 +45,14 @@ interface BlackjackArenaProps {
 const renderSuitIcon = (suit: string) => {
   switch (suit) {
     case '♥':
-      return <span className="text-red-500">♥</span>;
+      return <span className="text-rose-500 font-black">♥</span>;
     case '♦':
-      return <span className="text-red-400">♦</span>;
+      return <span className="text-amber-500 font-black">♦</span>;
     case '♣':
-      return <span className="text-cyber-cyan">♣</span>;
+      return <span className="text-cyan-400 font-black">♣</span>;
     case '♠':
     default:
-      return <span className="text-slate-200">♠</span>;
+      return <span className="text-cyan-400 font-black">♠</span>;
   }
 };
 
@@ -63,18 +64,18 @@ const CardView: React.FC<{ card: Card; index: number }> = ({ card, index }) => {
       initial={{ scale: 0, y: -20, rotate: -5 }}
       animate={{ scale: 1, y: 0, rotate: 0 }}
       transition={{ delay: index * 0.1, duration: 0.3 }}
-      className={`w-12 h-18 sm:w-14 sm:h-20 bg-gradient-to-br from-slate-900 to-black border-2 rounded-xl p-1.5 flex flex-col justify-between shadow-lg select-none relative shrink-0 ${
-        isRed ? 'border-cyber-pink/70 shadow-[0_0_12px_rgba(255,0,85,0.25)]' : 'border-cyber-cyan/70 shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+      className={`w-14 h-20 sm:w-16 sm:h-24 bg-gradient-to-br from-slate-900 to-black border-2 rounded-xl p-1.5 flex flex-col justify-between shadow-lg select-none relative shrink-0 ${
+        isRed ? 'border-rose-500/70 shadow-[0_0_12px_rgba(244,63,94,0.3)]' : 'border-cyan-400/70 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
       }`}
     >
-      <div className={`text-xs font-chakra font-black flex items-center justify-between ${isRed ? 'text-cyber-pink' : 'text-cyber-cyan'}`}>
+      <div className={`text-xs font-chakra font-black flex items-center justify-between ${isRed ? 'text-rose-400' : 'text-cyan-400'}`}>
         <span>{card.value}</span>
         <span className="text-xs">{card.suit}</span>
       </div>
-      <div className="text-center text-lg my-auto leading-none">
+      <div className="text-center text-xl my-auto leading-none">
         {renderSuitIcon(card.suit)}
       </div>
-      <div className={`text-xs font-chakra font-black flex items-center justify-between rotate-180 ${isRed ? 'text-cyber-pink' : 'text-cyber-cyan'}`}>
+      <div className={`text-xs font-chakra font-black flex items-center justify-between rotate-180 ${isRed ? 'text-rose-400' : 'text-cyan-400'}`}>
         <span>{card.value}</span>
         <span className="text-xs">{card.suit}</span>
       </div>
@@ -114,6 +115,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   hasPlayerB = true,
   onJoinAsPlayer,
 }) => {
+  const { t } = useI18n();
   const deckRemaining = gameData?.deckRemaining ?? 48;
   const handA = gameData?.handA ?? [];
   const handB = gameData?.handB ?? [];
@@ -160,14 +162,14 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
         <div className="flex flex-col items-start min-w-0">
           <span className="text-[10px] text-cyber-cyan uppercase font-chakra font-bold tracking-widest flex items-center space-x-1 truncate">
             <Sparkles className="w-3 h-3 text-cyber-cyan inline shrink-0" />
-            <span>FACE-UP BLACKJACK</span>
+            <span>{t('blackjack.title')}</span>
           </span>
-          <span className="text-[10px] font-chakra text-slate-400">52-Card Shoe</span>
+          <span className="text-[10px] font-chakra text-slate-400">{t('blackjack.shoe')}</span>
         </div>
 
         <div className="flex items-center space-x-1.5 bg-black/60 border border-cyber-border px-2.5 py-1 rounded-xl shrink-0">
           <Layers className="w-3 h-3 text-cyber-cyan" />
-          <span className="text-xs font-mono font-bold text-white">{deckRemaining} Cards</span>
+          <span className="text-xs font-mono font-bold text-white">{deckRemaining} {t('blackjack.cards')}</span>
         </div>
       </div>
 
@@ -209,18 +211,18 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                   <span className="text-xs font-chakra font-bold text-cyber-pink truncate">{playerBName}</span>
                   {standB && (
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-600">
-                      STAND
+                      {t('blackjack.stand')}
                     </span>
                   )}
                   {bustB && (
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-cyber-pink/20 text-cyber-pink border border-cyber-pink animate-pulse">
-                      BUST!
+                      {t('blackjack.bust')}
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center space-x-1 shrink-0">
-                  <span className="text-xs font-chakra text-slate-400">Score:</span>
+                  <span className="text-xs font-chakra text-slate-400">{t('blackjack.score')}</span>
                   <span className={`text-base font-orbitron font-black ${
                     bustB ? 'text-cyber-pink line-through' : scoreB === 21 ? 'text-cyber-amber animate-pulse' : 'text-white'
                   }`}>
@@ -232,7 +234,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               {/* Cards Row B */}
               <div className="flex items-center space-x-2 overflow-x-auto py-1 min-h-[75px]">
                 {handB.length === 0 ? (
-                  <span className="text-xs text-slate-500 italic">Dealing face-up cards...</span>
+                  <span className="text-xs text-slate-500 italic">{t('blackjack.dealingCards')}</span>
                 ) : (
                   handB.map((c, i) => <CardView key={`${c.suit}-${c.value}-${i}`} card={c} index={i} />)
                 )}
@@ -243,10 +245,10 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             {roomState === 'GAME_ACTIVE' && (
               <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-cyber-border/60 text-center">
                 <div className="flex items-center space-x-2 text-xs font-chakra">
-                  <span className="text-slate-400">Active Turn:</span>
+                  <span className="text-slate-400">{t('blackjack.activeTurn')}</span>
                   <span className="font-bold text-white uppercase">{activeTurnName}</span>
                   <span className="text-slate-500">•</span>
-                  <span className="text-slate-400">Bust Odds:</span>
+                  <span className="text-slate-400">{t('blackjack.bustOdds')}</span>
                   <span className={`font-mono font-bold ${activeBustOdds >= 50 ? 'text-cyber-pink' : 'text-cyber-green'}`}>
                     {activeBustOdds}%
                   </span>
@@ -469,7 +471,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                 <div className="w-full flex flex-col space-y-2">
                   <div className="w-full py-2.5 px-3 bg-black/60 border border-cyber-cyan/30 rounded-xl text-center">
                     <span className="text-xs font-chakra font-bold text-cyber-cyan">
-                      👁️ VISTA SPETTATORE • IN ATTESA DI UNO SFIDANTE
+                      {t('arena.spectatorWaitingOpponent')}
                     </span>
                   </div>
                   {onJoinAsPlayer && (
@@ -478,14 +480,14 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                       className="w-full py-3 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                     >
                       <Swords className="w-4 h-4" />
-                      <span>PARTECIPA AL DUELLO ({wagerTon} GRAM)</span>
+                      <span>{t('arena.joinAsPlayer', { amount: wagerTon })}</span>
                     </button>
                   )}
                 </div>
               ) : (
                 <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
                   <span className="text-xs font-chakra font-bold text-cyber-cyan">
-                    👁️ SPECTATOR VIEW • WAITING FOR DUELISTS TO READY UP
+                    {t('arena.spectatorWaitingReady')}
                   </span>
                 </div>
               )}
@@ -495,7 +497,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
           <div className="w-full py-3 px-4 rounded-xl bg-black/60 border border-cyber-amber/60 text-center flex items-center justify-center space-x-2">
             <Clock className="w-4 h-4 animate-spin text-cyber-amber" />
             <span className="text-xs font-chakra font-bold text-cyber-amber">
-              DEALING FACE-UP SHOE • BETTING WINDOW ACTIVE ({countdownSeconds ?? 30}s)
+              {t('blackjack.bettingWindow')} ({countdownSeconds ?? 30}s)
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (
@@ -503,16 +505,16 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             isPlayerTurn ? (
               <div className="w-full flex flex-col space-y-2">
                 <span className="text-[11px] font-orbitron font-bold text-cyber-cyan uppercase tracking-wider text-center animate-pulse">
-                  ⚡ YOUR TURN • HIT OR STAND?
+                  {t('blackjack.yourTurn')}
                 </span>
                 <div className="flex space-x-2.5 w-full">
                   <button
                     onClick={onHit}
                     className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-cyan text-cyber-bg shadow-neon-cyan hover:brightness-110 active:scale-95 transition-all flex flex-col items-center"
                   >
-                    <span>HIT (+1 CARD)</span>
+                    <span>{t('blackjack.hitBtn')}</span>
                     <span className="text-[9px] text-cyber-bg/80 font-chakra font-normal mt-0.5">
-                      Bust Risk: {activeBustOdds}%
+                      {t('blackjack.bustRisk')} {activeBustOdds}%
                     </span>
                   </button>
 
@@ -520,9 +522,9 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                     onClick={onStand}
                     className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-bg border-2 border-cyber-pink text-cyber-pink shadow-[0_0_15px_rgba(255,0,85,0.3)] hover:bg-cyber-pink/15 active:scale-95 transition-all flex flex-col items-center"
                   >
-                    <span>STAND (HOLD)</span>
+                    <span>{t('blackjack.standBtn')}</span>
                     <span className="text-[9px] text-cyber-pink font-chakra font-normal mt-0.5">
-                      Lock your {currentTurn === 'A' ? scoreA : scoreB} score
+                      {t('blackjack.lockScore')} {currentTurn === 'A' ? scoreA : scoreB}
                     </span>
                   </button>
                 </div>
@@ -531,14 +533,14 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               <div className="w-full py-3.5 rounded-xl bg-black/50 border border-cyber-border text-center flex items-center justify-center space-x-2">
                 <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
                 <span className="text-xs font-chakra font-bold text-slate-300">
-                  {activeTurnName} is deciding to Hit or Stand...
+                  {activeTurnName} {t('blackjack.waitingDecide')}
                 </span>
               </div>
             )
           ) : (
             <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
               <span className="text-xs font-chakra font-bold text-cyber-cyan">
-                👁️ SPECTATOR VIEW • 100% FACE-UP TABLE • PLACE BETS BELOW
+                {t('blackjack.spectatorView')}
               </span>
             </div>
           )

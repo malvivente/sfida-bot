@@ -99,6 +99,11 @@ export function createTelegramBot(token?: string): Bot {
   activeBotInstance = bot;
   const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
 
+  // Global Error Handler to ensure the bot process NEVER halts/stops on unhandled errors
+  bot.catch((err) => {
+    console.error(`[Grammy Error] Error in update ${err.ctx?.update?.update_id}:`, err.error || err);
+  });
+
   // Helper to resolve user's active language
   const getUserLang = async (user?: { id?: number; language_code?: string }): Promise<BotLanguage> => {
     if (!user) return 'en';
@@ -109,7 +114,7 @@ export function createTelegramBot(token?: string): Bot {
   // /start command with deep linking and multi-language support
   bot.command('start', async (ctx) => {
     const user = ctx.from;
-    const payload = ctx.match;
+    const payload = (ctx.match || '').trim();
     const parsed = parseDeepLink(payload);
 
     // Register / update user in database with their client language
@@ -128,13 +133,21 @@ export function createTelegramBot(token?: string): Bot {
 
     let welcomeText = `${botT(lang, 'welcome_header')}\n\n${botT(lang, 'welcome_body')}\n\n`;
 
-    if (parsed.recruiterWallet) {
+    if (parsed.matchId) {
+      welcomeText = lang === 'it'
+        ? `⚔️ <b>SFIDA ARENA • INVITO DUELLO</b>\n\nSei stato invitato a un duello nella stanza <b>#${parsed.matchId}</b>!\n\nPremi il pulsante qui sotto per scendere nell'arena:`
+        : `⚔️ <b>SFIDA ARENA • DUEL INVITE</b>\n\nYou have been invited to a duel in room <b>#${parsed.matchId}</b>!\n\nTap below to enter the arena and battle:`;
+    } else if (parsed.recruiterWallet) {
       const truncatedRecruiter = `${parsed.recruiterWallet.slice(0, 8)}...${parsed.recruiterWallet.slice(-6)}`;
       welcomeText += botT(lang, 'welcome_recruited', { recruiter: truncatedRecruiter });
     }
 
+    const buttonLabel = parsed.matchId
+      ? (lang === 'it' ? '⚔️ ENTRA NEL DUELLO' : '⚔️ ENTER DUEL')
+      : botT(lang, 'btn_enter_arena');
+
     const keyboard = new InlineKeyboard()
-      .webApp(botT(lang, 'btn_enter_arena'), `${webAppUrl}?startapp=${payload || 'lobby'}`)
+      .webApp(buttonLabel, `${webAppUrl}?startapp=${payload || 'lobby'}`)
       .row()
       .url(botT(lang, 'btn_official_channel'), 'https://t.me/toncoin');
 
@@ -251,13 +264,15 @@ export function createTelegramBot(token?: string): Bot {
     const duelPayload = `duel_${matchId}_${userWallet}_${chatId}`;
     const spectatePayload = `spectate_${matchId}`;
 
-    const duelUrl = `${webAppUrl}?startapp=${duelPayload}`;
-    const spectateUrl = `${webAppUrl}?startapp=${spectatePayload}`;
+    const botUser = bot.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'SfidaRobot';
+    // In Telegram Bot API, inline query results require URL buttons (web_app throws BUTTON_TYPE_INVALID):
+    const duelTelegramUrl = `https://t.me/${botUser}?start=${duelPayload}`;
+    const spectateTelegramUrl = `https://t.me/${botUser}?start=${spectatePayload}`;
 
     const keyboard = new InlineKeyboard()
-      .webApp(botT(lang, 'inline_accept_btn', { wager }), duelUrl)
+      .url(botT(lang, 'inline_accept_btn', { wager }), duelTelegramUrl)
       .row()
-      .webApp(botT(lang, 'inline_watch_btn'), spectateUrl);
+      .url(botT(lang, 'inline_watch_btn'), spectateTelegramUrl);
 
     const title = botT(lang, 'inline_challenge_title', { wager });
     const description = botT(lang, 'inline_challenge_desc', { payout: netWinnerPayout });

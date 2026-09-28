@@ -86,7 +86,7 @@ export abstract class BaseGameRoom {
   public isRematch: boolean = false;
   protected settleCleanupTimer?: NodeJS.Timeout;
 
-  private onMatchSettledCallback?: (room: BaseGameRoom, winnerAddress: string) => Promise<void>;
+  protected onMatchSettledCallback?: (room: BaseGameRoom, winnerAddress: string) => Promise<void>;
 
   constructor(
     config: RoomConfig,

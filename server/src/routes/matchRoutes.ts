@@ -9,6 +9,7 @@ import { feeConfig } from '../config/feeConfig.js';
 import { isTelegramChatMember } from '../bot/index.js';
 import { TonClient, WalletContractV4, WalletContractV5R1, SendMode, internal, toNano, Address } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
+import { depositWatcher } from '../services/depositWatcher.js';
 
 export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
@@ -18,6 +19,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
   fastify.get('/api/jackpot', async (_req, reply) => {
     const info = await dbService.getJackpotInfo();
     return reply.send(info);
+  });
+
+  // Global Recent Wins (Real Platform Settled Duels)
+  fastify.get('/api/recent-wins', async (_req, reply) => {
+    const wins = await dbService.getRecentWins(15);
+    return reply.send({ success: true, wins });
   });
 
   // List all active matches (exclude WAITING_FOR_DEPLOY)
@@ -505,6 +512,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
       photoUrl?: string;
     };
     await dbService.restoreUnsentWithdrawals(wallet);
+
+    // Sync any pending confirmed on-chain deposits
+    try {
+      await depositWatcher.checkDepositsForWallet(wallet);
+    } catch (e) {
+      console.warn('[matchRoutes] deposit check warning:', e);
+    }
+
     const disp = query.displayName || query.fullName;
     const account = await dbService.getUserAccount(
       wallet,
@@ -517,31 +532,33 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({ success: true, account, transactions });
   });
 
-  // User deposit to internal balance
-  fastify.post('/api/users/:wallet/deposit', async (req, reply) => {
+  // Secure User deposit sync (verifies on-chain transactions via depositWatcher)
+  const handleDepositSync = async (req: any, reply: any) => {
     const { wallet } = req.params as { wallet: string };
-    const body = req.body as {
+    const body = (req.body || {}) as {
       amountGram?: string;
       amountTon?: string;
       txHash?: string;
       boc?: string;
       telegramId?: string;
     };
-    const query = req.query as { telegramId?: string };
-    const amount = body.amountGram || body.amountTon;
-    if (!amount || parseFloat(amount) <= 0) {
-      return reply.status(400).send({ error: 'Invalid deposit amount' });
+    const query = (req.query || {}) as { telegramId?: string };
+
+    // Trigger on-chain scan to credit any confirmed blockchain deposits
+    try {
+      await depositWatcher.checkDepositsForWallet(wallet);
+    } catch (e) {
+      console.warn('[matchRoutes] deposit sync error:', e);
     }
+
     const cleanTgId = body.telegramId || query?.telegramId;
-    const account = await dbService.creditUserBalance(
-      wallet,
-      amount,
-      'DEPOSIT',
-      body.txHash ? `Tx: ${body.txHash}` : body.boc ? `BOC: ${body.boc.slice(0, 16)}...` : 'On-chain deposit',
-      cleanTgId
-    );
-    return reply.send({ success: true, account });
-  });
+    const account = await dbService.getUserAccount(wallet, cleanTgId);
+    const transactions = await dbService.getUserTransactions(wallet, cleanTgId);
+    return reply.send({ success: true, account, transactions });
+  };
+
+  fastify.post('/api/users/:wallet/deposit', handleDepositSync);
+  fastify.post('/api/users/:wallet/sync-deposit', handleDepositSync);
 
   // User withdraw from internal balance
   fastify.post('/api/users/:wallet/withdraw', async (req, reply) => {

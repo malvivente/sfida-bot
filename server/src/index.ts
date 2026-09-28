@@ -12,6 +12,7 @@ import { profileRoutes } from './routes/profileRoutes.js';
 import { affiliateRoutes } from './routes/affiliateRoutes.js';
 import { createTelegramBot } from './bot/index.js';
 import { signerService } from './services/signer.js';
+import { depositWatcher } from './services/depositWatcher.js';
 
 const cjsRequire = createRequire(import.meta.url);
 const isProduction = process.env.NODE_ENV === 'production';
@@ -93,6 +94,7 @@ async function main() {
   await fastify.register(matchRoutes);
   await fastify.register(profileRoutes);
   await fastify.register(affiliateRoutes);
+  depositWatcher.start();
 
   // Initialize Telegram Bot
   const botToken = process.env.TELEGRAM_BOT_TOKEN;

@@ -33,6 +33,7 @@ interface ArenaProps {
   onOpenSpectate?: () => void;
   onNavigateToDuels?: (gameType?: string) => void;
   initialGameFilter?: string;
+  onClearInitialGameFilter?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   onBalanceUpdated?: (balance: string) => void;
@@ -51,6 +52,7 @@ export const Arena: React.FC<ArenaProps> = ({
   onOpenSpectate,
   onNavigateToDuels,
   initialGameFilter,
+  onClearInitialGameFilter,
   onOpenAffiliates,
   onOpenJackpotModal,
   onBalanceUpdated,
@@ -101,6 +103,7 @@ export const Arena: React.FC<ArenaProps> = ({
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
   const [isClaimingPayout, setIsClaimingPayout] = useState(false);
   const [payoutClaimed, setPayoutClaimed] = useState(false);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
 
   const fetchUserBalance = async () => {
     const targetKey = userAddress || (userId ? `tg_${userId}` : '');
@@ -669,6 +672,31 @@ export const Arena: React.FC<ArenaProps> = ({
   const playerA_Name = socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A';
   const playerB_Name = socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent'));
 
+  const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
+  const effectiveInviteCode = initialInviteCode || currentActiveMatch?.inviteCode || (activeMatchId ? (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+      return stored[activeMatchId];
+    } catch { return undefined; }
+  })() : undefined);
+  const canJoinAsPlayer = !hasPlayerB && !isCurrentCreator && (!isPrivateMatch || Boolean(effectiveInviteCode));
+
+  const isMatchInProgress = Boolean(
+    isMatchPlayer &&
+    (socketData.roomState === 'GAME_ACTIVE' || socketData.roomState === 'SIGNAL_FIRED' || socketData.roomState === 'ROUND_END' || socketData.roomState === 'BETTING_WINDOW' || (socketData.roomState === 'LOBBY' && hasPlayerB))
+  );
+
+  const handleAttemptExitMatch = () => {
+    if (isMatchInProgress) {
+      triggerImpact('heavy');
+      setShowExitConfirmModal(true);
+    } else {
+      triggerImpact('light');
+      setActiveMatchId(null);
+      onClearDeepMatch?.();
+    }
+  };
+
   const handleJoinFromArena = () => {
     if (!currentActiveMatch && activeMatchId) {
       const m = matches.find((x) => x.matchId === activeMatchId);
@@ -818,10 +846,7 @@ export const Arena: React.FC<ArenaProps> = ({
           {/* Top Header Controls: Back to Lobby + Share + Cancel Duel if Creator */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button
-              onClick={() => {
-                setActiveMatchId(null);
-                onClearDeepMatch?.();
-              }}
+              onClick={handleAttemptExitMatch}
               className="flex items-center space-x-1.5 text-xs font-heading font-bold text-slate-400 hover:text-cyan-400 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -895,7 +920,7 @@ export const Arena: React.FC<ArenaProps> = ({
               }}
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
-              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
             />
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
@@ -939,7 +964,7 @@ export const Arena: React.FC<ArenaProps> = ({
               }}
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
-              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
             />
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
@@ -982,7 +1007,7 @@ export const Arena: React.FC<ArenaProps> = ({
               }}
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
-              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
             />
           ) : effectiveGameType === 'split' ? (
             <SplitStealArena
@@ -1025,7 +1050,7 @@ export const Arena: React.FC<ArenaProps> = ({
               }}
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
-              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
             />
           ) : (
             <RussianRouletteArena
@@ -1068,7 +1093,7 @@ export const Arena: React.FC<ArenaProps> = ({
               }}
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
-              onJoinAsPlayer={!hasPlayerB && !isCurrentCreator ? handleJoinFromArena : undefined}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
             />
           )}
 
@@ -1120,11 +1145,51 @@ export const Arena: React.FC<ArenaProps> = ({
           onOpenSpectate={onOpenSpectate}
           onNavigateToDuels={onNavigateToDuels}
           initialGameFilter={initialGameFilter}
+          onClearInitialGameFilter={onClearInitialGameFilter}
           onOpenAffiliates={onOpenAffiliates}
           onOpenJackpotModal={onOpenJackpotModal}
           initialCreateGame={initialCreateGame}
           onClearInitialCreateGame={onClearInitialCreateGame}
         />
+      )}
+
+      {/* Active Match In-Progress Exit Warning Modal */}
+      {showExitConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-[#141724] border-2 border-amber-500/60 p-5 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center mx-auto text-amber-400">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-heading font-black text-white uppercase tracking-wide">
+                {t('arena.exitWarningTitle')}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                {t('arena.exitWarningDesc')}
+              </p>
+            </div>
+
+            <div className="flex flex-col space-y-2 pt-2">
+              <button
+                onClick={() => setShowExitConfirmModal(false)}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-epic-cyan active:scale-95 transition-all"
+              >
+                {t('arena.stayInGame')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowExitConfirmModal(false);
+                  setActiveMatchId(null);
+                  onClearDeepMatch?.();
+                }}
+                className="w-full py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-400 font-heading font-bold text-xs uppercase tracking-wider transition-all"
+              >
+                {t('arena.exitAnyway')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

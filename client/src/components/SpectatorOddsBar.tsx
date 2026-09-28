@@ -98,8 +98,8 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           <TrendingUp className="w-4 h-4 text-cyber-cyan" />
           <span className="text-xs font-orbitron font-bold text-slate-200 tracking-wider">
             {isPlayer
-              ? isSplit ? 'PARI-MUTUEL ODDS (1-X-2)' : 'PARI-MUTUEL ODDS (SPECTATORS)'
-              : isSplit ? 'PRE-MATCH BETTING (1-X-2)' : t('spectator.title')}
+              ? isSplit ? t('spectator.oddsSplit') : t('spectator.oddsSpectators')
+              : isSplit ? t('spectator.oddsSplit') : t('spectator.title')}
           </span>
         </div>
         {!isPlayer ? (
@@ -116,14 +116,14 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
               </div>
             ) : (
               <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-green bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-                <span>Est. payout: ~+{estimatedPayout}</span>
+                <span>{t('spectator.estPayout')} ~+{estimatedPayout}</span>
                 <GramIcon className="w-3 h-3 text-cyber-green" />
               </div>
             )}
           </div>
         ) : (
           <div className="flex items-center space-x-1 text-xs font-chakra font-bold text-cyber-cyan bg-cyber-bg px-2.5 py-0.5 rounded-lg border border-cyber-border">
-            <span>Live Pool</span>
+            <span>{t('spectator.livePool')}</span>
           </div>
         )}
       </div>

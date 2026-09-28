@@ -238,6 +238,14 @@ export function useSocket({
             if (msg.message) setFeedMessage(msg.message);
             break;
 
+          case 'GLOBAL_WIN':
+            if ((msg as any).data) {
+              window.dispatchEvent(
+                new CustomEvent('sfida_global_win', { detail: (msg as any).data })
+              );
+            }
+            break;
+
           case 'MATCH_SETTLED':
           case 'MATCH_FORFEITED':
             setRoomState('MATCH_SETTLED');
@@ -246,6 +254,19 @@ export function useSocket({
             if (msg.resolution) setResolution(msg.resolution);
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
+            if (msg.winnerName && !msg.winnerName.includes('Nessun') && !msg.winnerName.includes('Pace')) {
+              window.dispatchEvent(
+                new CustomEvent('sfida_global_win', {
+                  detail: {
+                    id: `win_${msg.resolution?.matchId || Date.now()}`,
+                    winnerName: msg.winnerName.replace(/^@/, ''),
+                    gameType: msg.gameType || 'roulette',
+                    payoutGram: msg.payoutTon || '1.92',
+                    timestamp: Date.now(),
+                  },
+                })
+              );
+            }
             break;
 
           case 'ROOM_CANCELLED':

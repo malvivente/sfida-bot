@@ -1273,6 +1273,38 @@ export class DatabaseService {
     return result;
   }
 
+  public async getRecentWins(limit: number = 15): Promise<{
+    id: string;
+    winnerName: string;
+    gameType: string;
+    payoutGram: string;
+    timestamp: number;
+  }[]> {
+    const allMatches = Array.from(this.matches.values());
+    const settled = allMatches.filter(
+      (m) =>
+        Boolean(m.winnerName || m.winnerAddress) &&
+        m.winnerName !== 'Doppio Tradimento (Nessun Vincitore)' &&
+        m.winnerName !== 'Pace (Entrambi Split)'
+    );
+
+    settled.sort((a, b) => (b.settledAt || b.createdAt || 0) - (a.settledAt || a.createdAt || 0));
+
+    return settled.slice(0, limit).map((m) => {
+      const payout =
+        m.payoutGram ||
+        m.payoutTon ||
+        (parseFloat(m.wagerGram || m.wagerTon || '1.0') * (m.gameType === 'split' ? 2.0 : 1.92)).toFixed(2);
+      return {
+        id: `win_${m.matchId}`,
+        winnerName: (m.winnerName || 'Sfida Duelist').replace(/^@/, ''),
+        gameType: m.gameType || 'roulette',
+        payoutGram: payout,
+        timestamp: m.settledAt || m.createdAt || Date.now(),
+      };
+    });
+  }
+
   public async getUserStats(walletAddress?: string, telegramId?: string): Promise<UserStats> {
     const resolvedTgId = this.resolveTelegramId(walletAddress, telegramId);
     const targetNorm = walletAddress ? this.normalizeAddress(walletAddress) : '';
