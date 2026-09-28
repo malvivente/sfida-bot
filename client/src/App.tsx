@@ -4,6 +4,7 @@ import { ReferralDashboard } from './pages/ReferralDashboard.js';
 import { Profile } from './pages/Profile.js';
 import { Leaderboard } from './pages/Leaderboard.js';
 import { RulesModal } from './components/RulesModal.js';
+import { TrustJackpotModal } from './components/TrustJackpotModal.js';
 import { DepositModal } from './components/DepositModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { EpicHeader } from './components/EpicHeader.js';
@@ -22,10 +23,32 @@ export const App: React.FC = () => {
   const [deepInviteCode, setDeepInviteCode] = useState<string | undefined>(undefined);
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showJackpotModal, setShowJackpotModal] = useState(false);
+  const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [isInsideMatch, setIsInsideMatch] = useState(false);
   const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<EpicTab>('profile');
   const { t } = useI18n();
+
+  // Periodic Trust Jackpot fetch from server
+  useEffect(() => {
+    const fetchJackpot = async () => {
+      try {
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        const res = await fetch(`${serverUrl}/api/jackpot`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.trustJackpotGram) {
+            setJackpotGram(parseFloat(data.trustJackpotGram).toFixed(2));
+          }
+        }
+      } catch {}
+    };
+
+    fetchJackpot();
+    const interval = setInterval(fetchJackpot, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const { userId, username, firstName, lastName, fullName, displayName, photoUrl } = useTelegram();
   const { userAddress } = useTonClashContract();
@@ -229,7 +252,7 @@ export const App: React.FC = () => {
             }}
             onMatchActiveChange={setIsInsideMatch}
             onOpenAffiliates={() => setActiveTab('referrals')}
-            onOpenJackpotModal={() => setShowRulesModal(true)}
+            onOpenJackpotModal={() => setShowJackpotModal(true)}
             onBalanceUpdated={setUserBalanceGram}
           />
         )}
@@ -249,7 +272,7 @@ export const App: React.FC = () => {
             }}
             onMatchActiveChange={setIsInsideMatch}
             onOpenAffiliates={() => setActiveTab('referrals')}
-            onOpenJackpotModal={() => setShowRulesModal(true)}
+            onOpenJackpotModal={() => setShowJackpotModal(true)}
             onBalanceUpdated={setUserBalanceGram}
           />
         )}
@@ -309,6 +332,17 @@ export const App: React.FC = () => {
       <RulesModal
         isOpen={showRulesModal}
         onClose={() => setShowRulesModal(false)}
+      />
+
+      {/* Trust Jackpot Explainer Modal */}
+      <TrustJackpotModal
+        isOpen={showJackpotModal}
+        onClose={() => setShowJackpotModal(false)}
+        jackpotGram={jackpotGram}
+        onPlaySplitSteal={() => {
+          setShowJackpotModal(false);
+          setActiveTab('home');
+        }}
       />
 
       {/* Quick Deposit Modal */}

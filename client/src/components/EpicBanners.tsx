@@ -24,7 +24,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
   onOpenSpectate,
   onOpenAffiliates,
   onOpenJackpotModal,
-  jackpotAmountGram = '24.50',
+  jackpotAmountGram = '5.00',
 }) => {
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();

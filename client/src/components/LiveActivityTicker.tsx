@@ -20,15 +20,6 @@ interface LiveActivityTickerProps {
   newWinEvent?: WinItem | null;
 }
 
-// Initial fallback past victories to ensure the live bar is vibrant on launch
-const SEED_WINS: WinItem[] = [
-  { id: 'seed-1', winnerName: 'Tonner', gameType: 'split', payoutGram: '12.50', timestamp: Date.now() - 45000 },
-  { id: 'seed-2', winnerName: 'Alex_K', gameType: 'roulette', payoutGram: '4.00', timestamp: Date.now() - 90000 },
-  { id: 'seed-3', winnerName: 'Degen_99', gameType: 'chrono', payoutGram: '2.00', timestamp: Date.now() - 130000 },
-  { id: 'seed-4', winnerName: 'CryptoSam', gameType: 'bridge', payoutGram: '6.00', timestamp: Date.now() - 180000 },
-  { id: 'seed-5', winnerName: 'Mike_TON', gameType: 'blackjack', payoutGram: '10.00', timestamp: Date.now() - 240000 },
-];
-
 export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
   matches,
   onSelectGame,
@@ -42,13 +33,17 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
       const saved = localStorage.getItem('sfidabot_recent_wins');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out any mock or seed examples
+          const realOnly = parsed.filter((w: WinItem) => w && w.id && !w.id.startsWith('seed-'));
+          return realOnly;
+        }
       }
     } catch {}
-    return SEED_WINS;
+    return [];
   });
 
-  // Extract settled matches from matches feed and add to wins list
+  // Extract settled matches from real matches feed and add to wins list
   useEffect(() => {
     const settledMatches = matches.filter(
       (m) => (m.state === 'MATCH_SETTLED' || Boolean(m.winnerAddress) || Boolean(m.winnerName)) && m.playerA
@@ -146,39 +141,45 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
       </div>
 
       {/* Horizontal Scrolling Stream of User Winnings */}
-      <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none py-1 -my-1 pr-2">
-        {winsList.map((win) => {
-          const style = getGameStyle(win.gameType);
-          const meta = GAMES_METADATA[win.gameType] || GAMES_METADATA.roulette;
+      <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none py-1 -my-1 pr-2 flex-1">
+        {winsList.length === 0 ? (
+          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-slate-400 font-sans italic w-full">
+            <span>{t('epic.noRecentWins')}</span>
+          </div>
+        ) : (
+          winsList.map((win) => {
+            const style = getGameStyle(win.gameType);
+            const meta = GAMES_METADATA[win.gameType] || GAMES_METADATA.roulette;
 
-          return (
-            <button
-              key={win.id}
-              onClick={() => {
-                triggerImpact('light');
-                onSelectGame?.(win.gameType);
-              }}
-              className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl ${style.bg} border ${style.border} shrink-0 text-white active:scale-95 transition-all shadow-sm hover:brightness-110 group ${
-                win.isNew ? 'ring-2 ring-amber-400 animate-bounce' : ''
-              }`}
-              title={`${win.winnerName} ${t('epic.won')} ${win.payoutGram} GRAM su ${meta.title}`}
-            >
-              {/* Game Icon */}
-              <span className="text-sm shrink-0 drop-shadow-sm">{style.icon}</span>
+            return (
+              <button
+                key={win.id}
+                onClick={() => {
+                  triggerImpact('light');
+                  onSelectGame?.(win.gameType);
+                }}
+                className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl ${style.bg} border ${style.border} shrink-0 text-white active:scale-95 transition-all shadow-sm hover:brightness-110 group ${
+                  win.isNew ? 'ring-2 ring-amber-400 animate-bounce' : ''
+                }`}
+                title={`${win.winnerName} ${t('epic.won')} ${win.payoutGram} GRAM su ${meta.title}`}
+              >
+                {/* Game Icon */}
+                <span className="text-sm shrink-0 drop-shadow-sm">{style.icon}</span>
 
-              {/* Winner Name & Amount Won */}
-              <div className="text-left leading-tight">
-                <span className="text-[10px] font-heading font-bold text-white/90 truncate max-w-[70px] sm:max-w-[90px] block">
-                  {win.winnerName}
-                </span>
-                <span className="text-[11px] font-heading font-black text-amber-300 flex items-center space-x-0.5">
-                  <span>+{win.payoutGram}</span>
-                  <GramIcon className="w-2.5 h-2.5 text-amber-300 inline" />
-                </span>
-              </div>
-            </button>
-          );
-        })}
+                {/* Winner Name & Amount Won */}
+                <div className="text-left leading-tight">
+                  <span className="text-[10px] font-heading font-bold text-white/90 truncate max-w-[70px] sm:max-w-[90px] block">
+                    {win.winnerName}
+                  </span>
+                  <span className="text-[11px] font-heading font-black text-amber-300 flex items-center space-x-0.5">
+                    <span>+{win.payoutGram}</span>
+                    <GramIcon className="w-2.5 h-2.5 text-amber-300 inline" />
+                  </span>
+                </div>
+              </button>
+            );
+          })
+        )}
       </div>
     </div>
   );

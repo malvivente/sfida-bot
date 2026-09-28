@@ -85,10 +85,31 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
   const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp'>('hub');
+  const [previousView, setPreviousView] = useState<'hub' | 'play_hub'>('hub');
+  const [jackpotGram, setJackpotGram] = useState<string>('5.00');
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [sectionView]);
+
+  React.useEffect(() => {
+    const fetchJackpot = async () => {
+      try {
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        const res = await fetch(`${serverUrl}/api/jackpot`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.trustJackpotGram) {
+            setJackpotGram(parseFloat(data.trustJackpotGram).toFixed(2));
+          }
+        }
+      } catch {}
+    };
+
+    fetchJackpot();
+    const interval = setInterval(fetchJackpot, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const effectiveMinWager = selectedGameType === 'split' ? 5.0 : GAME_CONFIG.MIN_WAGER;
   const parsedWager = parseFloat(wagerChoice || '0');
@@ -253,74 +274,76 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       return 0;
     });
 
-  if (sectionView === 'play_hub') {
-    return (
-      <PlayHubView
-        onBack={() => setSectionView('hub')}
-        matches={matches}
-        onSelectGame={(g) => {
-          setFilterGameType(g);
-          setSectionView('pvp');
-        }}
-        onCreateMatchForGame={(g) => handleOpenModal(g, true)}
-      />
-    );
-  }
-
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-sans pb-10">
-      {/* If inside PVP Section, show Back to Hub header */}
-      {sectionView === 'pvp' && (
-        <div className="flex items-center justify-between px-1 mb-2">
-          <button
-            onClick={() => {
-              triggerImpact('light');
-              setSectionView('hub');
-            }}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-heading font-bold text-xs uppercase tracking-wider active:scale-95 transition-all"
-          >
-            <ArrowLeft className="w-4 h-4 text-cyan-400" />
-            <span>{t('epic.back')}</span>
-          </button>
-          <div className="flex items-center space-x-1.5">
-            <Swords className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-              {t('epic.pvpTitle')}
-            </h2>
-          </div>
-          <div className="w-16" />
-        </div>
-      )}
-
-      {/* Live Activity Ticker (Real-time and previous victories ticker) */}
-      <LiveActivityTicker
-        matches={matches}
-        onSelectGame={(g) => {
-          setFilterGameType(g);
-          setSectionView('pvp');
-        }}
-      />
-
-      {/* Epic Banners only in Hub mode */}
-      {showBanners && sectionView === 'hub' && (
-        <EpicBanners
+      {sectionView === 'play_hub' ? (
+        <PlayHubView
+          onBack={() => setSectionView('hub')}
           matches={matches}
-          onOpenCreateModal={(g) => handleOpenModal(g, true)}
-          onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
           onSelectGame={(g) => {
             setFilterGameType(g);
+            setPreviousView('play_hub');
             setSectionView('pvp');
           }}
-          onOpenPlayHub={() => setSectionView('play_hub')}
-          onOpenSpectate={onOpenSpectate}
-          onOpenAffiliates={onOpenAffiliates}
-          onOpenJackpotModal={onOpenJackpotModal}
+          onCreateMatchForGame={(g) => handleOpenModal(g, true)}
         />
-      )}
+      ) : (
+        <>
+          {/* If inside PVP Section, show Back to Hub header */}
+          {sectionView === 'pvp' && (
+            <div className="flex items-center justify-between px-1 mb-2">
+              <button
+                onClick={() => {
+                  triggerImpact('light');
+                  setSectionView(previousView);
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-heading font-bold text-xs uppercase tracking-wider active:scale-95 transition-all"
+              >
+                <ArrowLeft className="w-4 h-4 text-cyan-400" />
+                <span>{t('epic.back')}</span>
+              </button>
+              <div className="flex items-center space-x-1.5">
+                <Swords className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-heading font-black text-white uppercase tracking-wider">
+                  {t('epic.pvpTitle')}
+                </h2>
+              </div>
+              <div className="w-16" />
+            </div>
+          )}
 
-      {/* Active Matches Feed Section Header */}
-      {(showMatchesList || sectionView === 'pvp') && (
-      <div className="space-y-3 pt-1">
+          {/* Live Activity Ticker (Real-time and previous victories ticker) */}
+          <LiveActivityTicker
+            matches={matches}
+            onSelectGame={(g) => {
+              setFilterGameType(g);
+              setPreviousView('hub');
+              setSectionView('pvp');
+            }}
+          />
+
+          {/* Epic Banners only in Hub mode */}
+          {showBanners && sectionView === 'hub' && (
+            <EpicBanners
+              matches={matches}
+              onOpenCreateModal={(g) => handleOpenModal(g, true)}
+              onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
+              onSelectGame={(g) => {
+                setFilterGameType(g);
+                setPreviousView('hub');
+                setSectionView('pvp');
+              }}
+              onOpenPlayHub={() => setSectionView('play_hub')}
+              onOpenSpectate={onOpenSpectate}
+              onOpenAffiliates={onOpenAffiliates}
+              onOpenJackpotModal={onOpenJackpotModal}
+              jackpotAmountGram={jackpotGram}
+            />
+          )}
+
+          {/* Active Matches Feed Section Header */}
+          {(showMatchesList || sectionView === 'pvp') && (
+          <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -870,6 +893,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           </div>
         )}
       </div>
+      )}
+      </>
       )}
 
       {/* Insufficient Balance to Join Modal */}

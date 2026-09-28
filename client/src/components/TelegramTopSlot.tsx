@@ -1,4 +1,5 @@
 import React from 'react';
+import { Swords } from 'lucide-react';
 
 interface TelegramTopSlotProps {
   isFullscreen: boolean;
@@ -7,42 +8,43 @@ interface TelegramTopSlotProps {
 }
 
 /**
- * Top clearance slot for Telegram Mini App Fullscreen mode.
+ * Top clearance slot for Telegram Mini App.
  * 
- * In Fullscreen, Telegram renders floating pill buttons at the top:
- * - Top Left: '✕ Close' (~75px wide)
- * - Top Right: 'v' and '⋮' (~75px wide)
+ * In Fullscreen mode, Telegram renders floating system buttons at the top:
+ * - Top Left: '✕ Close'
+ * - Top Right: 'v' and '⋮' (Menu)
  * 
- * This component:
- * 1. Pushes the entire app (SFIDA ARENA, TonConnect, tabs, arena) down below the floating buttons.
- * 2. Leaves the center space between the buttons clear and ready for the Jackpot Mini-Card.
+ * This component preserves the left and right zones for the Telegram buttons,
+ * and centers the miniapp title "SFIDA" with the Swords SVG logo in the vacant middle space.
  */
 export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
   isFullscreen,
   topInset,
   children,
 }) => {
-  if (!isFullscreen) {
-    return null;
-  }
-
-  const height = Math.max(topInset, 80);
+  const height = isFullscreen ? Math.max(topInset, 56) : 42;
 
   return (
     <div
       style={{ height: `${height}px` }}
       className="w-full max-w-md mx-auto flex items-center justify-between relative select-none pointer-events-none transition-all duration-200 shrink-0"
-      aria-hidden="true"
     >
       {/* Left zone: Reserved empty space underneath Telegram's floating '✕ Close' button */}
       <div className="w-20 sm:w-24 h-full shrink-0" />
 
       {/* Center zone: Dedicated slot between '✕ Close' and 'v ⋮' buttons */}
       <div
-        id="telegram-top-jackpot-slot"
-        className="flex-1 h-full flex items-center justify-center pt-8 px-1 pointer-events-auto min-w-0"
+        id="telegram-top-system-slot"
+        className="flex-1 h-full flex items-center justify-center px-1 pointer-events-auto min-w-0"
       >
-        {children || null}
+        {children || (
+          <div className="flex items-center space-x-1.5 py-1 px-3.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 shadow-md">
+            <Swords className="w-4 h-4 text-cyan-400" />
+            <span className="font-heading font-black text-xs sm:text-sm tracking-widest text-white uppercase drop-shadow">
+              SFIDA
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Right zone: Reserved empty space underneath Telegram's floating 'v' and '⋮' buttons */}
