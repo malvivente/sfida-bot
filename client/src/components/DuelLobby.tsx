@@ -34,6 +34,8 @@ interface DuelLobbyProps {
   initialInviteCode?: string;
   onOpenDeposit?: (missingAmount?: string) => void;
   showBanners?: boolean;
+  showMatchesList?: boolean;
+  onOpenSpectate?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
 }
@@ -57,6 +59,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   initialInviteCode,
   onOpenDeposit,
   showBanners = true,
+  showMatchesList = true,
+  onOpenSpectate,
   onOpenAffiliates,
   onOpenJackpotModal,
 }) => {
@@ -67,6 +71,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
   const modalBottomOffset = isFullscreen ? 24 : 12;
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [lockedGameType, setLockedGameType] = useState<GameType | null>(null);
   const [isPrivateRoom, setIsPrivateRoom] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [selectedGameType, setSelectedGameType] = useState<GameType>('roulette');
@@ -80,6 +85,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
   const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp'>('hub');
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [sectionView]);
 
   const effectiveMinWager = selectedGameType === 'split' ? 5.0 : GAME_CONFIG.MIN_WAGER;
   const parsedWager = parseFloat(wagerChoice || '0');
@@ -102,13 +111,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
   };
 
-  const handleOpenModal = (defaultGame?: GameType) => {
+  const handleOpenModal = (defaultGame?: GameType, lockGame: boolean = false) => {
     onClearError?.();
     if (!userAddress) {
       triggerImpact('medium');
       onOpenWallet?.();
       return;
     }
+    setLockedGameType(lockGame && defaultGame ? defaultGame : null);
     if (defaultGame) {
       setSelectedGameType(defaultGame);
       if (defaultGame === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
@@ -252,7 +262,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           setFilterGameType(g);
           setSectionView('pvp');
         }}
-        onCreateMatchForGame={(g) => handleOpenModal(g)}
+        onCreateMatchForGame={(g) => handleOpenModal(g, true)}
       />
     );
   }
@@ -295,20 +305,21 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       {showBanners && sectionView === 'hub' && (
         <EpicBanners
           matches={matches}
-          onOpenCreateModal={(g) => handleOpenModal(g)}
+          onOpenCreateModal={(g) => handleOpenModal(g, true)}
           onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
           onSelectGame={(g) => {
             setFilterGameType(g);
             setSectionView('pvp');
           }}
           onOpenPlayHub={() => setSectionView('play_hub')}
-          onOpenPvpSection={() => setSectionView('pvp')}
+          onOpenSpectate={onOpenSpectate}
           onOpenAffiliates={onOpenAffiliates}
           onOpenJackpotModal={onOpenJackpotModal}
         />
       )}
 
       {/* Active Matches Feed Section Header */}
+      {(showMatchesList || sectionView === 'pvp') && (
       <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center space-x-2">
@@ -859,6 +870,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Insufficient Balance to Join Modal */}
       {insufficientJoinMatch && (
@@ -928,10 +940,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div>
                 <h3 className="text-base font-heading font-extrabold text-white flex items-center space-x-2">
                   <Flame className="w-5 h-5 text-amber-400" />
-                  <span>{t('lobby.createModalTitle')}</span>
+                  <span>
+                    {lockedGameType
+                      ? t('lobby.configureForGame', { game: GAMES_METADATA[selectedGameType]?.title || '' })
+                      : t('lobby.createModalTitle')}
+                  </span>
                 </h3>
                 <p className="text-xs text-slate-400 font-sans mt-1">
-                  {t('lobby.createModalDesc')}
+                  {lockedGameType
+                    ? (GAMES_METADATA[selectedGameType]?.tagline || t('lobby.createModalDesc'))
+                    : t('lobby.createModalDesc')}
                 </p>
               </div>
               <button
@@ -948,39 +966,108 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
             {/* Scrollable Modal Content */}
             <div className="p-4 sm:p-5 pt-3 overflow-y-auto custom-scrollbar flex-1 space-y-3">
-              {/* Game Mode Selection */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
-                  {t('lobby.gameMode')}
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
-                    const isSelected = selectedGameType === game.id;
-                    const isSplit = game.id === 'split';
-                    return (
-                      <button
-                        key={game.id}
-                        type="button"
-                        onClick={() => {
-                          triggerImpact('light');
-                          setSelectedGameType(game.id);
-                          if (game.id === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
-                            setWagerChoice('5');
-                          }
-                        }}
-                        className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                          isSplit ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
-                        } ${
-                          isSelected
-                            ? `bg-purple-950/60 border-2 border-purple-500 shadow-epic-purple`
-                            : 'bg-white/[0.03] border-white/10 hover:border-white/20 opacity-70'
-                        }`}
-                      >
-                        {isSplit ? (
-                          <div className="flex items-center justify-between w-full gap-2.5">
-                            {/* Left: Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-1.5 mb-1">
+              {/* Game Mode Selection / Dedicated Game Banner */}
+              {lockedGameType ? (
+                <div className={`p-3.5 rounded-2xl border transition-all ${
+                  selectedGameType === 'split'
+                    ? 'bg-gradient-to-r from-sky-950/60 via-indigo-950/50 to-blue-950/60 border-sky-400/40 shadow-[0_0_20px_rgba(56,189,248,0.15)]'
+                    : 'bg-gradient-to-r from-purple-950/50 via-indigo-950/40 to-purple-950/50 border-purple-500/40 shadow-epic-purple'
+                }`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-[9px] font-heading font-black px-2 py-0.5 rounded-md bg-black/60 ${GAMES_METADATA[selectedGameType]?.accentColor || 'text-cyan-400'}`}>
+                          {GAMES_METADATA[selectedGameType]?.badge}
+                        </span>
+                        <span className="text-xs sm:text-sm font-heading font-black text-white tracking-wide truncate">
+                          {GAMES_METADATA[selectedGameType]?.title}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-sans text-slate-300 leading-snug">
+                        {GAMES_METADATA[selectedGameType]?.tagline}
+                      </p>
+                    </div>
+
+                    {selectedGameType === 'split' && (
+                      <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/20 via-purple-900/40 to-amber-500/20 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                        <Trophy className="w-4 h-4 text-amber-300 shrink-0" />
+                        <div className="text-left">
+                          <div className="text-[8px] font-heading font-black text-amber-300 tracking-wider">
+                            TRUST JACKPOT
+                          </div>
+                          <div className="text-[10px] font-heading font-black text-emerald-400">
+                            +25% BONUS
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
+                    {t('lobby.gameMode')}
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(Object.values(GAMES_METADATA) as GameMetadata[]).map((game) => {
+                      const isSelected = selectedGameType === game.id;
+                      const isSplit = game.id === 'split';
+                      return (
+                        <button
+                          key={game.id}
+                          type="button"
+                          onClick={() => {
+                            triggerImpact('light');
+                            setSelectedGameType(game.id);
+                            if (game.id === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
+                              setWagerChoice('5');
+                            }
+                          }}
+                          className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                            isSplit ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
+                          } ${
+                            isSelected
+                              ? `bg-purple-950/60 border-2 border-purple-500 shadow-epic-purple`
+                              : 'bg-white/[0.03] border-white/10 hover:border-white/20 opacity-70'
+                          }`}
+                        >
+                          {isSplit ? (
+                            <div className="flex items-center justify-between w-full gap-2.5">
+                              {/* Left: Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-1.5 mb-1">
+                                  <span className={`text-[8px] font-heading font-extrabold px-1.5 py-0.5 rounded-md bg-black/60 ${game.accentColor}`}>
+                                    {game.badge}
+                                  </span>
+                                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />}
+                                </div>
+                                <div className={`text-[11px] font-heading font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                                  {game.title}
+                                </div>
+                                <div className="text-[9px] font-sans text-slate-400 mt-0.5 truncate">
+                                  {game.tagline}
+                                </div>
+                              </div>
+
+                              {/* Right: Adapted Trust Jackpot Mini-Card */}
+                              <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                                <div className="w-7 h-7 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
+                                  <Trophy className="w-3.5 h-3.5 text-amber-300" />
+                                  <Sparkles className="w-2 h-2 text-amber-300 absolute -top-0.5 -right-0.5 animate-pulse" />
+                                </div>
+                                <div className="text-left">
+                                  <div className="text-[8px] font-heading font-extrabold text-amber-300 tracking-wider">
+                                    TRUST JACKPOT
+                                  </div>
+                                  <div className="text-[10px] font-sans font-bold text-emerald-400 flex items-center space-x-1">
+                                    <span>+25% BONUS</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center justify-between mb-1">
                                 <span className={`text-[8px] font-heading font-extrabold px-1.5 py-0.5 rounded-md bg-black/60 ${game.accentColor}`}>
                                   {game.badge}
                                 </span>
@@ -992,45 +1079,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                               <div className="text-[9px] font-sans text-slate-400 mt-0.5 truncate">
                                 {game.tagline}
                               </div>
-                            </div>
-
-                            {/* Right: Adapted Trust Jackpot Mini-Card */}
-                            <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
-                              <div className="w-7 h-7 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
-                                <Trophy className="w-3.5 h-3.5 text-amber-300" />
-                                <Sparkles className="w-2 h-2 text-amber-300 absolute -top-0.5 -right-0.5 animate-pulse" />
-                              </div>
-                              <div className="text-left">
-                                <div className="text-[8px] font-heading font-extrabold text-amber-300 tracking-wider">
-                                  TRUST JACKPOT
-                                </div>
-                                <div className="text-[10px] font-sans font-bold text-emerald-400 flex items-center space-x-1">
-                                  <span>+25% BONUS</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className={`text-[8px] font-heading font-extrabold px-1.5 py-0.5 rounded-md bg-black/60 ${game.accentColor}`}>
-                                {game.badge}
-                              </span>
-                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />}
-                            </div>
-                            <div className={`text-[11px] font-heading font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                              {game.title}
-                            </div>
-                            <div className="text-[9px] font-sans text-slate-400 mt-0.5 truncate">
-                              {game.tagline}
-                            </div>
-                          </>
-                        )}
-                      </button>
-                    );
-                  })}
+                            </>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Room Access Selection: Public vs Private */}
               <div className="space-y-1.5">
@@ -1100,16 +1156,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               )}
 
               <div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans mb-1.5">
-                  <span>{t('lobby.presetAmount')}</span>
-                  <span className="flex items-center space-x-1">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-sans font-medium mb-1.5">
+                  <span className="text-white font-bold">{t('lobby.presetAmount')}</span>
+                  <span className="flex items-center space-x-1 text-slate-400">
                     <span>{t('lobby.maxWagerLabel', { max: GAME_CONFIG.MAX_WAGER })}</span>
-                    <GramIcon className="w-3 h-3 text-slate-400" />
+                    <GramIcon className="w-3.5 h-3.5 text-cyan-400" />
                   </span>
                 </div>
 
                 {/* Presets Grid */}
-                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                <div className="grid grid-cols-4 gap-1.5 mb-2.5">
                   {(selectedGameType === 'split'
                     ? GAME_CONFIG.PRESET_DUEL_WAGERS.filter((amt) => parseFloat(amt) >= 5.0)
                     : GAME_CONFIG.PRESET_DUEL_WAGERS
@@ -1120,79 +1176,79 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         triggerImpact('light');
                         setWagerChoice(amt);
                       }}
-                      className={`py-2 rounded-2xl font-heading text-xs font-bold border transition-all flex items-center justify-center space-x-0.5 active:scale-95 ${
+                      className={`py-2 rounded-2xl font-heading text-xs font-black border transition-all flex items-center justify-center space-x-0.5 active:scale-95 ${
                         wagerChoice === amt
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-500/50 shadow-epic-purple'
-                          : 'bg-white/[0.04] border-white/10 text-slate-300 hover:border-white/20'
+                          ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-purple-400/60 shadow-epic-purple'
+                          : 'bg-white/[0.04] border-white/10 text-slate-200 hover:border-white/20'
                       }`}
                     >
                       <span>{amt}</span>
-                      <GramIcon className={`w-3 h-3 ${wagerChoice === amt ? 'text-white' : 'text-slate-300'}`} />
+                      <GramIcon className={`w-3.5 h-3.5 ${wagerChoice === amt ? 'text-white' : 'text-slate-300'}`} />
                     </button>
                   ))}
                 </div>
 
                 {/* Custom Input */}
-                <div className="flex items-center space-x-2 bg-black/40 border border-white/10 rounded-2xl px-3.5 py-2">
-                  <span className="text-xs text-slate-400 font-sans">{t('lobby.customStake')}</span>
+                <div className="flex items-center space-x-2 bg-black/40 border border-white/15 rounded-2xl px-3.5 py-2.5">
+                  <span className="text-xs text-slate-300 font-sans font-medium">{t('lobby.customStake')}</span>
                   <input
                     type="text"
                     inputMode="decimal"
                     value={wagerChoice}
                     onChange={handleCustomInput}
                     placeholder={`${effectiveMinWager} - ${GAME_CONFIG.MAX_WAGER}`}
-                    className="flex-1 bg-transparent text-sm font-heading font-bold text-white text-right focus:outline-none"
+                    className="flex-1 bg-transparent text-sm sm:text-base font-heading font-black text-white text-right focus:outline-none"
                   />
-                  <GramIcon className="w-3.5 h-3.5 text-purple-400" />
+                  <GramIcon className="w-4 h-4 text-purple-400 shrink-0" />
                 </div>
 
                 {isBelowMin && (
-                  <p className="text-[11px] text-rose-400 font-sans mt-1.5">
+                  <p className="text-[11px] text-rose-400 font-sans font-medium mt-1.5">
                     {selectedGameType === 'split'
                       ? t('lobby.splitMinWagerWarn')
                       : t('lobby.minWagerWarn')}
                   </p>
                 )}
                 {isOverMax && (
-                  <p className="text-[11px] text-rose-400 font-sans mt-1.5">
+                  <p className="text-[11px] text-rose-400 font-sans font-medium mt-1.5">
                     {t('lobby.maxWagerWarn', { max: GAME_CONFIG.MAX_WAGER })}
                   </p>
                 )}
               </div>
 
               {/* Stake Breakdown */}
-              <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3 text-xs font-sans text-slate-300 space-y-1.5">
+              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 text-xs font-sans text-slate-300 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span>{t('lobby.yourWager')}</span>
-                  <span className="text-white font-bold flex items-center space-x-1">
+                  <span className="text-slate-400">{t('lobby.yourWager')}</span>
+                  <span className="text-white font-heading font-bold text-sm flex items-center space-x-1">
                     <span>{wagerChoice || '0'}</span>
-                    <GramIcon className="w-3 h-3 text-white" />
+                    <GramIcon className="w-3.5 h-3.5 text-white" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{t('lobby.creationFee')}</span>
-                  <span className="text-amber-400 flex items-center space-x-1">
+                  <span className="text-slate-400">{t('lobby.creationFee')}</span>
+                  <span className="text-amber-400 font-heading font-bold flex items-center space-x-1">
                     <span>+{creationFeeGram.toFixed(2)}</span>
-                    <GramIcon className="w-3 h-3 text-amber-400" />
+                    <GramIcon className="w-3.5 h-3.5 text-amber-400" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{t('lobby.winnerTakes')}</span>
-                  <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                  <span className="text-slate-400">{t('lobby.winnerTakes')}</span>
+                  <span className="text-emerald-400 font-heading font-bold text-sm flex items-center space-x-1">
                     <span>+{netWinnerPayout}</span>
-                    <GramIcon className="w-3 h-3 text-emerald-400" />
+                    <GramIcon className="w-3.5 h-3.5 text-emerald-400" />
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-t border-white/10 pt-1 font-bold text-white">
-                  <span>{t('lobby.totalNeeded')}</span>
-                  <span className="text-purple-300 flex items-center space-x-1">
+                <div className="flex justify-between items-center border-t border-white/10 pt-2 font-bold text-white">
+                  <span className="text-xs uppercase font-heading">{t('lobby.totalNeeded')}</span>
+                  <span className="text-purple-300 font-heading font-black text-base flex items-center space-x-1">
                     <span>{totalRequired}</span>
-                    <GramIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <GramIcon className="w-4 h-4 text-purple-400" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-slate-400">
                   <span>{t('lobby.availableBalance')}</span>
-                  <span className={isInsufficient ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                  <span className={`font-heading font-bold text-xs ${isInsufficient ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {currentBal.toFixed(2)} GRAM
                   </span>
                 </div>

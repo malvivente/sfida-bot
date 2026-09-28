@@ -28,6 +28,8 @@ interface ArenaProps {
   onClearDeepMatch?: () => void;
   onMatchActiveChange?: (isActive: boolean) => void;
   showBanners?: boolean;
+  showMatchesList?: boolean;
+  onOpenSpectate?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   onBalanceUpdated?: (balance: string) => void;
@@ -40,6 +42,8 @@ export const Arena: React.FC<ArenaProps> = ({
   onClearDeepMatch,
   onMatchActiveChange,
   showBanners = true,
+  showMatchesList = true,
+  onOpenSpectate,
   onOpenAffiliates,
   onOpenJackpotModal,
   onBalanceUpdated,
@@ -1156,6 +1160,8 @@ export const Arena: React.FC<ArenaProps> = ({
             setShowDepositModal(true);
           }}
           showBanners={showBanners}
+          showMatchesList={showMatchesList}
+          onOpenSpectate={onOpenSpectate}
           onOpenAffiliates={onOpenAffiliates}
           onOpenJackpotModal={onOpenJackpotModal}
         />

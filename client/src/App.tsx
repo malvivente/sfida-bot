@@ -8,7 +8,6 @@ import { DepositModal } from './components/DepositModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { EpicHeader } from './components/EpicHeader.js';
 import { EpicBottomNav, EpicTab } from './components/EpicBottomNav.js';
-import { ActivityView } from './components/ActivityView.js';
 import { ShieldCheck } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
 import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
@@ -187,6 +186,11 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Scroll to top instantly on tab switch
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [activeTab]);
+
   return (
     <div
       className={`min-h-screen bg-[#0e1015] text-slate-100 flex flex-col items-center justify-start px-3 sm:px-4 select-none font-sans relative ${
@@ -211,10 +215,11 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className={`w-full max-w-md ${!isInsideMatch ? 'pb-24' : 'pb-6'}`}>
-        {/* Tab 1: HOME (Epic Banners + Live Activity + Duels Feed) */}
-        {activeTab === 'home' && (
+        {/* Tab 1: DUELS (Public & Private Arena Duels Lobbies with Filters, Search, NO Banners) */}
+        {activeTab === 'duels' && (
           <Arena
-            showBanners={true}
+            showBanners={false}
+            showMatchesList={true}
             initialMatchId={deepMatchId}
             initialInviteCode={deepInviteCode}
             role={deepRole}
@@ -229,15 +234,23 @@ export const App: React.FC = () => {
           />
         )}
 
-        {/* Tab 2: ACTIVITY / I MIEI DUELLI */}
-        {activeTab === 'activity' && (
-          <ActivityView
-            onResumeMatch={(matchId) => {
-              setDeepMatchId(matchId);
-              setDeepRole('player');
-              setActiveTab('home');
+        {/* Tab 2: HOME (Epic Banners + Live Activity + Play Hub, ZERO Duels List Redundancy) */}
+        {activeTab === 'home' && (
+          <Arena
+            showBanners={true}
+            showMatchesList={false}
+            onOpenSpectate={() => setActiveTab('duels')}
+            initialMatchId={deepMatchId}
+            initialInviteCode={deepInviteCode}
+            role={deepRole}
+            onClearDeepMatch={() => {
+              setDeepMatchId(undefined);
+              setDeepInviteCode(undefined);
             }}
-            onGoToHome={() => setActiveTab('home')}
+            onMatchActiveChange={setIsInsideMatch}
+            onOpenAffiliates={() => setActiveTab('referrals')}
+            onOpenJackpotModal={() => setShowRulesModal(true)}
+            onBalanceUpdated={setUserBalanceGram}
           />
         )}
 
@@ -255,8 +268,9 @@ export const App: React.FC = () => {
             onResumeDuel={(matchId) => {
               setDeepMatchId(matchId);
               setDeepRole('player');
-              setActiveTab('home');
+              setActiveTab('duels');
             }}
+            onGoToDuels={() => setActiveTab('duels')}
             onOpenLeaderboard={() => {
               setLastTabBeforeLeaderboard('profile');
               setActiveTab('leaderboard');
@@ -278,7 +292,7 @@ export const App: React.FC = () => {
         <EpicBottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
-            if (tab !== 'home') {
+            if (tab !== 'home' && tab !== 'duels') {
               setDeepMatchId(undefined);
               setDeepInviteCode(undefined);
             }

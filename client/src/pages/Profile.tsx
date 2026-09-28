@@ -13,6 +13,7 @@ import { useHaptics } from '../hooks/useHaptics.js';
 interface ProfileProps {
   onResumeDuel?: (matchId: string) => void;
   onOpenLeaderboard?: () => void;
+  onGoToDuels?: () => void;
 }
 
 const getGameIcon = (type?: GameType) => {
@@ -26,7 +27,7 @@ const getGameIcon = (type?: GameType) => {
   }
 };
 
-export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboard }) => {
+export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboard, onGoToDuels }) => {
   const { userAddress, openWalletModal, sendDepositTransaction } = useTonClashContract();
   const { userId, username, fullName, displayName, photoUrl, isPremium } = useTelegram();
   const { isFullscreen, topInset } = useTelegramViewport();
@@ -469,8 +470,24 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
         </div>
 
         {history.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-xs font-medium">
-            {t('profile.noMatches')}
+          <div className="p-8 rounded-3xl bg-[#10131d]/60 border border-white/5 text-center space-y-3">
+            <Swords className="w-10 h-10 text-slate-500 mx-auto" />
+            <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto">
+              {t('profile.noMatches')}
+            </p>
+            {onGoToDuels && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerImpact('medium');
+                  onGoToDuels();
+                }}
+                className="mt-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all inline-flex items-center space-x-1.5"
+              >
+                <Swords className="w-4 h-4" />
+                <span>{t('activity.playNow')}</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
