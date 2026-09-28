@@ -399,8 +399,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 }}
                 className={`px-3.5 py-1.5 rounded-2xl text-xs font-heading font-extrabold uppercase transition-all whitespace-nowrap border shrink-0 active:scale-95 ${
                   isSelected
-                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-purple-500/50 shadow-epic-purple'
-                    : 'bg-white/5 text-slate-300 border-white/10 hover:border-white/25'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 shadow-md'
+                    : 'bg-[#151823] text-slate-400 border-white/5 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {label}
@@ -419,7 +419,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('lobby.searchPlaceholder')}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-9 pr-8 py-2 text-xs font-sans text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all font-medium"
+                className="w-full bg-[#151823] border border-white/10 rounded-2xl pl-9 pr-8 py-2 text-xs font-sans text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all font-medium"
               />
               {searchQuery && (
                 <button
@@ -439,8 +439,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               }}
               className={`px-3 py-2 rounded-2xl text-xs font-heading font-extrabold flex items-center space-x-1.5 border transition-all active:scale-95 shrink-0 ${
                 showFiltersPanel || hasActiveFilters
-                  ? 'bg-purple-600/20 border-purple-500/50 text-purple-300 shadow-epic-purple'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                  ? 'bg-purple-900/40 border-purple-400/40 text-purple-200 shadow-sm'
+                  : 'bg-[#151823] border-white/10 text-slate-400 hover:text-white hover:border-white/20'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -453,7 +453,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
           {/* Expandable Filter Drawer */}
           {showFiltersPanel && (
-            <div className="bg-[#121520]/95 border border-white/15 rounded-3xl p-4 space-y-3 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="bg-[#131622] border border-white/10 rounded-3xl p-4 space-y-3 shadow-xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-heading font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
                   <SlidersHorizontal className="w-3.5 h-3.5 text-purple-400" />
@@ -490,8 +490,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         }}
                         className={`py-1.5 px-2 rounded-xl text-xs font-heading font-bold border transition-all text-center flex items-center justify-center space-x-1 active:scale-95 ${
                           active
-                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-epic-purple border-purple-500/40'
-                            : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 shadow-sm'
+                            : 'bg-[#181b28] text-slate-400 border-white/10 hover:border-white/20'
                         }`}
                       >
                         {mode === 'PRIVATE' && <Lock className="w-2.5 h-2.5" />}
@@ -528,8 +528,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         }}
                         className={`py-1.5 px-1.5 rounded-xl text-[10px] font-heading font-extrabold border transition-all text-center truncate active:scale-95 ${
                           active
-                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-epic-purple border-purple-500/40'
-                            : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 shadow-sm'
+                            : 'bg-[#181b28] text-slate-400 border-white/10 hover:border-white/20'
                         }`}
                       >
                         {label}

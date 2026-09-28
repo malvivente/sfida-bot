@@ -5,6 +5,7 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { UserAvatar } from '../components/UserAvatar.js';
+import { DepositModal } from '../components/DepositModal.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useI18n } from '../i18n/index.js';
@@ -161,13 +162,13 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
     if (isNaN(amt) || amt <= 0) return;
 
     if (amt < 1.0) {
-      setBalanceMsg({ type: 'error', text: 'Prelievo minimo: 1.00 GRAM (per evitare lo spreco di fee di rete).' });
+      setBalanceMsg({ type: 'error', text: t('profile.withdrawMinNotice') });
       return;
     }
 
     const currentBal = parseFloat(userBalance?.balanceGram || userBalance?.balanceTon || '0');
     if (currentBal < amt) {
-      setBalanceMsg({ type: 'error', text: `Insufficient balance! You have ${currentBal.toFixed(2)} GRAM.` });
+      setBalanceMsg({ type: 'error', text: `${t('profile.withdrawAvailLabel', { amount: currentBal.toFixed(2) })}` });
       return;
     }
 
@@ -185,14 +186,16 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
         try {
           localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
         } catch {}
-        const txNote = data.txHash ? ' (sent on-chain)' : '';
-        setBalanceMsg({ type: 'success', text: `Successfully withdrew ${withdrawAmount} GRAM${txNote} to your wallet!` });
+        window.dispatchEvent(
+          new CustomEvent('sfida_balance_updated', { detail: { balance: data.account.balanceGram } })
+        );
+        setBalanceMsg({ type: 'success', text: t('profile.withdrawSuccess', { amount: withdrawAmount }) });
         setTimeout(() => {
           setShowWithdrawModal(false);
           setBalanceMsg(null);
-        }, 2500);
+        }, 2200);
       } else {
-        setBalanceMsg({ type: 'error', text: data?.message || data?.error || 'Withdrawal failed. Check balance.' });
+        setBalanceMsg({ type: 'error', text: data?.message || data?.error || 'Withdrawal failed.' });
       }
     } catch (err: any) {
       setBalanceMsg({ type: 'error', text: err?.message || 'Network error during withdrawal.' });
@@ -501,7 +504,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                     hour: '2-digit',
                     minute: '2-digit',
                   })
-                : 'Recente';
+                : t('profile.recent');
               const gIcon = getGameIcon(item.gameType);
 
               return (
@@ -522,9 +525,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                               : 'bg-rose-500/20 text-rose-300 border-rose-400/40'
                           }`}
                         >
-                          {isWin ? 'VITTORIA' : isDraw ? 'PAREGGIO' : 'SCONFITTA'}
+                          {isWin ? t('profile.win') : isDraw ? t('profile.draw') : t('profile.loss')}
                         </span>
-                        <span className="text-white font-heading font-bold">vs {item.opponentName.replace(/^@/, '')}</span>
+                        <span className="text-white font-heading font-bold">{t('profile.vs')} {item.opponentName.replace(/^@/, '')}</span>
                       </div>
                       <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
                         {dateStr}
@@ -549,79 +552,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
         )}
       </div>
 
-      {/* Deposit Modal */}
-      {showDepositModal && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-          style={{
-            paddingTop: `${modalTopOffset}px`,
-            paddingBottom: `${modalBottomOffset}px`
-          }}
-        >
-          <div 
-            className="bg-[#111420]/95 border border-white/15 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
-            style={{
-              maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)`
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-heading font-black text-white flex items-center space-x-2">
-                <ArrowDownLeft className="w-4 h-4 text-purple-400" />
-                <span>DEPOSITA GRAM SUL SALDO</span>
-              </h3>
-              <button
-                onClick={() => setShowDepositModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-300 font-medium">
-              Deposita GRAM sul tuo saldo interno per sfide istantanee senza transazioni continue e rivincite 2X rapide.
-            </p>
-
-            {balanceMsg && (
-              <div className={`p-2.5 rounded-2xl border text-xs flex items-center space-x-2 ${
-                balanceMsg.type === 'success' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-rose-500/20 border-rose-400 text-rose-300'
-              }`}>
-                {balanceMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                <span>{balanceMsg.text}</span>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-xs text-slate-400 font-heading font-extrabold uppercase">Importo (GRAM):</label>
-              <div className="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                  className="flex-1 bg-transparent text-sm font-heading font-black text-white focus:outline-none"
-                />
-                <GramIcon className="w-4 h-4 text-purple-400" />
-              </div>
-            </div>
-
-            <div className="flex space-x-2 pt-1">
-              <button
-                onClick={() => setShowDepositModal(false)}
-                className="flex-1 py-2.5 bg-white/5 border border-white/10 text-xs font-heading font-extrabold text-slate-300 hover:text-white rounded-2xl active:scale-95"
-              >
-                ANNULLA
-              </button>
-              <button
-                onClick={handleDeposit}
-                disabled={balanceLoading}
-                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-heading font-black rounded-2xl shadow-epic-purple hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
-              >
-                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>CONFERMA DEPOSITO</span>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Quick Deposit Modal */}
+      <DepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        currentBalanceGram={displayBalance}
+        onSuccess={() => {
+          fetchUserData();
+        }}
+      />
 
       {/* Withdraw Modal */}
       {showWithdrawModal && (
@@ -641,7 +580,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-heading font-black text-white flex items-center space-x-2">
                 <ArrowUpRight className="w-4 h-4 text-purple-400" />
-                <span>PRELEVA GRAM NEL WALLET</span>
+                <span>{t('profile.withdrawModalTitle')}</span>
               </h3>
               <button
                 onClick={() => setShowWithdrawModal(false)}
@@ -652,7 +591,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             </div>
 
             <p className="text-xs text-slate-300 font-medium">
-              Preleva fondi verso il tuo portafoglio TON collegato ({userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : ''}).
+              {t('profile.withdrawModalDesc', {
+                wallet: userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : '',
+              })}
             </p>
 
             {balanceMsg && (
@@ -666,8 +607,8 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-xs text-slate-400 font-medium">
-                <span>Importo (Min 1.00 GRAM):</span>
-                <span>Disponibile: {displayBalance} GRAM</span>
+                <span>{t('profile.withdrawAmountLabel')}</span>
+                <span>{t('profile.withdrawAvailLabel', { amount: displayBalance })}</span>
               </div>
               <div className="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
                 <input
@@ -686,14 +627,14 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                 onClick={() => setShowWithdrawModal(false)}
                 className="flex-1 py-2.5 bg-white/5 border border-white/10 text-xs font-heading font-extrabold text-slate-300 hover:text-white rounded-2xl active:scale-95"
               >
-                ANNULLA
+                {t('depositModal.cancel')}
               </button>
               <button
                 onClick={handleWithdraw}
                 disabled={balanceLoading}
                 className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-heading font-black rounded-2xl shadow-epic-purple hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
               >
-                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>PRELEVA GRAM</span>}
+                {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>{t('profile.withdrawModalTitle')}</span>}
               </button>
             </div>
           </div>

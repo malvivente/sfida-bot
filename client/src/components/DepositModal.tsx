@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowDownLeft, X, Loader2, CheckCircle2, AlertCircle, Wallet } from 'lucide-react';
 import { GramIcon } from './GramIcon.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
+import { useTelegram } from '../hooks/useTelegram.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { useI18n } from '../i18n/index.js';
@@ -11,7 +12,7 @@ interface DepositModalProps {
   onClose: () => void;
   currentBalanceGram?: string;
   defaultAmount?: string;
-  onSuccess?: () => void;
+  onSuccess?: (newBalance?: string) => void;
 }
 
 export const DepositModal: React.FC<DepositModalProps> = ({
@@ -24,6 +25,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { isFullscreen, topInset } = useTelegramViewport();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
+  const { userId } = useTelegram();
   const { userAddress, sendDepositTransaction, openWalletModal } = useTonClashContract();
 
   const [depositAmount, setDepositAmount] = useState(defaultAmount);
@@ -51,27 +53,81 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
     try {
       const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
-      const cfgRes = await fetch(`${serverUrl}/api/config/fees`);
-      const cfgData = await cfgRes.json();
-      const treasury = cfgData?.config?.treasuryAddress || '';
+      let targetDepositAddress = '';
 
-      await sendDepositTransaction(amt.toString(), treasury);
+      try {
+        const addrRes = await fetch(`${serverUrl}/api/treasury/address`);
+        if (addrRes.ok) {
+          const addrData = await addrRes.json();
+          targetDepositAddress = addrData?.depositAddress || addrData?.address || '';
+        }
+      } catch {}
 
-      setMsg({
-        type: 'success',
-        text: 'Transazione inviata! Il saldo in-app si aggiornerà automaticamente dopo la conferma sulla blockchain TON.',
+      if (!targetDepositAddress) {
+        targetDepositAddress = 'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+      }
+
+      // Step 1: Execute on-chain TonConnect transaction
+      const txResult = await sendDepositTransaction(
+        targetDepositAddress,
+        amt.toString(),
+        `Sfida Deposit: ${userAddress}`
+      );
+      const boc = txResult?.boc;
+
+      // Step 2: Inform backend server to immediately credit user's in-bot balance
+      const depRes = await fetch(`${serverUrl}/api/users/${userAddress}/deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amountGram: amt.toString(),
+          boc,
+          telegramId: userId,
+        }),
       });
 
-      triggerImpact('heavy');
-      setTimeout(() => {
-        onSuccess?.();
-        onClose();
-      }, 3500);
+      const depData = await depRes.json();
+
+      if (depRes.ok && depData?.account) {
+        const newBal = depData.account.balanceGram || depData.account.balanceTon || amt.toFixed(2);
+        try {
+          localStorage.setItem('sfidabot_user_balance', JSON.stringify(depData.account));
+        } catch {}
+
+        // Fire global balance update event so header and all views update instantly
+        window.dispatchEvent(
+          new CustomEvent('sfida_balance_updated', { detail: { balance: newBal } })
+        );
+
+        onSuccess?.(newBal);
+        setMsg({
+          type: 'success',
+          text: t('depositModal.successMsg', { amount: amt.toFixed(2) }),
+        });
+
+        triggerImpact('heavy');
+        setTimeout(() => {
+          onClose();
+        }, 2200);
+      } else {
+        throw new Error(depData?.error || t('depositModal.verifyFailed'));
+      }
     } catch (err: any) {
       triggerImpact('heavy');
+      const rawMsg = err?.message || '';
+      let friendlyError = t('depositModal.errorGeneric');
+
+      if (/Transaction was not sent|reject|cancel|TON_CONNECT_SDK_ERROR/i.test(rawMsg)) {
+        friendlyError = t('depositModal.errorRejected');
+      } else if (/network|failed to fetch/i.test(rawMsg)) {
+        friendlyError = t('depositModal.errorNetwork');
+      } else if (rawMsg) {
+        friendlyError = rawMsg.replace(/\[TON_CONNECT_SDK_ERROR\]\s*/i, '');
+      }
+
       setMsg({
         type: 'error',
-        text: err?.message || 'Deposito annullato o rifiutato dal wallet.',
+        text: friendlyError,
       });
     } finally {
       setLoading(false);
@@ -97,10 +153,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                DEPOSITA GRAM
+                {t('depositModal.title')}
               </h3>
               <p className="text-[10px] text-slate-400 font-medium">
-                Ricarica il saldo per duelli immediati
+                {t('depositModal.subtitle')}
               </p>
             </div>
           </div>
@@ -136,7 +192,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
         {/* Balance Status */}
         <div className="flex items-center justify-between text-xs px-1 text-slate-400">
-          <span>Saldo attuale:</span>
+          <span>{t('depositModal.currentBalance')}</span>
           <span className="font-heading font-bold text-white flex items-center space-x-1">
             <span>{currentBalanceGram}</span>
             <GramIcon className="w-3 h-3 text-cyan-400" />
@@ -146,7 +202,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         {/* Input Field */}
         <div className="space-y-1.5">
           <label className="text-[11px] font-heading font-bold text-slate-300 uppercase tracking-wider block">
-            Importo da depositare:
+            {t('depositModal.amountLabel')}
           </label>
           <div className="flex items-center space-x-2 bg-[#0e1015] border border-white/10 focus-within:border-purple-500/60 rounded-2xl px-3.5 py-2.5 transition-all">
             <input
@@ -155,9 +211,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               value={depositAmount}
               onChange={(e) => setDepositAmount(e.target.value.replace(/[^0-9.]/g, ''))}
               placeholder="1.0"
-              className="flex-1 bg-transparent text-lg font-heading font-black text-white focus:outline-none"
+              className="flex-1 min-w-0 bg-transparent text-lg font-heading font-black text-white focus:outline-none"
             />
-            <div className="flex items-center space-x-1 text-xs font-heading font-extrabold text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-lg">
+            <div className="shrink-0 flex items-center space-x-1.5 text-xs font-heading font-extrabold text-cyan-400 bg-cyan-400/10 px-2.5 py-1 rounded-xl border border-cyan-400/20">
               <GramIcon className="w-3.5 h-3.5" />
               <span>GRAM</span>
             </div>
@@ -192,7 +248,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             onClick={onClose}
             className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-heading font-bold text-slate-300 hover:text-white rounded-2xl transition-all active:scale-95"
           >
-            ANNULLA
+            {t('depositModal.cancel')}
           </button>
           <button
             type="button"
@@ -205,7 +261,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             ) : (
               <>
                 <Wallet className="w-4 h-4" />
-                <span>CONFERMA DEPOSITO</span>
+                <span>{t('depositModal.confirm')}</span>
               </>
             )}
           </button>

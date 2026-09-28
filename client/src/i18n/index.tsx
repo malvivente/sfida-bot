@@ -457,6 +457,84 @@ export const translations: Translations = {
   'rules.affiliatePayout': { it: 'Accrediti Istantanei & Prelievo Libero', en: 'Instant Earnings & Free Withdrawals' },
   'rules.affiliatePayoutDesc': { it: 'Le commissioni degli affiliati vengono accreditate in tempo reale sul saldo interno del bot e possono essere prelevate in qualsiasi momento con un click (min. 1.00 GRAM).', en: 'Affiliate commissions are credited in real-time to your in-app balance and can be withdrawn anytime with one click (min. 1.00 GRAM).' },
 
+  // Quick Deposit Modal
+  'depositModal.title': { it: 'DEPOSITA GRAM', en: 'DEPOSIT GRAM' },
+  'depositModal.subtitle': { it: 'Ricarica il saldo per duelli immediati', en: 'Top up balance for instant duels' },
+  'depositModal.currentBalance': { it: 'Saldo attuale:', en: 'Current balance:' },
+  'depositModal.amountLabel': { it: 'Importo da depositare:', en: 'Amount to deposit:' },
+  'depositModal.cancel': { it: 'ANNULLA', en: 'CANCEL' },
+  'depositModal.confirm': { it: 'CONFERMA DEPOSITO', en: 'CONFIRM DEPOSIT' },
+  'depositModal.successMsg': { it: 'Deposito di {amount} GRAM confermato! Il saldo si è aggiornato.', en: 'Deposit of {amount} GRAM confirmed! Your balance has been updated.' },
+  'depositModal.errorRejected': { it: 'Transazione annullata o rifiutata dal wallet.', en: 'Transaction cancelled or rejected by wallet.' },
+  'depositModal.errorNetwork': { it: 'Errore di rete o server non raggiungibile. Riprova.', en: 'Network error or game server unreachable. Please try again.' },
+  'depositModal.errorGeneric': { it: 'Errore durante il deposito. Riprova.', en: 'Error during deposit. Please try again.' },
+  'depositModal.verifyFailed': { it: 'Verifica del deposito non riuscita dal server.', en: 'Deposit verification failed on server.' },
+
+  // Trust Jackpot Explainer Modal
+  'jackpotModal.title': { it: 'TRUST JACKPOT', en: 'TRUST JACKPOT' },
+  'jackpotModal.luckyDropBadge': { it: 'LUCKY DROP', en: 'LUCKY DROP' },
+  'jackpotModal.sharedPool': { it: 'Montepremi Condiviso', en: 'Shared Prize Pool' },
+  'jackpotModal.currentPool': { it: 'MONTEPREMI ATTUALE DELLA FIDUCIA', en: 'CURRENT TRUST JACKPOT POOL' },
+  'jackpotModal.statusActive': { it: 'ATTIVO • RUOTA 30% DROP CHANCE', en: 'ACTIVE • 30% DROP WHEEL' },
+  'jackpotModal.statusCharging': { it: 'IN CARICA (< 5.00 GRAM)', en: 'CHARGING (< 5.00 GRAM)' },
+  'jackpotModal.howItWorks': { it: 'COME SI VINCE IL JACKPOT', en: 'HOW TO WIN THE JACKPOT' },
+  'jackpotModal.splitTitle': { it: 'DOPPIO SPLIT (PACE ASSOLUTA)', en: 'DOUBLE SPLIT (MUTUAL PEACE)' },
+  'jackpotModal.splitBadge': { it: '+12.5% A TESTA', en: '+12.5% EACH' },
+  'jackpotModal.splitDesc': {
+    it: 'Rimborso del 100% della puntata a entrambi. Nelle partite pubbliche con Jackpot attivo, gira la Ruota Lucky Drop con il 30% di probabilità per un Bonus del 25% diviso equamente (12.5% a testa) dal Jackpot!',
+    en: '100% stake refund to both players. In public lobby matches with active Jackpot, spin the Lucky Drop Wheel with a 30% chance to win a 25% Bonus split equally (12.5% each) from the Jackpot!',
+  },
+  'jackpotModal.stealTitle': { it: 'STEAL VS SPLIT (TRADIMENTO)', en: 'STEAL VS SPLIT (BETRAYAL)' },
+  'jackpotModal.stealBadge': { it: '+20% TAGLIA', en: '+20% BOUNTY' },
+  'jackpotModal.stealDesc': {
+    it: 'Chi sceglie STEAL vince il 100% del piatto (2x puntata). Inoltre gira la Ruota per una Taglia Tentazione extra del 20% della propria puntata prelevata dal Trust Jackpot!',
+    en: 'The player who chooses STEAL wins 100% of the pot (2x stake). In addition, spin the wheel for an extra 20% Temptation Bounty on their stake taken from the Trust Jackpot!',
+  },
+  'jackpotModal.doubleStealTitle': { it: 'DOPPIO STEAL (AVIDITÀ)', en: 'DOUBLE STEAL (GREED)' },
+  'jackpotModal.doubleStealBadge': { it: '50% AL JACKPOT', en: '50% TO JACKPOT' },
+  'jackpotModal.doubleStealDesc': {
+    it: 'Nessun vincitore ed entrambi perdono la puntata. Il 50% del piatto bruciato va ad alimentare questo Trust Jackpot, facendolo crescere continuamente nel tempo!',
+    en: 'No winner and both lose their stake. 50% of the burned pot feeds this Trust Jackpot, growing it continuously over time!',
+  },
+  'jackpotModal.safeguardsTitle': { it: 'REGOLE ANTI-COLLUSIONE & EQUITÀ', en: 'ANTI-COLLUSION & FAIRPLAY RULES' },
+  'jackpotModal.safeguardPublic': { it: 'Solo Lobby Pubblica: non attivo nelle stanze private tra amici.', en: 'Public Lobby Only: not active in private rooms between friends.' },
+  'jackpotModal.safeguardCooldown': { it: 'Cooldown 48 Ore: la stessa coppia può riscuotere il bonus solo una volta ogni 48h.', en: '48-Hour Cooldown: the same player pair can only claim a bonus once every 48 hours.' },
+  'jackpotModal.safeguardReferral': { it: 'Blocco Referral: duellanti legati da invito diretto non possono incassare bonus sfidandosi.', en: 'Referral Lock: duelists linked by direct referral cannot claim bonuses against each other.' },
+  'jackpotModal.safeguardMinBet': { it: 'Puntata Minima: 5.00 GRAM per duello.', en: 'Minimum Stake: 5.00 GRAM per duel.' },
+  'jackpotModal.close': { it: 'CHIUDI', en: 'CLOSE' },
+  'jackpotModal.playSplitSteal': { it: 'GIOCA SPLIT/STEAL', en: 'PLAY SPLIT/STEAL' },
+
+  // Rules Game Titles
+  'rules.gameRoulette': { it: '1. Russian Roulette (8 Camere, 1 Proiettile)', en: '1. Russian Roulette (8 Chambers, 1 Bullet)' },
+  'rules.gameBlackjack': { it: '2. Blackjack Face-Up (Duello al 21)', en: '2. Blackjack Face-Up (Duel to 21)' },
+  'rules.gameBridge': { it: '3. Endless Glass Bridge (Ponte di Vetro)', en: '3. Endless Glass Bridge (Survival Leap)' },
+  'rules.gameChrono': { it: '4. Chrono Blind (Precision Countdown)', en: '4. Chrono Blind (Precision Countdown)' },
+  'rules.gameSplit': { it: '5. Split or Steal (Dilemma della Fiducia & Jackpot Condiviso)', en: '5. Split or Steal (Trust Dilemma & Shared Jackpot)' },
+  'rules.gameSettle': { it: '6. Risoluzione Automatica Vincite & Rivincite', en: '6. Automated Prize Settlement & Rematches' },
+
+  // Profile outcome badges
+  'profile.win': { it: 'VITTORIA', en: 'VICTORY' },
+  'profile.draw': { it: 'PAREGGIO', en: 'DRAW' },
+  'profile.loss': { it: 'SCONFITTA', en: 'DEFEAT' },
+  'profile.recent': { it: 'Recente', en: 'Recent' },
+  'profile.vs': { it: 'vs', en: 'vs' },
+
+  // Profile Withdraw Modal
+  'profile.withdrawModalTitle': { it: 'PRELEVA GRAM NEL WALLET', en: 'WITHDRAW GRAM TO WALLET' },
+  'profile.withdrawModalDesc': { it: 'Preleva fondi verso il tuo portafoglio TON collegato ({wallet}).', en: 'Withdraw funds to your connected TON wallet ({wallet}).' },
+  'profile.withdrawAmountLabel': { it: 'Importo (Min 1.00 GRAM):', en: 'Amount (Min 1.00 GRAM):' },
+  'profile.withdrawAvailLabel': { it: 'Disponibile: {amount} GRAM', en: 'Available: {amount} GRAM' },
+  'profile.withdrawMinNotice': { it: 'Prelievo minimo: 1.00 GRAM (per evitare lo spreco di fee di rete).', en: 'Minimum withdrawal: 1.00 GRAM (to avoid network fee waste).' },
+  'profile.withdrawSuccess': { it: 'Prelievo di {amount} GRAM elaborato con successo!', en: 'Withdrawal of {amount} GRAM processed successfully!' },
+
+  // Arena error messages
+  'arena.connectWalletToWager': { it: 'Connetti il tuo Tonkeeper Wallet per puntare e creare un duello.', en: 'Connect your Tonkeeper Wallet to proceed with the wager and create a duel.' },
+  'arena.serverUnreachable': { it: 'Server di gioco non configurato o non raggiungibile.', en: 'Game server not configured or unreachable.' },
+  'arena.connectWalletToJoin': { it: 'Devi connettere il tuo Tonkeeper Wallet per entrare in questo duello.', en: 'You must connect your Tonkeeper Wallet to enter this duel.' },
+  'arena.spectatorSelfBetDisabled': { it: 'Sei un combattente in questo duello: le scommesse da spettatore sono disabilitate per i duellanti.', en: 'You are a fighter in this duel: spectator bets are disabled for duelists.' },
+  'arena.joinMatchError': { it: 'Errore durante l\'ingresso nella partita.', en: 'Error joining match.' },
+  'arena.serverConnError': { it: 'Errore di connessione con il server di gioco. Riprova.', en: 'Connection error with game server. Please try again.' },
+
   // Footer & Common
   'footer.escrow': { it: 'Smart Contract Escrow TON • Gioco Equo Senza Rischio Banco', en: 'TON Smart Contract Escrow • Fair Play Zero House Risk' },
 };

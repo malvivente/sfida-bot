@@ -8,6 +8,7 @@ import { SplitStealArena } from '../components/games/SplitStealArena.js';
 import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
+import { DepositModal } from '../components/DepositModal.js';
 import { useSocket } from '../hooks/useSocket.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
@@ -289,12 +290,12 @@ export const Arena: React.FC<ArenaProps> = ({
 
     if (!userAddress) {
       openWalletModal();
-      setCreateError('Connect your Tonkeeper Wallet to proceed with the wager and create a duel.');
+      setCreateError(t('arena.connectWalletToWager'));
       return false;
     }
 
     if (!serverUrl) {
-      setCreateError('Game server not configured or unreachable.');
+      setCreateError(t('arena.serverUnreachable'));
       return false;
     }
 
@@ -370,7 +371,7 @@ export const Arena: React.FC<ArenaProps> = ({
       return true;
     } catch (err: any) {
       console.warn('Match creation error:', err);
-      setCreateError(err?.message || 'Connection error with game server. Please try again.');
+      setCreateError(err?.message || t('arena.serverConnError'));
       return false;
     }
   };
@@ -380,7 +381,7 @@ export const Arena: React.FC<ArenaProps> = ({
     if (!userAddress) {
       if (isUserClick) {
         openWalletModal();
-        setCreateError('You must connect your Tonkeeper Wallet to enter this duel.');
+        setCreateError(t('arena.connectWalletToJoin'));
       }
       return;
     }
@@ -451,7 +452,7 @@ export const Arena: React.FC<ArenaProps> = ({
       setIsReady(false);
     } catch (err: any) {
       setCreateStatus(null);
-      setCreateError(err?.message || 'Error joining match.');
+      setCreateError(err?.message || t('arena.joinMatchError'));
     }
   };
 
@@ -527,7 +528,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const handleSpectatorBet = async (target: 'A' | 'B' | 'X', amountGram: string) => {
     if (isMatchPlayer) {
-      setCreateError('You are a fighter in this duel: spectator bets are disabled for duelists.');
+      setCreateError(t('arena.spectatorSelfBetDisabled'));
       return;
     }
 
@@ -794,68 +795,15 @@ export const Arena: React.FC<ArenaProps> = ({
       )}
 
       {/* Quick Deposit Modal */}
-      {showDepositModal && (
-        <div
-          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
-        >
-          <div
-            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-[#181b29] border border-cyan-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
-          >
-            <h3 className="text-sm font-heading font-extrabold text-white flex items-center space-x-2">
-              <ArrowDownLeft className="w-4 h-4 text-cyan-400" />
-              <span>{t('arena.depositModalTitle')}</span>
-            </h3>
-
-            <p className="text-xs text-slate-300 font-sans">
-              {t('arena.depositModalDesc')}
-            </p>
-
-            {depositMsg && (
-              <div className={`p-2.5 rounded-2xl border text-xs font-sans flex items-center space-x-2 ${
-                depositMsg.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-rose-500/20 border-rose-500/40 text-rose-300'
-              }`}>
-                {depositMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                <span>{depositMsg.text}</span>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs text-slate-400 font-sans">
-                <span>{t('arena.depositAmountLabel')}</span>
-                <span>{t('arena.currentBalLabel', { amount: availableBalanceGram })}</span>
-              </div>
-              <div className="flex items-center space-x-2 bg-black/40 border border-white/10 rounded-2xl px-3.5 py-2">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                  className="flex-1 bg-transparent text-sm font-heading font-bold text-white focus:outline-none"
-                />
-                <GramIcon className="w-4 h-4 text-cyan-400" />
-              </div>
-            </div>
-
-            <div className="flex space-x-2 pt-1">
-              <button
-                onClick={() => setShowDepositModal(false)}
-                className="flex-1 py-2.5 bg-white/5 border border-white/10 text-xs font-heading font-bold text-slate-400 hover:text-white rounded-2xl"
-              >
-                {t('lobby.cancelBtn')}
-              </button>
-              <button
-                onClick={handleQuickDeposit}
-                disabled={depositLoading}
-                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white text-xs font-heading font-extrabold rounded-2xl shadow-epic-purple hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
-              >
-                {depositLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>{t('arena.confirmDepositBtn')}</span>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        currentBalanceGram={availableBalanceGram}
+        defaultAmount={depositAmount || '1.0'}
+        onSuccess={() => {
+          fetchUserBalance();
+        }}
+      />
 
       {activeMatchId ? (
         <div className="space-y-4">

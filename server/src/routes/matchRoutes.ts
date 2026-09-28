@@ -520,16 +520,25 @@ export async function matchRoutes(fastify: FastifyInstance) {
   // User deposit to internal balance
   fastify.post('/api/users/:wallet/deposit', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };
-    const body = req.body as { amountGram?: string; amountTon?: string; txHash?: string; boc?: string };
+    const body = req.body as {
+      amountGram?: string;
+      amountTon?: string;
+      txHash?: string;
+      boc?: string;
+      telegramId?: string;
+    };
+    const query = req.query as { telegramId?: string };
     const amount = body.amountGram || body.amountTon;
     if (!amount || parseFloat(amount) <= 0) {
       return reply.status(400).send({ error: 'Invalid deposit amount' });
     }
+    const cleanTgId = body.telegramId || query?.telegramId;
     const account = await dbService.creditUserBalance(
       wallet,
       amount,
       'DEPOSIT',
-      body.txHash ? `Tx: ${body.txHash}` : body.boc ? `BOC: ${body.boc.slice(0, 16)}...` : 'On-chain deposit'
+      body.txHash ? `Tx: ${body.txHash}` : body.boc ? `BOC: ${body.boc.slice(0, 16)}...` : 'On-chain deposit',
+      cleanTgId
     );
     return reply.send({ success: true, account });
   });
@@ -731,19 +740,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({ success: true, matches });
   });
 
-  // Dynamic fee configuration endpoint
-  fastify.get('/api/config/fees', async (_req, reply) => {
-    return reply.send({ success: true, config: feeConfig.getConfig() });
-  });
-
-  // Treasury stats endpoint
-  fastify.get('/api/treasury', async (_req, reply) => {
-    const data = await dbService.getTreasuryData();
-    return reply.send({ success: true, treasury: data });
-  });
-
-  // Treasury addresses endpoint (for frontend deposit destination)
-  fastify.get('/api/treasury/address', async (_req, reply) => {
+  // Helper to determine active deposit address
+  const getActiveDepositAddress = async (): Promise<string> => {
     let depositAddress = process.env.BOT_CASSA_WALLET_ADDRESS;
 
     if (!depositAddress) {
@@ -770,6 +768,32 @@ export async function matchRoutes(fastify: FastifyInstance) {
       depositAddress = Address.parse(depositAddress).toString({ bounceable: false });
     } catch {}
 
+    return depositAddress;
+  };
+
+  // Dynamic fee configuration endpoint
+  fastify.get('/api/config/fees', async (_req, reply) => {
+    const depositAddress = await getActiveDepositAddress();
+    return reply.send({
+      success: true,
+      config: {
+        ...feeConfig.getConfig(),
+        treasuryAddress: depositAddress,
+      },
+      treasuryAddress: depositAddress,
+    });
+  });
+
+  // Treasury stats endpoint
+  fastify.get('/api/treasury', async (_req, reply) => {
+    const data = await dbService.getTreasuryData();
+    return reply.send({ success: true, treasury: data });
+  });
+
+  // Treasury addresses endpoint (for frontend deposit destination)
+  fastify.get('/api/treasury/address', async (_req, reply) => {
+    const depositAddress = await getActiveDepositAddress();
+
     let treasuryOwner =
       process.env.TREASURY_ADDRESS ||
       process.env.OWNER_ADDRESS ||
@@ -779,7 +803,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       treasuryOwner = Address.parse(treasuryOwner).toString({ bounceable: false });
     } catch {}
 
-    return reply.send({ success: true, depositAddress, treasuryOwner });
+    return reply.send({ success: true, depositAddress, address: depositAddress, treasuryOwner });
   });
 
   // Delete / cancel match endpoint (refunds players if match has not started active combat)

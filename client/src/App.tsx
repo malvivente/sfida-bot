@@ -53,7 +53,7 @@ export const App: React.FC = () => {
   const { userId, username, firstName, lastName, fullName, displayName, photoUrl } = useTelegram();
   const { userAddress } = useTonClashContract();
 
-  // In-bot balance state synced from localStorage / Arena
+  // In-bot balance state synced from localStorage / server
   const [userBalanceGram, setUserBalanceGram] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('sfidabot_user_balance');
@@ -66,6 +66,59 @@ export const App: React.FC = () => {
       return '0.00';
     }
   });
+
+  // Fetch live balance from backend and keep header in sync
+  const fetchLiveBalance = React.useCallback(async () => {
+    const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+    if (!serverUrl) return;
+    const targetKey = userAddress || (userId ? `tg_${userId}` : '');
+    if (!targetKey) return;
+
+    try {
+      const q = new URLSearchParams();
+      if (userId) q.set('telegramId', String(userId));
+      if (username) q.set('username', username);
+      const disp = displayName || fullName;
+      if (disp) q.set('displayName', disp);
+      if (photoUrl) q.set('photoUrl', photoUrl);
+
+      const res = await fetch(`${serverUrl}/api/users/${targetKey}/balance?${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.account) {
+          const bal = data.account.balanceGram || data.account.balanceTon || '0.00';
+          setUserBalanceGram(bal);
+          try {
+            localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
+          } catch {}
+        }
+      }
+    } catch {}
+  }, [userAddress, userId, username, displayName, fullName, photoUrl]);
+
+  // Sync balance on user/wallet change and periodically
+  useEffect(() => {
+    fetchLiveBalance();
+    const interval = setInterval(fetchLiveBalance, 6000);
+    return () => clearInterval(interval);
+  }, [fetchLiveBalance]);
+
+  // Listen to global balance update events from deposits / wins / matches
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e?.detail?.balance !== undefined) {
+        setUserBalanceGram(String(e.detail.balance));
+      } else {
+        fetchLiveBalance();
+      }
+    };
+    window.addEventListener('sfida_balance_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('sfida_balance_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [fetchLiveBalance]);
 
   // Open rooms counter for Duels badge
   const [openRoomsCount, setOpenRoomsCount] = useState<number>(() => {
@@ -350,15 +403,12 @@ export const App: React.FC = () => {
         isOpen={showDepositModal}
         onClose={() => setShowDepositModal(false)}
         currentBalanceGram={userBalanceGram}
-        onSuccess={() => {
-          // Trigger balance refresh
-          try {
-            const saved = localStorage.getItem('sfidabot_user_balance');
-            if (saved) {
-              const p = JSON.parse(saved);
-              setUserBalanceGram(p.balanceGram || p.balanceTon || '0.00');
-            }
-          } catch {}
+        onSuccess={(newBal) => {
+          if (newBal) {
+            setUserBalanceGram(newBal);
+          } else {
+            fetchLiveBalance();
+          }
         }}
       />
     </div>

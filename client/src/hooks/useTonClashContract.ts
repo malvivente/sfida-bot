@@ -230,17 +230,7 @@ export function useTonClashContract() {
     // If only 1 argument provided, it's amountGram:
     if (!amountOrTarget) {
       amountGram = targetOrAmount;
-      try {
-        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
-        const res = await fetch(`${serverUrl}/api/config/fees`);
-        if (res.ok) {
-          const data = await res.json();
-          targetAddress = data?.config?.treasuryAddress || data?.treasuryAddress || '';
-        }
-      } catch {}
-      if (!targetAddress) {
-        targetAddress = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
-      }
+      targetAddress = '';
     } else {
       // If first is numeric and second looks like TON address
       if (!isNaN(Number(targetOrAmount)) && (amountOrTarget.startsWith('EQ') || amountOrTarget.startsWith('UQ') || amountOrTarget.startsWith('0:'))) {
@@ -249,8 +239,27 @@ export function useTonClashContract() {
       }
     }
 
-    if (!targetAddress) {
-      throw new Error('Deposit destination address not available');
+    if (!targetAddress || targetAddress === 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') {
+      try {
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        const res = await fetch(`${serverUrl}/api/treasury/address`);
+        if (res.ok) {
+          const data = await res.json();
+          targetAddress = data?.depositAddress || data?.address || data?.config?.treasuryAddress || '';
+        }
+      } catch {}
+    }
+
+    if (!targetAddress || targetAddress === 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c') {
+      targetAddress = 'UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx';
+    }
+
+    try {
+      targetAddress = Address.parse(targetAddress).toString({ bounceable: false });
+    } catch {}
+
+    if (!amountGram || isNaN(Number(amountGram)) || Number(amountGram) <= 0) {
+      throw new Error('Invalid deposit amount');
     }
 
     const amountNano = toNano(amountGram);

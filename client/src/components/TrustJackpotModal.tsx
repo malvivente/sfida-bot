@@ -51,14 +51,14 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
             <div>
               <div className="flex items-center space-x-1.5">
                 <h3 className="text-base font-heading font-black text-white tracking-wide">
-                  TRUST JACKPOT
+                  {t('jackpotModal.title')}
                 </h3>
                 <span className="text-[9px] font-heading font-black px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                  LUCKY DROP
+                  {t('jackpotModal.luckyDropBadge')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 font-sans">
-                {t('split.title')} • Montepremi Condiviso
+                {t('split.title')} • {t('jackpotModal.sharedPool')}
               </p>
             </div>
           </div>
@@ -82,7 +82,7 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
             <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
             
             <span className="text-[10px] font-heading font-black text-amber-300 uppercase tracking-widest block">
-              MONTEPREMI ATTUALE DELLA FIDUCIA
+              {t('jackpotModal.currentPool')}
             </span>
 
             <div className="flex items-center justify-center space-x-2">
@@ -96,7 +96,7 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-black/40 border border-amber-400/30 text-[10px] font-heading font-extrabold">
               <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span className={isActive ? 'text-emerald-300' : 'text-amber-300'}>
-                {isActive ? 'ATTIVO • RUOTA 30% DROP CHANCE' : 'IN CARICA (< 5.00 GRAM)'}
+                {isActive ? t('jackpotModal.statusActive') : t('jackpotModal.statusCharging')}
               </span>
             </div>
           </div>
@@ -104,7 +104,7 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
           {/* Dinamiche di Gioco */}
           <div className="space-y-2">
             <span className="text-[11px] font-heading font-black text-slate-300 uppercase tracking-wider block">
-              COME SI VINCE IL JACKPOT
+              {t('jackpotModal.howItWorks')}
             </span>
 
             {/* Caso 1: Doppio Split */}
@@ -112,14 +112,14 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-heading font-black text-emerald-400 flex items-center space-x-1.5">
                   <span>🤝</span>
-                  <span>DOPPIO SPLIT (PACE ASSOLUTA)</span>
+                  <span>{t('jackpotModal.splitTitle')}</span>
                 </span>
                 <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  +12.5% A TESTA
+                  {t('jackpotModal.splitBadge')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                Rimborso del <strong>100% della puntata</strong> a entrambi. Nelle partite pubbliche con Jackpot attivo, gira la Ruota Lucky Drop con il <strong>30% di probabilità</strong> per un Bonus del <strong>25% diviso equamente (12.5% a testa)</strong> dal Jackpot!
+                {t('jackpotModal.splitDesc')}
               </p>
             </div>
 
@@ -128,14 +128,14 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-heading font-black text-amber-300 flex items-center space-x-1.5">
                   <span>🗡️</span>
-                  <span>STEAL VS SPLIT (TRADIMENTO)</span>
+                  <span>{t('jackpotModal.stealTitle')}</span>
                 </span>
                 <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
-                  +20% TAGLIA
+                  {t('jackpotModal.stealBadge')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                Chi sceglie STEAL vince il <strong>100% del piatto (2x puntata)</strong>. Inoltre gira la Ruota per una <strong>Taglia Tentazione extra del 20% della propria puntata</strong> prelevata dal Trust Jackpot!
+                {t('jackpotModal.stealDesc')}
               </p>
             </div>
 
@@ -144,14 +144,14 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-heading font-black text-rose-400 flex items-center space-x-1.5">
                   <span>💀</span>
-                  <span>DOPPIO STEAL (AVIDITÀ)</span>
+                  <span>{t('jackpotModal.doubleStealTitle')}</span>
                 </span>
                 <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30">
-                  50% AL JACKPOT
+                  {t('jackpotModal.doubleStealBadge')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                Nessun vincitore ed entrambi perdono la puntata. Il <strong>50% del piatto bruciato va ad alimentare questo Trust Jackpot</strong>, facendolo crescere continuamente nel tempo!
+                {t('jackpotModal.doubleStealDesc')}
               </p>
             </div>
           </div>
@@ -160,24 +160,24 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
           <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-2">
             <span className="text-[10px] font-heading font-black text-cyan-400 uppercase tracking-wider flex items-center space-x-1">
               <Shield className="w-3.5 h-3.5" />
-              <span>REGOLE ANTI-COLLUSIONE & EQUITÀ</span>
+              <span>{t('jackpotModal.safeguardsTitle')}</span>
             </span>
             <ul className="text-[11px] text-slate-300 space-y-1.5 font-sans">
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                <span><strong>Solo Lobby Pubblica:</strong> non attivo nelle stanze private tra amici.</span>
+                <span>{t('jackpotModal.safeguardPublic')}</span>
               </li>
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                <span><strong>Cooldown 48 Ore:</strong> la stessa coppia può riscuotere il bonus solo una volta ogni 48h.</span>
+                <span>{t('jackpotModal.safeguardCooldown')}</span>
               </li>
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                <span><strong>Blocco Referral:</strong> duellanti legati da invito diretto non possono incassare bonus sfidandosi.</span>
+                <span>{t('jackpotModal.safeguardReferral')}</span>
               </li>
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                <span><strong>Puntata Minima:</strong> 5.00 GRAM per duello.</span>
+                <span>{t('jackpotModal.safeguardMinBet')}</span>
               </li>
             </ul>
           </div>
@@ -193,7 +193,7 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
             }}
             className="flex-1 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-heading font-bold text-slate-400 hover:text-white"
           >
-            CHIUDI
+            {t('jackpotModal.close')}
           </button>
 
           {onPlaySplitSteal && (
@@ -206,7 +206,7 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
               }}
               className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-black font-heading font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
             >
-              <span>GIOCA SPLIT/STEAL</span>
+              <span>{t('jackpotModal.playSplitSteal')}</span>
               <ArrowRight className="w-4 h-4 text-black" />
             </button>
           )}

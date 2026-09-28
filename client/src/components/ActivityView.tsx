@@ -282,7 +282,7 @@ export const ActivityView: React.FC<ActivityViewProps> = ({ onResumeMatch, onGoT
                         isWin ? 'text-emerald-400' : isDraw ? 'text-slate-400' : 'text-rose-400'
                       }`}
                     >
-                      {isWin ? 'VITTORIA' : isDraw ? 'PAREGGIO' : 'SCONFITTA'}
+                      {isWin ? t('profile.win') : isDraw ? t('profile.draw') : t('profile.loss')}
                     </span>
                   </div>
                 </div>

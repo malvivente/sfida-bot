@@ -125,27 +125,27 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
               <div className="space-y-2 text-xs">
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-pink-300 font-heading font-bold block mb-0.5">1. Russian Roulette (8 Chambers, 1 Bullet)</strong>
+                  <strong className="text-pink-300 font-heading font-bold block mb-0.5">{t('rules.gameRoulette')}</strong>
                   <span className="text-slate-300 font-medium">{t('rules.rrRule')}</span>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-cyan-300 font-heading font-bold block mb-0.5">2. Blackjack Face-Up (Duel to 21)</strong>
+                  <strong className="text-cyan-300 font-heading font-bold block mb-0.5">{t('rules.gameBlackjack')}</strong>
                   <span className="text-slate-300 font-medium">{t('rules.bjRule')}</span>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-emerald-300 font-heading font-bold block mb-0.5">3. Endless Glass Bridge (Survival Leap)</strong>
+                  <strong className="text-emerald-300 font-heading font-bold block mb-0.5">{t('rules.gameBridge')}</strong>
                   <span className="text-slate-300 font-medium">{t('rules.gbRule')}</span>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-amber-300 font-heading font-bold block mb-0.5">4. Chrono Blind (Precision Countdown)</strong>
+                  <strong className="text-amber-300 font-heading font-bold block mb-0.5">{t('rules.gameChrono')}</strong>
                   <span className="text-slate-300 font-medium">{t('rules.cbRule')}</span>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-yellow-300 font-heading font-bold block mb-1">5. Split or Steal (Trust Dilemma & Shared Jackpot)</strong>
+                  <strong className="text-yellow-300 font-heading font-bold block mb-1">{t('rules.gameSplit')}</strong>
                   <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[11.5px] font-medium">{t('rules.ssRule')}</div>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-slate-200 font-heading font-bold block mb-0.5">6. Automated Prize Settlement & Rematches</strong>
+                  <strong className="text-slate-200 font-heading font-bold block mb-0.5">{t('rules.gameSettle')}</strong>
                   <span className="text-slate-300 font-medium">{t('rules.settleRule')}</span>
                 </div>
               </div>
