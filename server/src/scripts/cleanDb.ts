@@ -65,6 +65,11 @@ export async function cleanDatabase() {
   fs.writeFileSync(treasuryPath, JSON.stringify(initialTreasury, null, 2), 'utf-8');
   console.log('✅ Reset treasury.json (0.00 GRAM)');
 
+  // 6. Reset processed deposits
+  const depositsPath = path.join(dataDir, 'processed_deposits.json');
+  fs.writeFileSync(depositsPath, JSON.stringify([], null, 2), 'utf-8');
+  console.log('✅ Cleared processed_deposits.json');
+
   console.log('\n✨ Database is now completely clean and ready for production!');
 }
 

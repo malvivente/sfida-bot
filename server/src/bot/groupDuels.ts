@@ -1,4 +1,5 @@
-import { Context, InlineKeyboard } from 'grammy';
+import { Context } from 'grammy';
+import { SfidaInlineKeyboard as InlineKeyboard } from './keyboardUtils.js';
 import { dbService } from '../services/db.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { GameType } from '../types/gameTypes.js';

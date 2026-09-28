@@ -1,4 +1,5 @@
-import { Bot, InlineKeyboard } from 'grammy';
+import { Bot } from 'grammy';
+import { SfidaInlineKeyboard as InlineKeyboard } from './keyboardUtils.js';
 import { dbService } from '../services/db.js';
 import { botT, resolveLanguage, SUPPORTED_LANGUAGES, BotLanguage } from './i18n.js';
 import { handleBroadcastCommand } from './broadcast.js';
