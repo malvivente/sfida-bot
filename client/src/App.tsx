@@ -1,32 +1,81 @@
 import React, { useEffect, useState } from 'react';
-import { Navbar } from './components/Navbar.js';
 import { Arena } from './pages/Arena.js';
 import { ReferralDashboard } from './pages/ReferralDashboard.js';
 import { Profile } from './pages/Profile.js';
 import { Leaderboard } from './pages/Leaderboard.js';
 import { RulesModal } from './components/RulesModal.js';
+import { DepositModal } from './components/DepositModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
-import { Swords, ShieldCheck, HelpCircle } from 'lucide-react';
+import { EpicHeader } from './components/EpicHeader.js';
+import { EpicBottomNav, EpicTab } from './components/EpicBottomNav.js';
+import { ShieldCheck } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
 import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
 import { requestTelegramFullscreen, exitTelegramFullscreen, getTelegramWebApp } from './utils/telegram.js';
-import { JackpotCard } from './components/JackpotCard.js';
 import { useTelegram } from './hooks/useTelegram.js';
 import { useTonClashContract } from './hooks/useTonClashContract.js';
 
 export const App: React.FC = () => {
-  const { isFullscreen, isDesktop, topInset } = useTelegramViewport();
-  const [activeTab, setActiveTab] = useState<'arena' | 'leaderboard' | 'profile' | 'referrals'>('arena');
+  const { isFullscreen, topInset } = useTelegramViewport();
+  const [activeTab, setActiveTab] = useState<EpicTab>('home');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepInviteCode, setDeepInviteCode] = useState<string | undefined>(undefined);
   const [deepRole, setDeepRole] = useState<'player' | 'spectator'>('player');
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [isInsideMatch, setIsInsideMatch] = useState(false);
-  const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<'arena' | 'profile'>('profile');
-  const { language, toggleLanguage, t } = useI18n();
+  const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<EpicTab>('profile');
+  const { t } = useI18n();
 
-  const { userId, username, firstName, lastName, fullName, photoUrl } = useTelegram();
+  const { userId, username, firstName, lastName, fullName, displayName, photoUrl } = useTelegram();
   const { userAddress } = useTonClashContract();
+
+  // In-bot balance state synced from localStorage / Arena
+  const [userBalanceGram, setUserBalanceGram] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_user_balance');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.balanceGram || parsed.balanceTon || '0.00';
+      }
+      return '0.00';
+    } catch {
+      return '0.00';
+    }
+  });
+
+  // Open rooms counter for Duels badge
+  const [openRoomsCount, setOpenRoomsCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_saved_matches');
+      if (saved) {
+        const matches = JSON.parse(saved);
+        return Array.isArray(matches) ? matches.filter((m: any) => m.state === 'LOBBY' && !m.playerB).length : 0;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Sync open rooms count from localStorage periodically
+  useEffect(() => {
+    const updateCount = () => {
+      try {
+        const saved = localStorage.getItem('sfidabot_saved_matches');
+        if (saved) {
+          const matches = JSON.parse(saved);
+          if (Array.isArray(matches)) {
+            setOpenRoomsCount(matches.filter((m: any) => m.state === 'LOBBY' && !m.playerB).length);
+          }
+        }
+      } catch {}
+    };
+
+    updateCount();
+    const interval = setInterval(updateCount, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Automatic profile & avatar synchronization with server on app launch
   useEffect(() => {
@@ -111,12 +160,12 @@ export const App: React.FC = () => {
         } catch {}
       }
       setDeepRole('player');
-      setActiveTab('arena');
+      setActiveTab('duels');
     } else if (startParam.startsWith('spectate_')) {
       const parts = startParam.split('_');
       setDeepMatchId(parts[1]);
       setDeepRole('spectator');
-      setActiveTab('arena');
+      setActiveTab('duels');
     } else if (startParam.startsWith('ref_')) {
       setActiveTab('referrals');
     } else if (startParam.startsWith('lead_') || params.get('tab') === 'leaderboard') {
@@ -137,58 +186,34 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Floating controls (Language on bottom-left and ToS on bottom-right)
-  // are hidden during active game matches or when viewing the Leaderboard
-  // to avoid overlapping the pinned user rank bar and keep the view completely clean
-  const showFloatingButtons =
-    activeTab !== 'leaderboard' && (activeTab !== 'arena' || !isInsideMatch);
-
   return (
     <div
-      className={`min-h-screen bg-cyber-bg text-slate-100 flex flex-col items-center justify-start px-3 sm:px-6 pb-20 select-none font-rajdhani relative ${
-        isFullscreen ? 'pt-1' : 'pt-3'
+      className={`min-h-screen bg-[#0e1015] text-slate-100 flex flex-col items-center justify-start px-3 sm:px-4 select-none font-sans relative ${
+        isFullscreen ? 'pt-1' : 'pt-2'
       }`}
     >
-      {/* Top clearance & Jackpot Slot for Telegram Fullscreen mode */}
-      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset}>
-        <JackpotCard />
-      </TelegramTopSlot>
+      {/* Top clearance for Telegram Fullscreen mode */}
+      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset} />
 
-      {/* Desktop Top Title (Centered) */}
-      {isDesktop && (
-        <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center pt-2 pb-1">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-cyber-cyan/15 border border-cyber-cyan flex items-center justify-center shadow-[0_0_12px_rgba(0,240,255,0.35)]">
-              <Swords className="w-4 h-4 text-cyber-cyan" />
-            </div>
-            <div className="text-center">
-              <h1 className="text-base font-orbitron font-extrabold tracking-wider text-white drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
-                SFIDA ARENA
-              </h1>
-              <p className="text-[9px] font-chakra text-cyber-cyan tracking-widest uppercase">
-                {t('nav.subtitle')}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Modern Epic Header (Hidden during active duel arena to give 100% screen focus) */}
+      {!isInsideMatch && (
+        <EpicHeader
+          userBalanceGram={userBalanceGram}
+          onOpenDeposit={() => setShowDepositModal(true)}
+          photoUrl={photoUrl}
+          displayName={displayName || fullName || username}
+          username={username}
+          onOpenRules={() => setShowRulesModal(true)}
+          onOpenProfile={() => setActiveTab('profile')}
+        />
       )}
 
-      <Navbar
-        isDesktop={isDesktop}
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          if (tab !== 'arena') {
-            setDeepMatchId(undefined);
-            setDeepInviteCode(undefined);
-          }
-          setActiveTab(tab);
-        }}
-        onOpenRules={() => setShowRulesModal(true)}
-      />
-
-      <main className="w-full max-w-md">
-        {activeTab === 'arena' && (
+      {/* Main Content Area */}
+      <main className={`w-full max-w-md ${!isInsideMatch ? 'pb-24' : 'pb-6'}`}>
+        {/* Tab 1: HOME (Epic Banners + Live Activity + Duels Feed) */}
+        {activeTab === 'home' && (
           <Arena
+            showBanners={true}
             initialMatchId={deepMatchId}
             initialInviteCode={deepInviteCode}
             role={deepRole}
@@ -197,18 +222,44 @@ export const App: React.FC = () => {
               setDeepInviteCode(undefined);
             }}
             onMatchActiveChange={setIsInsideMatch}
+            onOpenAffiliates={() => setActiveTab('referrals')}
+            onOpenJackpotModal={() => setActiveTab('duels')}
+            onBalanceUpdated={setUserBalanceGram}
           />
         )}
+
+        {/* Tab 2: DUELS (Focused Open Duels Lobby & Advanced Filters) */}
+        {activeTab === 'duels' && (
+          <Arena
+            showBanners={false}
+            initialMatchId={deepMatchId}
+            initialInviteCode={deepInviteCode}
+            role={deepRole}
+            onClearDeepMatch={() => {
+              setDeepMatchId(undefined);
+              setDeepInviteCode(undefined);
+            }}
+            onMatchActiveChange={setIsInsideMatch}
+            onOpenAffiliates={() => setActiveTab('referrals')}
+            onBalanceUpdated={setUserBalanceGram}
+          />
+        )}
+
+        {/* Tab 3: REFERRALS & GROUPS */}
+        {activeTab === 'referrals' && <ReferralDashboard />}
+
+        {/* Tab 4: LEADERBOARD */}
         {activeTab === 'leaderboard' && (
           <Leaderboard onBack={() => setActiveTab(lastTabBeforeLeaderboard)} />
         )}
-        {activeTab === 'referrals' && <ReferralDashboard />}
+
+        {/* Tab 5: PROFILE & WALLET */}
         {activeTab === 'profile' && (
           <Profile
             onResumeDuel={(matchId) => {
               setDeepMatchId(matchId);
               setDeepRole('player');
-              setActiveTab('arena');
+              setActiveTab('duels');
             }}
             onOpenLeaderboard={() => {
               setLastTabBeforeLeaderboard('profile');
@@ -218,43 +269,53 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Subtle Footer */}
-      <footer className="w-full max-w-md mt-6 pt-4 border-t border-cyber-border/40 flex items-center justify-center text-[11px] text-slate-500 font-chakra space-x-1.5 text-center">
-        <ShieldCheck className="w-3.5 h-3.5 text-cyber-cyan shrink-0" />
-        <span>{t('footer.escrow')}</span>
-      </footer>
+      {/* Subtle Footer (Visible only when not in active match) */}
+      {!isInsideMatch && (
+        <footer className="w-full max-w-md pb-24 pt-2 flex items-center justify-center text-[10px] text-slate-500 font-medium space-x-1.5 text-center">
+          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <span>{t('footer.escrow')}</span>
+        </footer>
+      )}
 
-      {/* Floating Action Buttons: Language (Bottom-Left) & ToS (Bottom-Right) */}
-      {showFloatingButtons && (
-        <>
-          {/* Language Switcher - Fixed in bottom-left corner */}
-          <button
-            onClick={toggleLanguage}
-            title={language === 'en' ? 'Passa alla lingua Italiana' : 'Switch to English'}
-            aria-label="Toggle language"
-            className="fixed bottom-5 left-4 z-40 w-11 h-11 rounded-2xl bg-cyber-card/90 hover:bg-cyber-cyan text-cyber-cyan hover:text-cyber-bg border border-cyber-cyan/50 hover:border-cyber-cyan shadow-neon-cyan backdrop-blur-md flex items-center justify-center transition-all active:scale-95 group font-orbitron font-extrabold text-xs"
-          >
-            <span className="group-hover:text-cyber-bg transition-colors">
-              {language === 'en' ? 'IT' : 'EN'}
-            </span>
-          </button>
-
-          {/* Rules & ToS (?) - Fixed in bottom-right corner */}
-          <button
-            onClick={() => setShowRulesModal(true)}
-            title="Game Rules & ToS (?)"
-            aria-label="Game Rules & ToS"
-            className="fixed bottom-5 right-4 z-40 w-11 h-11 rounded-2xl bg-cyber-card/90 hover:bg-cyber-cyan text-cyber-cyan hover:text-cyber-bg border border-cyber-cyan/50 hover:border-cyber-cyan shadow-neon-cyan backdrop-blur-md flex items-center justify-center transition-all active:scale-95 group"
-          >
-            <HelpCircle className="w-5 h-5 text-cyber-cyan group-hover:text-cyber-bg transition-colors" />
-          </button>
-        </>
+      {/* Epic Bottom Navigation Dock (Hidden during active combat arena) */}
+      {!isInsideMatch && (
+        <EpicBottomNav
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            if (tab !== 'home' && tab !== 'duels') {
+              setDeepMatchId(undefined);
+              setDeepInviteCode(undefined);
+            }
+            if (tab === 'leaderboard' && activeTab !== 'leaderboard') {
+              setLastTabBeforeLeaderboard(activeTab === 'duels' ? 'duels' : 'profile');
+            }
+            setActiveTab(tab);
+          }}
+          openRoomsCount={openRoomsCount}
+        />
       )}
 
       {/* Rules & ToS Modal */}
       <RulesModal
         isOpen={showRulesModal}
         onClose={() => setShowRulesModal(false)}
+      />
+
+      {/* Quick Deposit Modal */}
+      <DepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        currentBalanceGram={userBalanceGram}
+        onSuccess={() => {
+          // Trigger balance refresh
+          try {
+            const saved = localStorage.getItem('sfidabot_user_balance');
+            if (saved) {
+              const p = JSON.parse(saved);
+              setUserBalanceGram(p.balanceGram || p.balanceTon || '0.00');
+            }
+          } catch {}
+        }}
       />
     </div>
   );

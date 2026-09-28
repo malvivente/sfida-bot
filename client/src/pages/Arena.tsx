@@ -27,6 +27,10 @@ interface ArenaProps {
   role?: 'player' | 'spectator';
   onClearDeepMatch?: () => void;
   onMatchActiveChange?: (isActive: boolean) => void;
+  showBanners?: boolean;
+  onOpenAffiliates?: () => void;
+  onOpenJackpotModal?: () => void;
+  onBalanceUpdated?: (balance: string) => void;
 }
 
 export const Arena: React.FC<ArenaProps> = ({
@@ -35,6 +39,10 @@ export const Arena: React.FC<ArenaProps> = ({
   role: initialRole = 'player',
   onClearDeepMatch,
   onMatchActiveChange,
+  showBanners = true,
+  onOpenAffiliates,
+  onOpenJackpotModal,
+  onBalanceUpdated,
 }) => {
   const { isFullscreen, topInset } = useTelegramViewport();
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
@@ -90,6 +98,7 @@ export const Arena: React.FC<ArenaProps> = ({
         const data = await res.json();
         if (data?.account) {
           setUserBalance(data.account);
+          onBalanceUpdated?.(data.account.balanceGram || data.account.balanceTon || '0.00');
           try {
             localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
           } catch {}
@@ -1146,6 +1155,9 @@ export const Arena: React.FC<ArenaProps> = ({
             if (missing) setDepositAmount(missing);
             setShowDepositModal(true);
           }}
+          showBanners={showBanners}
+          onOpenAffiliates={onOpenAffiliates}
+          onOpenJackpotModal={onOpenJackpotModal}
         />
       )}
     </div>

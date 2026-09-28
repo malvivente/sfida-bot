@@ -11,12 +11,34 @@ export interface Translations {
 
 export const translations: Translations = {
   // Navigation
+  'nav.home': { it: 'Home', en: 'Home' },
+  'nav.duels': { it: 'Duelli', en: 'Duels' },
+  'nav.invite': { it: 'Invita', en: 'Invite' },
   'nav.arena': { it: 'ARENA', en: 'ARENA' },
   'nav.leaderboard': { it: 'CLASSIFICA', en: 'LEADERBOARD' },
   'nav.leaderboardShort': { it: 'TOP', en: 'TOP' },
   'nav.affiliates': { it: 'AFFILIATI', en: 'AFFILIATES' },
   'nav.profile': { it: 'PROFILO', en: 'PROFILE' },
   'nav.subtitle': { it: 'DUELLI CYBER PVP', en: 'CYBER PVP DUELS' },
+
+  // Epic GUI Experience
+  'epic.yourBalance': { it: 'Il tuo saldo', en: 'Your balance' },
+  'epic.deposit': { it: 'Deposita', en: 'Deposit' },
+  'epic.live': { it: 'Live', en: 'Live' },
+  'epic.hot': { it: 'HOT', en: 'HOT' },
+  'epic.pvpTitle': { it: 'PVP', en: 'PVP' },
+  'epic.pvpSubtitle': { it: 'Duelli 1v1 in tempo reale', en: 'Real-time 1v1 duels' },
+  'epic.createDuel': { it: 'Crea Sfida', en: 'Create Duel' },
+  'epic.playHubTitle': { it: 'PLAY HUB', en: 'PLAY HUB' },
+  'epic.playHubSubtitle': { it: 'Tutte le 5 Discipline', en: 'All 5 Disciplines' },
+  'epic.allGames': { it: 'Tutti i Giochi', en: 'All Games' },
+  'epic.trustJackpot': { it: 'TRUST JACKPOT', en: 'TRUST JACKPOT' },
+  'epic.jackpotSub': { it: 'Ruota Lucky Drop 30%', en: '30% Lucky Drop Wheel' },
+  'epic.inviteTitle': { it: 'COMMUNITY & EARN', en: 'COMMUNITY & EARN' },
+  'epic.inviteSub': { it: 'Fino al 30% sulle commissioni', en: 'Up to 30% fee share' },
+  'epic.openRooms': { it: 'Stanze Aperte', en: 'Open Rooms' },
+  'epic.viewAll': { it: 'Vedi Tutti', en: 'View All' },
+  'epic.fastJoin': { it: 'SFIDA', en: 'DUEL' },
 
   // Profile
   'profile.title': { it: 'PROFILO GUERRIERO', en: 'WARRIOR PROFILE' },

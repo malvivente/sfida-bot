@@ -11,6 +11,8 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { areAddressesEqual } from '../utils/ton.js';
 import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
+import { EpicBanners } from './EpicBanners.js';
+import { LiveActivityTicker } from './LiveActivityTicker.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -30,6 +32,9 @@ interface DuelLobbyProps {
   joinFeeGram?: number;
   initialInviteCode?: string;
   onOpenDeposit?: (missingAmount?: string) => void;
+  showBanners?: boolean;
+  onOpenAffiliates?: () => void;
+  onOpenJackpotModal?: () => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -50,6 +55,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   joinFeeGram = 0.05,
   initialInviteCode,
   onOpenDeposit,
+  showBanners = true,
+  onOpenAffiliates,
+  onOpenJackpotModal,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
@@ -92,12 +100,18 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
   };
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (defaultGame?: GameType) => {
     onClearError?.();
     if (!userAddress) {
       triggerImpact('medium');
       onOpenWallet?.();
       return;
+    }
+    if (defaultGame) {
+      setSelectedGameType(defaultGame);
+      if (defaultGame === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
+        setWagerChoice('5');
+      }
     }
     triggerImpact('medium');
     setShowCreateModal(true);
@@ -228,61 +242,68 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     });
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-4 font-rajdhani">
-      {/* Balance Bar & Create Duel Banner */}
-      <div className="bg-gradient-to-r from-cyber-cyan/20 via-cyber-card to-cyber-pink/20 border border-cyber-border rounded-2xl p-4 flex items-center justify-between shadow-xl">
-        <div>
+    <div className="w-full max-w-md mx-auto space-y-4 font-sans">
+      {/* Epic Gift-Style Banners & Live Activity Strip */}
+      {showBanners && (
+        <div className="space-y-3">
+          <LiveActivityTicker
+            matches={matches}
+            onSelectGame={(g) => setFilterGameType(g)}
+            onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
+          />
+
+          <EpicBanners
+            matches={matches}
+            onOpenCreateModal={(g) => handleOpenModal(g)}
+            onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
+            onSelectGame={(g) => setFilterGameType(g)}
+            onOpenAffiliates={onOpenAffiliates}
+            onOpenJackpotModal={onOpenJackpotModal}
+          />
+        </div>
+      )}
+
+      {/* Active Matches Feed Section Header */}
+      <div className="space-y-3 pt-1">
+        <div className="flex items-center justify-between px-1">
           <div className="flex items-center space-x-2">
-            <Flame className="w-5 h-5 text-cyber-cyan animate-pulse" />
-            <h2 className="text-base font-orbitron font-bold text-white">{t('lobby.liveDuels')}</h2>
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+            <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
+              {t('lobby.activeDuels')}
+              <span className="ml-1.5 px-2 py-0.5 rounded-full bg-white/10 text-cyan-400 text-xs">
+                {filteredMatches.length}
+              </span>
+            </h3>
           </div>
-          <div className="flex items-center space-x-1.5 mt-1 text-xs font-chakra text-slate-300">
-            <Wallet className="w-3.5 h-3.5 text-cyber-cyan" />
-            <span>{t('lobby.balance')} <strong className="text-white font-bold">{currentBal.toFixed(2)} GRAM</strong></span>
-            {onOpenDeposit && (
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleOpenModal()}
+              className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-bold rounded-xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center space-x-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{t('lobby.create')}</span>
+            </button>
+
+            {onRefreshMatches && (
               <button
-                onClick={() => onOpenDeposit()}
-                className="text-[10px] text-cyber-cyan hover:underline ml-1 font-bold"
+                onClick={() => {
+                  triggerImpact('light');
+                  onRefreshMatches();
+                }}
+                disabled={isRefreshing}
+                className={`text-[11px] font-medium transition-all flex items-center space-x-1.5 py-1.5 px-2.5 rounded-xl border active:scale-95 ${
+                  isRefreshing
+                    ? 'bg-purple-500/10 border-purple-500 text-purple-400 cursor-wait'
+                    : 'text-slate-400 hover:text-white bg-white/5 border-white/10 hover:border-white/20'
+                }`}
+                title="Refresh duels list"
               >
-                {t('lobby.deposit')}
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+                <span className="hidden sm:inline">{isRefreshing ? t('lobby.refreshing') : t('lobby.refresh')}</span>
               </button>
             )}
           </div>
-        </div>
-
-        <button
-          onClick={handleOpenModal}
-          className="px-4 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all flex items-center space-x-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('lobby.create')}</span>
-        </button>
-      </div>
-
-      {/* Active Matches Feed */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-orbitron font-bold text-slate-300 uppercase tracking-wider">
-            {t('lobby.activeDuels')} ({filteredMatches.length})
-          </h3>
-          {onRefreshMatches && (
-            <button
-              onClick={() => {
-                triggerImpact('light');
-                onRefreshMatches();
-              }}
-              disabled={isRefreshing}
-              className={`text-[11px] font-chakra transition-all flex items-center space-x-1.5 py-1 px-2.5 rounded-lg border active:scale-95 ${
-                isRefreshing
-                  ? 'bg-cyber-cyan/10 border-cyber-cyan text-cyber-cyan cursor-wait'
-                  : 'text-slate-400 hover:text-cyber-cyan bg-cyber-bg/60 border-cyber-border/80 hover:border-cyber-cyan/50'
-              }`}
-              title="Refresh duels list"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyber-cyan' : ''}`} />
-              <span>{isRefreshing ? t('lobby.refreshing') : t('lobby.refresh')}</span>
-            </button>
-          )}
         </div>
 
         {/* Game Filter Tabs */}
@@ -579,8 +600,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   {t('lobby.noDuelsDesc')}
                 </p>
                 <button
-                  onClick={handleOpenModal}
-                  className="mt-4 px-5 py-2.5 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider shadow-neon-cyan active:scale-95 transition-all inline-flex items-center space-x-1.5"
+                  onClick={() => handleOpenModal()}
+                  className="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-bold rounded-xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all inline-flex items-center space-x-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   <span>{t('lobby.createDuelBtn')}</span>
@@ -718,7 +739,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     {isAlreadyPlayer ? (
                       <button
                         onClick={() => onJoinMatch(m)}
-                        className="flex-1 py-2 bg-gradient-to-r from-cyber-cyan to-blue-500 text-cyber-bg font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                        className="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-heading font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-md active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                       >
                         <Swords className="w-3.5 h-3.5" />
                         <span>{t('profile.resume')}</span>
@@ -727,7 +748,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       m.isPrivate && !effectiveInviteCode ? (
                         <button
                           onClick={() => onSpectateMatch(m.matchId)}
-                          className="flex-1 py-2 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                          className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                         >
                           <Eye className="w-3.5 h-3.5 text-purple-400" />
                           <span>{t('lobby.spectatePrivate')}</span>
@@ -736,21 +757,21 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <>
                           <button
                             onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
-                            className="flex-1 py-2 bg-cyber-cyan text-cyber-bg font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center justify-center space-x-1"
                           >
                             <Swords className="w-3.5 h-3.5" />
                             <span className="flex items-center space-x-1">
                               <span>{t('lobby.joinBtn')} ({wagerGram}</span>
-                              <GramIcon className="w-3 h-3 text-cyber-bg inline-block" />
+                              <GramIcon className="w-3 h-3 text-white inline-block" />
                               <span>)</span>
                             </span>
                           </button>
                           <button
                             onClick={() => onSpectateMatch(m.matchId)}
                             title={t('lobby.spectateBtn')}
-                            className="py-2 px-3 bg-cyber-border/70 hover:bg-slate-800 text-slate-200 hover:text-cyber-cyan border border-cyber-border hover:border-cyber-cyan/50 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 font-heading font-bold rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
                           >
-                            <Eye className="w-3.5 h-3.5 text-cyber-cyan" />
+                            <Eye className="w-3.5 h-3.5 text-cyan-400" />
                             <span>{t('lobby.spectateBtn')}</span>
                           </button>
                         </>
@@ -758,9 +779,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     ) : (
                       <button
                         onClick={() => onSpectateMatch(m.matchId)}
-                        className="flex-1 py-2 bg-cyber-border text-slate-200 font-orbitron font-bold rounded-xl text-xs uppercase tracking-wider hover:border-cyber-cyan active:scale-95 transition-all flex items-center justify-center space-x-1"
+                        className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-200 font-heading font-bold rounded-xl text-xs uppercase tracking-wider hover:border-white/20 active:scale-95 transition-all flex items-center justify-center space-x-1"
                       >
-                        <Eye className="w-3.5 h-3.5 text-cyber-cyan" />
+                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
                         <span>{t('lobby.spectateBtn')}</span>
                       </button>
                     )}
@@ -768,7 +789,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     <button
                       onClick={() => handleShare(m.matchId, wagerGram, m.gameType, m.isPrivate, effectiveInviteCode)}
                       title="Share to Telegram"
-                      className="p-2 bg-cyber-bg border border-cyber-border rounded-xl text-slate-300 hover:text-cyber-cyan active:scale-95 transition-all"
+                      className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl transition-all active:scale-95 shrink-0"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
@@ -781,7 +802,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           onCancelMatch(m);
                         }}
                         title="Cancel duel and refund balance"
-                        className="p-2 bg-cyber-bg border border-cyber-border hover:border-cyber-pink text-slate-400 hover:text-cyber-pink active:scale-95 transition-all rounded-xl"
+                        className="p-2.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 hover:text-rose-300 rounded-xl transition-all active:scale-95 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
