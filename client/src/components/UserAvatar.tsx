@@ -55,12 +55,12 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   if (photoUrl && photoUrl.trim() && !hasError) {
     return (
       <div
-        className={`${sizeClass} ${roundedClass} border border-slate-600/80 bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-md ${className}`}
+        className={`${sizeClass} ${roundedClass} border border-slate-600/80 bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden relative shadow-md aspect-square ${className}`}
       >
         <img
           src={photoUrl}
           alt={name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover block select-none pointer-events-none"
           onError={() => setHasError(true)}
         />
         {children}
@@ -71,7 +71,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   // Fallback: colorful deterministic background with initial letter (NO letter on top of photos)
   return (
     <div
-      className={`${sizeClass} ${roundedClass} bg-gradient-to-br ${gradient} border border-white/20 flex items-center justify-center shrink-0 font-orbitron font-bold ${textClass} shadow-md select-none relative overflow-hidden ${className}`}
+      className={`${sizeClass} ${roundedClass} bg-gradient-to-br ${gradient} border border-white/20 flex items-center justify-center shrink-0 font-orbitron font-bold ${textClass} shadow-md select-none relative overflow-hidden aspect-square ${className}`}
     >
       {initial}
       {children}

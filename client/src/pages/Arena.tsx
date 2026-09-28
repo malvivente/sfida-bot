@@ -31,6 +31,8 @@ interface ArenaProps {
   showBanners?: boolean;
   showMatchesList?: boolean;
   onOpenSpectate?: () => void;
+  onNavigateToDuels?: (gameType?: string) => void;
+  initialGameFilter?: string;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   onBalanceUpdated?: (balance: string) => void;
@@ -47,6 +49,8 @@ export const Arena: React.FC<ArenaProps> = ({
   showBanners = true,
   showMatchesList = true,
   onOpenSpectate,
+  onNavigateToDuels,
+  initialGameFilter,
   onOpenAffiliates,
   onOpenJackpotModal,
   onBalanceUpdated,
@@ -1114,6 +1118,8 @@ export const Arena: React.FC<ArenaProps> = ({
           showBanners={showBanners}
           showMatchesList={showMatchesList}
           onOpenSpectate={onOpenSpectate}
+          onNavigateToDuels={onNavigateToDuels}
+          initialGameFilter={initialGameFilter}
           onOpenAffiliates={onOpenAffiliates}
           onOpenJackpotModal={onOpenJackpotModal}
           initialCreateGame={initialCreateGame}

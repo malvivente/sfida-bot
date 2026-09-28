@@ -210,9 +210,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
             {/* 2nd Place Silver */}
             {top2 ? (
               <div className="bg-gradient-to-b from-slate-400/15 via-[#1a1e2c] to-[#12141c] border border-slate-400/30 rounded-3xl p-3 text-center flex flex-col items-center relative shadow-lg">
-                <div className="relative mb-1 flex items-center justify-center">
-                  {renderAvatar(top2, 'w-11 h-11', 'text-sm')}
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-200 text-slate-900 font-heading font-black text-[10px] flex items-center justify-center shadow-md">
+                <div className="relative mb-1 w-12 h-12 flex items-center justify-center shrink-0 mx-auto">
+                  {renderAvatar(top2, 'w-12 h-12', 'text-sm')}
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-200 text-slate-900 font-heading font-black text-[10px] flex items-center justify-center shadow-md z-10">
                     2
                   </span>
                 </div>
@@ -229,9 +229,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
             {top1 && (
               <div className="bg-gradient-to-b from-amber-500/25 via-[#231d16] to-[#16131b] border-2 border-amber-400/60 rounded-3xl p-3.5 text-center flex flex-col items-center relative shadow-epic-gold -translate-y-2">
                 <Crown className="w-6 h-6 text-amber-300 absolute -top-3 left-1/2 -translate-x-1/2 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
-                <div className="relative mb-1 flex items-center justify-center mt-1">
-                  {renderAvatar(top1, 'w-13 h-13', 'text-base')}
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-heading font-black text-[11px] flex items-center justify-center shadow-md">
+                <div className="relative mb-1 w-16 h-16 flex items-center justify-center shrink-0 mx-auto mt-1">
+                  {renderAvatar(top1, 'w-16 h-16', 'text-base')}
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-heading font-black text-[11px] flex items-center justify-center shadow-md z-10">
                     1
                   </span>
                 </div>
@@ -247,9 +247,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
             {/* 3rd Place Bronze */}
             {top3 ? (
               <div className="bg-gradient-to-b from-amber-800/20 via-[#221817] to-[#131118] border border-amber-600/30 rounded-3xl p-3 text-center flex flex-col items-center relative shadow-lg">
-                <div className="relative mb-1 flex items-center justify-center">
-                  {renderAvatar(top3, 'w-11 h-11', 'text-sm')}
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-700 text-amber-100 font-heading font-black text-[10px] flex items-center justify-center shadow-md">
+                <div className="relative mb-1 w-12 h-12 flex items-center justify-center shrink-0 mx-auto">
+                  {renderAvatar(top3, 'w-12 h-12', 'text-sm')}
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-700 text-amber-100 font-heading font-black text-[10px] flex items-center justify-center shadow-md z-10">
                     3
                   </span>
                 </div>

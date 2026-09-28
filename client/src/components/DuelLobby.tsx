@@ -36,6 +36,9 @@ interface DuelLobbyProps {
   showBanners?: boolean;
   showMatchesList?: boolean;
   onOpenSpectate?: () => void;
+  onNavigateToDuels?: (gameType?: string) => void;
+  initialGameFilter?: string;
+  onClearInitialGameFilter?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   initialCreateGame?: GameType | null;
@@ -63,6 +66,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   showBanners = true,
   showMatchesList = true,
   onOpenSpectate,
+  onNavigateToDuels,
+  initialGameFilter,
+  onClearInitialGameFilter,
   onOpenAffiliates,
   onOpenJackpotModal,
   initialCreateGame,
@@ -79,7 +85,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [isPrivateRoom, setIsPrivateRoom] = useState(false);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [selectedGameType, setSelectedGameType] = useState<GameType>('roulette');
-  const [filterGameType, setFilterGameType] = useState<string>('ALL');
+  const [filterGameType, setFilterGameType] = useState<string>(initialGameFilter || 'ALL');
+
+  React.useEffect(() => {
+    if (initialGameFilter) {
+      setFilterGameType(initialGameFilter);
+    }
+  }, [initialGameFilter]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
   const [filterVisibility, setFilterVisibility] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
@@ -304,10 +317,15 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           onBack={() => setSectionView('hub')}
           matches={matches}
           onSelectGame={(g) => {
-            setFilterGameType(g);
-            setPreviousView('play_hub');
-            setSectionView('pvp');
+            if (onNavigateToDuels) {
+              onNavigateToDuels(g);
+            } else {
+              setFilterGameType(g);
+              setPreviousView('play_hub');
+              setSectionView('pvp');
+            }
           }}
+          onNavigateToDuels={onNavigateToDuels}
           onCreateMatchForGame={(g) => handleOpenModal(g, true)}
         />
       ) : (
@@ -339,9 +357,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           <LiveActivityTicker
             matches={matches}
             onSelectGame={(g) => {
-              setFilterGameType(g);
-              setPreviousView('hub');
-              setSectionView('pvp');
+              if (onNavigateToDuels) {
+                onNavigateToDuels(g);
+              } else {
+                setFilterGameType(g);
+                setPreviousView('hub');
+                setSectionView('pvp');
+              }
             }}
           />
 
@@ -352,9 +374,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               onOpenCreateModal={(g) => handleOpenModal(g, true)}
               onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
               onSelectGame={(g) => {
-                setFilterGameType(g);
-                setPreviousView('hub');
-                setSectionView('pvp');
+                if (onNavigateToDuels) {
+                  onNavigateToDuels(g);
+                } else {
+                  setFilterGameType(g);
+                  setPreviousView('hub');
+                  setSectionView('pvp');
+                }
               }}
               onOpenPlayHub={() => setSectionView('play_hub')}
               onOpenSpectate={onOpenSpectate}

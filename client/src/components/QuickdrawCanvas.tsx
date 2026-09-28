@@ -364,8 +364,8 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
             {/* Glowing Neon Trophy */}
             <div className="relative mb-3">
               <div className="absolute inset-0 bg-cyber-amber/30 rounded-full blur-xl animate-pulse" />
-              <div className="relative w-18 h-18 rounded-2xl bg-cyber-card border border-cyber-amber/60 flex items-center justify-center shadow-[0_0_25px_rgba(255,180,0,0.4)] p-3">
-                <Trophy className="w-10 h-10 text-cyber-amber animate-bounce" />
+              <div className="relative w-16 h-16 rounded-2xl bg-cyber-card border border-cyber-amber/60 flex items-center justify-center shadow-[0_0_25px_rgba(255,180,0,0.4)] p-3">
+                <Trophy className="w-9 h-9 text-cyber-amber animate-bounce" />
               </div>
             </div>
 

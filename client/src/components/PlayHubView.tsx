@@ -9,12 +9,14 @@ interface PlayHubViewProps {
   onBack: () => void;
   matches: MatchData[];
   onSelectGame: (gameType: GameType) => void;
+  onNavigateToDuels?: (gameType?: string) => void;
   onCreateMatchForGame: (gameType: GameType) => void;
 }
 
 export const PlayHubView: React.FC<PlayHubViewProps> = ({
   onBack,
   matches,
+  onNavigateToDuels,
   onCreateMatchForGame,
 }) => {
   const { triggerImpact } = useHaptics();
@@ -54,7 +56,13 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
       {/* Live Winnings Ticker */}
       <LiveActivityTicker
         matches={matches}
-        onSelectGame={(g) => onCreateMatchForGame(g)}
+        onSelectGame={(g) => {
+          if (onNavigateToDuels) {
+            onNavigateToDuels(g);
+          } else {
+            onCreateMatchForGame(g);
+          }
+        }}
       />
 
       {/* ------------------------------------------------------------- */}

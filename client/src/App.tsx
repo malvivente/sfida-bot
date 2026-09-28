@@ -30,6 +30,7 @@ export const App: React.FC = () => {
   const [isInsideMatch, setIsInsideMatch] = useState(false);
   const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<EpicTab>('profile');
   const [pendingCreateGame, setPendingCreateGame] = useState<GameType | null>(null);
+  const [duelFilterGame, setDuelFilterGame] = useState<string>('ALL');
   const { t } = useI18n();
 
   // Periodic Trust Jackpot fetch from server
@@ -298,6 +299,7 @@ export const App: React.FC = () => {
           <Arena
             showBanners={false}
             showMatchesList={true}
+            initialGameFilter={duelFilterGame}
             initialMatchId={deepMatchId}
             initialInviteCode={deepInviteCode}
             role={deepRole}
@@ -319,7 +321,14 @@ export const App: React.FC = () => {
           <Arena
             showBanners={true}
             showMatchesList={false}
-            onOpenSpectate={() => setActiveTab('duels')}
+            onOpenSpectate={() => {
+              setDuelFilterGame('ALL');
+              setActiveTab('duels');
+            }}
+            onNavigateToDuels={(game) => {
+              setDuelFilterGame(game || 'ALL');
+              setActiveTab('duels');
+            }}
             initialMatchId={deepMatchId}
             initialInviteCode={deepInviteCode}
             role={deepRole}
