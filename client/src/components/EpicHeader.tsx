@@ -14,6 +14,7 @@ interface EpicHeaderProps {
   username?: string;
   onOpenRules: () => void;
   onOpenProfile?: () => void;
+  hideBalanceRow?: boolean;
 }
 
 export const EpicHeader: React.FC<EpicHeaderProps> = ({
@@ -24,6 +25,7 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
   username,
   onOpenRules,
   onOpenProfile,
+  hideBalanceRow = false,
 }) => {
   const { triggerImpact } = useHaptics();
   const { language, toggleLanguage, t } = useI18n();
@@ -68,57 +70,59 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
         </div>
       </div>
 
-      {/* Main Epic-Style Balance Row */}
-      <div className="flex items-center justify-between">
-        {/* Left: User Avatar & Balance */}
-        <div 
-          onClick={onOpenProfile}
-          className="flex items-center space-x-3 cursor-pointer group select-none"
-        >
-          {/* Avatar with subtle glow ring and VIP gem badge */}
-          <div className="relative">
-            <UserAvatar
-              photoUrl={photoUrl}
-              name={displayName || username || 'Player'}
-              sizeClass="w-11 h-11"
-              roundedClass="rounded-2xl"
-              className="ring-2 ring-white/10 group-hover:ring-purple-500/50 transition-all shadow-md"
-            />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 border border-[#0e1015] flex items-center justify-center shadow-sm">
-              <Shield className="w-2.5 h-2.5 text-white" />
-            </div>
-          </div>
-
-          {/* Balance info */}
-          <div>
-            <span className="text-[11px] font-medium text-slate-400 block leading-tight">
-              {t('epic.yourBalance')}
-            </span>
-            <div className="flex items-center space-x-1.5 mt-0.5">
-              <div className="w-5 h-5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center shrink-0">
-                <GramIcon className="w-3 h-3 text-cyan-400" />
-              </div>
-              <span className="text-xl font-heading font-extrabold text-white tracking-tight leading-none">
-                {formattedBal}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Vibrant Epic Deposit Button */}
-        {onOpenDeposit && (
-          <button
-            onClick={() => {
-              triggerImpact('medium');
-              onOpenDeposit();
-            }}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-bold text-xs uppercase tracking-wider shadow-epic-purple flex items-center space-x-1.5 active:scale-95 transition-all"
+      {/* Main Epic-Style Balance Row (Hidden when on Profile tab to avoid duplicate avatar & balance) */}
+      {!hideBalanceRow && (
+        <div className="flex items-center justify-between">
+          {/* Left: User Avatar & Balance */}
+          <div 
+            onClick={onOpenProfile}
+            className="flex items-center space-x-3 cursor-pointer group select-none"
           >
-            <Wallet className="w-3.5 h-3.5 text-white/90" />
-            <span>{t('epic.deposit')}</span>
-          </button>
-        )}
-      </div>
+            {/* Avatar with subtle glow ring and VIP gem badge */}
+            <div className="relative">
+              <UserAvatar
+                photoUrl={photoUrl}
+                name={displayName || username || 'Player'}
+                sizeClass="w-11 h-11"
+                roundedClass="rounded-2xl"
+                className="ring-2 ring-white/10 group-hover:ring-purple-500/50 transition-all shadow-md"
+              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 border border-[#0e1015] flex items-center justify-center shadow-sm">
+                <Shield className="w-2.5 h-2.5 text-white" />
+              </div>
+            </div>
+
+            {/* Balance info */}
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block leading-tight">
+                {t('epic.yourBalance')}
+              </span>
+              <div className="flex items-center space-x-1.5 mt-0.5">
+                <div className="w-5 h-5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center shrink-0">
+                  <GramIcon className="w-3 h-3 text-cyan-400" />
+                </div>
+                <span className="text-xl font-heading font-extrabold text-white tracking-tight leading-none">
+                  {formattedBal}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Vibrant Epic Deposit Button */}
+          {onOpenDeposit && (
+            <button
+              onClick={() => {
+                triggerImpact('medium');
+                onOpenDeposit();
+              }}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-bold text-xs uppercase tracking-wider shadow-epic-purple flex items-center space-x-1.5 active:scale-95 transition-all"
+            >
+              <Wallet className="w-3.5 h-3.5 text-white/90" />
+              <span>{t('epic.deposit')}</span>
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 };

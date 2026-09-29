@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, Sparkles, Flame, ArrowRight } from 'lucide-react';
 import { GameType, MatchData } from '../types/index.js';
 import { LiveActivityTicker } from './LiveActivityTicker.js';
+import { GameIcon } from './GameIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 
@@ -112,7 +113,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           </div>
 
           <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex flex-col items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform shadow-md">
-            <span className="text-3xl mb-0.5">🤝</span>
+            <GameIcon type="split" className="w-9 h-9 text-white mb-1" />
             <span className="text-[10px] font-heading font-black tracking-widest uppercase">
               {t('playHub.splitBadge')}
             </span>
@@ -135,8 +136,8 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         >
           <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
 
-          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center text-2xl shadow-md mb-2">
-            🎯
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
+            <GameIcon type="roulette" className="w-7 h-7 text-white" />
           </div>
 
           <div className="space-y-1">
@@ -172,8 +173,8 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         >
           <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-pink-500/20 blur-2xl pointer-events-none" />
 
-          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center text-2xl shadow-md mb-2">
-            🃏
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
+            <GameIcon type="blackjack" className="w-7 h-7 text-white" />
           </div>
 
           <div className="space-y-1">
@@ -209,8 +210,8 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         >
           <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-sky-500/20 blur-2xl pointer-events-none" />
 
-          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center text-2xl shadow-md mb-2">
-            🌉
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
+            <GameIcon type="bridge" className="w-7 h-7 text-white" />
           </div>
 
           <div className="space-y-1">
@@ -246,8 +247,8 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         >
           <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
 
-          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center text-2xl shadow-md mb-2">
-            ⏱️
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
+            <GameIcon type="chrono" className="w-7 h-7 text-white" />
           </div>
 
           <div className="space-y-1">

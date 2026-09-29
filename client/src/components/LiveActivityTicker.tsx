@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { GramIcon } from './GramIcon.js';
+import { GameIcon } from './GameIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 
@@ -214,8 +215,10 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
                 }`}
                 title={`${win.winnerName} ${t('epic.won')} ${win.payoutGram} GRAM su ${meta.title}`}
               >
-                {/* Game Icon */}
-                <span className="text-sm shrink-0 drop-shadow-sm">{style.icon}</span>
+                {/* Game SVG Icon */}
+                <div className="w-5 h-5 rounded-lg bg-black/20 flex items-center justify-center shrink-0">
+                  <GameIcon type={win.gameType} className="w-3.5 h-3.5 text-white drop-shadow-sm" />
+                </div>
 
                 {/* Winner Name & Amount Won */}
                 <div className="text-left leading-tight">

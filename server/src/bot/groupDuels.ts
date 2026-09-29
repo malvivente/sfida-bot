@@ -34,7 +34,7 @@ const pendingGroupDuels = new Map<string, PendingGroupDuel>();
 export function parseGameType(raw?: string): { type: GameType; title: string } {
   const clean = (raw || '').toLowerCase().trim();
   if (clean.includes('black') || clean === 'bj' || clean === '21') {
-    return { type: 'blackjack', title: 'Blackjack 21 🃏' };
+    return { type: 'blackjack', title: 'Face-Up Blackjack 🃏' };
   }
   if (clean.includes('bridge') || clean.includes('glass') || clean.includes('vetro')) {
     return { type: 'bridge', title: 'Glass Bridge 🌉' };
@@ -45,7 +45,7 @@ export function parseGameType(raw?: string): { type: GameType; title: string } {
   if (clean.includes('split') || clean.includes('steal') || clean.includes('dilemma')) {
     return { type: 'split', title: 'Split or Steal 🤝' };
   }
-  return { type: 'roulette', title: 'Russian Roulette 🔫' };
+  return { type: 'roulette', title: 'Russian Roulette 🎯' };
 }
 
 /**
@@ -89,6 +89,46 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
 
   const text = ctx.message?.text?.trim() || '';
   const parts = text.split(/\s+/).slice(1);
+
+  // If user calls /duel without parameters, show interactive syntax guide with examples
+  if (parts.length === 0) {
+    const guideMsg = lang === 'it'
+      ? `⚔️ <b>COME CREARE UN DUELLO NEL GRUPPO:</b>\n\n` +
+        `Usa la sintassi:\n` +
+        `<code>/duel &lt;gioco&gt; &lt;puntata&gt;</code> oppure <code>/duel &lt;puntata&gt;</code>\n\n` +
+        `<b>Esempi:</b>\n` +
+        `• <code>/duel roulette 1</code> — Russian Roulette (1 GRAM)\n` +
+        `• <code>/duel blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
+        `• <code>/duel bridge 1</code> — Glass Bridge (1 GRAM)\n` +
+        `• <code>/duel chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
+        `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `<b>Modalità Inline in qualsiasi chat:</b>\n` +
+        `Digita semplicemente: <code>@${botUsername} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
+        `<i>Tocca sotto per aprire l'Arena Sfida:</i>`
+      : `⚔️ <b>HOW TO CREATE A GROUP DUEL:</b>\n\n` +
+        `Use the syntax:\n` +
+        `<code>/duel &lt;game&gt; &lt;wager&gt;</code> or <code>/duel &lt;wager&gt;</code>\n\n` +
+        `<b>Examples:</b>\n` +
+        `• <code>/duel roulette 1</code> — Russian Roulette (1 GRAM)\n` +
+        `• <code>/duel blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
+        `• <code>/duel bridge 1</code> — Glass Bridge (1 GRAM)\n` +
+        `• <code>/duel chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
+        `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `<b>Inline Mode in any chat:</b>\n` +
+        `Type: <code>@${botUsername} &lt;game&gt; &lt;wager&gt;</code>\n\n` +
+        `<i>Tap below to open Sfida Arena:</i>`;
+
+    const guideKeyboard = new InlineKeyboard().url(
+      botT(lang, 'btn_enter_arena'),
+      `https://t.me/${botUsername}?startapp=duels`
+    );
+
+    await ctx.reply(guideMsg, {
+      parse_mode: 'HTML',
+      reply_markup: guideKeyboard,
+    });
+    return;
+  }
 
   let wager = 1;
   let gameRaw: string | undefined = undefined;

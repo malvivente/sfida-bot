@@ -4,6 +4,7 @@ import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { GramIcon } from '../components/GramIcon.js';
+import { GameIcon } from '../components/GameIcon.js';
 import { UserAvatar } from '../components/UserAvatar.js';
 import { DepositModal } from '../components/DepositModal.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData, GameType } from '../types/index.js';
@@ -513,7 +514,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                   className="bg-[#10131d]/90 border border-white/10 rounded-2xl p-3 flex items-center justify-between text-xs shadow-sm"
                 >
                   <div className="flex items-center space-x-2.5">
-                    <span className="text-base">{gIcon}</span>
+                    <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                      <GameIcon type={item.gameType} className="w-4 h-4 text-white" />
+                    </div>
                     <div>
                       <div className="flex items-center space-x-2">
                         <span

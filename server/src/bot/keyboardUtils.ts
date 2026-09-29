@@ -32,13 +32,21 @@ export function parseButtonEmoji(text: string, overrideEmojiId?: string): Parsed
     return emojiConfig?.fallback || '';
   });
 
-  // 3. Remove any remaining HTML tags (Telegram buttons do NOT parse HTML)
+  // 3. If no icon_custom_emoji_id yet, scan BOT_EMOJIS to see if any known emoji fallback is inside cleanText
+  if (!icon_custom_emoji_id) {
+    for (const [_, config] of Object.entries(BOT_EMOJIS)) {
+      if (config.id && config.fallback && cleanText.includes(config.fallback)) {
+        icon_custom_emoji_id = config.id.trim();
+        break;
+      }
+    }
+  }
+
+  // 4. Remove any remaining HTML tags (Telegram buttons do NOT parse HTML)
   cleanText = cleanText.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
-  // Telegram Bot API rejects icon_custom_emoji_id with BUTTON_TYPE_INVALID if the bot
-  // does not have a purchased username from Fragment or Telegram Premium.
-  // By default, keep buttons 100% compliant with standard Unicode emojis in text.
-  const enableCustomEmoji = process.env.ENABLE_CUSTOM_EMOJI_BUTTONS === 'true';
+  // Custom emoji buttons are enabled by default if icon_custom_emoji_id is available
+  const enableCustomEmoji = process.env.ENABLE_CUSTOM_EMOJI_BUTTONS !== 'false';
 
   return {
     text: cleanText,

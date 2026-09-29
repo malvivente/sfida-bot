@@ -60,9 +60,26 @@ export const EpicBottomNav: React.FC<EpicBottomNavProps> = ({
     },
   ];
 
+  const activeIndex = Math.max(0, navItems.findIndex((item) => item.id === activeTab));
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 pb-2 px-2.5 max-w-md mx-auto pointer-events-none select-none">
-      <nav className="pointer-events-auto rounded-[26px] bg-[#111422]/95 backdrop-blur-2xl border border-white/15 px-1.5 py-1.5 flex items-center justify-between shadow-[0_12px_40px_rgba(0,0,0,0.85)] relative">
+      <nav className="pointer-events-auto rounded-[26px] bg-[#111422]/95 backdrop-blur-2xl border border-white/15 px-1.5 py-1.5 flex items-center justify-between shadow-[0_12px_40px_rgba(0,0,0,0.85)] relative overflow-hidden">
+        {/* Horizontal sliding jewel highlight pill (purely horizontal, zero vertical scroll jump) */}
+        <motion.div
+          animate={{ x: `${activeIndex * 100}%` }}
+          transition={{
+            type: 'spring',
+            stiffness: 480,
+            damping: 34,
+            mass: 0.6,
+          }}
+          style={{ width: `${100 / navItems.length}%` }}
+          className="absolute top-1.5 bottom-1.5 left-0 px-1 pointer-events-none z-0"
+        >
+          <div className="w-full h-full rounded-2xl bg-gradient-to-b from-[#7059e2] via-[#5b3dd4] to-[#4527a0] border border-white/30 shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_6px_22px_rgba(112,89,226,0.55)]" />
+        </motion.div>
+
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -72,25 +89,8 @@ export const EpicBottomNav: React.FC<EpicBottomNavProps> = ({
               key={item.id}
               type="button"
               onClick={() => handleSelect(item.id)}
-              className="flex-1 h-13 flex flex-col items-center justify-center relative touch-manipulation group active:scale-95 transition-transform"
+              className="flex-1 h-13 flex flex-col items-center justify-center relative touch-manipulation group active:scale-95 transition-transform z-10"
             >
-              {/* Premium Floating Jewel Highlight Card */}
-              {isActive && (
-                <motion.div
-                  layoutId="activeNavBubble"
-                  transition={{
-                    type: 'spring',
-                    stiffness: 480,
-                    damping: 32,
-                    mass: 0.6,
-                  }}
-                  className="absolute inset-0 mx-0.5 my-0.5 rounded-2xl bg-gradient-to-b from-[#7059e2] via-[#5b3dd4] to-[#4527a0] border border-white/30 shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_6px_22px_rgba(112,89,226,0.55)] z-0 pointer-events-none flex flex-col items-center justify-start overflow-hidden"
-                >
-                  {/* Subtle Top Cyan Glow Sheen */}
-                  <div className="w-8 h-1 rounded-full bg-cyan-300 shadow-[0_0_8px_#67e8f9] opacity-90 mt-0.5" />
-                </motion.div>
-              )}
-
               <div
                 className={`relative z-10 flex flex-col items-center justify-center w-full py-0.5 pointer-events-none transition-all duration-200 ${
                   isActive ? 'scale-105' : 'scale-100 opacity-70 group-hover:opacity-100'

@@ -245,6 +245,14 @@ export const App: React.FC = () => {
       setDeepMatchId(parts[1]);
       setDeepRole('spectator');
       setActiveTab('home');
+    } else if (startParam.startsWith('create')) {
+      const parts = startParam.split('_');
+      if (parts[1]) {
+        setPendingCreateGame(parts[1] as GameType);
+      }
+      setActiveTab('duels');
+    } else if (startParam.startsWith('deposit')) {
+      setShowDepositModal(true);
     } else if (startParam.startsWith('ref_')) {
       setActiveTab('referrals');
     } else if (startParam.startsWith('lead_') || params.get('tab') === 'leaderboard') {
@@ -289,6 +297,7 @@ export const App: React.FC = () => {
           username={username}
           onOpenRules={() => setShowRulesModal(true)}
           onOpenProfile={() => setActiveTab('profile')}
+          hideBalanceRow={activeTab === 'profile'}
         />
       )}
 

@@ -2,6 +2,7 @@ import { Bot } from 'grammy';
 import { SfidaInlineKeyboard as InlineKeyboard } from './keyboardUtils.js';
 import { dbService } from '../services/db.js';
 import { botT, resolveLanguage, SUPPORTED_LANGUAGES, BotLanguage } from './i18n.js';
+import { GameType } from '../types/gameTypes.js';
 import { handleBroadcastCommand } from './broadcast.js';
 import {
   handleSetGroupCommand,
@@ -100,6 +101,29 @@ export function createTelegramBot(token?: string): Bot {
   activeBotInstance = bot;
   const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
 
+  // Resilient API Transformer: If Telegram API rejects custom emoji with BUTTON_TYPE_INVALID,
+  // automatically strip icon_custom_emoji_id from the buttons and retry seamlessly
+  bot.api.config.use(async (prev, method, payload, signal) => {
+    try {
+      return await prev(method, payload, signal);
+    } catch (err: any) {
+      const errMsg = err?.description || err?.message || '';
+      if (errMsg.includes('BUTTON_TYPE_INVALID') && payload && typeof payload === 'object') {
+        const p: any = payload;
+        if (p.reply_markup?.inline_keyboard) {
+          const cloned = JSON.parse(JSON.stringify(payload));
+          for (const row of cloned.reply_markup.inline_keyboard) {
+            for (const btn of row) {
+              delete btn.icon_custom_emoji_id;
+            }
+          }
+          return await prev(method, cloned, signal);
+        }
+      }
+      throw err;
+    }
+  });
+
   // Global Error Handler to ensure the bot process NEVER halts/stops on unhandled errors
   bot.catch((err) => {
     console.error(`[Grammy Error] Error in update ${err.ctx?.update?.update_id}:`, err.error || err);
@@ -144,7 +168,7 @@ export function createTelegramBot(token?: string): Bot {
     }
 
     const buttonLabel = parsed.matchId
-      ? (lang === 'it' ? '⚔️ ENTRA NEL DUELLO' : '⚔️ ENTER DUEL')
+      ? (lang === 'it' ? '{{emoji.swords}} ENTRA NEL DUELLO' : '{{emoji.swords}} ENTER DUEL')
       : botT(lang, 'btn_enter_arena');
 
     const isPrivateChat = ctx.chat?.type === 'private';
@@ -255,58 +279,168 @@ export function createTelegramBot(token?: string): Bot {
     console.warn('[Bot] Note on setChatMenuButton:', err?.message || err);
   });
 
-  // Inline query handler: @yourbot duel <amount>
+  // Inline query handler: @SfidaRobot <game> <amount> with complete guide & game cards
   bot.on('inline_query', async (ctx) => {
-    const query = ctx.inlineQuery.query.trim();
+    const rawQuery = ctx.inlineQuery.query.trim().toLowerCase();
     const lang = await getUserLang(ctx.from);
-    let wager = '1';
+    const botUser = bot.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'SfidaRobot';
+    const challenger = ctx.from.username ? `@${ctx.from.username}` : (ctx.from.first_name || 'Warrior');
 
-    const match = query.match(/^duel\s*([0-9]+(\.[0-9]+)?)/i);
-    if (match && match[1]) {
-      wager = match[1];
+    // Parse any wager amount from query (e.g. "@SfidaRobot roulette 2" or "@SfidaRobot 5")
+    const numMatch = rawQuery.match(/([0-9]+(\.[0-9]+)?)/);
+    const customWager = numMatch ? parseFloat(numMatch[1]) : 1;
+
+    interface GameInlineDef {
+      id: GameType;
+      title: string;
+      icon: string;
+      descIt: string;
+      descEn: string;
+      minWager: number;
     }
 
-    const parsedWager = parseFloat(wager) || 1;
-    const netWinnerPayout = (parsedWager * 2).toFixed(2); // 100% of pot (2x wager)
+    const GAMES: GameInlineDef[] = [
+      {
+        id: 'roulette',
+        title: 'Russian Roulette',
+        icon: '🎯',
+        descIt: '8 Colpi tattici, 1 proiettile letale',
+        descEn: '8 Tactical shots, 1 live round',
+        minWager: 0.1,
+      },
+      {
+        id: 'blackjack',
+        title: 'Face-Up Blackjack',
+        icon: '🃏',
+        descIt: 'Carte scoperte da un mazzo comune visibile a tutti',
+        descEn: 'Face-up common deck 21 duel',
+        minWager: 0.1,
+      },
+      {
+        id: 'bridge',
+        title: 'Glass Bridge',
+        icon: '🌉',
+        descIt: 'Passi infiniti su lastre di vetro (2 vite)',
+        descEn: 'Endless stepping glass bridge (2 lives)',
+        minWager: 0.1,
+      },
+      {
+        id: 'chrono',
+        title: 'Chrono Blind',
+        icon: '⏱️',
+        descIt: 'Timer al buio, ferma più vicino a 0.000s',
+        descEn: 'Millisecond countdown blind stop',
+        minWager: 0.1,
+      },
+      {
+        id: 'split',
+        title: 'Split or Steal',
+        icon: '🤝',
+        descIt: 'Coopera (+12.5%) o Tradisci (+20%) + Trust Jackpot',
+        descEn: 'Prisoner\'s Dilemma + Shared Trust Jackpot',
+        minWager: 5.0,
+      },
+    ];
 
-    const matchId = (Date.now() % 1000000).toString();
-    const userWallet = `user_${ctx.from.id}`;
-    const chatId = ctx.inlineQuery.chat_type || 'inline';
+    const results: any[] = [];
 
-    const duelPayload = `duel_${matchId}_${userWallet}_${chatId}`;
-    const spectatePayload = `spectate_${matchId}`;
+    // 1. Result: Interactive How-To Guide Article
+    const guideTitle = lang === 'it' ? '💡 Guida: Come creare un duello inline' : '💡 Guide: How to create an inline duel';
+    const guideDesc = lang === 'it'
+      ? `Scrivi @${botUser} <gioco> <importo> (es: @${botUser} roulette 2)`
+      : `Type @${botUser} <game> <wager> (e.g. @${botUser} roulette 2)`;
 
-    const botUser = bot.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'SfidaRobot';
-    // In Telegram Bot API, inline query results require URL buttons (web_app throws BUTTON_TYPE_INVALID):
-    const duelTelegramUrl = `https://t.me/${botUser}?start=${duelPayload}`;
-    const spectateTelegramUrl = `https://t.me/${botUser}?start=${spectatePayload}`;
+    const guideText = lang === 'it'
+      ? `⚔️ <b>SFIDA ARENA • GUIDA DUELLI INLINE</b> ⚔️\n\n` +
+        `Puoi sfidare direttamente chiunque in questa chat digitando:\n` +
+        `<code>@${botUser} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
+        `<b>Discipline disponibili:</b>\n` +
+        `• <code>@${botUser} roulette 1</code> — Russian Roulette (1 GRAM)\n` +
+        `• <code>@${botUser} blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
+        `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
+        `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
+        `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `<i>Tocca il pulsante in basso per entrare subito nell'Arena Sfida:</i>`
+      : `⚔️ <b>SFIDA ARENA • INLINE DUEL GUIDE</b> ⚔️\n\n` +
+        `Challenge anyone directly in this chat by typing:\n` +
+        `<code>@${botUser} &lt;game&gt; &lt;wager&gt;</code>\n\n` +
+        `<b>Available disciplines:</b>\n` +
+        `• <code>@${botUser} roulette 1</code> — Russian Roulette (1 GRAM)\n` +
+        `• <code>@${botUser} blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
+        `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
+        `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
+        `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `<i>Tap below to open Sfida Arena:</i>`;
 
-    const keyboard = new InlineKeyboard()
-      .url(botT(lang, 'inline_accept_btn', { wager }), duelTelegramUrl)
-      .row()
-      .url(botT(lang, 'inline_watch_btn'), spectateTelegramUrl);
+    const guideKeyboard = new InlineKeyboard().url(
+      botT(lang, 'btn_enter_arena'),
+      `https://t.me/${botUser}?startapp=duels`
+    );
 
-    const title = botT(lang, 'inline_challenge_title', { wager });
-    const description = botT(lang, 'inline_challenge_desc', { payout: netWinnerPayout });
-    const messageText = botT(lang, 'inline_challenge_msg', {
-      challenger: ctx.from.username || ctx.from.first_name,
-      wager,
-      payout: netWinnerPayout,
+    results.push({
+      type: 'article',
+      id: 'guide_inline',
+      title: guideTitle,
+      description: guideDesc,
+      input_message_content: {
+        message_text: guideText,
+        parse_mode: 'HTML',
+      },
+      reply_markup: guideKeyboard,
     });
 
-    await ctx.answerInlineQuery([
-      {
+    // 2. Results: Game Cards (Filtered if user specified game name, or all 5 games)
+    const filteredGames = GAMES.filter((g) => {
+      if (!rawQuery || rawQuery === 'duel' || numMatch?.[0] === rawQuery) return true;
+      return rawQuery.includes(g.id) || (g.id === 'split' && rawQuery.includes('steal')) || (g.id === 'roulette' && rawQuery.includes('rr'));
+    });
+
+    const gamesToShow = filteredGames.length > 0 ? filteredGames : GAMES;
+
+    for (const g of gamesToShow) {
+      const wager = Math.max(g.minWager, isNaN(customWager) ? 1 : customWager).toFixed(2);
+      const payout = (parseFloat(wager) * 2).toFixed(2);
+
+      const cardTitle = `${g.icon} ${g.title} • ${wager} GRAM`;
+      const cardDesc = lang === 'it'
+        ? `${g.descIt} | Vincita: ${payout} GRAM`
+        : `${g.descEn} | Payout: ${payout} GRAM`;
+
+      const cardMsg = lang === 'it'
+        ? `⚔️ <b>SFIDA DUELLO 1v1 • ${g.title.toUpperCase()}</b> ⚔️\n\n` +
+          `👤 <b>Sfidante</b>: ${challenger}\n` +
+          `🎮 <b>Disciplina</b>: <b>${g.title}</b>\n` +
+          `💰 <b>Puntata</b>: <b>${wager} GRAM</b> ciascuno\n` +
+          `🏆 <b>Montepremi Vincitore</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
+          `👁️ <b>Spettatori</b>: Finestra totalizzatore Pari-Mutuel aperta\n\n` +
+          `<i>Chi osa raccogliere la sfida? Tocca sotto per entrare nell'Arena!</i>`
+        : `⚔️ <b>1v1 DUEL CHALLENGE • ${g.title.toUpperCase()}</b> ⚔️\n\n` +
+          `👤 <b>Challenger</b>: ${challenger}\n` +
+          `🎮 <b>Discipline</b>: <b>${g.title}</b>\n` +
+          `💰 <b>Wager</b>: <b>${wager} GRAM</b> each\n` +
+          `🏆 <b>Winner Payout</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
+          `👁️ <b>Spectators</b>: Pari-Mutuel betting window open\n\n` +
+          `<i>Who dares to accept? Tap below to enter the Arena!</i>`;
+
+      const cardKeyboard = new InlineKeyboard().url(
+        botT(lang, 'inline_accept_btn', { wager }),
+        `https://t.me/${botUser}?startapp=create_${g.id}_${wager}`
+      );
+
+      results.push({
         type: 'article',
-        id: `duel_${matchId}`,
-        title,
-        description,
+        id: `game_${g.id}_${wager}`,
+        title: cardTitle,
+        description: cardDesc,
         input_message_content: {
-          message_text: messageText,
+          message_text: cardMsg,
           parse_mode: 'HTML',
         },
-        reply_markup: keyboard,
-      },
-    ]);
+        reply_markup: cardKeyboard,
+      });
+    }
+
+    await ctx.answerInlineQuery(results, { cache_time: 10 });
   });
 
   return bot;

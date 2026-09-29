@@ -3,6 +3,7 @@ import { Swords, Trophy, Flame, TrendingUp, ArrowRight, Play, CheckCircle2, XCir
 import { MatchData, DuelHistoryRecord, GameType } from '../types/index.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { GramIcon } from './GramIcon.js';
+import { GameIcon } from './GameIcon.js';
 import { UserAvatar } from './UserAvatar.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
@@ -248,11 +249,11 @@ export const ActivityView: React.FC<ActivityViewProps> = ({ onResumeMatch, onGoT
                 >
                   <div className="flex items-center space-x-3">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                         isWin ? 'bg-emerald-500/20 text-emerald-300' : isDraw ? 'bg-slate-700/30 text-slate-300' : 'bg-rose-500/20 text-rose-300'
                       }`}
                     >
-                      {gIcon}
+                      <GameIcon type={record.gameType} className="w-5 h-5" />
                     </div>
 
                     <div>
