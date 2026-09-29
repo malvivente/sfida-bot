@@ -15,7 +15,7 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { MatchData, UserBalance, FeeConfig, GameType } from '../types/index.js';
 import { Address } from '@ton/ton';
 import { areAddressesEqual } from '../utils/ton.js';
-import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2 } from 'lucide-react';
+import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2, Swords, X } from 'lucide-react';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -39,6 +39,9 @@ interface ArenaProps {
   onBalanceUpdated?: (balance: string) => void;
   initialCreateGame?: GameType | null;
   onClearInitialCreateGame?: () => void;
+  initialCreateWager?: string | null;
+  onClearInitialCreateWager?: () => void;
+  groupChatId?: string;
 }
 
 export const Arena: React.FC<ArenaProps> = ({
@@ -58,11 +61,15 @@ export const Arena: React.FC<ArenaProps> = ({
   onBalanceUpdated,
   initialCreateGame,
   onClearInitialCreateGame,
+  initialCreateWager,
+  onClearInitialCreateWager,
+  groupChatId,
 }) => {
   const { isFullscreen, topInset } = useTelegramViewport();
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
   const modalBottomOffset = isFullscreen ? 24 : 12;
   const [activeMatchId, setActiveMatchId] = useState<string | null>(initialMatchId || null);
+  const [unavailableMatchNotice, setUnavailableMatchNotice] = useState<{ matchId?: string } | null>(null);
 
   useEffect(() => {
     onMatchActiveChange?.(Boolean(activeMatchId));
@@ -216,10 +223,11 @@ export const Arena: React.FC<ArenaProps> = ({
       socketData.feedMessage?.includes('Match not found') ||
       socketData.feedMessage?.includes('already closed')
     ) {
+      setUnavailableMatchNotice({ matchId: activeMatchId || initialMatchId || undefined });
       setActiveMatchId(null);
       onClearDeepMatch?.();
     }
-  }, [socketData.feedMessage, onClearDeepMatch]);
+  }, [socketData.feedMessage, activeMatchId, initialMatchId, onClearDeepMatch]);
 
   // Auto-refresh user balance when match settles
   useEffect(() => {
@@ -299,7 +307,8 @@ export const Arena: React.FC<ArenaProps> = ({
   const handleCreateMatch = async (wagerGram: string, gameType: GameType = 'roulette', isPrivate?: boolean): Promise<boolean> => {
     setCreateError(null);
 
-    if (!userAddress) {
+    const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
+    if (!playerAddress) {
       openWalletModal();
       setCreateError(t('arena.connectWalletToWager'));
       return false;
@@ -311,7 +320,7 @@ export const Arena: React.FC<ArenaProps> = ({
     }
 
     try {
-      const playerName = displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior');
+      const playerName = displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (username ? `@${username}` : 'Warrior'));
 
       // Call server to create match with in-bot balance
       const res = await fetch(`${serverUrl}/api/matches`, {
@@ -319,12 +328,13 @@ export const Arena: React.FC<ArenaProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wagerAmountNano: (parseFloat(wagerGram) * 1e9).toString(),
-          playerAAddress: userAddress,
+          playerAAddress: playerAddress,
           telegramUserId: userId,
           telegramUsername: displayName || fullName || username || 'Player A',
           photoUrl: photoUrl || '',
           gameType,
           isPrivate: Boolean(isPrivate),
+          groupChatId,
         }),
       });
 
@@ -361,7 +371,7 @@ export const Arena: React.FC<ArenaProps> = ({
         state: 'LOBBY',
         currentRound: 1,
         playerA: {
-          wallet: userAddress,
+          wallet: playerAddress,
           name: playerName,
           ready: true,
           score: 0,
@@ -389,7 +399,8 @@ export const Arena: React.FC<ArenaProps> = ({
 
   // Join match using in-bot balance
   const handleJoinMatch = async (match: MatchData, inviteCode?: string, isUserClick: boolean = true) => {
-    if (!userAddress) {
+    const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
+    if (!playerAddress) {
       if (isUserClick) {
         openWalletModal();
         setCreateError(t('arena.connectWalletToJoin'));
@@ -399,7 +410,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
     const isPlayerA = Boolean(
       (userAddress && areAddressesEqual(match.playerA?.wallet, userAddress)) ||
-      (userId && (match.playerA as any)?.telegramUserId === userId) ||
+      (userId && ((match.playerA as any)?.telegramUserId === userId || match.playerA?.wallet === `tg_${userId}`)) ||
       (fullName && match.playerA?.name === fullName) ||
       (username && (match.playerA?.name === `@${username}` || match.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
     );
@@ -407,7 +418,7 @@ export const Arena: React.FC<ArenaProps> = ({
     const isPlayerB = Boolean(
       match.playerB && (
         (userAddress && areAddressesEqual(match.playerB?.wallet, userAddress)) ||
-        (userId && (match.playerB as any)?.telegramUserId === userId) ||
+        (userId && ((match.playerB as any)?.telegramUserId === userId || match.playerB?.wallet === `tg_${userId}`)) ||
         (fullName && match.playerB?.name === fullName) ||
         (username && (match.playerB?.name === `@${username}` || match.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
         (displayName && match.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
@@ -439,7 +450,7 @@ export const Arena: React.FC<ArenaProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          playerBAddress: userAddress,
+          playerBAddress: playerAddress,
           telegramUserId: userId,
           telegramUsername: displayName || fullName || username || 'Player B',
           photoUrl: photoUrl || '',
@@ -449,6 +460,11 @@ export const Arena: React.FC<ArenaProps> = ({
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 404 || data?.error === 'MATCH_NOT_FOUND' || data?.error === 'MATCH_CANCELLED' || data?.error === 'MATCH_CLOSED') {
+          setCreateStatus(null);
+          setUnavailableMatchNotice({ matchId: match.matchId });
+          return;
+        }
         if (data?.error === 'INSUFFICIENT_BALANCE') {
           setDepositAmount(data.missingGram || wagerGram);
           setShowDepositModal(true);
@@ -472,6 +488,7 @@ export const Arena: React.FC<ArenaProps> = ({
     if (!initialMatchId) return;
 
     const resolveDeepMatch = async () => {
+      let notFoundOrEnded = false;
       let m = matches.find((x) => x.matchId === initialMatchId);
       if (!m && serverUrl) {
         try {
@@ -479,8 +496,21 @@ export const Arena: React.FC<ArenaProps> = ({
           if (res.ok) {
             const data = await res.json();
             if (data?.matchId) m = data;
+          } else if (res.status === 404) {
+            notFoundOrEnded = true;
           }
         } catch {}
+      }
+
+      if (m && (m.state === 'MATCH_SETTLED' || m.state === 'FORFEITED' || (m.state as string) === 'CANCELLED' || (m.state as string) === 'RESOLVED' || (m.state as string) === 'FINISHED')) {
+        notFoundOrEnded = true;
+      }
+
+      if (notFoundOrEnded) {
+        setActiveMatchId(null);
+        onClearDeepMatch?.();
+        setUnavailableMatchNotice({ matchId: initialMatchId });
+        return;
       }
 
       if (!m) {
@@ -491,7 +521,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
       const isPlayerA = Boolean(
         (userAddress && areAddressesEqual(m.playerA?.wallet, userAddress)) ||
-        (userId && String((m.playerA as any)?.telegramUserId) === String(userId)) ||
+        (userId && (String((m.playerA as any)?.telegramUserId) === String(userId) || m.playerA?.wallet === `tg_${userId}`)) ||
         (fullName && m.playerA?.name === fullName) ||
         (username && (m.playerA?.name === `@${username}` || m.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
       );
@@ -499,7 +529,7 @@ export const Arena: React.FC<ArenaProps> = ({
       const isPlayerB = Boolean(
         m.playerB && (
           (userAddress && areAddressesEqual(m.playerB?.wallet, userAddress)) ||
-          (userId && String((m.playerB as any)?.telegramUserId) === String(userId)) ||
+          (userId && (String((m.playerB as any)?.telegramUserId) === String(userId) || m.playerB?.wallet === `tg_${userId}`)) ||
           (fullName && m.playerB?.name === fullName) ||
           (username && (m.playerB?.name === `@${username}` || m.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
           (displayName && m.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
@@ -1150,6 +1180,8 @@ export const Arena: React.FC<ArenaProps> = ({
           onOpenJackpotModal={onOpenJackpotModal}
           initialCreateGame={initialCreateGame}
           onClearInitialCreateGame={onClearInitialCreateGame}
+          initialCreateWager={initialCreateWager}
+          onClearInitialCreateWager={onClearInitialCreateWager}
         />
       )}
 
@@ -1186,6 +1218,48 @@ export const Arena: React.FC<ArenaProps> = ({
                 className="w-full py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-400 font-heading font-bold text-xs uppercase tracking-wider transition-all"
               >
                 {t('arena.exitAnyway')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unavailable / Concluded Duel Notice Modal */}
+      {unavailableMatchNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-[#141724] border-2 border-rose-500/50 p-6 shadow-2xl space-y-5 text-center relative">
+            <button
+              onClick={() => {
+                setUnavailableMatchNotice(null);
+                onNavigateToDuels?.('ALL');
+              }}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center mx-auto text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)]">
+              <Swords className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-base font-heading font-black text-white uppercase tracking-wide">
+                {t('arena.duelUnavailableTitle')}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                {t('arena.duelUnavailableDesc')}
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setUnavailableMatchNotice(null);
+                  onNavigateToDuels?.('ALL');
+                }}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-epic-cyan active:scale-95 transition-all"
+              >
+                {t('arena.goToDuelsBtn')}
               </button>
             </div>
           </div>

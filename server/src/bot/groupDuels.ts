@@ -4,6 +4,7 @@ import { dbService } from '../services/db.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { GameType } from '../types/gameTypes.js';
 import { botT, resolveLanguage, BotLanguage } from './i18n.js';
+import { renderCustomEmojis } from './emojis.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
@@ -34,18 +35,18 @@ const pendingGroupDuels = new Map<string, PendingGroupDuel>();
 export function parseGameType(raw?: string): { type: GameType; title: string } {
   const clean = (raw || '').toLowerCase().trim();
   if (clean.includes('black') || clean === 'bj' || clean === '21') {
-    return { type: 'blackjack', title: 'Face-Up Blackjack 🃏' };
+    return { type: 'blackjack', title: 'Face-Up Blackjack' };
   }
   if (clean.includes('bridge') || clean.includes('glass') || clean.includes('vetro')) {
-    return { type: 'bridge', title: 'Glass Bridge 🌉' };
+    return { type: 'bridge', title: 'Glass Bridge' };
   }
   if (clean.includes('chrono') || clean.includes('blind') || clean.includes('reflex') || clean.includes('tempo')) {
-    return { type: 'chrono', title: 'Chrono Blind ⏱️' };
+    return { type: 'chrono', title: 'Chrono Blind' };
   }
   if (clean.includes('split') || clean.includes('steal') || clean.includes('dilemma')) {
-    return { type: 'split', title: 'Split or Steal 🤝' };
+    return { type: 'split', title: 'Split or Steal' };
   }
-  return { type: 'roulette', title: 'Russian Roulette 🎯' };
+  return { type: 'roulette', title: 'Russian Roulette' };
 }
 
 /**
@@ -71,7 +72,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
       botT(lang, 'btn_enter_arena'),
       `https://t.me/${botUsername}?startapp=create`
     );
-    await ctx.reply(botT(lang, 'group_duel_private_hint'), {
+    await ctx.reply(renderCustomEmojis(botT(lang, 'group_duel_private_hint')), {
       parse_mode: 'HTML',
       reply_markup: enterKeyboard,
     });
@@ -92,8 +93,8 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
 
   // If user calls /duel without parameters, show interactive syntax guide with examples
   if (parts.length === 0) {
-    const guideMsg = lang === 'it'
-      ? `⚔️ <b>COME CREARE UN DUELLO NEL GRUPPO:</b>\n\n` +
+    const rawGuide = lang === 'it'
+      ? `{{emoji.swords}} <b>COME CREARE UN DUELLO NEL GRUPPO:</b> {{emoji.swords}}\n\n` +
         `Usa la sintassi:\n` +
         `<code>/duel &lt;gioco&gt; &lt;puntata&gt;</code> oppure <code>/duel &lt;puntata&gt;</code>\n\n` +
         `<b>Esempi:</b>\n` +
@@ -104,8 +105,8 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
         `<b>Modalità Inline in qualsiasi chat:</b>\n` +
         `Digita semplicemente: <code>@${botUsername} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
-        `<i>Tocca sotto per aprire l'Arena Sfida:</i>`
-      : `⚔️ <b>HOW TO CREATE A GROUP DUEL:</b>\n\n` +
+        `<i>Tocca sotto per entrare nell'Arena Sfida:</i>`
+      : `{{emoji.swords}} <b>HOW TO CREATE A GROUP DUEL:</b> {{emoji.swords}}\n\n` +
         `Use the syntax:\n` +
         `<code>/duel &lt;game&gt; &lt;wager&gt;</code> or <code>/duel &lt;wager&gt;</code>\n\n` +
         `<b>Examples:</b>\n` +
@@ -123,7 +124,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
       `https://t.me/${botUsername}?startapp=duels`
     );
 
-    await ctx.reply(guideMsg, {
+    await ctx.reply(renderCustomEmojis(rawGuide), {
       parse_mode: 'HTML',
       reply_markup: guideKeyboard,
     });
@@ -151,12 +152,12 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
   // Validate wager range
   if (isNaN(wager) || wager < minWagerForGame || wager > 100) {
     if (gameType === 'split' && wager < minWagerForGame) {
-      await ctx.reply(`⚠️ <b>Puntata non valida:</b> La puntata minima per <b>Split or Steal</b> è di <b>5.00 GRAM</b>.`, {
+      await ctx.reply(renderCustomEmojis(`{{emoji.warning}} <b>Puntata non valida:</b> La puntata minima per <b>Split or Steal</b> è di <b>5.00 GRAM</b>.`), {
         parse_mode: 'HTML',
       });
       return;
     }
-    await ctx.reply(botT(lang, 'group_duel_invalid_wager'), { parse_mode: 'HTML' });
+    await ctx.reply(renderCustomEmojis(botT(lang, 'group_duel_invalid_wager')), { parse_mode: 'HTML' });
     return;
   }
   const creationFee = 0.05;
@@ -174,13 +175,13 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
     );
 
     await ctx.reply(
-      botT(lang, 'group_duel_insufficient', {
+      renderCustomEmojis(botT(lang, 'group_duel_insufficient', {
         username: user.username || user.first_name,
         wager: wager.toFixed(2),
         total: totalRequired.toFixed(2),
         balance: currentBal.toFixed(2),
         missing,
-      }),
+      })),
       {
         parse_mode: 'HTML',
         reply_markup: depositKeyboard,
@@ -226,7 +227,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
       total: totalRequired.toFixed(2),
     });
 
-  await ctx.reply(confirmMsg, {
+  await ctx.reply(renderCustomEmojis(confirmMsg), {
     parse_mode: 'HTML',
     reply_markup: confirmKeyboard,
   });
@@ -382,7 +383,7 @@ export async function handleConfirmGroupDuelCallback(ctx: Context, pendingId: st
       payout,
     });
 
-  await ctx.editMessageText(cardText, {
+  await ctx.editMessageText(renderCustomEmojis(cardText), {
     parse_mode: 'HTML',
     reply_markup: publicKeyboard,
   });
@@ -421,7 +422,7 @@ export async function handleCancelGroupDuelCallback(ctx: Context, pendingId: str
   if (pending.timer) clearTimeout(pending.timer);
   pendingGroupDuels.delete(pendingId);
 
-  await ctx.editMessageText(botT(lang, 'group_duel_cancelled', { creator: pending.creatorUsername }), {
+  await ctx.editMessageText(renderCustomEmojis(botT(lang, 'group_duel_cancelled', { creator: pending.creatorUsername })), {
     parse_mode: 'HTML',
   });
 

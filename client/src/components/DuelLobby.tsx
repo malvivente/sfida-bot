@@ -43,6 +43,8 @@ interface DuelLobbyProps {
   onOpenJackpotModal?: () => void;
   initialCreateGame?: GameType | null;
   onClearInitialCreateGame?: () => void;
+  initialCreateWager?: string | null;
+  onClearInitialCreateWager?: () => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -73,6 +75,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onOpenJackpotModal,
   initialCreateGame,
   onClearInitialCreateGame,
+  initialCreateWager,
+  onClearInitialCreateWager,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName } = useTelegram();
@@ -150,9 +154,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
   };
 
-  const handleOpenModal = (defaultGame?: GameType, lockGame: boolean = false) => {
+  const handleOpenModal = (defaultGame?: GameType, lockGame: boolean = false, defaultWager?: string) => {
     onClearError?.();
-    if (!userAddress) {
+    if (!userAddress && !userId) {
       triggerImpact('medium');
       onOpenWallet?.();
       return;
@@ -160,27 +164,33 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     setLockedGameType(lockGame && defaultGame ? defaultGame : null);
     if (defaultGame) {
       setSelectedGameType(defaultGame);
-      if (defaultGame === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
+      if (defaultWager) {
+        setWagerChoice(defaultWager);
+      } else if (defaultGame === 'split' && parseFloat(wagerChoice || '0') < 5.0) {
         setWagerChoice('5');
       }
+    } else if (defaultWager) {
+      setWagerChoice(defaultWager);
     }
     triggerImpact('medium');
     setShowCreateModal(true);
   };
 
-  // Handle programmatic create duel trigger (e.g. from Trust Jackpot modal or external button)
+  // Handle programmatic create duel trigger (e.g. from Trust Jackpot modal or external button or startapp create)
   React.useEffect(() => {
     if (initialCreateGame) {
-      handleOpenModal(initialCreateGame, true);
+      handleOpenModal(initialCreateGame, true, initialCreateWager || undefined);
       onClearInitialCreateGame?.();
+      onClearInitialCreateWager?.();
     }
-  }, [initialCreateGame]);
+  }, [initialCreateGame, initialCreateWager]);
 
   React.useEffect(() => {
     const handleCustomOpen = (e: any) => {
       const g = e?.detail?.game as GameType | undefined;
+      const w = e?.detail?.wager as string | undefined;
       if (g) {
-        handleOpenModal(g, true);
+        handleOpenModal(g, true, w);
       }
     };
     window.addEventListener('sfida_open_create_game', handleCustomOpen);
@@ -209,7 +219,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   };
 
   const handleAttemptJoin = (m: MatchData, inviteCode?: string) => {
-    if (!userAddress) {
+    if (!userAddress && !userId) {
       triggerImpact('medium');
       onOpenWallet?.();
       return;

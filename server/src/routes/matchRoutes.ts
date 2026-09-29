@@ -183,18 +183,20 @@ export async function matchRoutes(fastify: FastifyInstance) {
   fastify.post('/api/matches', async (req, reply) => {
     const body = req.body as {
       wagerAmountNano?: string;
-      playerAAddress: string;
+      playerAAddress?: string;
       gameType?: any;
       telegramUserId?: string;
       telegramUsername?: string;
       photoUrl?: string;
       recruiterA?: string;
       groupAdminAddress?: string;
+      groupChatId?: string;
       isPrivate?: boolean;
     };
 
-    if (!body.playerAAddress) {
-      return reply.status(400).send({ error: 'playerAAddress is required' });
+    const effectivePlayerAddress = body.playerAAddress || (body.telegramUserId ? `tg_${body.telegramUserId}` : '');
+    if (!effectivePlayerAddress) {
+      return reply.status(400).send({ error: 'playerAAddress or telegramUserId is required' });
     }
 
     const matchId = BigInt(Date.now() % 1000000000);
@@ -219,7 +221,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     // Check Player A's internal balance
     const userAccount = await dbService.getUserAccount(
-      body.playerAAddress,
+      effectivePlayerAddress,
       body.telegramUserId,
       body.telegramUsername
     );
@@ -239,14 +241,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     // Debit wager and creation fee
     await dbService.debitUserBalance(
-      body.playerAAddress,
+      effectivePlayerAddress,
       wagerGram.toFixed(2),
       'MATCH_BET',
       `Wager for match #${matchId}`,
       body.telegramUserId
     );
     await dbService.debitUserBalance(
-      body.playerAAddress,
+      effectivePlayerAddress,
       creationFeeGram.toFixed(2),
       'CREATION_FEE',
       `Creation fee for match #${matchId}`,
@@ -256,13 +258,22 @@ export async function matchRoutes(fastify: FastifyInstance) {
     // Credit creation fee to Treasury
     await dbService.creditTreasury(creationFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
 
+    // Resolve group affiliate if match is created with a group context
+    let groupAdminAddress = body.groupAdminAddress;
+    if (body.groupChatId && !groupAdminAddress) {
+      const groupAffiliate = await dbService.getGroupAffiliate(body.groupChatId);
+      if (groupAffiliate?.walletAddress) {
+        groupAdminAddress = groupAffiliate.walletAddress;
+      }
+    }
+
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
     let escrowAddress = '';
-    if (clashMasterAddr && body.playerAAddress) {
+    if (clashMasterAddr && effectivePlayerAddress && !effectivePlayerAddress.startsWith('tg_')) {
       escrowAddress = computeEscrowAddress(
         clashMasterAddr,
         matchId,
-        body.playerAAddress,
+        effectivePlayerAddress,
         wagerNano,
         signerService.getPublicKeyBigInt()
       );
@@ -276,9 +287,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
         matchId,
         gameType,
         wagerAmountNano: wagerNano,
-        playerAAddress: body.playerAAddress,
+        playerAAddress: effectivePlayerAddress,
         recruiterA: body.recruiterA,
-        groupAdminAddress: body.groupAdminAddress,
+        groupAdminAddress,
+        groupChatId: body.groupChatId,
         escrowAddress,
         isPrivate,
         inviteCode,

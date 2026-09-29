@@ -2,6 +2,7 @@ import { Bot } from 'grammy';
 import { SfidaInlineKeyboard as InlineKeyboard } from './keyboardUtils.js';
 import { dbService } from '../services/db.js';
 import { botT, resolveLanguage, SUPPORTED_LANGUAGES, BotLanguage } from './i18n.js';
+import { renderCustomEmojis } from './emojis.js';
 import { GameType } from '../types/gameTypes.js';
 import { handleBroadcastCommand } from './broadcast.js';
 import {
@@ -350,8 +351,8 @@ export function createTelegramBot(token?: string): Bot {
       ? `Scrivi @${botUser} <gioco> <importo> (es: @${botUser} roulette 2)`
       : `Type @${botUser} <game> <wager> (e.g. @${botUser} roulette 2)`;
 
-    const guideText = lang === 'it'
-      ? `⚔️ <b>SFIDA ARENA • GUIDA DUELLI INLINE</b> ⚔️\n\n` +
+    const rawGuideText = lang === 'it'
+      ? `{{emoji.swords}} <b>SFIDA ARENA • GUIDA DUELLI INLINE</b> {{emoji.swords}}\n\n` +
         `Puoi sfidare direttamente chiunque in questa chat digitando:\n` +
         `<code>@${botUser} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
         `<b>Discipline disponibili:</b>\n` +
@@ -361,7 +362,7 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
         `<i>Tocca il pulsante in basso per entrare subito nell'Arena Sfida:</i>`
-      : `⚔️ <b>SFIDA ARENA • INLINE DUEL GUIDE</b> ⚔️\n\n` +
+      : `{{emoji.swords}} <b>SFIDA ARENA • INLINE DUEL GUIDE</b> {{emoji.swords}}\n\n` +
         `Challenge anyone directly in this chat by typing:\n` +
         `<code>@${botUser} &lt;game&gt; &lt;wager&gt;</code>\n\n` +
         `<b>Available disciplines:</b>\n` +
@@ -383,7 +384,7 @@ export function createTelegramBot(token?: string): Bot {
       title: guideTitle,
       description: guideDesc,
       input_message_content: {
-        message_text: guideText,
+        message_text: renderCustomEmojis(rawGuideText),
         parse_mode: 'HTML',
       },
       reply_markup: guideKeyboard,
@@ -399,6 +400,7 @@ export function createTelegramBot(token?: string): Bot {
 
     for (const g of gamesToShow) {
       const wager = Math.max(g.minWager, isNaN(customWager) ? 1 : customWager).toFixed(2);
+      const cleanWagerParam = wager.replace('.', '_');
       const payout = (parseFloat(wager) * 2).toFixed(2);
 
       const cardTitle = `${g.icon} ${g.title} • ${wager} GRAM`;
@@ -406,34 +408,34 @@ export function createTelegramBot(token?: string): Bot {
         ? `${g.descIt} | Vincita: ${payout} GRAM`
         : `${g.descEn} | Payout: ${payout} GRAM`;
 
-      const cardMsg = lang === 'it'
-        ? `⚔️ <b>SFIDA DUELLO 1v1 • ${g.title.toUpperCase()}</b> ⚔️\n\n` +
-          `👤 <b>Sfidante</b>: ${challenger}\n` +
-          `🎮 <b>Disciplina</b>: <b>${g.title}</b>\n` +
-          `💰 <b>Puntata</b>: <b>${wager} GRAM</b> ciascuno\n` +
-          `🏆 <b>Montepremi Vincitore</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
-          `👁️ <b>Spettatori</b>: Finestra totalizzatore Pari-Mutuel aperta\n\n` +
+      const rawCardMsg = lang === 'it'
+        ? `{{emoji.swords}} <b>SFIDA DUELLO 1v1 • ${g.title.toUpperCase()}</b> {{emoji.swords}}\n\n` +
+          `{{emoji.user}} <b>Sfidante</b>: ${challenger}\n` +
+          `{{emoji.controller}} <b>Disciplina</b>: <b>${g.title}</b>\n` +
+          `{{emoji.moneyBag}} <b>Puntata</b>: <b>${wager} GRAM</b> ciascuno\n` +
+          `{{emoji.trophy}} <b>Montepremi Vincitore</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
+          `{{emoji.eye}} <b>Spettatori</b>: Finestra totalizzatore Pari-Mutuel aperta\n\n` +
           `<i>Chi osa raccogliere la sfida? Tocca sotto per entrare nell'Arena!</i>`
-        : `⚔️ <b>1v1 DUEL CHALLENGE • ${g.title.toUpperCase()}</b> ⚔️\n\n` +
-          `👤 <b>Challenger</b>: ${challenger}\n` +
-          `🎮 <b>Discipline</b>: <b>${g.title}</b>\n` +
-          `💰 <b>Wager</b>: <b>${wager} GRAM</b> each\n` +
-          `🏆 <b>Winner Payout</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
-          `👁️ <b>Spectators</b>: Pari-Mutuel betting window open\n\n` +
+        : `{{emoji.swords}} <b>1v1 DUEL CHALLENGE • ${g.title.toUpperCase()}</b> {{emoji.swords}}\n\n` +
+          `{{emoji.user}} <b>Challenger</b>: ${challenger}\n` +
+          `{{emoji.controller}} <b>Discipline</b>: <b>${g.title}</b>\n` +
+          `{{emoji.moneyBag}} <b>Wager</b>: <b>${wager} GRAM</b> each\n` +
+          `{{emoji.trophy}} <b>Winner Payout</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
+          `{{emoji.eye}} <b>Spectators</b>: Pari-Mutuel betting window open\n\n` +
           `<i>Who dares to accept? Tap below to enter the Arena!</i>`;
 
       const cardKeyboard = new InlineKeyboard().url(
         botT(lang, 'inline_accept_btn', { wager }),
-        `https://t.me/${botUser}?startapp=create_${g.id}_${wager}`
+        `https://t.me/${botUser}?startapp=create_${g.id}_${cleanWagerParam}`
       );
 
       results.push({
         type: 'article',
-        id: `game_${g.id}_${wager}`,
+        id: `game_${g.id}_${cleanWagerParam}`,
         title: cardTitle,
         description: cardDesc,
         input_message_content: {
-          message_text: cardMsg,
+          message_text: renderCustomEmojis(rawCardMsg),
           parse_mode: 'HTML',
         },
         reply_markup: cardKeyboard,

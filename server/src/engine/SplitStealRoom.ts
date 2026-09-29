@@ -482,6 +482,60 @@ export class SplitStealRoom extends BaseGameRoom {
 
     this.message = outcomeMessage;
 
+    // Distribute creation and join fee commissions (30% to affiliate pool) for standard matches
+    if (this.outcome !== 'DOUBLE_STEAL') {
+      const { creationFeeGram, joinFeeGram } = feeConfig.getConfig();
+      const feeA = creationFeeGram || 0.05;
+      const feeB = joinFeeGram || 0.05;
+
+      (async () => {
+        try {
+          const groupAffiliate = this.config.groupChatId ? await dbService.getGroupAffiliate(this.config.groupChatId) : null;
+          const hasAffiliatedGroup = Boolean(groupAffiliate);
+
+          const accA = await dbService.getUserAccount(this.playerA.walletAddress, this.playerA.telegramId);
+          const accB = this.playerB ? await dbService.getUserAccount(this.playerB.walletAddress, this.playerB.telegramId) : null;
+
+          let totalGroupCommission = 0;
+
+          // Process Player A's fee
+          const commissionPoolA = feeA * 0.30;
+          if (hasAffiliatedGroup && accA?.referredBy) {
+            const refShareA = commissionPoolA * 0.50;
+            const groupShareA = commissionPoolA * 0.50;
+            totalGroupCommission += groupShareA;
+            await dbService.creditReferralEarnings(accA.referredBy, refShareA, this.matchId.toString());
+          } else if (hasAffiliatedGroup) {
+            totalGroupCommission += commissionPoolA;
+          } else if (accA?.referredBy) {
+            await dbService.creditReferralEarnings(accA.referredBy, commissionPoolA, this.matchId.toString());
+          }
+
+          // Process Player B's fee
+          if (accB) {
+            const commissionPoolB = feeB * 0.30;
+            if (hasAffiliatedGroup && accB?.referredBy) {
+              const refShareB = commissionPoolB * 0.50;
+              const groupShareB = commissionPoolB * 0.50;
+              totalGroupCommission += groupShareB;
+              await dbService.creditReferralEarnings(accB.referredBy, refShareB, this.matchId.toString());
+            } else if (hasAffiliatedGroup) {
+              totalGroupCommission += commissionPoolB;
+            } else if (accB?.referredBy) {
+              await dbService.creditReferralEarnings(accB.referredBy, commissionPoolB, this.matchId.toString());
+            }
+          }
+
+          // Record group match revenue & volume
+          if (this.config.groupChatId) {
+            await dbService.recordGroupMatchRevenue(this.config.groupChatId, wagerNum, totalGroupCommission);
+          }
+        } catch (err) {
+          console.error(`[SplitStealRoom] Error distributing match affiliate commissions:`, err);
+        }
+      })();
+    }
+
     // --- Settle Spectator Bets ---
     const totalSpecPoolNano = this.totalBetsA + this.totalBetsB + this.totalBetsX;
     const totalSpecPoolGram = Number(totalSpecPoolNano) / 1e9;

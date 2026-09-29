@@ -575,6 +575,9 @@ export const translations: Translations = {
   'arena.spectatorSelfBetDisabled': { it: 'Sei un combattente in questo duello: le scommesse da spettatore sono disabilitate per i duellanti.', en: 'You are a fighter in this duel: spectator bets are disabled for duelists.' },
   'arena.joinMatchError': { it: 'Errore durante l\'ingresso nella partita.', en: 'Error joining match.' },
   'arena.serverConnError': { it: 'Errore di connessione con il server di gioco. Riprova.', en: 'Connection error with game server. Please try again.' },
+  'arena.duelUnavailableTitle': { it: 'DUELLO NON PIÙ DISPONIBILE', en: 'DUEL NO LONGER AVAILABLE' },
+  'arena.duelUnavailableDesc': { it: 'Questo duello è stato annullato dal creatore, i fondi sono stati rimborsati o la partita è già terminata.', en: 'This duel was cancelled by the creator, funds have been refunded, or the match has already concluded.' },
+  'arena.goToDuelsBtn': { it: 'VEDI TUTTI I DUELLI', en: 'EXPLORE ALL DUELS' },
 
   // Footer & Common
   'footer.escrow': { it: 'Smart Contract Escrow TON • Gioco Equo Senza Rischio Banco', en: 'TON Smart Contract Escrow • Fair Play Zero House Risk' },

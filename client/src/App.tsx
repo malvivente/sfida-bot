@@ -30,6 +30,8 @@ export const App: React.FC = () => {
   const [isInsideMatch, setIsInsideMatch] = useState(false);
   const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<EpicTab>('profile');
   const [pendingCreateGame, setPendingCreateGame] = useState<GameType | null>(null);
+  const [pendingCreateWager, setPendingCreateWager] = useState<string | null>(null);
+  const [originChatId, setOriginChatId] = useState<string | null>(null);
   const [duelFilterGame, setDuelFilterGame] = useState<string>('ALL');
   const { t } = useI18n();
 
@@ -227,28 +229,54 @@ export const App: React.FC = () => {
     const tg = getTelegramWebApp();
     const startParam = tg?.initDataUnsafe?.start_param || params.get('startapp') || '';
 
+    // Check origin chat from Telegram WebApp context
+    const tgChatId = tg?.initDataUnsafe?.chat?.id ? String(tg.initDataUnsafe.chat.id) : null;
+    if (tgChatId) {
+      setOriginChatId(tgChatId);
+    }
+
     if (startParam.startsWith('duel_')) {
       const parts = startParam.split('_');
       setDeepMatchId(parts[1]);
-      if (parts[2]) {
-        setDeepInviteCode(parts[2]);
-        try {
-          const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
-          stored[parts[1]] = parts[2];
-          localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
-        } catch {}
+      for (let i = 2; i < parts.length; i++) {
+        if (parts[i].startsWith('-')) {
+          setOriginChatId(parts[i]);
+        } else if (parts[i]) {
+          setDeepInviteCode(parts[i]);
+          try {
+            const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+            stored[parts[1]] = parts[i];
+            localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
+          } catch {}
+        }
       }
       setDeepRole('player');
       setActiveTab('home');
     } else if (startParam.startsWith('spectate_')) {
       const parts = startParam.split('_');
       setDeepMatchId(parts[1]);
+      for (let i = 2; i < parts.length; i++) {
+        if (parts[i].startsWith('-')) {
+          setOriginChatId(parts[i]);
+        }
+      }
       setDeepRole('spectator');
       setActiveTab('home');
     } else if (startParam.startsWith('create')) {
       const parts = startParam.split('_');
       if (parts[1]) {
         setPendingCreateGame(parts[1] as GameType);
+      }
+      const wagerParts: string[] = [];
+      for (let i = 2; i < parts.length; i++) {
+        if (parts[i].startsWith('-')) {
+          setOriginChatId(parts[i]);
+        } else if (parts[i]) {
+          wagerParts.push(parts[i]);
+        }
+      }
+      if (wagerParts.length > 0) {
+        setPendingCreateWager(wagerParts.join('.'));
       }
       setActiveTab('duels');
     } else if (startParam.startsWith('deposit')) {
@@ -323,6 +351,9 @@ export const App: React.FC = () => {
             onBalanceUpdated={setUserBalanceGram}
             initialCreateGame={pendingCreateGame}
             onClearInitialCreateGame={() => setPendingCreateGame(null)}
+            initialCreateWager={pendingCreateWager}
+            onClearInitialCreateWager={() => setPendingCreateWager(null)}
+            groupChatId={originChatId || undefined}
           />
         )}
 
@@ -352,6 +383,9 @@ export const App: React.FC = () => {
             onBalanceUpdated={setUserBalanceGram}
             initialCreateGame={pendingCreateGame}
             onClearInitialCreateGame={() => setPendingCreateGame(null)}
+            initialCreateWager={pendingCreateWager}
+            onClearInitialCreateWager={() => setPendingCreateWager(null)}
+            groupChatId={originChatId || undefined}
           />
         )}
 

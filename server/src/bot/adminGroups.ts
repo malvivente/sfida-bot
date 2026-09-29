@@ -2,6 +2,7 @@ import { Context } from 'grammy';
 import { dbService } from '../services/db.js';
 import { isBotAdmin } from './broadcast.js';
 import { botT } from './i18n.js';
+import { renderCustomEmojis } from './emojis.js';
 
 /**
  * Handles superadmin manual commands to configure group affiliates.
@@ -13,7 +14,7 @@ export async function handleSetGroupCommand(ctx: Context): Promise<void> {
   const lang = ctx.from?.language_code || 'it';
 
   if (!isBotAdmin(fromId)) {
-    await ctx.reply(botT(lang, 'broadcast_unauthorized'), { parse_mode: 'HTML' });
+    await ctx.reply(renderCustomEmojis(botT(lang, 'broadcast_unauthorized')), { parse_mode: 'HTML' });
     return;
   }
 
@@ -34,7 +35,7 @@ export async function handleSetGroupCommand(ctx: Context): Promise<void> {
       `<b>Esempio pratico:</b>\n` +
       `<code>/setgroup -1002345678901 UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx 25 123456789</code>`;
 
-    await ctx.reply(botT(lang, 'help_text', { botUsername: '' }) ? helpMsg : helpMsg, { parse_mode: 'HTML' });
+    await ctx.reply(renderCustomEmojis(helpMsg), { parse_mode: 'HTML' });
     return;
   }
 
@@ -77,7 +78,7 @@ export async function handleSetGroupCommand(ctx: Context): Promise<void> {
     (record.managerTelegramId ? `• <b>Manager Telegram ID</b>: <code>${record.managerTelegramId}</code> (@${record.managerUsername || 'N/A'})\n` : '') +
     `\n<i>Le partite create in questo gruppo accrediteranno automaticamente le commissioni a questo wallet!</i>`;
 
-  await ctx.reply(replyText, { parse_mode: 'HTML' });
+  await ctx.reply(renderCustomEmojis(replyText), { parse_mode: 'HTML' });
 }
 
 export async function handleGetGroupCommand(ctx: Context): Promise<void> {
