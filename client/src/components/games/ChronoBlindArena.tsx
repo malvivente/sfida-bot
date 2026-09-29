@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, Eye, EyeOff, Trophy, RotateCcw, Loader2, Zap, ArrowDownLeft, Swords } from 'lucide-react';
 import { ChronoBlindState } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
+import { useI18n } from '../../i18n/index.js';
 
 interface ChronoBlindArenaProps {
   gameData?: ChronoBlindState;
@@ -38,6 +39,7 @@ interface ChronoBlindArenaProps {
   socketError?: string | null;
   hasPlayerB?: boolean;
   onJoinAsPlayer?: () => void;
+  onInviteChallenger?: () => void;
 }
 
 export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
@@ -53,6 +55,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
   countdownSeconds,
   roomState,
   wagerTon,
+  isCreator = false,
   isWinner,
   onClaimPayout,
   isClaimingPayout,
@@ -70,7 +73,9 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
   socketError,
   hasPlayerB = true,
   onJoinAsPlayer,
+  onInviteChallenger,
 }) => {
+  const { t } = useI18n();
   const currentRound = gameData?.currentRound ?? 1;
   const maxRounds = gameData?.maxRounds ?? 3;
   const scoreA = gameData?.scoreA ?? 0;
@@ -89,16 +94,17 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
 
   const [syncedNow, setSyncedNow] = useState(Date.now());
   const clockOffsetRef = useRef<number>(0);
-  const [showSettledModal, setShowSettledModal] = useState(false);
+  const [outcomePhase, setOutcomePhase] = useState<'splash' | 'settled' | 'none'>('none');
 
   useEffect(() => {
-    if (roomState === 'MATCH_SETTLED') {
+    if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
+      setOutcomePhase('splash');
       const timer = setTimeout(() => {
-        setShowSettledModal(true);
-      }, 2600);
+        setOutcomePhase('settled');
+      }, 3000);
       return () => clearTimeout(timer);
     } else {
-      setShowSettledModal(false);
+      setOutcomePhase('none');
     }
   }, [roomState]);
 
@@ -124,9 +130,12 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
   const elapsedMs = hasStarted ? syncedNow - startEpochMs : 0;
   const remainingMs = Math.max(0, targetDurationMs - elapsedMs);
   const isPastZero = hasStarted && elapsedMs > targetDurationMs;
+  const isBlindZone = hasStarted && elapsedMs >= blindThresholdMs;
 
-  const isBlindZone = hasStarted && remainingMs <= blindThresholdMs;
   const userStopped = userSide === 'A' ? stoppedA : stoppedB;
+  const userDiff = userSide === 'A' ? diffA : diffB;
+  const userBusted = userSide === 'A' ? bustedA : bustedB;
+  const userStopTime = userSide === 'A' ? gameData?.stopTimeA : gameData?.stopTimeB;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 2.0).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
@@ -283,7 +292,28 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   </div>
 
                   {/* Millisecond Digits */}
-                  {isBlindZone && role === 'player' && roomState === 'GAME_ACTIVE' ? (
+                  {userStopped && role === 'player' ? (
+                    <div className="flex flex-col items-center py-2 animate-in zoom-in-95 duration-200">
+                      <span className="text-[11px] font-chakra font-bold text-cyber-green uppercase tracking-wider mb-1">
+                        🎯 TEMPO FERMATO!
+                      </span>
+                      <span className={`text-4xl font-mono font-black tracking-wider ${userBusted ? 'text-cyber-pink' : 'text-cyber-green'}`}>
+                        {userStopTime !== undefined ? formatSeconds(Math.abs(userStopTime)) : formatSeconds(remainingMs)}
+                      </span>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${
+                          userBusted
+                            ? 'bg-rose-500/20 border-rose-500 text-rose-300'
+                            : 'bg-cyber-green/20 border-cyber-green text-cyber-green'
+                        }`}>
+                          {userBusted ? `💥 BUST: +${userDiff ?? 0}ms oltre 0.00s` : `✓ SCARTO: ${userDiff ?? 0}ms da 0.00s`}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-rajdhani text-slate-400 mt-1">
+                        {stoppedA && stoppedB ? 'Round concluso!' : 'In attesa del click avversario...'}
+                      </span>
+                    </div>
+                  ) : isBlindZone && role === 'player' && roomState === 'GAME_ACTIVE' ? (
                     <div className="flex flex-col items-center py-2">
                       <span className="text-4xl font-mono font-black text-cyber-pink tracking-widest animate-pulse">
                         ??.???s
@@ -320,8 +350,8 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               </div>
             )}
 
-            {/* Duel Result Comparison Banner while awaiting modal */}
-            {roomState === 'MATCH_SETTLED' && !showSettledModal && (
+            {/* Duel Result Comparison Banner while awaiting settled modal */}
+            {roomState === 'MATCH_SETTLED' && outcomePhase !== 'settled' && (
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -358,23 +388,81 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
           </div>
         ) : null}
 
-        {/* Match Settled Modal (Appears as overlay after 2.6s delay) */}
-        {showSettledModal && (
+        {/* Phase 1: 3-Second Victory or Defeat Overlay */}
+        {outcomePhase === 'splash' && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+            <div className={`flex flex-col items-center p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center border-2 ${
+              isWinner
+                ? 'bg-gradient-to-b from-cyber-green/20 via-black/95 to-black border-cyber-green shadow-[0_0_50px_rgba(0,255,102,0.4)]'
+                : role === 'player'
+                ? 'bg-gradient-to-b from-rose-950/40 via-black/95 to-black border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.4)]'
+                : 'bg-gradient-to-b from-cyan-950/40 via-black/95 to-black border-cyber-cyan shadow-[0_0_50px_rgba(0,240,255,0.3)]'
+            }`}>
+              {isWinner ? (
+                <>
+                  <Trophy className="w-16 h-16 text-cyber-amber animate-bounce mb-3 filter drop-shadow-[0_0_15px_#ffb800]" />
+                  <h2 className="text-2xl font-orbitron font-black text-cyber-green tracking-wider uppercase animate-pulse">
+                    🏆 VITTORIA!
+                  </h2>
+                  <p className="text-xs font-chakra text-slate-200 mt-2">
+                    Hai trionfato nel duello Chrono Blind!
+                  </p>
+                </>
+              ) : role === 'player' ? (
+                <>
+                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-3xl animate-pulse">
+                    💀
+                  </div>
+                  <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
+                    💀 SCONFITTA!
+                  </h2>
+                  <p className="text-xs font-chakra text-slate-300 mt-2">
+                    Il tuo avversario è stato più preciso.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Swords className="w-16 h-16 text-cyber-cyan mb-3 animate-pulse" />
+                  <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
+                    ⚔️ DUELLO CONCLUSO
+                  </h2>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Phase 2: Settled Concluded Modal (After 3 Seconds) */}
+        {outcomePhase === 'settled' && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="flex flex-col items-center p-5 bg-cyber-bg/95 border border-cyber-amber rounded-3xl shadow-2xl max-w-xs w-full text-center mx-auto"
+              className={`flex flex-col items-center p-5 bg-cyber-bg/95 border rounded-3xl shadow-2xl max-w-xs w-full text-center mx-auto ${
+                isWinner ? 'border-cyber-green' : 'border-cyber-border'
+              }`}
             >
-              <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
-              <h2 className="text-lg font-orbitron font-black text-white">DUEL CONCLUDED</h2>
-              <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
-                <span className="text-slate-400">Winner Prize:</span>
-                <span className="font-bold text-cyber-cyan flex items-center space-x-1">
-                  <span>{winnerPayoutTon}</span>
-                  <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
-                </span>
-              </div>
+              {isWinner ? (
+                <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-2xl">
+                  💀
+                </div>
+              )}
+              <h2 className="text-lg font-orbitron font-black text-white">
+                {isWinner ? '🏆 VITTORIA!' : role === 'player' ? '💀 DUELLO CONCLUSO' : '⚔️ DUELLO CONCLUSO'}
+              </h2>
+
+              {/* Winner Prize row shown ONLY to the winner! */}
+              {isWinner && (
+                <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-green/50 w-full flex justify-between items-center text-xs font-chakra">
+                  <span className="text-slate-300">Winner Prize:</span>
+                  <span className="font-bold text-cyber-green flex items-center space-x-1">
+                    <span>+{winnerPayoutTon}</span>
+                    <GramIcon className="w-3.5 h-3.5 text-cyber-green inline" />
+                  </span>
+                </div>
+              )}
 
               {/* Rematch Offer Received */}
               {rematchOffer && isRematchProposer && (
@@ -478,35 +566,46 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
       <div className="w-full z-10 pt-3 border-t border-cyber-border/60 flex flex-col items-center">
         {roomState === 'LOBBY' ? (
           role === 'player' ? (
-            <button
-              onClick={onReady}
-              disabled={isReady || !hasPlayerB}
-              className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
-                isReady
-                  ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
-                  : !hasPlayerB
-                  ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
-                  : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
-              }`}
-            >
-              {isReady ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
-                  <span>READY • WAITING FOR OPPONENT</span>
-                </>
-              ) : !hasPlayerB ? (
-                <span>⏳ IN ATTESA DI UNO SFIDANTE...</span>
-              ) : (
-                <span>⚔️ READY TO DUEL</span>
+            <div className="w-full flex flex-col space-y-2">
+              {isCreator && !hasPlayerB && onInviteChallenger && (
+                <button
+                  onClick={onInviteChallenger}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-orbitron font-extrabold rounded-2xl text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/25 active:scale-95 transition-all flex items-center justify-center space-x-2"
+                >
+                  <Swords className="w-4 h-4 text-cyan-300" />
+                  <span>{t('arena.inviteChallengerBtn')}</span>
+                </button>
               )}
-            </button>
+              <button
+                onClick={onReady}
+                disabled={isReady || !hasPlayerB}
+                className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  isReady
+                    ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
+                    : !hasPlayerB
+                    ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
+                    : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
+                }`}
+              >
+                {isReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
+                    <span>{t('arena.readyWaiting')}</span>
+                  </>
+                ) : !hasPlayerB ? (
+                  <span>{t('arena.waitingForOpponentBtn')}</span>
+                ) : (
+                  <span>{t('arena.readyToDuel')}</span>
+                )}
+              </button>
+            </div>
           ) : (
             <div className="w-full flex flex-col items-center">
               {!hasPlayerB ? (
                 <div className="w-full flex flex-col space-y-2">
                   <div className="w-full py-2.5 px-3 bg-black/60 border border-cyber-amber/30 rounded-xl text-center">
                     <span className="text-xs font-chakra font-bold text-cyber-amber">
-                      👁️ VISTA SPETTATORE • IN ATTESA DI UNO SFIDANTE
+                      {t('arena.spectatorWaitingOpponent')}
                     </span>
                   </div>
                   {onJoinAsPlayer && (
@@ -515,14 +614,14 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                       className="w-full py-3 bg-gradient-to-r from-cyber-amber to-amber-500 text-black font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-[0_0_15px_rgba(255,184,0,0.3)] active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                     >
                       <Swords className="w-4 h-4" />
-                      <span>PARTECIPA AL DUELLO ({wagerTon} GRAM)</span>
+                      <span>{t('arena.joinAsPlayer', { amount: wagerTon })}</span>
                     </button>
                   )}
                 </div>
               ) : (
                 <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
                   <span className="text-xs font-chakra font-bold text-cyber-amber">
-                    👁️ SPECTATOR VIEW • WAITING FOR DUELISTS TO READY UP
+                    {t('arena.spectatorWaitingReady')}
                   </span>
                 </div>
               )}
@@ -538,12 +637,15 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
         ) : roomState === 'GAME_ACTIVE' ? (
           role === 'player' ? (
             userStopped ? (
-              <div className="w-full py-3.5 px-4 rounded-2xl bg-black/60 border border-cyber-green text-center flex flex-col items-center">
+              <div className="w-full py-3 px-4 rounded-2xl bg-black/70 border border-cyber-green text-center flex flex-col items-center shadow-[0_0_20px_rgba(0,255,102,0.2)]">
                 <span className="text-xs font-chakra font-bold text-cyber-green">
-                  ✓ TIMER STOPPED!
+                  ✓ TIMER FERMATO! {userStopTime !== undefined ? `${((Math.abs(userStopTime)) / 1000).toFixed(3)}s` : ''}
                 </span>
-                <span className="text-[11px] font-mono text-slate-300 mt-0.5">
-                  Awaiting opponent stop & round score...
+                <span className="text-[11px] font-mono text-white mt-0.5 font-bold">
+                  {userBusted ? `💥 BUST: +${userDiff ?? 0}ms oltre 0.00s` : `🎯 Scarto: ${userDiff ?? 0}ms da 0.000s`}
+                </span>
+                <span className="text-[10px] font-chakra text-slate-400 mt-0.5">
+                  {stoppedA && stoppedB ? 'Calcolo punteggio round...' : 'In attesa del click avversario...'}
                 </span>
               </div>
             ) : hasStarted ? (

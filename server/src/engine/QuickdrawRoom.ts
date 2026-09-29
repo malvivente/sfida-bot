@@ -343,7 +343,7 @@ export class QuickdrawRoom {
 
     this.state = 'BETTING_WINDOW';
     const dynamicConfig = feeConfig.getConfig();
-    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 30;
+    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 20;
     let countdown = duration;
 
     this.broadcast({

@@ -94,7 +94,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                   message: !room
                     ? 'Match not found.'
                     : room.state === 'LOBBY'
-                    ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 30s).'
+                    ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 20s).'
                     : 'Le scommesse per questa partita sono chiuse.',
                 }));
                 break;

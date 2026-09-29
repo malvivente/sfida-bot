@@ -760,9 +760,24 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
+  // Spectator Share (from top bar Share button)
   const handleInGameShare = () => {
     if (!activeMatchId) return;
     triggerImpact('light');
+    const m = currentActiveMatch;
+    const wager = m ? (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2) : (socketData.activeWagerTon || activeWagerTon || '1.0');
+    const gType = effectiveGameType || 'roulette';
+    const meta = GAMES_METADATA[gType] || GAMES_METADATA.roulette;
+
+    const text = t('arena.shareSpectatorText', { title: meta.title, wager });
+    const url = `https://t.me/${botUsername}?start=spectate_${activeMatchId}`;
+    shareToTelegram(url, text);
+  };
+
+  // Dedicated Challenger Invite (from Lobby "Invita sfidante" button)
+  const handleInviteChallenger = () => {
+    if (!activeMatchId) return;
+    triggerImpact('medium');
     const m = currentActiveMatch;
     const wager = m ? (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2) : (socketData.activeWagerTon || activeWagerTon || '1.0');
     const gType = effectiveGameType || 'roulette';
@@ -778,11 +793,11 @@ export const Arena: React.FC<ArenaProps> = ({
     }
 
     if (isPrivate && code) {
-      const text = `⚔️ Ti ho invitato a un duello PRIVATO su ${meta.title} per ${wager} GRAM! Entra con questo link unico:`;
+      const text = t('arena.invitePrivateText', { title: meta.title, wager });
       const url = `https://t.me/${botUsername}?start=duel_${activeMatchId}_${code}`;
       shareToTelegram(url, text);
     } else {
-      const text = `⚔️ Ti sfido a un duello ${meta.title} per ${wager} GRAM! ${meta.tagline}`;
+      const text = t('arena.invitePublicText', { title: meta.title, wager });
       const url = `https://t.me/${botUsername}?start=duel_${activeMatchId}`;
       shareToTelegram(url, text);
     }
@@ -948,9 +963,9 @@ export const Arena: React.FC<ArenaProps> = ({
                 if (missing) setDepositAmount(missing);
                 setShowDepositModal(true);
               }}
-              socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
@@ -995,6 +1010,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
@@ -1038,6 +1054,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'split' ? (
             <SplitStealArena
@@ -1081,6 +1098,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
             />
           ) : (
             <RussianRouletteArena
@@ -1124,6 +1142,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
             />
           )}
 

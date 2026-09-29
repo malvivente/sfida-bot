@@ -188,4 +188,12 @@ export class RussianRouletteRoom extends BaseGameRoom {
       this.turnTimeout = undefined;
     }
   }
+
+  public override resetForRematch() {
+    this.chambersRemaining = this.totalChambers;
+    this.offensiveShotsA = 1;
+    this.offensiveShotsB = 1;
+    this.lastOutcome = undefined;
+    this.cleanupGameTimers();
+  }
 }

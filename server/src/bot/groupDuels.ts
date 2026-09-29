@@ -3,7 +3,7 @@ import { SfidaInlineKeyboard as InlineKeyboard } from './keyboardUtils.js';
 import { dbService } from '../services/db.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { GameType } from '../types/gameTypes.js';
-import { botT, resolveLanguage, BotLanguage } from './i18n.js';
+import { botT, botTPlain, resolveLanguage, BotLanguage } from './i18n.js';
 import { renderCustomEmojis } from './emojis.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
@@ -246,7 +246,7 @@ export async function handleConfirmGroupDuelCallback(ctx: Context, pendingId: st
 
   if (!pending || Date.now() > pending.expiresAt) {
     await ctx.answerCallbackQuery({
-      text: botT(lang, 'group_duel_expired'),
+      text: botTPlain(lang, 'group_duel_expired'),
       show_alert: true,
     });
     return;
@@ -255,7 +255,7 @@ export async function handleConfirmGroupDuelCallback(ctx: Context, pendingId: st
   // Security Check: Only the original creator can confirm
   if (fromUser.id !== pending.creatorId) {
     await ctx.answerCallbackQuery({
-      text: botT(lang, 'group_duel_not_author_alert', { creator: pending.creatorUsername }),
+      text: botTPlain(lang, 'group_duel_not_author_alert', { creator: pending.creatorUsername }),
       show_alert: true,
     });
     return;
@@ -404,7 +404,7 @@ export async function handleCancelGroupDuelCallback(ctx: Context, pendingId: str
 
   if (!pending || Date.now() > pending.expiresAt) {
     await ctx.answerCallbackQuery({
-      text: botT(lang, 'group_duel_expired'),
+      text: botTPlain(lang, 'group_duel_expired'),
       show_alert: true,
     });
     return;
@@ -413,7 +413,7 @@ export async function handleCancelGroupDuelCallback(ctx: Context, pendingId: str
   // Security Check: Only the original creator can cancel
   if (fromUser.id !== pending.creatorId) {
     await ctx.answerCallbackQuery({
-      text: botT(lang, 'group_duel_not_author_alert', { creator: pending.creatorUsername }),
+      text: botTPlain(lang, 'group_duel_not_author_alert', { creator: pending.creatorUsername }),
       show_alert: true,
     });
     return;

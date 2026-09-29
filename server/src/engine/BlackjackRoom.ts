@@ -119,8 +119,8 @@ export class BlackjackRoom extends BaseGameRoom {
     this.standA = false;
     this.standB = false;
     this.bustA = false;
-    this.bustB = false;
-    this.currentTurn = 'A';
+    // Coin toss determines who gets the first turn
+    this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
     this.lastAction = undefined;
 
     // Deal 2 face-up cards to each player
@@ -132,9 +132,11 @@ export class BlackjackRoom extends BaseGameRoom {
     this.scoreA = this.calculateHandScore(this.handA);
     this.scoreB = this.calculateHandScore(this.handB);
 
+    const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+
     this.broadcast({
       type: 'BLACKJACK_START',
-      message: `Face-Up cards dealt! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}. ${this.playerA.username}'s turn to Hit or Stand.`,
+      message: `🪙 Coin Toss: ${firstPlayerName} plays first! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}.`,
       gameData: this.getGamePayload(),
     });
 
@@ -249,7 +251,9 @@ export class BlackjackRoom extends BaseGameRoom {
 
     // Check if game has concluded
     if (this.currentTurn === 'FINISHED' || (this.bustA && this.bustB)) {
-      this.evaluateShowdown();
+      setTimeout(() => {
+        this.evaluateShowdown();
+      }, 1200);
     } else if (this.currentTurn === 'B' && this.bustA) {
       // If Player A busted, Player B automatically wins if they stand or already have <= 21!
       // Player B gets their turn to play or can win immediately
@@ -342,5 +346,19 @@ export class BlackjackRoom extends BaseGameRoom {
       clearTimeout(this.turnTimeout);
       this.turnTimeout = undefined;
     }
+  }
+
+  public override resetForRematch() {
+    this.deck = [];
+    this.handA = [];
+    this.handB = [];
+    this.scoreA = 0;
+    this.scoreB = 0;
+    this.standA = false;
+    this.standB = false;
+    this.bustA = false;
+    this.bustB = false;
+    this.lastAction = undefined;
+    this.cleanupGameTimers();
   }
 }

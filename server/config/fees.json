@@ -16,5 +16,5 @@
   "splitJackpotProbabilityPercent": 30,
   "splitJackpotCooldownHours": 48,
   "presetsWagerGram": ["0.1", "0.5", "1", "2", "5", "10", "25", "50"],
-  "bettingWindowSeconds": 30
+  "bettingWindowSeconds": 20
 }

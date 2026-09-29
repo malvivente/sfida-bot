@@ -164,9 +164,13 @@ export class SplitStealRoom extends BaseGameRoom {
 
     if (this.hasChosenA && this.hasChosenB) {
       this.cleanupGameTimers();
+      this.broadcast({
+        type: 'SPLIT_STEAL_REVEALING',
+        message: 'Entrambi i giocatori hanno confermato la scelta! Showdown imminente...',
+      });
       setTimeout(() => {
         this.revealAndSettle();
-      }, 700);
+      }, 2000);
     }
   }
 
@@ -689,5 +693,20 @@ export class SplitStealRoom extends BaseGameRoom {
       clearInterval(this.countdownTimer);
       this.countdownTimer = undefined;
     }
+  }
+
+  public override resetForRematch() {
+    this.phase = 'COUNTDOWN';
+    this.choicesRevealed = false;
+    this.choiceA = undefined;
+    this.choiceB = undefined;
+    this.hasChosenA = false;
+    this.hasChosenB = false;
+    this.outcome = undefined;
+    this.bonusAwardedGram = undefined;
+    this.bonusPerPlayerGram = undefined;
+    this.message = undefined;
+    this.secondsLeft = 30;
+    this.cleanupGameTimers();
   }
 }

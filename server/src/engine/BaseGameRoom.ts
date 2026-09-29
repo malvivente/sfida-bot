@@ -346,7 +346,7 @@ export abstract class BaseGameRoom {
     }
   }
 
-  // Spectator Pari-Mutuel Window (configurable, default 30s when both players are ready)
+  // Spectator Pari-Mutuel Window (configurable, default 20s when both players are ready)
   public startBettingWindow() {
     if (this.bettingTimer) {
       clearInterval(this.bettingTimer);
@@ -355,7 +355,7 @@ export abstract class BaseGameRoom {
 
     this.state = 'BETTING_WINDOW';
     const dynamicConfig = feeConfig.getConfig();
-    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 30;
+    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 20;
     let countdown = duration;
 
     this.broadcast({
@@ -916,6 +916,7 @@ export abstract class BaseGameRoom {
     this.resolution = undefined;
     this.forfeitWinner = undefined;
     this.cleanupTimers();
+    this.resetForRematch();
 
     this.broadcast({
       type: 'REMATCH_ACCEPTED',
@@ -942,6 +943,7 @@ export abstract class BaseGameRoom {
   }
 
   // --- Abstract Game Hooks ---
+  public resetForRematch(): void {}
   public abstract getGamePayload(): any;
   public abstract handleGameAction(wallet: string, data: any): void;
   public abstract onGameStart(): void;

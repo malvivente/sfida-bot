@@ -53,6 +53,7 @@ interface SplitStealArenaProps {
   socketError?: string | null;
   hasPlayerB?: boolean;
   onJoinAsPlayer?: () => void;
+  onInviteChallenger?: () => void;
 }
 
 export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
@@ -68,6 +69,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   countdownSeconds,
   roomState,
   wagerTon,
+  isCreator = false,
   onReturnToLobby,
   rematchOffer,
   onRequestRematch,
@@ -78,6 +80,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   userSide = 'A',
   hasPlayerB = true,
   onJoinAsPlayer,
+  onInviteChallenger,
   isWinner,
 }) => {
   const { t } = useI18n();
@@ -123,6 +126,20 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const isBetting = roomState === 'BETTING_WINDOW';
   const isSettled = roomState === 'MATCH_SETTLED';
   const isCombatActive = roomState === 'GAME_ACTIVE';
+
+  const [outcomePhase, setOutcomePhase] = React.useState<'splash' | 'settled' | 'none'>('none');
+
+  React.useEffect(() => {
+    if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
+      setOutcomePhase('splash');
+      const timer = setTimeout(() => {
+        setOutcomePhase('settled');
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setOutcomePhase('none');
+    }
+  }, [roomState]);
 
   // Reset choice on new round / lobby / betting window
   React.useEffect(() => {
@@ -405,7 +422,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
         )}
 
         {/* State: REVEAL / SHOWDOWN / SETTLED */}
-        {choicesRevealed && (
+        {choicesRevealed && !isLobby && !isBetting && (
           <div className="w-full flex flex-col items-center justify-center space-y-3 py-2 animate-in fade-in zoom-in-95 duration-300">
             {/* Outcome Big Banner */}
             {outcome === 'PEACE' && (
@@ -495,31 +512,42 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
       <div className="w-full z-10 pt-3 border-t border-cyber-border/60 flex flex-col items-center">
         {isLobby ? (
           role === 'player' ? (
-            <button
-              onClick={() => {
-                triggerImpact('medium');
-                onReady?.();
-              }}
-              disabled={isReady || !hasPlayerB}
-              className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
-                isReady
-                  ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
-                  : !hasPlayerB
-                  ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
-                  : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
-              }`}
-            >
-              {isReady ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
-                  <span>{t('arena.readyWaiting')}</span>
-                </>
-              ) : !hasPlayerB ? (
-                <span>{t('arena.waitingForOpponentBtn')}</span>
-              ) : (
-                <span>{t('arena.readyToDuel')}</span>
+            <div className="w-full flex flex-col space-y-2">
+              {isCreator && !hasPlayerB && onInviteChallenger && (
+                <button
+                  onClick={onInviteChallenger}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-orbitron font-extrabold rounded-2xl text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/25 active:scale-95 transition-all flex items-center justify-center space-x-2"
+                >
+                  <Swords className="w-4 h-4 text-cyan-300" />
+                  <span>{t('arena.inviteChallengerBtn')}</span>
+                </button>
               )}
-            </button>
+              <button
+                onClick={() => {
+                  triggerImpact('medium');
+                  onReady?.();
+                }}
+                disabled={isReady || !hasPlayerB}
+                className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  isReady
+                    ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
+                    : !hasPlayerB
+                    ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
+                    : 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan active:scale-95'
+                }`}
+              >
+                {isReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
+                    <span>{t('arena.readyWaiting')}</span>
+                  </>
+                ) : !hasPlayerB ? (
+                  <span>{t('arena.waitingForOpponentBtn')}</span>
+                ) : (
+                  <span>{t('arena.readyToDuel')}</span>
+                )}
+              </button>
+            </div>
           ) : (
             <div className="w-full flex flex-col items-center">
               {!hasPlayerB ? (
@@ -612,6 +640,50 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
           </div>
         ) : null}
       </div>
+
+      {/* Phase 1: 3-Second Victory or Defeat Overlay */}
+      {outcomePhase === 'splash' && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+          <div className={`flex flex-col items-center p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center border-2 ${
+            isWinner
+              ? 'bg-gradient-to-b from-cyber-green/20 via-black/95 to-black border-cyber-green shadow-[0_0_50px_rgba(0,255,102,0.4)]'
+              : role === 'player'
+              ? 'bg-gradient-to-b from-rose-950/40 via-black/95 to-black border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.4)]'
+              : 'bg-gradient-to-b from-purple-950/40 via-black/95 to-black border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.3)]'
+          }`}>
+            {isWinner ? (
+              <>
+                <Trophy className="w-16 h-16 text-amber-400 animate-bounce mb-3 filter drop-shadow-[0_0_15px_#f59e0b]" />
+                <h2 className="text-2xl font-orbitron font-black text-cyber-green tracking-wider uppercase animate-pulse">
+                  🏆 VITTORIA!
+                </h2>
+                <p className="text-xs font-chakra text-slate-200 mt-2">
+                  Hai vinto il duello Split or Steal!
+                </p>
+              </>
+            ) : role === 'player' ? (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-3xl animate-pulse">
+                  🗡️
+                </div>
+                <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
+                  💀 SCONFITTA!
+                </h2>
+                <p className="text-xs font-chakra text-slate-300 mt-2">
+                  {outcome === 'DOUBLE_STEAL' ? 'Entrambi avete tradito! Nessun vincitore.' : 'Sei stato tradito nel duello.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <Swords className="w-16 h-16 text-purple-400 mb-3 animate-pulse" />
+                <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
+                  ⚔️ DUELLO CONCLUSO
+                </h2>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

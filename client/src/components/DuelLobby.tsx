@@ -263,6 +263,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   };
 
   const hasActiveFilters =
+    filterGameType !== 'ALL' ||
     filterVisibility !== 'ALL' ||
     filterBetTier !== 'ALL' ||
     filterOpenOnly ||
@@ -270,6 +271,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     sortBy !== 'newest';
 
   const resetFilters = () => {
+    setFilterGameType('ALL');
     setFilterVisibility('ALL');
     setFilterBetTier('ALL');
     setFilterOpenOnly(false);
@@ -458,30 +460,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           </div>
         </div>
 
-        {/* Game Filter Tabs */}
-        <div className="flex items-center space-x-2 overflow-x-auto py-2 px-1 -mx-1 scrollbar-none">
-          {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split'].map((gKey) => {
-            const isSelected = filterGameType === gKey;
-            const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
-            return (
-              <button
-                key={gKey}
-                onClick={() => {
-                  triggerImpact('light');
-                  setFilterGameType(gKey);
-                }}
-                className={`px-3.5 py-1.5 rounded-2xl text-xs font-heading font-extrabold uppercase transition-all whitespace-nowrap border shrink-0 active:scale-95 ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 shadow-md'
-                    : 'bg-[#151823] text-slate-400 border-white/5 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
         {/* Search & Advanced Filters Bar */}
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
@@ -543,6 +521,35 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     {t('lobby.resetFilters')}
                   </button>
                 )}
+              </div>
+
+              {/* Game Type Filter */}
+              <div>
+                <span className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  {t('lobby.gameTypeLabel') || 'Disciplina / Gioco'}
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split'].map((gKey) => {
+                    const isSelected = filterGameType === gKey;
+                    const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
+                    return (
+                      <button
+                        key={gKey}
+                        onClick={() => {
+                          triggerImpact('light');
+                          setFilterGameType(gKey);
+                        }}
+                        className={`py-1.5 px-2 rounded-xl text-xs font-heading font-bold border transition-all text-center truncate active:scale-95 ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 shadow-sm'
+                            : 'bg-[#181b28] text-slate-400 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Access Filter (Public vs Private) */}
@@ -667,6 +674,15 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           {hasActiveFilters && !showFiltersPanel && (
             <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-[10px] font-sans">
               <span className="text-slate-500 shrink-0">{t('lobby.filtersLabel')}</span>
+              {filterGameType !== 'ALL' && (
+                <button
+                  onClick={() => setFilterGameType('ALL')}
+                  className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shrink-0 flex items-center space-x-1"
+                >
+                  <span>{GAMES_METADATA[filterGameType as GameType]?.title || filterGameType}</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
               {filterVisibility !== 'ALL' && (
                 <button
                   onClick={() => setFilterVisibility('ALL')}

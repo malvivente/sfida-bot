@@ -110,6 +110,14 @@ export function createTelegramBot(token?: string): Bot {
   // Resilient API Transformer: If Telegram API rejects custom emoji with BUTTON_TYPE_INVALID,
   // automatically strip icon_custom_emoji_id from the buttons and retry seamlessly
   bot.api.config.use(async (prev, method, payload, signal) => {
+    // Popup alerts (answerCallbackQuery) do NOT support HTML or <tg-emoji> tags. Strip them automatically.
+    if (method === 'answerCallbackQuery' && payload && typeof (payload as any).text === 'string') {
+      const p: any = payload;
+      p.text = p.text
+        .replace(/<tg-emoji[^>]*>(.*?)<\/tg-emoji>/gi, '$1')
+        .replace(/<[^>]*>/g, '')
+        .trim();
+    }
     try {
       return await prev(method, payload, signal);
     } catch (err: any) {

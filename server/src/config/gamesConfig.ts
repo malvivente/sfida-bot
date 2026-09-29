@@ -14,7 +14,7 @@ export const GAMES_CONFIG = {
   bridge: {
     name: 'Glass Bridge',
     description: 'Endless perilous steps over the abyss. Choose tempered glass or shatter and lose a life.',
-    initialLives: 2,
+    initialLives: 3,
     turnTimeoutSeconds: 20,
   },
   chrono: {

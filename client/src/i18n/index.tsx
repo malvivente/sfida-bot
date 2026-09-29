@@ -313,6 +313,10 @@ export const translations: Translations = {
   'arena.readyBadge': { it: '✓ PRONTO', en: '✓ READY' },
   'arena.waitingBadge': { it: 'ATTESA', en: 'WAITING' },
   'arena.notReadyBadge': { it: 'NON PRONTO', en: 'NOT READY' },
+  'arena.inviteChallengerBtn': { it: '⚔️ INVITA SFIDANTE', en: '⚔️ INVITE CHALLENGER' },
+  'arena.invitePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM! Entra con questo link unico per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM! Join using this link to play:' },
+  'arena.invitePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM! Accetta la sfida:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM! Accept the challenge:' },
+  'arena.shareSpectatorText': { it: '👀 Guarda il duello su {title} per {wager} GRAM in corso su Sfida! Fai il tuo pronostico e scommetti sullo sfidante vincente:', en: '👀 Watch the live {title} duel for {wager} GRAM on Sfida! Predict the winner and place your bets:' },
 
   // Blackjack Arena Translations
   'blackjack.title': { it: 'BLACKJACK SCOPERTO', en: 'FACE-UP BLACKJACK' },

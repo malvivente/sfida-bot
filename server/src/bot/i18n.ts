@@ -544,3 +544,19 @@ export function botT(
   // Substitute custom emojis
   return renderCustomEmojis(template);
 }
+
+/**
+ * Returns plain text without HTML tags and with fallback Unicode emojis.
+ * Essential for Telegram alert popups (answerCallbackQuery), which do not support HTML or <tg-emoji>.
+ */
+export function botTPlain(
+  lang: string | undefined | null,
+  key: string,
+  params: Record<string, string | number> = {}
+): string {
+  const html = botT(lang, key, params);
+  return html
+    .replace(/<tg-emoji[^>]*>(.*?)<\/tg-emoji>/gi, '$1')
+    .replace(/<[^>]*>/g, '')
+    .trim();
+}

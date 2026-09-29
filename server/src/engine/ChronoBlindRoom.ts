@@ -157,10 +157,12 @@ export class ChronoBlindRoom extends BaseGameRoom {
       gameData: this.getGamePayload(),
     });
 
-    // If both players have stopped, evaluate round immediately!
+    // If both players have stopped, evaluate round after suspense delay!
     if (this.stoppedA && this.stoppedB) {
       if (this.roundTimer) clearTimeout(this.roundTimer);
-      this.evaluateRound();
+      setTimeout(() => {
+        this.evaluateRound();
+      }, 1500);
     }
   }
 
