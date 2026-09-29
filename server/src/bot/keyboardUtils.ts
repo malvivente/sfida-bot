@@ -15,34 +15,45 @@ export function parseButtonEmoji(text: string, overrideEmojiId?: string): Parsed
   let icon_custom_emoji_id: string | undefined = overrideEmojiId;
   let cleanText = text;
 
-  // 1. Replace <tg-emoji emoji-id="...">FALLBACK</tg-emoji> with the fallback emoji
-  cleanText = cleanText.replace(/<tg-emoji emoji-id="([^"]+)">([^<]*)<\/tg-emoji>/gi, (_match, id, fallback) => {
+  // 1. Replace <tg-emoji emoji-id="...">FALLBACK</tg-emoji> with custom emoji ID, stripping fallback from text
+  cleanText = cleanText.replace(/<tg-emoji emoji-id="([^"]+)">([^<]*)<\/tg-emoji>/gi, (_match, id, _fallback) => {
     if (!icon_custom_emoji_id && id) {
       icon_custom_emoji_id = id.trim();
     }
-    return fallback ? fallback.trim() : '';
+    return '';
   });
 
-  // 2. Replace {{emoji.<name>}} with the fallback emoji from BOT_EMOJIS
+  // 2. Replace {{emoji.<name>}} with extracting custom emoji id from BOT_EMOJIS, stripping token from text
   cleanText = cleanText.replace(/\{\{emoji\.([a-zA-Z0-9_]+)\}\}/gi, (_match, key) => {
     const emojiConfig = BOT_EMOJIS[key];
     if (emojiConfig?.id && !icon_custom_emoji_id) {
       icon_custom_emoji_id = emojiConfig.id.trim();
     }
-    return emojiConfig?.fallback || '';
+    // Only return fallback if custom emoji id is NOT available
+    return emojiConfig?.id ? '' : (emojiConfig?.fallback || '');
   });
 
-  // 3. If no icon_custom_emoji_id yet, scan BOT_EMOJIS to see if any known emoji fallback is inside cleanText
+  // 3. If icon_custom_emoji_id is NOT set yet, scan BOT_EMOJIS to see if any known emoji fallback is in cleanText
   if (!icon_custom_emoji_id) {
     for (const [_, config] of Object.entries(BOT_EMOJIS)) {
       if (config.id && config.fallback && cleanText.includes(config.fallback)) {
         icon_custom_emoji_id = config.id.trim();
+        cleanText = cleanText.split(config.fallback).join('');
         break;
       }
     }
   }
 
-  // 4. Remove any remaining HTML tags (Telegram buttons do NOT parse HTML)
+  // 4. If icon_custom_emoji_id IS set, strip all known fallback unicode emojis from cleanText so only the custom emoji appears
+  if (icon_custom_emoji_id) {
+    for (const [_, config] of Object.entries(BOT_EMOJIS)) {
+      if (config.fallback && cleanText.includes(config.fallback)) {
+        cleanText = cleanText.split(config.fallback).join('');
+      }
+    }
+  }
+
+  // 5. Remove any remaining HTML tags (Telegram buttons do NOT parse HTML) and clean spaces
   cleanText = cleanText.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
   // Custom emoji buttons are enabled by default if icon_custom_emoji_id is available

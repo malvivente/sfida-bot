@@ -15,7 +15,12 @@ import {
   handleGroupDuelCommand,
   handleConfirmGroupDuelCallback,
   handleCancelGroupDuelCallback,
+  parseGameType,
 } from './groupDuels.js';
+import { RoomManager } from '../engine/RoomManager.js';
+import { computeEscrowAddress } from '../utils/escrow.js';
+import { signerService } from '../services/signer.js';
+import { tonSettlementService } from '../services/tonSettlement.js';
 
 export interface DeepLinkPayload {
   mode: 'duel' | 'spectate' | 'ref';
@@ -120,6 +125,19 @@ export function createTelegramBot(token?: string): Bot {
           }
           return await prev(method, cloned, signal);
         }
+        if (Array.isArray(p.results)) {
+          const cloned = JSON.parse(JSON.stringify(payload));
+          for (const res of cloned.results) {
+            if (res.reply_markup?.inline_keyboard) {
+              for (const row of res.reply_markup.inline_keyboard) {
+                for (const btn of row) {
+                  delete btn.icon_custom_emoji_id;
+                }
+              }
+            }
+          }
+          return await prev(method, cloned, signal);
+        }
       }
       throw err;
     }
@@ -129,6 +147,20 @@ export function createTelegramBot(token?: string): Bot {
   bot.catch((err) => {
     console.error(`[Grammy Error] Error in update ${err.ctx?.update?.update_id}:`, err.error || err);
   });
+
+  // Dynamic Bot Username Helper to ensure startapp links ALWAYS point to the real bot username
+  let cachedBotUsername: string | null = null;
+  const getBotUsername = async (): Promise<string> => {
+    if (cachedBotUsername) return cachedBotUsername;
+    try {
+      const me = await bot.api.getMe();
+      if (me?.username) {
+        cachedBotUsername = me.username;
+        return cachedBotUsername;
+      }
+    } catch {}
+    return process.env.TELEGRAM_BOT_USERNAME || 'sfida_bot';
+  };
 
   // Helper to resolve user's active language
   const getUserLang = async (user?: { id?: number; language_code?: string }): Promise<BotLanguage> => {
@@ -173,8 +205,7 @@ export function createTelegramBot(token?: string): Bot {
       : botT(lang, 'btn_enter_arena');
 
     const isPrivateChat = ctx.chat?.type === 'private';
-    const botInfo = await bot.api.getMe().catch(() => ({ username: 'sfida_bot' }));
-    const botUsername = botInfo.username || 'sfida_bot';
+    const botUsername = await getBotUsername();
 
     const keyboard = new InlineKeyboard();
     if (isPrivateChat) {
@@ -188,7 +219,7 @@ export function createTelegramBot(token?: string): Bot {
       .row()
       .url(botT(lang, 'btn_official_channel'), 'https://t.me/sfida');
 
-    await ctx.reply(welcomeText, {
+    await ctx.reply(renderCustomEmojis(welcomeText), {
       parse_mode: 'HTML',
       reply_markup: keyboard,
     });
@@ -197,10 +228,9 @@ export function createTelegramBot(token?: string): Bot {
   // /help command
   bot.command('help', async (ctx) => {
     const lang = await getUserLang(ctx.from);
-    const botInfo = await bot.api.getMe().catch(() => ({ username: 'sfida_bot' }));
-    const botUsername = botInfo.username || 'sfida_bot';
+    const botUsername = await getBotUsername();
 
-    await ctx.reply(botT(lang, 'help_text', { botUsername }), {
+    await ctx.reply(renderCustomEmojis(botT(lang, 'help_text', { botUsername })), {
       parse_mode: 'HTML',
     });
   });
@@ -280,14 +310,14 @@ export function createTelegramBot(token?: string): Bot {
     console.warn('[Bot] Note on setChatMenuButton:', err?.message || err);
   });
 
-  // Inline query handler: @SfidaRobot <game> <amount> with complete guide & game cards
+  // Inline query handler: @sfida_bot <game> <amount> with complete guide & game cards
   bot.on('inline_query', async (ctx) => {
     const rawQuery = ctx.inlineQuery.query.trim().toLowerCase();
     const lang = await getUserLang(ctx.from);
-    const botUser = bot.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'SfidaRobot';
+    const botUser = await getBotUsername();
     const challenger = ctx.from.username ? `@${ctx.from.username}` : (ctx.from.first_name || 'Warrior');
 
-    // Parse any wager amount from query (e.g. "@SfidaRobot roulette 2" or "@SfidaRobot 5")
+    // Parse any wager amount from query (e.g. "@sfida_bot roulette 2" or "@sfida_bot 5")
     const numMatch = rawQuery.match(/([0-9]+(\.[0-9]+)?)/);
     const customWager = numMatch ? parseFloat(numMatch[1]) : 1;
 
@@ -400,10 +430,10 @@ export function createTelegramBot(token?: string): Bot {
 
     for (const g of gamesToShow) {
       const wager = Math.max(g.minWager, isNaN(customWager) ? 1 : customWager).toFixed(2);
-      const cleanWagerParam = wager.replace('.', '_');
+      const cleanWagerParam = wager.replace('.', '-');
       const payout = (parseFloat(wager) * 2).toFixed(2);
 
-      const cardTitle = `${g.icon} ${g.title} • ${wager} GRAM`;
+      const cardTitle = `${g.title} • ${wager} GRAM`;
       const cardDesc = lang === 'it'
         ? `${g.descIt} | Vincita: ${payout} GRAM`
         : `${g.descEn} | Payout: ${payout} GRAM`;
@@ -424,14 +454,20 @@ export function createTelegramBot(token?: string): Bot {
           `{{emoji.eye}} <b>Spectators</b>: Pari-Mutuel betting window open\n\n` +
           `<i>Who dares to accept? Tap below to enter the Arena!</i>`;
 
-      const cardKeyboard = new InlineKeyboard().url(
-        botT(lang, 'inline_accept_btn', { wager }),
-        `https://t.me/${botUser}?startapp=create_${g.id}_${cleanWagerParam}`
-      );
+      const cardKeyboard = new InlineKeyboard()
+        .url(
+          botT(lang, 'group_duel_accept_btn', { wager }),
+          `https://t.me/${botUser}?startapp=inline_${g.id}_${cleanWagerParam}`
+        )
+        .row()
+        .url(
+          botT(lang, 'group_duel_spectate_btn'),
+          `https://t.me/${botUser}?startapp=duels`
+        );
 
       results.push({
         type: 'article',
-        id: `game_${g.id}_${cleanWagerParam}`,
+        id: `duel_${g.id}_${cleanWagerParam}_${Date.now()}`,
         title: cardTitle,
         description: cardDesc,
         input_message_content: {
@@ -443,6 +479,165 @@ export function createTelegramBot(token?: string): Bot {
     }
 
     await ctx.answerInlineQuery(results, { cache_time: 10 });
+  });
+
+  // Chosen inline result handler: automatically creates room and updates buttons upon sending
+  bot.on('chosen_inline_result', async (ctx) => {
+    const chosen = ctx.chosenInlineResult;
+    if (!chosen) return;
+
+    const resultId = chosen.result_id;
+    if (!resultId.startsWith('duel_')) return;
+
+    const parts = resultId.split('_');
+    const rawGame = parts[1] || 'roulette';
+    const wagerStr = (parts[2] || '1').replace('-', '.');
+    const wager = parseFloat(wagerStr) || 1;
+    const wagerNano = BigInt(Math.round(wager * 1e9));
+    const creationFee = 0.05;
+    const totalDeduct = wager + creationFee;
+
+    const { type: gameType, title: gameTitle } = parseGameType(rawGame);
+
+    const creator = chosen.from;
+    const customLang = await dbService.getUserLanguage(creator.id);
+    const lang: BotLanguage = resolveLanguage(customLang || creator.language_code);
+    const botUser = await getBotUsername();
+
+    // Register creator in database
+    await dbService.registerBotUser({
+      telegramId: creator.id,
+      username: creator.username,
+      firstName: creator.first_name,
+      lastName: creator.last_name,
+      languageCode: creator.language_code,
+    });
+
+    const userAccount = await dbService.getUserAccount(undefined, creator.id.toString(), creator.username);
+    const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
+
+    // Balance check
+    if (currentBal < totalDeduct) {
+      if (chosen.inline_message_id) {
+        const depositKeyboard = new InlineKeyboard().url(
+          botT(lang, 'group_duel_deposit_btn'),
+          `https://t.me/${botUser}?startapp=deposit`
+        );
+        await ctx.api.editMessageTextInline(
+          chosen.inline_message_id,
+          renderCustomEmojis(
+            botT(lang, 'group_duel_insufficient', {
+              username: creator.username || creator.first_name,
+              wager: wager.toFixed(2),
+              total: totalDeduct.toFixed(2),
+              balance: currentBal.toFixed(2),
+              missing: (totalDeduct - currentBal).toFixed(2),
+            })
+          ),
+          { parse_mode: 'HTML', reply_markup: depositKeyboard }
+        ).catch((err) => console.warn('[ChosenInline] editMessageTextInline error:', err?.message || err));
+      }
+      return;
+    }
+
+    // Debit funds implicitly: wager + 0.05 creation fee
+    const playerAAddress = userAccount.walletAddress || `tg_${creator.id}`;
+    const matchId = BigInt(Date.now() % 1000000000);
+
+    await dbService.debitUserBalance(
+      playerAAddress,
+      wager.toFixed(2),
+      'MATCH_BET',
+      `Inline duel #${matchId}`,
+      creator.id.toString()
+    );
+    await dbService.debitUserBalance(
+      playerAAddress,
+      creationFee.toFixed(2),
+      'CREATION_FEE',
+      `Creation fee for inline duel #${matchId}`,
+      creator.id.toString()
+    );
+    await dbService.creditTreasury(creationFee.toFixed(2), 'CREATION_FEE', matchId.toString());
+
+    const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
+    let escrowAddress = '';
+    if (clashMasterAddr && playerAAddress) {
+      escrowAddress = computeEscrowAddress(
+        clashMasterAddr,
+        matchId,
+        playerAAddress,
+        wagerNano,
+        signerService.getPublicKeyBigInt()
+      );
+    }
+
+    // Create room in RoomManager
+    const roomManager = RoomManager.getInstance();
+    const room = roomManager.createRoom(
+      {
+        matchId,
+        gameType,
+        wagerAmountNano: wagerNano,
+        playerAAddress,
+        escrowAddress,
+        isPrivate: false,
+      },
+      async (settledRoom, winner) => {
+        console.log(`[Inline Duel] Match #${settledRoom.matchId} settled with winner: ${winner}`);
+        let targetEscrow = settledRoom.escrowAddress;
+        if (!targetEscrow && clashMasterAddr) {
+          targetEscrow = computeEscrowAddress(
+            clashMasterAddr,
+            settledRoom.matchId,
+            settledRoom.config.playerAAddress,
+            settledRoom.config.wagerAmountNano,
+            signerService.getPublicKeyBigInt()
+          );
+        }
+        if (targetEscrow) {
+          await tonSettlementService.settleMatch(targetEscrow, settledRoom.matchId, winner);
+        }
+      }
+    );
+
+    room.state = 'LOBBY';
+    room.playerA.telegramId = creator.id.toString();
+    room.playerA.username = creator.username || creator.first_name;
+    room.playerA.photoUrl = userAccount.photoUrl || '';
+
+    // Update sent message with active match link
+    if (chosen.inline_message_id) {
+      const inlineMsgId = chosen.inline_message_id;
+      const duelUrl = `https://t.me/${botUser}?startapp=duel_${matchId}`;
+      const spectateUrl = `https://t.me/${botUser}?startapp=spectate_${matchId}`;
+
+      const activeKeyboard = new InlineKeyboard()
+        .url(botT(lang, 'group_duel_accept_btn', { wager: wager.toFixed(2) }), duelUrl)
+        .row()
+        .url(botT(lang, 'group_duel_spectate_btn'), spectateUrl);
+
+      const payout = (wager * 2).toFixed(2);
+      const cardText =
+        `${botT(lang, 'group_duel_card_title')}\n\n` +
+        botT(lang, 'group_duel_card_desc', {
+          creator: creator.username || creator.first_name,
+          gameTitle,
+          wager: wager.toFixed(2),
+          payout,
+        });
+
+      await ctx.api.editMessageTextInline(
+        inlineMsgId,
+        renderCustomEmojis(cardText),
+        { parse_mode: 'HTML', reply_markup: activeKeyboard }
+      ).catch(async () => {
+        await ctx.api.editMessageReplyMarkupInline(
+          inlineMsgId,
+          { reply_markup: activeKeyboard }
+        ).catch((err) => console.warn('[ChosenInline] editMessageReplyMarkupInline error:', err?.message || err));
+      });
+    }
   });
 
   return bot;

@@ -262,7 +262,7 @@ export const App: React.FC = () => {
       }
       setDeepRole('spectator');
       setActiveTab('home');
-    } else if (startParam.startsWith('create')) {
+    } else if (startParam.startsWith('create') || startParam.startsWith('inline')) {
       const parts = startParam.split('_');
       if (parts[1]) {
         setPendingCreateGame(parts[1] as GameType);
@@ -272,7 +272,7 @@ export const App: React.FC = () => {
         if (parts[i].startsWith('-')) {
           setOriginChatId(parts[i]);
         } else if (parts[i]) {
-          wagerParts.push(parts[i]);
+          wagerParts.push(parts[i].replace('-', '.'));
         }
       }
       if (wagerParts.length > 0) {

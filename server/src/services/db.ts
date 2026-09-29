@@ -79,6 +79,8 @@ export interface UserAccount {
   displayName?: string; // Real Telegram display name (first_name + last_name)
   photoUrl?: string; // Telegram profile picture url
   languageCode?: string; // Telegram user client language (e.g. 'it', 'en', 'ru')
+  customLanguageCode?: string; // Explicit language chosen via /lang
+  hasExplicitLanguage?: boolean;
   referredBy?: string; // Telegram ID or wallet of recruiter
   referralEarningsGram?: string; // Total lifetime referral earnings in GRAM
   isBotBlocked?: boolean; // Whether user has blocked the bot
@@ -684,7 +686,12 @@ export class DatabaseService {
     );
 
     let changed = false;
-    if (user.languageCode && account.languageCode !== user.languageCode) {
+    if (
+      user.languageCode &&
+      !account.customLanguageCode &&
+      !account.hasExplicitLanguage &&
+      account.languageCode !== user.languageCode
+    ) {
       account.languageCode = user.languageCode;
       changed = true;
     }
@@ -743,9 +750,14 @@ export class DatabaseService {
 
   public async updateUserLanguage(telegramId: string | number, languageCode: string): Promise<UserAccount | null> {
     const cleanTg = String(telegramId).trim();
-    const user = this.usersByTg.get(cleanTg);
+    let user = this.usersByTg.get(cleanTg);
+    if (!user) {
+      user = await this.getUserAccount(undefined, cleanTg);
+    }
     if (user) {
+      user.customLanguageCode = languageCode;
       user.languageCode = languageCode;
+      user.hasExplicitLanguage = true;
       user.updatedAt = Date.now();
       this.persistData();
       return user;
@@ -757,7 +769,7 @@ export class DatabaseService {
     if (!telegramId) return undefined;
     const cleanTg = String(telegramId).trim();
     const user = this.usersByTg.get(cleanTg);
-    return user?.languageCode;
+    return user?.customLanguageCode || user?.languageCode;
   }
 
   public async setGroupAffiliate(config: {
