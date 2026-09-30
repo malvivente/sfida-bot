@@ -178,7 +178,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
             {roomState === 'GAME_ACTIVE' ? (
               stoppedA ? <span className="text-cyber-green">✓ STOPPED</span> : <span className="text-slate-400">TICKING</span>
             ) : (
-              playerAReady ? <span className="text-cyber-green font-bold">✓ READY</span> : <span className="text-slate-400">WAITING</span>
+              playerAReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
           </span>
         </div>
@@ -209,7 +209,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
             {roomState === 'GAME_ACTIVE' ? (
               stoppedB ? <span className="text-cyber-green">✓ STOPPED</span> : <span className="text-slate-400">TICKING</span>
             ) : (
-              playerBReady ? <span className="text-cyber-green font-bold">✓ READY</span> : <span className="text-slate-400">WAITING</span>
+              playerBReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
           </span>
         </div>
@@ -341,10 +341,10 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                 {/* Tracking & Differences Info */}
                 <div className="w-full flex items-center justify-between text-xs font-chakra p-2 bg-black/50 border border-cyber-border rounded-xl">
                   <span className={stoppedA || roomState === 'MATCH_SETTLED' ? 'text-cyber-cyan font-bold' : 'text-slate-400'}>
-                    {playerAName}: {diffA !== undefined ? `${diffA}ms diff` : stoppedA ? 'STOPPED' : 'WAITING'}
+                    {playerAName}: {diffA !== undefined ? `${diffA}ms diff` : stoppedA ? 'STOPPED' : t('arena.waitingTurn')}
                   </span>
                   <span className={stoppedB || roomState === 'MATCH_SETTLED' ? 'text-cyber-pink font-bold' : 'text-slate-400'}>
-                    {playerBName}: {diffB !== undefined ? `${diffB}ms diff` : stoppedB ? 'STOPPED' : 'WAITING'}
+                    {playerBName}: {diffB !== undefined ? `${diffB}ms diff` : stoppedB ? 'STOPPED' : t('arena.waitingTurn')}
                   </span>
                 </div>
               </div>
@@ -456,7 +456,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               {/* Winner Prize row shown ONLY to the winner! */}
               {isWinner && (
                 <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-green/50 w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-300">Winner Prize:</span>
+                  <span className="text-slate-300">{t('arena.winnerPrize')}:</span>
                   <span className="font-bold text-cyber-green flex items-center space-x-1">
                     <span>+{winnerPayoutTon}</span>
                     <GramIcon className="w-3.5 h-3.5 text-cyber-green inline" />
@@ -470,28 +470,28 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
-                      <span>REMATCH OFFER SENT (2X)</span>
+                      <span>{t('arena.rematchOfferSent')}</span>
                     </span>
                     <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} GRAM</span>
                   </div>
                   <span className="text-[11px] text-slate-300 font-chakra">
-                    Waiting for opponent to accept the 2X challenge...
+                    {t('arena.waitingForOpponentRematch')}
                   </span>
                   {onDeclineRematch && (
                     <button
                       onClick={onDeclineRematch}
                       className="w-full py-1.5 rounded-lg bg-black/60 border border-slate-600 text-xs text-slate-300 hover:text-white font-chakra"
                     >
-                      WITHDRAW OFFER
+                      {t('arena.decline')}
                     </button>
                   )}
                 </div>
               )}
               {rematchOffer && !isRematchProposer && (
                 <div className="w-full p-2.5 rounded-xl bg-cyber-pink/25 border border-cyber-pink flex flex-col space-y-2 mb-2 animate-pulse">
-                  <span className="text-xs font-orbitron font-bold text-white">🔥 2X REMATCH OFFER!</span>
+                  <span className="text-xs font-orbitron font-bold text-white">🔥 {t('arena.rematch2x')}</span>
                   <span className="text-[11px] text-slate-200 font-chakra">
-                    {rematchOffer.proposerName} challenges you to a 2X Rematch for {rematchOffer.newWagerTon} GRAM!
+                    {t('arena.rematchChallengeReceived', { name: rematchOffer.proposerName, amount: rematchOffer.newWagerTon })}
                   </span>
                   {!hasEnoughForRematch ? (
                     <div className="flex flex-col space-y-1.5 pt-1">
@@ -500,20 +500,20 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                         <span className="font-bold">Mancano: {missingForRematch} GRAM</span>
                       </div>
                       <div className="flex space-x-2">
-                        <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
+                        <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">{t('arena.decline')}</button>
                         <button
                           onClick={() => onOpenDeposit?.(missingForRematch)}
                           className="flex-1 py-1.5 rounded-lg bg-cyber-cyan text-cyber-bg text-xs font-bold font-orbitron flex items-center justify-center space-x-1 shadow-neon-cyan hover:brightness-110 active:scale-95"
                         >
                           <ArrowDownLeft className="w-3.5 h-3.5" />
-                          <span>DEPOSITA ({missingForRematch})</span>
+                          <span>{t('arena.depositForRematch', { amount: missingForRematch })}</span>
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex space-x-2 pt-1">
-                      <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">DECLINE</button>
-                      <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron shadow-neon-pink hover:brightness-110 active:scale-95">ACCEPT 2X</button>
+                      <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">{t('arena.decline')}</button>
+                      <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron shadow-neon-pink hover:brightness-110 active:scale-95">{t('arena.accept2x')}</button>
                     </div>
                   )}
                   {socketError && (
@@ -528,7 +528,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               {!rematchOffer && onRequestRematch && role === 'player' && (
                 !opponentConnected ? (
                   <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
-                    OPPONENT LEFT ROOM (REMATCH UNAVAILABLE)
+                    {t('arena.opponentLeft')}
                   </div>
                 ) : (
                   <button
@@ -536,7 +536,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                     className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-cyber-pink to-cyber-cyan text-white shadow-neon-pink hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>REMATCH (2X BET)</span>
+                    <span>{t('arena.rematch2x')}</span>
                   </button>
                 )
               )}
@@ -544,7 +544,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               {isWinner && (
                 <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
                   <span className="text-xs font-orbitron font-bold text-cyber-green">
-                    ✅ PRIZE AUTO-CREDITED (+{winnerPayoutTon} GRAM)
+                    ✅ {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
                   </span>
                 </div>
               )}
@@ -554,7 +554,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   onClick={onReturnToLobby}
                   className="w-full py-2 rounded-xl bg-cyber-border text-slate-300 text-xs font-chakra font-bold hover:text-white"
                 >
-                  BACK TO LOBBY
+                  {t('arena.backToLobby')}
                 </button>
               )}
             </motion.div>

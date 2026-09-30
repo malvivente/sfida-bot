@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Crosshair,
   Shield,
@@ -7,13 +7,10 @@ import {
   Clock,
   Trophy,
   Loader2,
-  Flame,
   Swords,
   Zap,
-  Volume2,
-  Lock,
 } from 'lucide-react';
-import { CyberShotgunState, ShotgunItem, ShellType, ShotgunTarget } from '../../types/index.js';
+import { CyberShotgunState, ShotgunItem, ShotgunTarget } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
 import { useI18n } from '../../i18n/index.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
@@ -56,37 +53,94 @@ interface CyberShotgunArenaProps {
   onInviteChallenger?: () => void;
 }
 
-const ITEM_DETAILS: Record<ShotgunItem, { name: string; icon: string; desc: string; color: string }> = {
-  saw: {
-    name: 'Sega',
-    icon: '🪚',
-    desc: 'Raddoppia il danno del prossimo colpo a 2 HP',
-    color: 'from-amber-500/20 to-orange-500/20 border-amber-500/60 text-amber-300',
-  },
-  ejector: {
-    name: 'Ejector',
-    icon: '🍺',
-    desc: 'Espelle la cartuccia in canna mostrandola a tutti',
-    color: 'from-blue-500/20 to-cyan-500/20 border-cyan-500/60 text-cyan-300',
-  },
-  handcuffs: {
-    name: 'Manette',
-    icon: '🔗',
-    desc: "Fa saltare il prossimo turno all'avversario",
-    color: 'from-purple-500/20 to-indigo-500/20 border-purple-500/60 text-purple-300',
-  },
-  inverter: {
-    name: 'Invertitore',
-    icon: '🔄',
-    desc: 'Inverte la polarità del colpo: Vera ↔ Salve',
-    color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/60 text-emerald-300',
-  },
+// Crisp Vector SVGs for Tactical Items (No Emojis!)
+const ItemIcon: React.FC<{ item: ShotgunItem; className?: string }> = ({ item, className = 'w-4 h-4' }) => {
+  switch (item) {
+    case 'saw':
+      // Tactical Serrated Saw Blade
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 2 L14 5 L12 8 L10 5 Z" fill="currentColor" />
+          <path d="M22 12 L19 14 L16 12 L19 10 Z" fill="currentColor" />
+          <path d="M12 22 L10 19 L12 16 L14 19 Z" fill="currentColor" />
+          <path d="M2 12 L5 10 L8 12 L5 14 Z" fill="currentColor" />
+          <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+        </svg>
+      );
+    case 'ejector':
+      // Shotgun Slide Rack & Shell Eject
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <rect x="3" y="9" width="11" height="6" rx="1.5" stroke="currentColor" fill="currentColor" fillOpacity="0.2" />
+          <path d="M14 12 h7 M18 9 l3 3 l-3 3" stroke="currentColor" strokeWidth="2" />
+          <circle cx="7" cy="12" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    case 'handcuffs':
+      // Cyber Energy Restraints / Handcuffs
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <circle cx="7" cy="14" r="4.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.15" />
+          <circle cx="17" cy="14" r="4.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.15" />
+          <path d="M7 9.5 V6 a2 2 0 0 1 2 -2 h6 a2 2 0 0 1 2 2 v3.5" stroke="currentColor" strokeWidth="2" />
+          <line x1="11.5" y1="14" x2="12.5" y2="14" stroke="currentColor" strokeWidth="2.5" />
+        </svg>
+      );
+    case 'inverter':
+      // Quantum Polarity Inverter
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="M20 11 A8 8 0 0 0 6.3 5.3 L3 8 M3 3 v5 h5" stroke="currentColor" strokeWidth="2" />
+          <path d="M4 13 a8 8 0 0 0 13.7 5.7 l3.3 -2.7 M21 21 v-5 h-5" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+  }
+};
+
+// Shotgun Shell Cartridge SVG (Live vs Blank)
+const ShellIcon: React.FC<{ type: 'LIVE' | 'BLANK'; className?: string }> = ({ type, className = 'w-4 h-7' }) => {
+  if (type === 'LIVE') {
+    return (
+      <svg viewBox="0 0 20 36" fill="none" className={className}>
+        {/* Brass Cap */}
+        <rect x="2" y="27" width="16" height="7" rx="1.5" fill="#f59e0b" stroke="#d97706" strokeWidth="1" />
+        <rect x="6" y="34" width="8" height="2" rx="0.5" fill="#b45309" />
+        {/* Primer */}
+        <circle cx="10" cy="30.5" r="2.5" fill="#ef4444" />
+        {/* Red Hull */}
+        <rect x="3" y="4" width="14" height="23" rx="2" fill="#ef4444" stroke="#dc2626" strokeWidth="1.2" />
+        {/* Ribbing */}
+        <line x1="4" y1="10" x2="16" y2="10" stroke="#b91c1c" strokeWidth="1" />
+        <line x1="4" y1="16" x2="16" y2="16" stroke="#b91c1c" strokeWidth="1" />
+        <line x1="4" y1="22" x2="16" y2="22" stroke="#b91c1c" strokeWidth="1" />
+        {/* Crimp top */}
+        <path d="M3 6 L10 2 L17 6 Z" fill="#991b1b" stroke="#7f1d1d" strokeWidth="1" />
+      </svg>
+    );
+  }
+
+  // Blank Shell: Metal gunmetal casing
+  return (
+    <svg viewBox="0 0 20 36" fill="none" className={className}>
+      {/* Dull Silver Cap */}
+      <rect x="2" y="27" width="16" height="7" rx="1.5" fill="#64748b" stroke="#475569" strokeWidth="1" />
+      <rect x="6" y="34" width="8" height="2" rx="0.5" fill="#334155" />
+      {/* Grey Hull */}
+      <rect x="3" y="4" width="14" height="23" rx="2" fill="#334155" stroke="#475569" strokeWidth="1.2" />
+      {/* Ribbing */}
+      <line x1="4" y1="10" x2="16" y2="10" stroke="#1e293b" strokeWidth="1" />
+      <line x1="4" y1="16" x2="16" y2="16" stroke="#1e293b" strokeWidth="1" />
+      <line x1="4" y1="22" x2="16" y2="22" stroke="#1e293b" strokeWidth="1" />
+      {/* Crimp top */}
+      <path d="M3 6 L10 2 L17 6 Z" fill="#1e293b" stroke="#0f172a" strokeWidth="1" />
+    </svg>
+  );
 };
 
 export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   gameData,
   role,
-  isPlayerTurn,
   onShoot,
   onUseItem,
   playerAName,
@@ -134,9 +188,8 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   const mancheNumber = gameData?.mancheNumber ?? 1;
 
   const myItems = userSide === 'A' ? itemsA : itemsB;
-  const opponentItems = userSide === 'A' ? itemsB : itemsA;
-  const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
   const isMyTurn = role === 'player' && currentTurn === userSide;
+  const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 2.0).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
@@ -144,7 +197,6 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   const hasEnoughForRematch = currentBal >= rematchWager;
   const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
-  // 2-Phase settlement popup: 3s splash screen then settled view
   const [outcomePhase, setOutcomePhase] = useState<'splash' | 'settled' | 'none'>('none');
 
   useEffect(() => {
@@ -161,35 +213,43 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
 
   const handleShootClick = (target: ShotgunTarget) => {
     if (!isMyTurn) return;
-    triggerImpact?.();
+    triggerImpact?.('heavy');
     onShoot(target);
   };
 
   const handleUseItemClick = (item: ShotgunItem) => {
     if (!isMyTurn) return;
-    triggerImpact?.();
+    triggerImpact?.('medium');
     onUseItem(item);
   };
 
-  // Render HP Hearts/Bars
-  const renderHpMeters = (hp: number, max: number, side: 'A' | 'B') => {
-    const isPlayer = side === userSide && role === 'player';
+  // Render High-Tech Cyber Battery Lightning HP Cells
+  const renderHpCells = (hp: number, max: number, side: 'A' | 'B') => {
     return (
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center space-x-1.5">
         {Array.from({ length: max }).map((_, i) => {
           const isAlive = i < hp;
+          const isA = side === 'A';
           return (
             <div
               key={i}
-              className={`w-4 h-5 sm:w-5 sm:h-6 rounded-md border flex items-center justify-center transition-all duration-300 ${
+              className={`w-6 h-7 rounded-lg border flex items-center justify-center transition-all duration-300 relative overflow-hidden ${
                 isAlive
-                  ? side === 'A'
-                    ? 'bg-cyber-cyan/30 border-cyber-cyan shadow-[0_0_10px_rgba(0,240,255,0.5)] text-cyber-cyan'
-                    : 'bg-cyber-pink/30 border-cyber-pink shadow-[0_0_10px_rgba(255,0,85,0.5)] text-cyber-pink'
-                  : 'bg-black/60 border-slate-800 text-slate-700 opacity-40'
+                  ? isA
+                    ? 'bg-gradient-to-t from-cyan-950/80 to-cyan-800/80 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)] text-cyan-300'
+                    : 'bg-gradient-to-t from-rose-950/80 to-pink-800/80 border-pink-400 shadow-[0_0_12px_rgba(244,63,94,0.6)] text-pink-300'
+                  : 'bg-black/80 border-slate-800 text-slate-700 opacity-40'
               }`}
             >
-              <span className="text-[10px] font-bold">{isAlive ? '⚡' : '✖'}</span>
+              {isAlive ? (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 drop-shadow-[0_0_4px_currentColor]">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 opacity-40">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                </svg>
+              )}
             </div>
           );
         })}
@@ -198,162 +258,246 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-between p-3.5 sm:p-4 bg-cyber-card/90 border border-red-500/40 rounded-3xl backdrop-blur-xl shadow-[0_0_40px_rgba(239,68,68,0.15)] relative overflow-hidden min-h-[540px]">
-      {/* Background Ambience */}
-      <div className="absolute inset-0 bg-radial-gradient from-red-950/20 via-black/40 to-black/90 pointer-events-none" />
+    <div className="w-full flex flex-col items-center justify-between p-3 sm:p-4 bg-[#0d0f17] border border-red-500/40 rounded-3xl backdrop-blur-2xl shadow-[0_0_50px_rgba(239,68,68,0.2)] relative overflow-hidden min-h-[550px]">
+      {/* Background Cybernetic Grid & Atmospheric Flare */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(239,68,68,0.12),transparent_70%)] pointer-events-none" />
 
-      {/* Top Header: Players & HP Meters */}
-      <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 pb-2.5 gap-2">
-        {/* Player A */}
-        <div className="flex flex-col items-start flex-1 min-w-0">
-          <div className="flex items-center space-x-1.5 w-full">
-            <span className="text-[11px] font-chakra font-bold text-cyber-cyan truncate">{playerAName}</span>
+      {/* Top Header: Duelists with Luminous Turn Highlighting */}
+      <div className="w-full z-10 grid grid-cols-2 gap-2.5 pb-2 border-b border-white/10">
+        {/* Player A Card */}
+        <div
+          className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-300 ${
+            currentTurn === 'A' && roomState === 'GAME_ACTIVE'
+              ? 'bg-cyan-950/40 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-[1.02]'
+              : 'bg-black/40 border-white/10 opacity-70'
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs font-chakra font-black text-cyan-300 truncate">{playerAName}</span>
             {userSide === 'A' && role === 'player' && (
-              <span className="text-[9px] bg-cyber-cyan/20 border border-cyber-cyan/40 text-cyber-cyan px-1 rounded font-mono">TU</span>
+              <span className="text-[8px] bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 px-1 py-0.2 rounded font-mono font-bold">
+                {t('arena.you')}
+              </span>
             )}
           </div>
-          <div className="mt-1 flex items-center space-x-1.5">
-            {renderHpMeters(hpA, maxHp, 'A')}
-            <span className="text-[10px] font-mono font-bold text-cyber-cyan">{hpA}/{maxHp} HP</span>
+          <div className="mt-1.5 flex items-center justify-between">
+            {renderHpCells(hpA, maxHp, 'A')}
+            <span className="text-[10px] font-mono font-black text-cyan-300">{hpA}/{maxHp} HP</span>
           </div>
           {isHandcuffedA && (
-            <span className="text-[8px] font-mono text-purple-400 bg-purple-950/60 border border-purple-500/40 px-1 py-0.5 rounded mt-1">
-              🔗 AMMANETTATO
+            <span className="text-[8px] font-mono text-purple-300 bg-purple-950/80 border border-purple-500/50 px-1.5 py-0.5 rounded mt-1 text-center">
+              {t('arena.handcuffed')}
             </span>
           )}
-          <span className="text-[9px] font-mono mt-0.5">
+          <span className="text-[9px] font-mono mt-1">
             {roomState === 'GAME_ACTIVE' ? (
               currentTurn === 'A' ? (
-                <span className="text-cyber-cyan font-bold animate-pulse">🎯 IN AZIONE</span>
+                <span className="text-cyan-300 font-black animate-pulse">{t('arena.activeTurn')}</span>
               ) : (
-                <span className="text-slate-500">ATTESA</span>
+                <span className="text-slate-500">{t('arena.waitingTurn')}</span>
               )
             ) : playerAReady ? (
-              <span className="text-cyber-green font-bold">✓ PRONTO</span>
+              <span className="text-emerald-400 font-bold">{t('arena.readyBadge')}</span>
             ) : (
-              <span className="text-slate-400">IN ATTESA</span>
+              <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
           </span>
         </div>
 
-        {/* Center: Manche & Saw indicator */}
-        <div className="flex flex-col items-center justify-center px-2">
-          {roomState === 'GAME_ACTIVE' && (
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-orbitron uppercase text-slate-400">ROUND {mancheNumber}</span>
-              {isSawActive && (
-                <span className="text-[9px] font-orbitron font-extrabold text-amber-300 bg-amber-500/20 border border-amber-500 px-1.5 py-0.5 rounded-full animate-pulse mt-0.5 shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                  🪚 2X DANNO
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Player B */}
-        <div className="flex flex-col items-end flex-1 min-w-0">
-          <div className="flex items-center space-x-1.5 justify-end w-full">
+        {/* Player B Card */}
+        <div
+          className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-300 ${
+            currentTurn === 'B' && roomState === 'GAME_ACTIVE'
+              ? 'bg-rose-950/40 border-pink-400 shadow-[0_0_20px_rgba(244,63,94,0.4)] scale-[1.02]'
+              : 'bg-black/40 border-white/10 opacity-70'
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs font-chakra font-black text-pink-300 truncate">{playerBName}</span>
             {userSide === 'B' && role === 'player' && (
-              <span className="text-[9px] bg-cyber-pink/20 border border-cyber-pink/40 text-cyber-pink px-1 rounded font-mono">TU</span>
+              <span className="text-[8px] bg-pink-500/20 border border-pink-400/50 text-pink-300 px-1 py-0.2 rounded font-mono font-bold">
+                {t('arena.you')}
+              </span>
             )}
-            <span className="text-[11px] font-chakra font-bold text-cyber-pink truncate">{playerBName}</span>
           </div>
-          <div className="mt-1 flex items-center space-x-1.5">
-            <span className="text-[10px] font-mono font-bold text-cyber-pink">{hpB}/{maxHp} HP</span>
-            {renderHpMeters(hpB, maxHp, 'B')}
+          <div className="mt-1.5 flex items-center justify-between">
+            {renderHpCells(hpB, maxHp, 'B')}
+            <span className="text-[10px] font-mono font-black text-pink-300">{hpB}/{maxHp} HP</span>
           </div>
           {isHandcuffedB && (
-            <span className="text-[8px] font-mono text-purple-400 bg-purple-950/60 border border-purple-500/40 px-1 py-0.5 rounded mt-1">
-              🔗 AMMANETTATO
+            <span className="text-[8px] font-mono text-purple-300 bg-purple-950/80 border border-purple-500/50 px-1.5 py-0.5 rounded mt-1 text-center">
+              {t('arena.handcuffed')}
             </span>
           )}
-          <span className="text-[9px] font-mono mt-0.5">
+          <span className="text-[9px] font-mono mt-1 text-right">
             {roomState === 'GAME_ACTIVE' ? (
               currentTurn === 'B' ? (
-                <span className="text-cyber-pink font-bold animate-pulse">🎯 IN AZIONE</span>
+                <span className="text-pink-300 font-black animate-pulse">{t('arena.activeTurn')}</span>
               ) : (
-                <span className="text-slate-500">ATTESA</span>
+                <span className="text-slate-500">{t('arena.waitingTurn')}</span>
               )
             ) : playerBReady ? (
-              <span className="text-cyber-green font-bold">✓ PRONTO</span>
+              <span className="text-emerald-400 font-bold">{t('arena.readyBadge')}</span>
             ) : (
-              <span className="text-slate-400">IN ATTESA</span>
+              <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
           </span>
         </div>
       </div>
 
-      {/* Center Cyber Shotgun & Ammo Counts */}
+      {/* Main Tactical Combat Area */}
       <div className="my-auto w-full flex flex-col items-center justify-center py-2 z-10 text-center">
         {roomState === 'GAME_ACTIVE' && (
-          <div className="flex flex-col items-center space-y-3 w-full">
-            {/* Ammo Magazine Display */}
-            <div className="flex items-center justify-center space-x-4 px-4 py-2 rounded-2xl bg-black/60 border border-slate-800 shadow-inner">
-              {/* Live Shells */}
+          <div className="flex flex-col items-center space-y-2.5 w-full">
+            {/* Luminous Active Turn Header Banner */}
+            <div
+              className={`w-full py-1.5 px-3 rounded-xl border flex items-center justify-between text-xs font-heading font-black tracking-wider uppercase transition-all duration-300 ${
+                isMyTurn
+                  ? 'bg-gradient-to-r from-red-600/30 via-red-500/20 to-red-600/30 border-red-500/80 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse'
+                  : 'bg-black/50 border-white/10 text-slate-400'
+              }`}
+            >
               <div className="flex items-center space-x-1.5">
-                <div className="w-3.5 h-6 rounded-sm bg-gradient-to-t from-red-600 to-red-400 border border-red-300 shadow-[0_0_8px_rgba(239,68,68,0.7)] flex items-center justify-center">
-                  <span className="text-[8px] font-bold text-black">🔥</span>
-                </div>
+                <span className={`w-2 h-2 rounded-full ${isMyTurn ? 'bg-red-400 animate-ping' : 'bg-slate-600'}`} />
+                <span>
+                  {isMyTurn ? t('shotgun.yourTurnPrompt') : `${t('arena.activeTurn')}: ${activeTurnName}`}
+                </span>
+              </div>
+              <span className="font-mono text-xs text-red-300">
+                {t('arena.round')} {mancheNumber}
+              </span>
+            </div>
+
+            {/* Public Magazine Ammo Counts (No Emojis!) */}
+            <div className="flex items-center justify-center space-x-5 px-4 py-2 rounded-2xl bg-black/60 border border-white/10 shadow-inner">
+              {/* Live Shells */}
+              <div className="flex items-center space-x-2">
+                <ShellIcon type="LIVE" className="w-4 h-6" />
                 <div className="flex flex-col text-left">
-                  <span className="text-[9px] font-chakra uppercase text-slate-400">Vere</span>
+                  <span className="text-[9px] font-chakra uppercase text-slate-400 font-bold">{t('shotgun.liveShells')}</span>
                   <span className="text-sm font-mono font-black text-red-400">{liveCount}</span>
                 </div>
               </div>
 
-              <div className="h-6 w-[1px] bg-slate-800" />
+              <div className="h-6 w-[1px] bg-white/10" />
 
               {/* Blank Shells */}
-              <div className="flex items-center space-x-1.5">
-                <div className="w-3.5 h-6 rounded-sm bg-gradient-to-t from-slate-500 to-slate-300 border border-slate-200 shadow-[0_0_8px_rgba(148,163,184,0.4)] flex items-center justify-center">
-                  <span className="text-[8px] font-bold text-black">⚪</span>
-                </div>
+              <div className="flex items-center space-x-2">
+                <ShellIcon type="BLANK" className="w-4 h-6" />
                 <div className="flex flex-col text-left">
-                  <span className="text-[9px] font-chakra uppercase text-slate-400">A Salve</span>
+                  <span className="text-[9px] font-chakra uppercase text-slate-400 font-bold">{t('shotgun.blankShells')}</span>
                   <span className="text-sm font-mono font-black text-slate-300">{blankCount}</span>
                 </div>
               </div>
 
-              <div className="h-6 w-[1px] bg-slate-800" />
+              <div className="h-6 w-[1px] bg-white/10" />
 
-              {/* Total Remaining */}
+              {/* In Chamber Remaining */}
               <div className="flex flex-col text-right">
-                <span className="text-[9px] font-chakra uppercase text-slate-400">Nel Fucile</span>
-                <span className="text-sm font-mono font-bold text-cyber-cyan">{totalShells}</span>
+                <span className="text-[9px] font-chakra uppercase text-slate-400 font-bold">{t('shotgun.inChamber')}</span>
+                <span className="text-sm font-mono font-bold text-cyan-300">{totalShells}</span>
               </div>
             </div>
 
-            {/* Central Shotgun 2D Representation */}
+            {/* Central Badass Cyber Shotgun SVG Graphic */}
             <motion.div
-              animate={lastAction?.type === 'SHOOT' ? { x: [-8, 8, -4, 4, 0], scale: [1, 1.05, 1] } : {}}
-              transition={{ duration: 0.4 }}
-              className="relative w-56 sm:w-64 h-24 rounded-2xl bg-gradient-to-b from-slate-900/90 to-black/90 border border-red-500/30 flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.15)] overflow-hidden"
+              animate={lastAction?.type === 'SHOOT' ? { x: [-14, 10, -6, 2, 0], scale: [1, 1.04, 1] } : {}}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="relative w-full max-w-[340px] h-28 rounded-2xl bg-gradient-to-b from-slate-900/90 via-[#10131e]/90 to-black/95 border border-red-500/30 flex items-center justify-center shadow-[0_0_35px_rgba(239,68,68,0.2)] overflow-hidden"
             >
-              {/* Shotgun Silhouette */}
-              <svg viewBox="0 0 200 60" className="w-48 h-16 drop-shadow-[0_0_12px_rgba(239,68,68,0.4)]">
-                {/* Stock */}
-                <path d="M 15 25 L 35 15 L 45 15 L 50 28 L 40 45 L 20 45 Z" fill="#334155" stroke="#64748b" strokeWidth="1.5" />
-                {/* Receiver */}
-                <rect x="50" y="20" width="45" height="18" rx="2" fill="#1e293b" stroke="#cbd5e1" strokeWidth="1.5" />
-                {/* Ejection Port */}
-                <rect x="68" y="23" width="16" height="6" rx="1" fill="#0f172a" stroke="#e2e8f0" strokeWidth="1" />
-                {/* Pump Handle */}
-                <rect x="105" y="32" width="30" height="10" rx="2" fill="#475569" stroke="#94a3b8" strokeWidth="1.5" />
-                {/* Barrel (Normal or Sawed-off) */}
+              {/* Neon Grid Ambient Lines in Shotgun Chamber */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:12px_12px]" />
+
+              {/* Badass Cyber Shotgun Silhouette with Mechanical Details */}
+              <svg viewBox="0 0 320 90" className="w-[300px] h-[82px] drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                <defs>
+                  <linearGradient id="metalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#475569" />
+                    <stop offset="50%" stopColor="#1e293b" />
+                    <stop offset="100%" stopColor="#0f172a" />
+                  </linearGradient>
+                  <linearGradient id="gripGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#334155" />
+                    <stop offset="100%" stopColor="#090d16" />
+                  </linearGradient>
+                  <linearGradient id="sawGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#f59e0b" />
+                    <stop offset="100%" stopColor="#ef4444" />
+                  </linearGradient>
+                </defs>
+
+                {/* Stock & Recoil Pad */}
+                <path d="M 12 36 L 42 22 L 72 22 L 80 40 L 64 68 L 32 68 L 18 56 Z" fill="url(#metalGrad)" stroke="#64748b" strokeWidth="1.8" />
+                <rect x="8" y="34" width="6" height="24" rx="2" fill="#090d16" stroke="#475569" strokeWidth="1" />
+                <line x1="28" y1="36" x2="56" y2="36" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3" />
+
+                {/* Trigger & Trigger Guard */}
+                <path d="M 80 50 C 80 64 96 64 96 50 Z" fill="none" stroke="#64748b" strokeWidth="1.8" />
+                <path d="M 88 50 Q 86 58 90 60" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+
+                {/* Main Heavy Receiver */}
+                <rect x="76" y="28" width="74" height="26" rx="3" fill="url(#metalGrad)" stroke="#94a3b8" strokeWidth="2" />
+                {/* Cyber LED Status Bar on Receiver */}
+                <rect x="84" y="32" width="22" height="4" rx="1" fill="#ef4444" className="animate-pulse" />
+                <rect x="110" y="32" width="6" height="4" rx="1" fill="#22d3ee" />
+                {/* Ejection Port with Brass Cartridge visible */}
+                <rect x="100" y="38" width="28" height="11" rx="2" fill="#090d16" stroke="#e2e8f0" strokeWidth="1.5" />
+                <rect x="104" y="41" width="16" height="6" rx="1" fill="#f59e0b" />
+
+                {/* Top Picatinny Rail */}
+                <rect x="72" y="24" width="80" height="4" rx="1" fill="#334155" stroke="#64748b" strokeWidth="1" />
+                {/* Red Dot Holographic Sight */}
+                <rect x="114" y="16" width="24" height="8" rx="2" fill="#1e293b" stroke="#38bdf8" strokeWidth="1.2" />
+                <circle cx="126" cy="20" r="1.5" fill="#ef4444" className="animate-ping" />
+
+                {/* Magazine Tube Underneath */}
+                <rect x="150" y="42" width="110" height="10" rx="2" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
+
+                {/* Tactical Ribbed Pump Slider */}
+                <rect x="162" y="44" width="46" height="15" rx="3" fill="url(#gripGrad)" stroke="#94a3b8" strokeWidth="2" />
+                <line x1="172" y1="46" x2="172" y2="57" stroke="#64748b" strokeWidth="1.8" />
+                <line x1="182" y1="46" x2="182" y2="57" stroke="#64748b" strokeWidth="1.8" />
+                <line x1="192" y1="46" x2="192" y2="57" stroke="#64748b" strokeWidth="1.8" />
+                <line x1="200" y1="46" x2="200" y2="57" stroke="#64748b" strokeWidth="1.8" />
+
+                {/* Main Barrel (Normal vs Sawed-Off) */}
                 {isSawActive ? (
-                  <path d="M 95 24 L 140 24 L 140 32 L 95 32 Z" fill="#0f172a" stroke="#f59e0b" strokeWidth="2" strokeDasharray="3 2" />
+                  <>
+                    {/* Chopped-off Barrel */}
+                    <rect x="150" y="30" width="70" height="12" rx="1" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1.8" />
+                    {/* Red-Hot Sheared Cut Edge */}
+                    <line x1="220" y1="28" x2="220" y2="54" stroke="url(#sawGlow)" strokeWidth="4" strokeLinecap="round" className="animate-pulse" />
+                    {/* Sparks */}
+                    <circle cx="224" cy="32" r="2" fill="#f59e0b" className="animate-ping" />
+                    <circle cx="226" cy="48" r="1.5" fill="#ef4444" className="animate-ping" />
+                  </>
                 ) : (
-                  <path d="M 95 24 L 185 24 L 185 32 L 95 32 Z" fill="#0f172a" stroke="#94a3b8" strokeWidth="1.8" />
+                  <>
+                    {/* Full Length Tactical Barrel */}
+                    <rect x="150" y="30" width="138" height="12" rx="1" fill="#0f172a" stroke="#94a3b8" strokeWidth="1.8" />
+                    {/* Heat Vent Slots */}
+                    <circle cx="220" cy="36" r="2" fill="#334155" />
+                    <circle cx="236" cy="36" r="2" fill="#334155" />
+                    <circle cx="252" cy="36" r="2" fill="#334155" />
+                    <circle cx="268" cy="36" r="2" fill="#334155" />
+                    {/* Tactical Muzzle Brake Choke */}
+                    <rect x="288" y="28" width="16" height="16" rx="2" fill="#1e293b" stroke="#cbd5e1" strokeWidth="1.8" />
+                    <line x1="294" y1="29" x2="294" y2="43" stroke="#ef4444" strokeWidth="1.5" />
+                    <line x1="299" y1="29" x2="299" y2="43" stroke="#ef4444" strokeWidth="1.5" />
+                  </>
                 )}
-                {/* Muzzle flash glow if BANG */}
+
+                {/* Muzzle Flash if Bang */}
                 {lastAction?.result === 'BANG' && (
-                  <circle cx="188" cy="28" r="8" fill="#ef4444" opacity="0.8" className="animate-ping" />
+                  <circle cx={isSawActive ? 222 : 306} cy="36" r="14" fill="#ef4444" opacity="0.8" className="animate-ping" />
                 )}
               </svg>
 
-              {/* Status overlay */}
+              {/* Sawed-Off Visual Badge Overlay */}
               {isSawActive && (
-                <div className="absolute top-1.5 right-2 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500 text-[9px] font-mono text-amber-300">
-                  CANNA MOZZATA
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400 text-[9px] font-orbitron font-black text-amber-300 flex items-center space-x-1 shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                  <ItemIcon item="saw" className="w-3 h-3 text-amber-300" />
+                  <span>{t('shotgun.sawedOffDmg')}</span>
                 </div>
               )}
             </motion.div>
@@ -375,32 +519,34 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               </motion.div>
             )}
 
-            {/* Tactical Items Inventory Shelf */}
+            {/* Tactical Items Inventory (No Emojis!) */}
             <div className="w-full flex flex-col items-center space-y-1 pt-1">
               <span className="text-[10px] font-orbitron uppercase tracking-wider text-slate-400">
-                I TUOI OGGETTI TATTICI ({myItems.length}/4)
+                {t('shotgun.tacticalItems')} ({myItems.length}/4)
               </span>
               <div className="flex items-center justify-center space-x-2 flex-wrap gap-y-1">
                 {myItems.length === 0 ? (
-                  <span className="text-[10px] font-chakra text-slate-600 italic">Nessun oggetto nell'inventario</span>
+                  <span className="text-[10px] font-chakra text-slate-600 italic">{t('shotgun.emptyInventory')}</span>
                 ) : (
                   myItems.map((item, idx) => {
-                    const info = ITEM_DETAILS[item];
+                    const itemName = t(`shotgun.item${item.charAt(0).toUpperCase() + item.slice(1)}` as any);
                     return (
                       <button
                         key={`${item}-${idx}`}
                         disabled={!isMyTurn}
                         onClick={() => handleUseItemClick(item)}
-                        className={`px-2.5 py-1.5 rounded-xl border text-left flex items-center space-x-1.5 transition-all ${
+                        className={`px-3 py-1.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
                           isMyTurn
-                            ? `bg-gradient-to-r ${info.color} shadow-sm hover:scale-105 active:scale-95 cursor-pointer`
-                            : 'bg-black/40 border-slate-800 opacity-50 cursor-not-allowed text-slate-400'
+                            ? 'bg-gradient-to-r from-red-950/60 to-slate-900 border-red-500/60 text-white shadow-sm hover:scale-105 active:scale-95 cursor-pointer'
+                            : 'bg-black/40 border-white/10 opacity-50 cursor-not-allowed text-slate-400'
                         }`}
                       >
-                        <span className="text-base">{info.icon}</span>
+                        <div className="p-1 rounded-lg bg-white/10 text-red-400">
+                          <ItemIcon item={item} className="w-4 h-4" />
+                        </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-chakra font-bold">{info.name}</span>
-                          {isMyTurn && <span className="text-[8px] font-mono text-cyan-300">CLICCA PER USARE</span>}
+                          <span className="text-[11px] font-chakra font-bold">{itemName}</span>
+                          {isMyTurn && <span className="text-[8px] font-mono text-cyan-300 font-bold">{t('shotgun.clickToUse')}</span>}
                         </div>
                       </button>
                     );
@@ -422,49 +568,48 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '20'}
             </span>
             <span className="text-[10px] font-rajdhani text-slate-400">
-              Entrambi i duellanti confermati. Caricamento cartucce in corso!
+              {t('spectator.waitingReadyNotice')}
             </span>
           </div>
         )}
 
         {/* 2-Phase Settlement Popups */}
-        {/* Phase 1: 3-Second Victory/Defeat Splash Modal */}
         {outcomePhase === 'splash' && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
             <div
               className={`flex flex-col items-center p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center border-2 ${
                 isWinner
-                  ? 'bg-gradient-to-b from-cyber-green/20 via-black/95 to-black border-cyber-green shadow-[0_0_50px_rgba(0,255,102,0.4)]'
+                  ? 'bg-gradient-to-b from-emerald-950/40 via-black/95 to-black border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.4)]'
                   : role === 'player'
                   ? 'bg-gradient-to-b from-rose-950/40 via-black/95 to-black border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.4)]'
-                  : 'bg-gradient-to-b from-cyan-950/40 via-black/95 to-black border-cyber-cyan shadow-[0_0_50px_rgba(0,240,255,0.3)]'
+                  : 'bg-gradient-to-b from-cyan-950/40 via-black/95 to-black border-cyan-500 shadow-[0_0_50px_rgba(6,182,212,0.3)]'
               }`}
             >
               {isWinner ? (
                 <>
-                  <Trophy className="w-16 h-16 text-cyber-amber animate-bounce mb-3 filter drop-shadow-[0_0_15px_#ffb800]" />
-                  <h2 className="text-2xl font-orbitron font-black text-cyber-green tracking-wider uppercase animate-pulse">
-                    🏆 VITTORIA!
+                  <Trophy className="w-16 h-16 text-amber-400 animate-bounce mb-3 filter drop-shadow-[0_0_15px_#f59e0b]" />
+                  <h2 className="text-2xl font-orbitron font-black text-emerald-400 tracking-wider uppercase animate-pulse">
+                    {t('shotgun.victoryTitle')}
                   </h2>
                   <p className="text-xs font-chakra text-slate-200 mt-2">
-                    Sei sopravvissuto al Cyber Shotgun!
+                    {t('shotgun.victoryDesc')}
                   </p>
                 </>
               ) : role === 'player' ? (
                 <>
-                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-3xl animate-pulse">
-                    💀
+                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-rose-400 animate-pulse">
+                    <Crosshair className="w-8 h-8" />
                   </div>
                   <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
-                    💀 SCONFITTA!
+                    {t('shotgun.defeatTitle')}
                   </h2>
                   <p className="text-xs font-chakra text-slate-300 mt-2">
-                    Punti vita azzerati dal Cyber Shotgun.
+                    {t('shotgun.defeatDesc')}
                   </p>
                 </>
               ) : (
                 <>
-                  <Swords className="w-16 h-16 text-cyber-cyan mb-3 animate-pulse" />
+                  <Swords className="w-16 h-16 text-cyan-400 mb-3 animate-pulse" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
                     ⚔️ DUELLO CONCLUSO
                   </h2>
@@ -474,69 +619,69 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
           </div>
         )}
 
-        {/* Phase 2: Settled Modal with Prize row (Winner only) & Rematch */}
+        {/* Phase 2: Settled Modal with Prize row & Rematch */}
         {outcomePhase === 'settled' && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className={`flex flex-col items-center p-5 bg-[#121520] border rounded-3xl shadow-2xl max-w-xs w-full text-center ${
-                isWinner ? 'border-cyber-cyan' : 'border-cyber-border'
+                isWinner ? 'border-cyan-400' : 'border-white/10'
               }`}
             >
               {isWinner ? (
-                <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
+                <Trophy className="w-12 h-12 text-amber-400 mb-2 animate-bounce" />
               ) : (
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-2xl">
-                  💀
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
+                  <Crosshair className="w-6 h-6" />
                 </div>
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isWinner ? '🏆 VITTORIA!' : role === 'player' ? '💀 DUELLO CONCLUSO' : '⚔️ DUELLO CONCLUSO'}
+                {isWinner ? t('shotgun.victoryTitle') : role === 'player' ? t('shotgun.defeatTitle') : '⚔️ DUELLO CONCLUSO'}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}
               {isWinner && (
-                <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-400">Winner Prize:</span>
-                  <span className="font-bold text-cyber-cyan flex items-center space-x-1">
+                <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-white/10 w-full flex justify-between items-center text-xs font-chakra">
+                  <span className="text-slate-400">{t('arena.winnerPrize')}</span>
+                  <span className="font-bold text-cyan-300 flex items-center space-x-1">
                     <span>+{winnerPayoutTon}</span>
-                    <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
+                    <GramIcon className="w-3.5 h-3.5 text-cyan-400 inline" />
                   </span>
                 </div>
               )}
 
               {/* Rematch Offer Received */}
               {rematchOffer && isRematchProposer && (
-                <div className="w-full p-2.5 rounded-xl bg-cyber-pink/20 border border-cyber-pink/60 flex flex-col space-y-1.5 mb-2">
+                <div className="w-full p-2.5 rounded-xl bg-red-500/20 border border-red-500/60 flex flex-col space-y-1.5 mb-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyber-pink" />
-                      <span>REMATCH OFFER SENT (2X)</span>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                      <span>{t('arena.rematchOfferSent')}</span>
                     </span>
-                    <span className="text-xs font-mono font-bold text-cyber-pink">{rematchOffer.newWagerTon} TON</span>
+                    <span className="text-xs font-mono font-bold text-red-400">{rematchOffer.newWagerTon} TON</span>
                   </div>
-                  <span className="text-[10px] font-chakra text-slate-300">In attesa dell'avversario...</span>
+                  <span className="text-[10px] font-chakra text-slate-300">{t('arena.waitingForOpponentRematch')}</span>
                 </div>
               )}
 
               {rematchOffer && !isRematchProposer && (
-                <div className="w-full p-2.5 rounded-xl bg-cyber-cyan/20 border border-cyber-cyan/60 flex flex-col space-y-2 mb-2">
+                <div className="w-full p-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/60 flex flex-col space-y-2 mb-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-orbitron font-bold text-white">SFIDA REMATCH 2X RICEVUTA!</span>
-                    <span className="text-xs font-mono font-bold text-cyber-cyan">{rematchOffer.newWagerTon} TON</span>
+                    <span className="text-xs font-orbitron font-bold text-white">{t('arena.rematchChallengeReceived')}</span>
+                    <span className="text-xs font-mono font-bold text-cyan-300">{rematchOffer.newWagerTon} TON</span>
                   </div>
                   {!hasEnoughForRematch ? (
                     <button
                       onClick={() => onOpenDeposit && onOpenDeposit(missingForRematch)}
-                      className="w-full py-1.5 rounded-lg bg-cyber-amber text-black text-xs font-bold font-orbitron"
+                      className="w-full py-1.5 rounded-lg bg-amber-400 text-black text-xs font-bold font-orbitron"
                     >
-                      DEPOSITA PER REMATCH
+                      {t('arena.depositForRematch')}
                     </button>
                   ) : (
                     <div className="flex space-x-2 pt-1">
-                      <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">RIFIUTA</button>
-                      <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-cyber-pink text-white text-xs font-bold font-orbitron shadow-neon-pink">ACCETTA 2X</button>
+                      <button onClick={onDeclineRematch} className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300">{t('arena.decline')}</button>
+                      <button onClick={onAcceptRematch} className="flex-1 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold font-orbitron shadow-md">{t('arena.accept2x')}</button>
                     </div>
                   )}
                 </div>
@@ -546,23 +691,23 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               {!rematchOffer && onRequestRematch && role === 'player' && (
                 !opponentConnected ? (
                   <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
-                    AVVERSARIO USCITO DALLA STANZA
+                    {t('arena.opponentLeft')}
                   </div>
                 ) : (
                   <button
                     onClick={onRequestRematch}
-                    className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-red-500 to-cyber-cyan text-white shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
+                    className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-red-600 to-cyan-600 text-white shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>REMATCH (2X BET)</span>
+                    <span>{t('arena.rematch2x')}</span>
                   </button>
                 )
               )}
 
               {isWinner && (
-                <div className="w-full py-2 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
-                  <span className="text-xs font-orbitron font-bold text-cyber-green">
-                    ✅ PREMIO ACCREDITATO (+{winnerPayoutTon} GRAM)
+                <div className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                  <span className="text-xs font-orbitron font-bold text-emerald-400">
+                    {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
                   </span>
                 </div>
               )}
@@ -570,9 +715,9 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               {onReturnToLobby && (
                 <button
                   onClick={onReturnToLobby}
-                  className="w-full py-2 rounded-xl bg-cyber-border text-slate-300 text-xs font-chakra font-bold hover:text-white"
+                  className="w-full py-2 rounded-xl bg-white/10 text-slate-300 text-xs font-chakra font-bold hover:text-white"
                 >
-                  TORNA ALLA LOBBY
+                  {t('arena.backToLobby')}
                 </button>
               )}
             </motion.div>
@@ -580,8 +725,8 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
         )}
       </div>
 
-      {/* Bottom Controls: Actions or Lobby Ready */}
-      <div className="w-full z-10 pt-3 border-t border-cyber-border/60 flex flex-col items-center">
+      {/* Bottom Controls: Action Buttons or Lobby Ready */}
+      <div className="w-full z-10 pt-2.5 border-t border-white/10 flex flex-col items-center">
         {roomState === 'LOBBY' ? (
           role === 'player' ? (
             <div className="w-full flex flex-col space-y-2">
@@ -599,10 +744,10 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                 disabled={isReady || !hasPlayerB}
                 className={`w-full py-3.5 rounded-2xl font-orbitron font-extrabold tracking-wider text-xs sm:text-sm uppercase transition-all duration-200 flex items-center justify-center space-x-2 ${
                   isReady
-                    ? 'bg-black/60 border border-cyber-border text-slate-400 cursor-not-allowed shadow-inner'
+                    ? 'bg-black/60 border border-white/10 text-slate-400 cursor-not-allowed shadow-inner'
                     : !hasPlayerB
-                    ? 'bg-black/40 border border-cyber-border text-slate-500 cursor-not-allowed'
-                    : 'bg-red-500 text-white hover:brightness-110 shadow-[0_0_20px_rgba(239,68,68,0.5)] active:scale-95'
+                    ? 'bg-black/40 border border-white/10 text-slate-500 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)] active:scale-95'
                 }`}
               >
                 {isReady ? (
@@ -621,15 +766,15 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
             <div className="w-full flex flex-col items-center">
               {!hasPlayerB ? (
                 <div className="w-full flex flex-col space-y-2">
-                  <div className="w-full py-2.5 px-3 bg-black/60 border border-cyber-cyan/30 rounded-xl text-center">
-                    <span className="text-xs font-chakra font-bold text-cyber-cyan">
+                  <div className="w-full py-2.5 px-3 bg-black/60 border border-cyan-400/30 rounded-xl text-center">
+                    <span className="text-xs font-chakra font-bold text-cyan-300">
                       {t('arena.spectatorWaitingOpponent')}
                     </span>
                   </div>
                   {onJoinAsPlayer && (
                     <button
                       onClick={onJoinAsPlayer}
-                      className="w-full py-3 bg-gradient-to-r from-red-500 to-cyan-500 text-white font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-lg active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                      className="w-full py-3 bg-gradient-to-r from-red-600 to-cyan-600 text-white font-orbitron font-extrabold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 shadow-lg active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                     >
                       <Swords className="w-4 h-4" />
                       <span>{t('arena.joinAsPlayer', { amount: wagerTon })}</span>
@@ -637,8 +782,8 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                   )}
                 </div>
               ) : (
-                <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
-                  <span className="text-xs font-chakra font-bold text-cyber-pink">
+                <div className="w-full py-3 bg-black/60 border border-white/10 rounded-xl text-center">
+                  <span className="text-xs font-chakra font-bold text-pink-400">
                     {t('arena.spectatorWaitingReady')}
                   </span>
                 </div>
@@ -649,51 +794,48 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
           role === 'player' ? (
             isMyTurn ? (
               <div className="w-full flex flex-col space-y-2">
-                <span className="text-[11px] font-orbitron font-bold text-red-400 uppercase tracking-wider text-center animate-pulse">
-                  ⚡ È IL TUO TURNO • SCEGLI L'AZIONE (15s)
-                </span>
                 <div className="flex space-x-2.5 w-full">
                   {/* Shoot Rival */}
                   <button
                     onClick={() => handleShootClick('opponent')}
-                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)] active:scale-95 transition-all flex flex-col items-center"
+                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)] active:scale-95 transition-all flex flex-col items-center"
                   >
-                    <span className="flex items-center space-x-1">
+                    <span className="flex items-center space-x-1.5">
                       <Crosshair className="w-4 h-4 text-white inline" />
-                      <span>SPARA ALL'AVVERSARIO</span>
+                      <span>{t('shotgun.shootRival')}</span>
                     </span>
                     <span className="text-[9px] font-chakra font-normal mt-0.5 text-red-200">
-                      {isSawActive ? '2 HP Danno se vera' : '1 HP Danno se vera'} · Passa turno
+                      {t('shotgun.shootRivalDesc')}
                     </span>
                   </button>
 
                   {/* Shoot Self */}
                   <button
                     onClick={() => handleShootClick('self')}
-                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-slate-900 border-2 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.3)] hover:bg-cyan-950/40 active:scale-95 transition-all flex flex-col items-center"
+                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-[#101422] border-2 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.3)] hover:bg-cyan-950/40 active:scale-95 transition-all flex flex-col items-center"
                   >
-                    <span className="flex items-center space-x-1">
+                    <span className="flex items-center space-x-1.5">
                       <Shield className="w-4 h-4 text-cyan-400 inline" />
-                      <span>SPARATI DA SOLO</span>
+                      <span>{t('shotgun.shootSelf')}</span>
                     </span>
                     <span className="text-[9px] font-chakra font-normal mt-0.5 text-cyan-200">
-                      Se a SALVE: guadagni TURNO EXTRA!
+                      {t('shotgun.shootSelfDesc')}
                     </span>
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="w-full py-3.5 rounded-xl bg-black/50 border border-cyber-border text-center flex items-center justify-center space-x-2">
+              <div className="w-full py-3.5 rounded-xl bg-black/50 border border-white/10 text-center flex items-center justify-center space-x-2">
                 <Loader2 className="w-4 h-4 animate-spin text-red-400" />
                 <span className="text-xs font-chakra font-bold text-slate-300">
-                  {activeTurnName} sta prendendo la mira... Trattieni il respiro!
+                  {t('shotgun.rivalAiming', { name: activeTurnName })}
                 </span>
               </div>
             )
           ) : (
-            <div className="w-full py-3 bg-cyber-bg/60 border border-cyber-border rounded-xl text-center">
+            <div className="w-full py-3 bg-black/60 border border-white/10 rounded-xl text-center">
               <span className="text-xs font-chakra font-bold text-red-400">
-                👁️ VISTA SPETTATORE • CALCOLA LE PROBABILITÀ E SCOMMETTI
+                {t('shotgun.spectatorNotice')}
               </span>
             </div>
           )

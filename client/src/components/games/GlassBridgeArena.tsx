@@ -146,9 +146,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           </div>
           <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
-              currentTurn === 'A' ? <span className="text-cyber-cyan font-bold animate-pulse">🎯 IN AZIONE</span> : <span className="text-slate-500">ATTESA</span>
+              currentTurn === 'A' ? <span className="text-cyber-cyan font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
             ) : (
-              playerAReady ? <span className="text-cyber-green font-bold">✓ READY</span> : <span className="text-slate-400">WAITING</span>
+              playerAReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
           </span>
         </div>
@@ -183,9 +183,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           </div>
           <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
-              currentTurn === 'B' ? <span className="text-cyber-pink font-bold animate-pulse">🎯 IN AZIONE</span> : <span className="text-slate-500">ATTESA</span>
+              currentTurn === 'B' ? <span className="text-cyber-pink font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
             ) : (
-              playerBReady ? <span className="text-cyber-green font-bold">✓ READY</span> : <span className="text-slate-400">WAITING</span>
+              playerBReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
           </span>
         </div>
