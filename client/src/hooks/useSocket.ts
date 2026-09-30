@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { RoomState, WsMessage, MatchResolution, GameType } from '../types/index.js';
+import { RoomState, WsMessage, MatchResolution, GameType, ShotgunItem } from '../types/index.js';
 
 interface UseSocketProps {
   matchId: string;
@@ -167,6 +167,11 @@ export function useSocket({
           case 'SPLIT_STEAL_TICK':
           case 'SPLIT_STEAL_CHOICE_LOCKED':
           case 'SPLIT_STEAL_REVEAL':
+          case 'SHOTGUN_START':
+          case 'SHOTGUN_ITEM_USED':
+          case 'SHOTGUN_OUTCOME':
+          case 'CONNECT4_START':
+          case 'CONNECT4_MOVE':
             setRoomState('GAME_ACTIVE');
             if (msg.gameData) setGameData(msg.gameData);
             if (msg.message) setFeedMessage(msg.message);
@@ -434,6 +439,24 @@ export function useSocket({
     }
   }, []);
 
+  const sendShotgunShoot = useCallback((target: 'self' | 'opponent') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'SHOTGUN_SHOOT', target }));
+    }
+  }, []);
+
+  const sendShotgunUseItem = useCallback((item: ShotgunItem) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'SHOTGUN_USE_ITEM', item }));
+    }
+  }, []);
+
+  const sendConnect4Drop = useCallback((column: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'CONNECT4_DROP', column }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -474,6 +497,9 @@ export function useSocket({
     sendBridgePass,
     sendChronoStop,
     sendSplitStealChoice,
+    sendShotgunShoot,
+    sendShotgunUseItem,
+    sendConnect4Drop,
     placeSpectatorBet,
     requestRematch,
     acceptRematch,
@@ -482,3 +508,4 @@ export function useSocket({
     setSocketError,
   };
 }
+

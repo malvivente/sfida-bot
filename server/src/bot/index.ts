@@ -379,6 +379,22 @@ export function createTelegramBot(token?: string): Bot {
         descEn: 'Prisoner\'s Dilemma + Shared Trust Jackpot',
         minWager: 5.0,
       },
+      {
+        id: 'shotgun',
+        title: 'Cyber Shotgun',
+        icon: '💥',
+        descIt: 'Buckshot roulette: 3 HP, cartucce e oggetti tattici',
+        descEn: 'Buckshot roulette: 3 HP, shells & tactical items',
+        minWager: 0.1,
+      },
+      {
+        id: 'connect4',
+        title: 'Forza 4',
+        icon: '🔴',
+        descIt: 'Griglia 7x6 strategica, allinea 4 gettoni per vincere',
+        descEn: 'Strategic 7x6 grid, connect 4 chips to win',
+        minWager: 0.1,
+      },
     ];
 
     const results: any[] = [];
@@ -398,7 +414,9 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
         `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
-        `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n` +
+        `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>@${botUser} connect4 1</code> — Forza 4 (1 GRAM)\n\n` +
         `<i>Tocca il pulsante in basso per entrare subito nell'Arena Sfida:</i>`
       : `{{emoji.swords}} <b>SFIDA ARENA • INLINE DUEL GUIDE</b> {{emoji.swords}}\n\n` +
         `Challenge anyone directly in this chat by typing:\n` +
@@ -408,7 +426,9 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
         `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
-        `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n` +
+        `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>@${botUser} connect4 1</code> — Connect 4 (1 GRAM)\n\n` +
         `<i>Tap below to open Sfida Arena:</i>`;
 
     const guideKeyboard = new InlineKeyboard().url(

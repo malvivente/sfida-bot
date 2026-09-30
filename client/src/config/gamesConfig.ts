@@ -68,4 +68,27 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-purple-500/60 hover:border-purple-400',
     bgGradient: 'from-purple-950/40 via-amber-950/20 to-black/80',
   },
+  shotgun: {
+    id: 'shotgun',
+    title: 'Cyber Shotgun',
+    badge: 'BUCKSHOT TACTICS',
+    tagline: 'Live & Blank Shells · Tactical Items',
+    description: '3 HP each. Shotgun loaded with live and blank shells in random order. Shoot yourself with a blank to gain an extra turn, or utilize tactical items (Saw, Ejector, Handcuffs, Inverter) to eliminate your rival.',
+    spectatorAppeal: 'Pure probability counting! Watch duelists calculate odds and gamble their turn by shooting themselves.',
+    accentColor: 'text-red-500',
+    borderColor: 'border-red-500/50 hover:border-red-500',
+    bgGradient: 'from-red-950/30 via-black/40 to-black/80',
+  },
+  connect4: {
+    id: 'connect4',
+    title: 'Forza 4',
+    badge: 'CONNECT 4',
+    tagline: '7x6 Vertical Grid · Pure Strategy',
+    description: '10-second turns on a 7x6 vertical grid. Drop chips by gravity and outthink your opponent. Connect 4 chips in any direction to win.',
+    spectatorAppeal: 'Pure mental skill with zero luck. Spectators anticipate traps, forks, and game-ending blunders.',
+    accentColor: 'text-blue-400',
+    borderColor: 'border-blue-500/50 hover:border-blue-400',
+    bgGradient: 'from-blue-950/30 via-indigo-950/20 to-black/80',
+  },
 };
+

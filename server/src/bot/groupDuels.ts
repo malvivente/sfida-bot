@@ -46,6 +46,12 @@ export function parseGameType(raw?: string): { type: GameType; title: string } {
   if (clean.includes('split') || clean.includes('steal') || clean.includes('dilemma')) {
     return { type: 'split', title: 'Split or Steal' };
   }
+  if (clean.includes('shotgun') || clean.includes('buckshot') || clean.includes('fucile') || clean.includes('pompa')) {
+    return { type: 'shotgun', title: 'Cyber Shotgun' };
+  }
+  if (clean.includes('connect') || clean.includes('forza') || clean === 'f4' || clean.includes('4in') || clean.includes('four')) {
+    return { type: 'connect4', title: 'Forza 4' };
+  }
   return { type: 'roulette', title: 'Russian Roulette' };
 }
 
@@ -102,7 +108,9 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
         `• <code>/duel bridge 1</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>/duel chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
-        `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n` +
+        `• <code>/duel shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>/duel connect4 1</code> — Forza 4 (1 GRAM)\n\n` +
         `<b>Modalità Inline in qualsiasi chat:</b>\n` +
         `Digita semplicemente: <code>@${botUsername} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
         `<i>Tocca sotto per entrare nell'Arena Sfida:</i>`
@@ -114,7 +122,9 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
         `• <code>/duel bridge 1</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>/duel chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
-        `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n\n` +
+        `• <code>/duel split 5</code> — Split or Steal (min. 5 GRAM)\n` +
+        `• <code>/duel shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>/duel connect4 1</code> — Connect 4 (1 GRAM)\n\n` +
         `<b>Inline Mode in any chat:</b>\n` +
         `Type: <code>@${botUsername} &lt;game&gt; &lt;wager&gt;</code>\n\n` +
         `<i>Tap below to open Sfida Arena:</i>`;

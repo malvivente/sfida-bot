@@ -942,6 +942,18 @@ export abstract class BaseGameRoom {
     }
   }
 
+  protected sendError(wallet: string, message: string) {
+    let ws: WebSocket | undefined;
+    if (this.isSameWallet(wallet, this.playerA.walletAddress)) {
+      ws = this.playerA.ws;
+    } else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) {
+      ws = this.playerB.ws;
+    }
+    if (ws) {
+      this.sendTo(ws, { type: 'ERROR', message });
+    }
+  }
+
   // --- Abstract Game Hooks ---
   public resetForRematch(): void {}
   public abstract getGamePayload(): any;

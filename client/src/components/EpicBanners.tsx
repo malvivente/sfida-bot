@@ -155,6 +155,64 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
+      {/* 2b. STRATEGY DUELS HUB (Cyber Shotgun, Forza 4, Split)        */}
+      {/* ------------------------------------------------------------- */}
+      <div
+        onClick={() => {
+          triggerImpact('medium');
+          onOpenPlayHub?.();
+        }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-indigo-800 p-4 sm:p-5 shadow-xl border border-red-400/30 cursor-pointer active:scale-[0.99] transition-all group"
+      >
+        <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-red-400/20 blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="max-w-[62%] space-y-1.5">
+            <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/95 text-red-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
+              <Flame className="w-3 h-3 text-red-600 fill-red-600" />
+              <span>{t('epic.strategyTag')}</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
+              {t('epic.strategyTitle')}
+            </h3>
+
+            <p className="text-xs text-rose-100/90 font-medium leading-tight">
+              {t('epic.strategyDesc')}
+            </p>
+
+            <div className="pt-1 flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerImpact('medium');
+                  onOpenPlayHub?.();
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-white text-red-700 hover:bg-rose-50 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
+              >
+                <span>{t('epic.strategyBtn')}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Static Badges */}
+          <div className="flex flex-col items-end space-y-1.5 shrink-0">
+            <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-white font-heading font-black text-xs shadow-md border border-white/20">
+              SHOTGUN & FORZA 4
+            </div>
+            <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
+              ABILITÀ PURA
+            </div>
+            <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-amber-200 font-heading font-bold text-[10px] border border-white/20">
+              100% STRATEGIA
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
       {/* 3. SPECTATE & BETTING HUB (Opens Duels Tab directly)           */}
       {/* Static banner without carousel - ready for PNG artwork         */}
       {/* ------------------------------------------------------------- */}

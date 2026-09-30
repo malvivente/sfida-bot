@@ -528,8 +528,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <span className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
                   {t('lobby.gameTypeLabel') || 'Disciplina / Gioco'}
                 </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split'].map((gKey) => {
+                <div className="grid grid-cols-4 gap-1.5">
+                  {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split', 'shotgun', 'connect4'].map((gKey) => {
                     const isSelected = filterGameType === gKey;
                     const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
                     return (

@@ -35,4 +35,17 @@ export const GAMES_CONFIG = {
     jackpotSplitBonusPercent: 25,
     jackpotStealBonusPercent: 20,
   },
+  shotgun: {
+    name: 'Cyber Shotgun',
+    description: 'Buckshot roulette style cyber duel. 3 HP, 15s turn, tactical items (Saw, Ejector, Handcuffs, Inverter).',
+    initialHp: 3,
+    turnTimeoutSeconds: 15,
+  },
+  connect4: {
+    name: 'Connect 4',
+    description: '7x6 vertical strategic grid. Align 4 chips in a row (horizontal, vertical, diagonal) to win.',
+    rows: 6,
+    cols: 7,
+    turnTimeoutSeconds: 10,
+  },
 } as const;

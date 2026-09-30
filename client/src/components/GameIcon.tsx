@@ -140,6 +140,67 @@ export const GameIcon: React.FC<GameIconProps> = ({ type, className = 'w-5 h-5',
         </svg>
       );
 
+    case 'shotgun':
+      // Cyber Shotgun: Tactical shotgun silhouette with barrel, pump, receiver, stock, and ejected shell spark
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+          style={style}
+        >
+          {/* Main barrel & receiver */}
+          <path d="M3 13 L8 12 L19 12 L22 10.5 L19 10 L8 10 L3 12 Z" fill="currentColor" fillOpacity="0.2" stroke="currentColor" />
+          {/* Pump slider underneath */}
+          <rect x="9" y="12.5" width="5" height="2" rx="0.5" fill="currentColor" stroke="currentColor" strokeWidth="1" />
+          {/* Pistol grip & stock */}
+          <path d="M5 13 L4 18 L2 18 L2 14 L3 13 Z" fill="currentColor" fillOpacity="0.3" stroke="currentColor" />
+          <path d="M6 14.5 L7.5 17" stroke="currentColor" strokeWidth="1.5" />
+          {/* Shell chamber slot */}
+          <line x1="14" y1="10.5" x2="16.5" y2="10.5" stroke="currentColor" strokeWidth="2" />
+          {/* Cyber spark / red shell blast */}
+          <circle cx="21" cy="7.5" r="1.5" fill="currentColor" />
+          <path d="M19.5 6 L21 4 M22.5 6 L23.5 5" stroke="currentColor" strokeWidth="1.2" />
+        </svg>
+      );
+
+    case 'connect4':
+      // Forza 4: 4x4 mini-grid representing Connect 4 with a winning diagonal line
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+          style={style}
+        >
+          {/* Grid frame */}
+          <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
+          {/* Slots / tokens */}
+          {/* Diagonal 4 in a row filled */}
+          <circle cx="6.5" cy="17.5" r="1.8" fill="currentColor" />
+          <circle cx="10" cy="14" r="1.8" fill="currentColor" />
+          <circle cx="14" cy="10" r="1.8" fill="currentColor" />
+          <circle cx="17.5" cy="6.5" r="1.8" fill="currentColor" />
+          {/* Winning line connecting them */}
+          <line x1="6.5" y1="17.5" x2="17.5" y2="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1 1" />
+          {/* Other open/empty slots */}
+          <circle cx="6.5" cy="10" r="1.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
+          <circle cx="10" cy="17.5" r="1.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
+          <circle cx="14" cy="17.5" r="1.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
+          <circle cx="17.5" cy="14" r="1.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
+          <circle cx="6.5" cy="6.5" r="1.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
+          <circle cx="14" cy="6.5" r="1.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
+        </svg>
+      );
+
     default:
       // Default: Crossed Swords
       return (

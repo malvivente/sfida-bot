@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -300,4 +300,53 @@ export interface BalanceTransaction {
   timestamp: number;
   txHash?: string;
   details?: string;
+}
+
+// --- Cyber Shotgun Types (Buckshot Roulette Style) ---
+export type ShotgunItem = 'saw' | 'ejector' | 'handcuffs' | 'inverter';
+export type ShellType = 'LIVE' | 'BLANK';
+export type ShotgunTarget = 'self' | 'opponent';
+
+export interface CyberShotgunState {
+  hpA: number;
+  hpB: number;
+  maxHp: number;
+  currentTurn: 'A' | 'B';
+  liveCount: number;
+  blankCount: number;
+  totalShellsRemaining: number;
+  isSawActive: boolean;
+  isHandcuffedA: boolean;
+  isHandcuffedB: boolean;
+  itemsA: ShotgunItem[];
+  itemsB: ShotgunItem[];
+  lastAction?: {
+    player: 'A' | 'B';
+    type: 'SHOOT' | 'USE_ITEM';
+    target?: ShotgunTarget;
+    item?: ShotgunItem;
+    result?: 'BANG' | 'BLANK' | 'EJECTED' | 'CONVERTED' | 'HANDCUFFED' | 'SAWED';
+    damage?: number;
+    extraTurn?: boolean;
+    ejectedShell?: ShellType;
+    message: string;
+  };
+  mancheNumber: number;
+}
+
+// --- Connect 4 (Forza 4) Types ---
+export type Connect4Cell = 0 | 1 | 2; // 0: empty, 1: playerA, 2: playerB
+
+export interface Connect4State {
+  board: Connect4Cell[][]; // 6 rows x 7 columns
+  currentTurn: 'A' | 'B';
+  movesCount: number;
+  lastMove?: {
+    player: 'A' | 'B';
+    row: number;
+    col: number;
+  };
+  winningLine?: [number, number][]; // Coordinates of winning 4 chips
+  isDraw?: boolean;
+  message?: string;
 }
