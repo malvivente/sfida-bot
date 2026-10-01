@@ -5,6 +5,7 @@ import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from './GramIcon.js';
+import { GameIcon } from './GameIcon.js';
 import { UserAvatar } from './UserAvatar.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { useTelegram } from '../hooks/useTelegram.js';
@@ -107,6 +108,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
   const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp'>('hub');
+  const [playHubSection, setPlayHubSection] = useState<'all' | 'quick' | 'strategy'>('all');
   const [previousView, setPreviousView] = useState<'hub' | 'play_hub'>('hub');
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
 
@@ -365,6 +367,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         <PlayHubView
           onBack={() => setSectionView('hub')}
           matches={matches}
+          initialSection={playHubSection}
           onSelectGame={(g) => {
             if (onNavigateToDuels) {
               onNavigateToDuels(g);
@@ -408,7 +411,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   setSectionView('pvp');
                 }
               }}
-              onOpenPlayHub={() => setSectionView('play_hub')}
+              onOpenPlayHub={(sec) => {
+                setPlayHubSection(sec || 'all');
+                setSectionView('play_hub');
+              }}
               onOpenSpectate={onOpenSpectate}
               onOpenAffiliates={onOpenAffiliates}
               onOpenJackpotModal={onOpenJackpotModal}
@@ -528,7 +534,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <span className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
                   {t('lobby.gameTypeLabel') || 'Disciplina / Gioco'}
                 </span>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split', 'shotgun', 'connect4', 'cubecount'].map((gKey) => {
                     const isSelected = filterGameType === gKey;
                     const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
@@ -539,13 +545,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           triggerImpact('light');
                           setFilterGameType(gKey);
                         }}
-                        className={`py-1.5 px-2 rounded-xl text-xs font-heading font-bold border transition-all text-center truncate active:scale-95 ${
+                        className={`py-1.5 px-2.5 rounded-xl text-xs font-heading font-bold border transition-all flex items-center space-x-1.5 whitespace-nowrap active:scale-95 ${
                           isSelected
                             ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-white/20 shadow-sm'
-                            : 'bg-[#181b28] text-slate-400 border-white/10 hover:border-white/20'
+                            : 'bg-[#181b28] text-slate-300 border-white/10 hover:border-white/20 hover:text-white'
                         }`}
                       >
-                        {label}
+                        {gKey !== 'ALL' && (
+                          <GameIcon type={gKey} className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                        )}
+                        <span>{label}</span>
                       </button>
                     );
                   })}

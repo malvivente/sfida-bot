@@ -10,7 +10,7 @@ interface EpicBannersProps {
   onOpenCreateModal: (defaultGame?: GameType) => void;
   onJoinMatch?: (match: MatchData) => void;
   onSelectGame?: (gameType: GameType) => void;
-  onOpenPlayHub?: () => void;
+  onOpenPlayHub?: (section?: 'all' | 'quick' | 'strategy') => void;
   onOpenSpectate?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
@@ -102,7 +102,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       <div
         onClick={() => {
           triggerImpact('medium');
-          onOpenPlayHub?.();
+          onOpenPlayHub?.('quick');
         }}
         className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 p-4 sm:p-5 shadow-xl border border-amber-400/30 cursor-pointer active:scale-[0.99] transition-all group"
       >
@@ -129,7 +129,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerImpact('medium');
-                  onOpenPlayHub?.();
+                  onOpenPlayHub?.('quick');
                 }}
                 className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 hover:bg-amber-50 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
               >
@@ -160,7 +160,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       <div
         onClick={() => {
           triggerImpact('medium');
-          onOpenPlayHub?.();
+          onOpenPlayHub?.('strategy');
         }}
         className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-indigo-800 p-4 sm:p-5 shadow-xl border border-red-400/30 cursor-pointer active:scale-[0.99] transition-all group"
       >
@@ -187,7 +187,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerImpact('medium');
-                  onOpenPlayHub?.();
+                  onOpenPlayHub?.('strategy');
                 }}
                 className="px-3.5 py-1.5 rounded-xl bg-white text-red-700 hover:bg-rose-50 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
               >

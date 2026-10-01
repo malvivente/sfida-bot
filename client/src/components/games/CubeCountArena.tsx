@@ -378,20 +378,20 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
             {roomState === 'GAME_ACTIVE' ? (
               phase === 'INPUT' ? (
                 hasAnsweredA ? (
-                  <span className="text-emerald-400 font-bold">✓ INVIATO</span>
+                  <span className="text-emerald-400 font-bold">{t('cubecount.submittedBadge')}</span>
                 ) : (
-                  <span className="text-amber-400 animate-pulse font-bold">DIGITANDO...</span>
+                  <span className="text-amber-400 animate-pulse font-bold">{t('cubecount.typingBadge')}</span>
                 )
               ) : phase === 'REVEAL' ? (
                 answerA !== undefined ? (
                   <span className={answerA === exactCount ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                    RISPOSTA: {answerA}
+                    {t('cubecount.answerLabel', { count: answerA })}
                   </span>
                 ) : (
-                  <span className="text-rose-400 font-bold">TEMPO SCADUTO</span>
+                  <span className="text-rose-400 font-bold">{t('cubecount.timeExpired')}</span>
                 )
               ) : (
-                <span className="text-slate-400">PRONTO</span>
+                <span className="text-slate-400">{t('cubecount.readyStatus')}</span>
               )
             ) : playerAReady ? (
               <span className="text-emerald-400 font-bold">{t('arena.readyBadge')}</span>
@@ -425,20 +425,20 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
             {roomState === 'GAME_ACTIVE' ? (
               phase === 'INPUT' ? (
                 hasAnsweredB ? (
-                  <span className="text-emerald-400 font-bold">✓ INVIATO</span>
+                  <span className="text-emerald-400 font-bold">{t('cubecount.submittedBadge')}</span>
                 ) : (
-                  <span className="text-amber-400 animate-pulse font-bold">DIGITANDO...</span>
+                  <span className="text-amber-400 animate-pulse font-bold">{t('cubecount.typingBadge')}</span>
                 )
               ) : phase === 'REVEAL' ? (
                 answerB !== undefined ? (
                   <span className={answerB === exactCount ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                    RISPOSTA: {answerB}
+                    {t('cubecount.answerLabel', { count: answerB })}
                   </span>
                 ) : (
-                  <span className="text-rose-400 font-bold">TEMPO SCADUTO</span>
+                  <span className="text-rose-400 font-bold">{t('cubecount.timeExpired')}</span>
                 )
               ) : (
-                <span className="text-slate-400">PRONTO</span>
+                <span className="text-slate-400">{t('cubecount.readyStatus')}</span>
               )
             ) : playerBReady ? (
               <span className="text-emerald-400 font-bold">{t('arena.readyBadge')}</span>
@@ -504,7 +504,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
                     : phase === 'FLASH'
                     ? `${t('cubecount.phaseFlash')} (${(timeRemainingMs / 1000).toFixed(1)}s)`
                     : phase === 'INPUT'
-                    ? t('cubecount.phaseInput')
+                    ? `${t('cubecount.phaseInput')} (${Math.max(0, Math.ceil(timeRemainingMs / 1000))}s)`
                     : t('cubecount.phaseReveal')}
                 </span>
               </div>
@@ -578,23 +578,38 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
             {/* Input Phase: Integrated Virtual On-Screen Numpad */}
             {phase === 'INPUT' && (
               <div className="w-full flex flex-col items-center space-y-2 mt-1">
-                {/* Answer Display Row */}
-                <div className="w-full flex items-center justify-between p-2 rounded-xl bg-black/60 border border-amber-500/40">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-amber-400 animate-spin" />
-                    <span className="text-xs font-chakra text-slate-300">
-                      {role === 'player'
-                        ? submittedThisRound
-                          ? t('cubecount.answerSubmitted', { count: submittedValue ?? 0 })
-                          : t('cubecount.enterCountPrompt')
-                        : t('cubecount.spectatorNotice')}
-                    </span>
+                {/* Answer Display Row & Countdown Timer */}
+                <div className="w-full space-y-1.5">
+                  <div className="w-full flex items-center justify-between p-2 rounded-xl bg-black/60 border border-amber-500/40">
+                    <div className="flex items-center space-x-2">
+                      <div className="px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center space-x-1 shrink-0">
+                        <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                        <span className="text-xs font-mono font-black text-amber-300">
+                          {Math.max(0, Math.ceil(timeRemainingMs / 1000))}s
+                        </span>
+                      </div>
+                      <span className="text-xs font-chakra text-slate-300">
+                        {role === 'player'
+                          ? submittedThisRound
+                            ? t('cubecount.answerSubmitted', { count: submittedValue ?? 0 })
+                            : t('cubecount.enterCountPrompt')
+                          : t('cubecount.spectatorNotice')}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1 shrink-0 ml-2">
+                      <span className="text-lg font-mono font-black text-amber-400 tracking-wider">
+                        {role === 'player' ? (submittedThisRound ? submittedValue : typedInput || '0') : '--'}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-slate-400">{t('cubecount.cubesUnit')}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <span className="text-lg font-mono font-black text-amber-400 tracking-wider">
-                      {role === 'player' ? (submittedThisRound ? submittedValue : typedInput || '0') : '--'}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-slate-400">cubi</span>
+
+                  {/* 6s Visual Timer Progress Bar */}
+                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-100 ease-linear shadow-[0_0_8px_#f59e0b]"
+                      style={{ width: `${Math.min(100, Math.max(0, (timeRemainingMs / 6000) * 100))}%` }}
+                    />
                   </div>
                 </div>
 

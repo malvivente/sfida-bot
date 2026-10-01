@@ -82,6 +82,9 @@ export const translations: Translations = {
   'playHub.quickMatchSub': { it: 'Partite lampo da 30 a 60 secondi: riflessi, adrenalina e calcolo immediato.', en: 'Lightning 30-60s matches: reflexes, adrenaline, and instant odds.' },
   'playHub.strategySection': { it: 'TATTICA & STRATEGIA • DUELLI LUNGHI', en: 'STRATEGY & TACTICS • DEEP DUELS' },
   'playHub.strategySub': { it: 'Partite da 2 a 3 minuti ad altissima tensione mentale e calcolo probabilistico.', en: '2-3 minute deep matches with pure skill, item tactics, and mind games.' },
+  'playHub.allGamesTab': { it: 'TUTTI (8)', en: 'ALL (8)' },
+  'playHub.quickMatchTab': { it: 'QUICK MATCH (4)', en: 'QUICK MATCH (4)' },
+  'playHub.strategyTab': { it: 'STRATEGY DUELS (4)', en: 'STRATEGY DUELS (4)' },
 
   'playHub.rouletteDesc': { it: '8 colpi tattici, 1 proiettile mortale. Spara all\'avversario o tenta la sorte.', en: '8 tactical shots, 1 live round. Shoot your foe or test your luck.' },
   'playHub.blackjackDesc': { it: 'Carte scoperte da un mazzo comune visibile a tutti.', en: 'Cards revealed from a public shared deck.' },
@@ -272,6 +275,7 @@ export const translations: Translations = {
   'lobby.missingDeposit': { it: 'Deposito Mancante:', en: 'Missing Deposit:' },
   'lobby.filterTitle': { it: 'Filtri e Ricerca', en: 'Filters & Search' },
   'lobby.filterBtn': { it: 'Filtri', en: 'Filters' },
+  'lobby.gameTypeLabel': { it: 'Disciplina / Gioco', en: 'Game Discipline' },
   'lobby.filterAll': { it: 'Tutti', en: 'All' },
   'lobby.filterPublic': { it: 'Pubbliche', en: 'Public' },
   'lobby.filterPrivate': { it: 'Private', en: 'Private' },
@@ -419,6 +423,13 @@ export const translations: Translations = {
   'cubecount.defeatDesc': { it: 'Hai esaurito le 3 vite disponibili.', en: 'You ran out of lives.' },
   'cubecount.submitBtn': { it: 'INVIO', en: 'SUBMIT' },
   'cubecount.delBtn': { it: 'CANC', en: 'DEL' },
+  'cubecount.typingBadge': { it: 'DIGITANDO...', en: 'TYPING...' },
+  'cubecount.submittedBadge': { it: '✓ INVIATO', en: '✓ SUBMITTED' },
+  'cubecount.readyStatus': { it: 'PRONTO', en: 'READY' },
+  'cubecount.timeExpired': { it: 'TEMPO SCADUTO', en: 'TIME EXPIRED' },
+  'cubecount.answerLabel': { it: 'RISPOSTA: {count}', en: 'ANSWER: {count}' },
+  'cubecount.cubesUnit': { it: 'cubi', en: 'cubes' },
+  'cubecount.timeLeft': { it: '{sec}s rimasti', en: '{sec}s left' },
 
   // Blackjack Arena Translations
   'blackjack.title': { it: 'BLACKJACK SCOPERTO', en: 'FACE-UP BLACKJACK' },

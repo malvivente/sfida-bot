@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Sparkles, Flame, ArrowRight, Zap, Target } from 'lucide-react';
 import { GameType, MatchData } from '../types/index.js';
 import { LiveActivityTicker } from './LiveActivityTicker.js';
@@ -12,6 +12,7 @@ interface PlayHubViewProps {
   onSelectGame: (gameType: GameType) => void;
   onNavigateToDuels?: (gameType?: string) => void;
   onCreateMatchForGame: (gameType: GameType) => void;
+  initialSection?: 'all' | 'quick' | 'strategy';
 }
 
 export const PlayHubView: React.FC<PlayHubViewProps> = ({
@@ -19,9 +20,18 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
   matches,
   onNavigateToDuels,
   onCreateMatchForGame,
+  initialSection = 'all',
 }) => {
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
+
+  const [activeCategory, setActiveCategory] = useState<'all' | 'quick' | 'strategy'>(initialSection);
+
+  useEffect(() => {
+    if (initialSection) {
+      setActiveCategory(initialSection);
+    }
+  }, [initialSection]);
 
   // Count open rooms per game
   const getOpenRoomsCount = (type: GameType) => {
@@ -29,7 +39,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-5 select-none pb-8 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
+    <div className="w-full max-w-md mx-auto space-y-4 select-none pb-8 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
       {/* Top Header Row with Back Button */}
       <div className="flex items-center justify-between px-1">
         <button
@@ -47,11 +57,61 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         <div className="flex items-center space-x-1.5">
           <Sparkles className="w-4 h-4 text-purple-400" />
           <h2 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-            {t('epic.playHubTitle')}
+            {activeCategory === 'quick'
+              ? t('playHub.quickMatchSection')
+              : activeCategory === 'strategy'
+              ? t('playHub.strategySection')
+              : t('epic.playHubTitle')}
           </h2>
         </div>
 
         <div className="w-16" /> {/* Spacer */}
+      </div>
+
+      {/* Category Filter Switcher Tabs */}
+      <div className="flex items-center justify-between p-1 bg-black/40 border border-white/10 rounded-2xl gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            triggerImpact('light');
+            setActiveCategory('all');
+          }}
+          className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-heading font-black uppercase tracking-wider transition-all text-center ${
+            activeCategory === 'all'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border border-white/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          {t('playHub.allGamesTab')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            triggerImpact('light');
+            setActiveCategory('quick');
+          }}
+          className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-heading font-black uppercase tracking-wider transition-all text-center ${
+            activeCategory === 'quick'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md border border-white/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          {t('playHub.quickMatchTab')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            triggerImpact('light');
+            setActiveCategory('strategy');
+          }}
+          className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-heading font-black uppercase tracking-wider transition-all text-center ${
+            activeCategory === 'strategy'
+              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-md border border-white/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          {t('playHub.strategyTab')}
+        </button>
       </div>
 
       {/* Live Winnings Ticker */}
@@ -69,6 +129,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
       {/* ============================================================= */}
       {/* SECTION 1: TATTICA & STRATEGIA (GIOCHI LUNGHI • 2-3 MINUTI)    */}
       {/* ============================================================= */}
+      {(activeCategory === 'all' || activeCategory === 'strategy') && (
       <div className="space-y-3">
         <div className="px-1 flex flex-col">
           <div className="flex items-center space-x-2">
@@ -251,10 +312,12 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* ============================================================= */}
       {/* SECTION 2: QUICK MATCH / QUICK PVP (PARTITE RAPIDE • 30-60S)   */}
       {/* ============================================================= */}
+      {(activeCategory === 'all' || activeCategory === 'quick') && (
       <div className="space-y-3 pt-2">
         <div className="px-1 flex flex-col">
           <div className="flex items-center space-x-2">
@@ -419,6 +482,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };
