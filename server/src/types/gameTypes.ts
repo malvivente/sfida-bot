@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -178,4 +178,28 @@ export interface Connect4State {
   winningLine?: [number, number][]; // Coordinates of winning 4 chips
   isDraw?: boolean;
   message?: string;
+}
+
+// --- Cube Count (Survival IQ) Types ---
+export type CubeCountPhase = 'COUNTDOWN' | 'FLASH' | 'INPUT' | 'REVEAL' | 'ROUND_OVER';
+
+export interface CubeCountState {
+  currentRound: number;
+  phase: CubeCountPhase;
+  hpA: number;
+  hpB: number;
+  maxHp: number;
+  isSuddenDeath: boolean;
+  gridSize: number; // 5x5
+  grid: number[][]; // 5x5 array of stacked cube column heights
+  exactCount?: number; // only revealed during REVEAL phase
+  flashDurationMs: number;
+  phaseEndEpochMs: number;
+  hasAnsweredA: boolean;
+  hasAnsweredB: boolean;
+  answerA?: number; // revealed in REVEAL
+  answerB?: number; // revealed in REVEAL
+  roundDamageA?: number; // 0 or 1
+  roundDamageB?: number; // 0 or 1
+  roundMessage?: string;
 }

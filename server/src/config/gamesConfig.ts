@@ -48,4 +48,11 @@ export const GAMES_CONFIG = {
     cols: 7,
     turnTimeoutSeconds: 10,
   },
+  cubecount: {
+    name: 'Cube Count',
+    description: 'Flash perception on 3D isometric grid. 3 lives survival duel.',
+    initialLives: 3,
+    gridSize: 5,
+    inputTimeoutSeconds: 5,
+  },
 } as const;

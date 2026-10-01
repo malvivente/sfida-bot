@@ -562,13 +562,13 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
           <div className="flex flex-col items-center space-y-1 py-4">
             <span className="text-xs font-mono font-bold text-cyber-amber uppercase tracking-wider animate-pulse flex items-center space-x-1">
               <Clock className="w-3.5 h-3.5" />
-              <span>PARI-MUTUEL BETTING WINDOW</span>
+              <span>{t('arena.bettingWindowTitle')}</span>
             </span>
             <span className="text-3xl font-mono font-black text-white">
               00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '20'}
             </span>
             <span className="text-[10px] font-rajdhani text-slate-400">
-              {t('spectator.waitingReadyNotice')}
+              {t('arena.bettingWindowActiveDesc')}
             </span>
           </div>
         )}

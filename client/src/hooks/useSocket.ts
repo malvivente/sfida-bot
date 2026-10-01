@@ -172,6 +172,11 @@ export function useSocket({
           case 'SHOTGUN_OUTCOME':
           case 'CONNECT4_START':
           case 'CONNECT4_MOVE':
+          case 'CUBECOUNT_ROUND_START':
+          case 'CUBECOUNT_FLASH':
+          case 'CUBECOUNT_INPUT':
+          case 'CUBECOUNT_ANSWER_STATUS':
+          case 'CUBECOUNT_REVEAL':
             setRoomState('GAME_ACTIVE');
             if (msg.gameData) setGameData(msg.gameData);
             if (msg.message) setFeedMessage(msg.message);
@@ -457,6 +462,12 @@ export function useSocket({
     }
   }, []);
 
+  const sendCubeCountSubmit = useCallback((count: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'CUBECOUNT_SUBMIT', count }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -500,6 +511,7 @@ export function useSocket({
     sendShotgunShoot,
     sendShotgunUseItem,
     sendConnect4Drop,
+    sendCubeCountSubmit,
     placeSpectatorBet,
     requestRematch,
     acceptRematch,

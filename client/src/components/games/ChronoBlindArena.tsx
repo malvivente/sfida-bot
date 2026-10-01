@@ -231,13 +231,13 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
           <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-cyber-amber/50 text-center space-y-2 max-w-xs">
             <Clock className="w-10 h-10 text-cyber-amber animate-spin" />
             <span className="text-xs font-mono font-bold text-cyber-amber uppercase tracking-wider">
-              PARI-MUTUEL BETTING OPEN
+              {t('arena.bettingWindowTitle')}
             </span>
             <span className="text-3xl font-mono font-black text-white">
-              00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '30'}
+              00:{countdownSeconds !== null && countdownSeconds !== undefined ? (countdownSeconds < 10 ? `0${countdownSeconds}` : countdownSeconds) : '20'}
             </span>
             <span className="text-[11px] text-slate-400 font-rajdhani">
-              Both duelists confirmed. Round 1 countdown starts at 00:00!
+              {t('arena.bettingWindowActiveDesc')}
             </span>
           </div>
         ) : (roomState === 'GAME_ACTIVE' || roomState === 'MATCH_SETTLED') ? (

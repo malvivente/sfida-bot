@@ -201,6 +201,35 @@ export const GameIcon: React.FC<GameIconProps> = ({ type, className = 'w-5 h-5',
         </svg>
       );
 
+    case 'cubecount':
+      // Isometric 3D stacked cubes icon
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+          style={style}
+        >
+          {/* Top Cube */}
+          <path d="M12 2 L17 5 L12 8 L7 5 Z" fill="currentColor" fillOpacity="0.25" stroke="currentColor" />
+          <path d="M7 5 V10 L12 13 V8 Z" fill="currentColor" fillOpacity="0.15" stroke="currentColor" />
+          <path d="M17 5 V10 L12 13 V8 Z" fill="currentColor" fillOpacity="0.35" stroke="currentColor" />
+
+          {/* Left Lower Cube */}
+          <path d="M7 11 L12 14 L7 17 L2 14 Z" fill="currentColor" fillOpacity="0.25" stroke="currentColor" />
+          <path d="M2 14 V19 L7 22 V17 Z" fill="currentColor" fillOpacity="0.15" stroke="currentColor" />
+          <path d="M12 14 V19 L7 22 V17 Z" fill="currentColor" fillOpacity="0.35" stroke="currentColor" />
+
+          {/* Right Lower Cube */}
+          <path d="M17 11 L22 14 L17 17 L12 14 Z" fill="currentColor" fillOpacity="0.25" stroke="currentColor" />
+          <path d="M17 17 V22 L22 19 V14 Z" fill="currentColor" fillOpacity="0.35" stroke="currentColor" />
+        </svg>
+      );
+
     default:
       // Default: Crossed Swords
       return (

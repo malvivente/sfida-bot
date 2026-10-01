@@ -395,6 +395,14 @@ export function createTelegramBot(token?: string): Bot {
         descEn: 'Strategic 7x6 grid, connect 4 chips to win',
         minWager: 0.1,
       },
+      {
+        id: 'cubecount',
+        title: 'Cube Count',
+        icon: '🎲',
+        descIt: 'Percezione flash isometrica 3D, 3 vite survival',
+        descEn: '3D isometric flash perception, 3 lives survival',
+        minWager: 0.1,
+      },
     ];
 
     const results: any[] = [];
@@ -416,7 +424,8 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n` +
         `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
-        `• <code>@${botUser} connect4 1</code> — Forza 4 (1 GRAM)\n\n` +
+        `• <code>@${botUser} connect4 1</code> — Forza 4 (1 GRAM)\n` +
+        `• <code>@${botUser} cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
         `<i>Tocca il pulsante in basso per entrare subito nell'Arena Sfida:</i>`
       : `{{emoji.swords}} <b>SFIDA ARENA • INLINE DUEL GUIDE</b> {{emoji.swords}}\n\n` +
         `Challenge anyone directly in this chat by typing:\n` +
@@ -428,7 +437,8 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n` +
         `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
-        `• <code>@${botUser} connect4 1</code> — Connect 4 (1 GRAM)\n\n` +
+        `• <code>@${botUser} connect4 1</code> — Connect 4 (1 GRAM)\n` +
+        `• <code>@${botUser} cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
         `<i>Tap below to open Sfida Arena:</i>`;
 
     const guideKeyboard = new InlineKeyboard().url(

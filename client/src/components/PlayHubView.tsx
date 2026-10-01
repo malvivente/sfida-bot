@@ -210,6 +210,45 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Card: Cube Count */}
+          <div
+            onClick={() => {
+              triggerImpact('medium');
+              onCreateMatchForGame('cubecount');
+            }}
+            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-700 to-amber-900 p-4 border border-amber-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[110px]"
+          >
+            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
+
+            <div className="flex items-center space-x-3.5 min-w-0 flex-1 pr-3">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md shrink-0">
+                <GameIcon type="cubecount" className="w-7 h-7 text-white" />
+              </div>
+
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
+                  {t('playHub.badgeCubeCount')}
+                </span>
+                <h4 className="text-base font-heading font-black text-white">
+                  CUBE COUNT
+                </h4>
+                <p className="text-[10px] text-amber-100 font-medium leading-tight line-clamp-1">
+                  {t('playHub.cubeCountDesc')}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex flex-col items-end justify-between self-stretch">
+              <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
+                {t('playHub.openRooms', { count: getOpenRoomsCount('cubecount') })}
+              </span>
+              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform mt-auto">
+                <span>{t('playHub.playNow')}</span>
+                <ArrowRight className="w-3 h-3" />
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

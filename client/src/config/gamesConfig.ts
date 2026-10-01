@@ -90,5 +90,16 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-blue-500/50 hover:border-blue-400',
     bgGradient: 'from-blue-950/30 via-indigo-950/20 to-black/80',
   },
+  cubecount: {
+    id: 'cubecount',
+    title: 'Cube Count',
+    badge: 'SURVIVAL IQ',
+    tagline: 'Flash Perception · Survival Duel · 3 Lives',
+    description: 'A 5x5 isometric structure of stacked cubes flashes on screen for mere fractions of a second before vanishing. Count the exact total and submit your answer on the virtual numpad. 3 lives survival duel.',
+    spectatorAppeal: 'Spectators test their own flash memory alongside duelists as the flash duration tightens to sub-second speeds.',
+    accentColor: 'text-amber-400',
+    borderColor: 'border-amber-500/50 hover:border-amber-400',
+    bgGradient: 'from-amber-950/30 via-orange-950/20 to-black/80',
+  },
 };
 

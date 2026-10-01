@@ -7,6 +7,7 @@ import { ChronoBlindArena } from '../components/games/ChronoBlindArena.js';
 import { SplitStealArena } from '../components/games/SplitStealArena.js';
 import { CyberShotgunArena } from '../components/games/CyberShotgunArena.js';
 import { Connect4Arena } from '../components/games/Connect4Arena.js';
+import { CubeCountArena } from '../components/games/CubeCountArena.js';
 import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
@@ -1153,6 +1154,50 @@ export const Arena: React.FC<ArenaProps> = ({
               role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
               onDrop={socketData.sendConnect4Drop}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
+              isClaimingPayout={isClaimingPayout}
+              payoutClaimed={payoutClaimed}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={socketData.rematchOffer}
+              onRequestRematch={socketData.requestRematch}
+              onAcceptRematch={socketData.acceptRematch}
+              onDeclineRematch={socketData.declineRematch}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
+              userAddress={userAddress}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+            />
+          ) : effectiveGameType === 'cubecount' ? (
+            <CubeCountArena
+              gameData={socketData.gameData as any}
+              role={effectiveRole}
+              isPlayerTurn={isPlayerTurn}
+              onSubmit={socketData.sendCubeCountSubmit}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
               playerAReady={socketData.playerAReady}
