@@ -13,44 +13,77 @@ function generateCubeGrid(round: number, isSuddenDeath: boolean): { grid: number
 
   if (isSuddenDeath) {
     targetMin = 10;
-    targetMax = 18;
-    maxHeight = 4;
+    targetMax = 14;
+    maxHeight = 3;
   } else if (round === 1) {
-    targetMin = 5;
-    targetMax = 8;
-    maxHeight = 2;
+    // Round 1: Ultra-simple onboarding. Exactly 3 to 4 flat cubes (height 1), spread on the grid.
+    targetMin = 3;
+    targetMax = 4;
+    maxHeight = 1;
   } else if (round === 2) {
-    targetMin = 9;
+    // Round 2: 5 to 6 cubes, still completely flat (height 1) for crystal clear counting.
+    targetMin = 5;
+    targetMax = 6;
+    maxHeight = 1;
+  } else if (round === 3) {
+    // Round 3: 7 to 9 cubes, introducing light vertical stacking (max height 2).
+    targetMin = 7;
+    targetMax = 9;
+    maxHeight = 2;
+  } else if (round === 4) {
+    // Round 4: 10 to 13 cubes, stacks up to height 3.
+    targetMin = 10;
     targetMax = 13;
     maxHeight = 3;
-  } else if (round === 3) {
+  } else if (round === 5) {
+    // Round 5: 14 to 18 cubes, stacks up to height 4.
     targetMin = 14;
     targetMax = 18;
     maxHeight = 4;
-  } else if (round === 4) {
-    targetMin = 19;
-    targetMax = 24;
-    maxHeight = 5;
   } else {
-    targetMin = 25;
-    targetMax = 32;
+    // Round 6+: 19 to 25 cubes, high density 3D structures.
+    targetMin = 19;
+    targetMax = 25;
     maxHeight = 5;
   }
 
   const targetCount = Math.floor(Math.random() * (targetMax - targetMin + 1)) + targetMin;
   let remaining = targetCount;
 
-  // Distribute cubes across the 5x5 grid in vertical column stacks
-  let attempts = 0;
-  while (remaining > 0 && attempts < 1000) {
-    attempts++;
-    const x = Math.floor(Math.random() * GRID_SIZE);
-    const y = Math.floor(Math.random() * GRID_SIZE);
-    const currentHeight = grid[x][y];
-    if (currentHeight < maxHeight) {
-      const add = Math.min(remaining, Math.min(maxHeight - currentHeight, Math.floor(Math.random() * 2) + 1));
-      grid[x][y] += add;
-      remaining -= add;
+  // For rounds 1 & 2: ensure cubes are distributed flat on distinct cells across the grid (no stacking)
+  if (round <= 2 && !isSuddenDeath) {
+    const availableCoords: [number, number][] = [];
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        availableCoords.push([x, y]);
+      }
+    }
+    // Fisher-Yates shuffle
+    for (let i = availableCoords.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [availableCoords[i], availableCoords[j]] = [availableCoords[j], availableCoords[i]];
+    }
+
+    // Place 1 cube per coordinate
+    for (let i = 0; i < targetCount && i < availableCoords.length; i++) {
+      const [x, y] = availableCoords[i];
+      grid[x][y] = 1;
+    }
+  } else {
+    // Rounds 3+: Natural vertical stacking and clustering
+    let attempts = 0;
+    while (remaining > 0 && attempts < 1000) {
+      attempts++;
+      const x = Math.floor(Math.random() * GRID_SIZE);
+      const y = Math.floor(Math.random() * GRID_SIZE);
+      const currentHeight = grid[x][y];
+      if (currentHeight < maxHeight) {
+        // In round 3, prefer gentle stacking of 1 at a time
+        const maxAddPerStep = round <= 3 ? 1 : Math.min(2, maxHeight - currentHeight);
+        const add = Math.min(remaining, Math.min(maxHeight - currentHeight, maxAddPerStep));
+        grid[x][y] += add;
+        remaining -= add;
+      }
     }
   }
 
@@ -66,12 +99,13 @@ function generateCubeGrid(round: number, isSuddenDeath: boolean): { grid: number
 }
 
 function getFlashDurationMs(round: number, isSuddenDeath: boolean): number {
-  if (isSuddenDeath) return 700;
-  if (round === 1) return 3000;
-  if (round === 2) return 2200;
-  if (round === 3) return 1600;
-  if (round === 4) return 1100;
-  return 800;
+  if (isSuddenDeath) return 800;
+  if (round === 1) return 3500; // 3.5s for initial 3-4 flat cubes (very relaxed)
+  if (round === 2) return 3000; // 3.0s for 5-6 flat cubes
+  if (round === 3) return 2400; // 2.4s for 7-9 cubes (height 2)
+  if (round === 4) return 1800; // 1.8s for 10-13 cubes (height 3)
+  if (round === 5) return 1300; // 1.3s for 14-18 cubes
+  return 900;                  // 0.9s for round 6+ extreme
 }
 
 export class CubeCountRoom extends BaseGameRoom {
