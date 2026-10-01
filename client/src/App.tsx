@@ -304,6 +304,8 @@ export const App: React.FC = () => {
   // Scroll to top instantly on tab switch
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }, [activeTab]);
 
   return (
