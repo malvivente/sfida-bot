@@ -593,107 +593,6 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
           </div>
         )}
 
-        {/* Tactical Boost Guide Modal */}
-        {showGuideModal && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="flex flex-col p-4 rounded-3xl bg-[#121520] border border-cyan-500/40 shadow-2xl max-w-sm w-full text-slate-200 max-h-[90%] overflow-y-auto">
-              <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-3">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 rounded-xl bg-cyan-500/20 text-cyan-300">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-orbitron font-bold text-white uppercase tracking-wider">
-                      {t('shotgun.boostGuideTitle')}
-                    </h3>
-                    <p className="text-[10px] font-chakra text-slate-400">
-                      {t('shotgun.boostGuideSubtitle')}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowGuideModal(false)}
-                  className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Items List */}
-              <div className="space-y-2 text-xs font-chakra">
-                {/* Saw */}
-                <div className="p-2.5 rounded-2xl bg-black/50 border border-red-500/30 flex space-x-2.5">
-                  <div className="p-2 rounded-xl bg-red-500/20 text-red-400 self-start shrink-0">
-                    <ItemIcon item="saw" className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col space-y-0.5">
-                    <span className="font-orbitron font-bold text-red-300 text-[11px]">
-                      {t('shotgun.guideSawTitle')}
-                    </span>
-                    <span className="text-[10px] text-slate-300 leading-snug">
-                      {t('shotgun.guideSawDesc')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Ejector */}
-                <div className="p-2.5 rounded-2xl bg-black/50 border border-amber-500/30 flex space-x-2.5">
-                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 self-start shrink-0">
-                    <ItemIcon item="ejector" className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col space-y-0.5">
-                    <span className="font-orbitron font-bold text-amber-300 text-[11px]">
-                      {t('shotgun.guideEjectorTitle')}
-                    </span>
-                    <span className="text-[10px] text-slate-300 leading-snug">
-                      {t('shotgun.guideEjectorDesc')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Handcuffs */}
-                <div className="p-2.5 rounded-2xl bg-black/50 border border-purple-500/30 flex space-x-2.5">
-                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 self-start shrink-0">
-                    <ItemIcon item="handcuffs" className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col space-y-0.5">
-                    <span className="font-orbitron font-bold text-purple-300 text-[11px]">
-                      {t('shotgun.guideHandcuffsTitle')}
-                    </span>
-                    <span className="text-[10px] text-slate-300 leading-snug">
-                      {t('shotgun.guideHandcuffsDesc')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Inverter */}
-                <div className="p-2.5 rounded-2xl bg-black/50 border border-cyan-500/30 flex space-x-2.5">
-                  <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 self-start shrink-0">
-                    <ItemIcon item="inverter" className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col space-y-0.5">
-                    <span className="font-orbitron font-bold text-cyan-300 text-[11px]">
-                      {t('shotgun.guideInverterTitle')}
-                    </span>
-                    <span className="text-[10px] text-slate-300 leading-snug">
-                      {t('shotgun.guideInverterDesc')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowGuideModal(false)}
-                className="mt-3 w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-orbitron font-black text-xs uppercase tracking-wider transition-all"
-              >
-                {t('shotgun.guideGotIt')}
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Betting Window State */}
         {roomState === 'BETTING_WINDOW' && (
           <div className="flex flex-col items-center space-y-1 py-4">
@@ -978,6 +877,125 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
           )
         ) : null}
       </div>
+
+      {/* Tactical Boost Guide Modal - Fullscreen Overlay at Root level with fixed z-[100] */}
+      {showGuideModal && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              triggerImpact?.('light');
+              setShowGuideModal(false);
+            }
+          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div className="flex flex-col p-4 sm:p-5 rounded-3xl bg-[#121520] border border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.3)] max-w-sm w-full text-slate-200 max-h-[85vh]">
+            {/* Header: fixed at top */}
+            <div className="shrink-0 flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-orbitron font-black text-white uppercase tracking-wider">
+                    {t('shotgun.boostGuideTitle')}
+                  </h3>
+                  <p className="text-[10px] font-chakra text-slate-400">
+                    {t('shotgun.boostGuideSubtitle')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerImpact?.('light');
+                  setShowGuideModal(false);
+                }}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-slate-300 hover:text-white transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Items List: flex-1 with min-h-0 and pr-1 */}
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-2.5 pr-1 font-chakra scrollbar-thin scrollbar-thumb-white/20">
+              {/* Saw */}
+              <div className="p-2.5 rounded-2xl bg-black/60 border border-red-500/40 flex space-x-2.5 shadow-sm">
+                <div className="p-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 self-start shrink-0">
+                  <ItemIcon item="saw" className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col space-y-0.5 min-w-0">
+                  <span className="font-orbitron font-bold text-red-300 text-[11px] uppercase tracking-wide">
+                    {t('shotgun.guideSawTitle')}
+                  </span>
+                  <span className="text-[10.5px] text-slate-300 leading-snug">
+                    {t('shotgun.guideSawDesc')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ejector */}
+              <div className="p-2.5 rounded-2xl bg-black/60 border border-amber-500/40 flex space-x-2.5 shadow-sm">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 self-start shrink-0">
+                  <ItemIcon item="ejector" className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col space-y-0.5 min-w-0">
+                  <span className="font-orbitron font-bold text-amber-300 text-[11px] uppercase tracking-wide">
+                    {t('shotgun.guideEjectorTitle')}
+                  </span>
+                  <span className="text-[10.5px] text-slate-300 leading-snug">
+                    {t('shotgun.guideEjectorDesc')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Handcuffs */}
+              <div className="p-2.5 rounded-2xl bg-black/60 border border-purple-500/40 flex space-x-2.5 shadow-sm">
+                <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 self-start shrink-0">
+                  <ItemIcon item="handcuffs" className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col space-y-0.5 min-w-0">
+                  <span className="font-orbitron font-bold text-purple-300 text-[11px] uppercase tracking-wide">
+                    {t('shotgun.guideHandcuffsTitle')}
+                  </span>
+                  <span className="text-[10.5px] text-slate-300 leading-snug">
+                    {t('shotgun.guideHandcuffsDesc')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Inverter */}
+              <div className="p-2.5 rounded-2xl bg-black/60 border border-cyan-500/40 flex space-x-2.5 shadow-sm">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 self-start shrink-0">
+                  <ItemIcon item="inverter" className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col space-y-0.5 min-w-0">
+                  <span className="font-orbitron font-bold text-cyan-300 text-[11px] uppercase tracking-wide">
+                    {t('shotgun.guideInverterTitle')}
+                  </span>
+                  <span className="text-[10.5px] text-slate-300 leading-snug">
+                    {t('shotgun.guideInverterDesc')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Button: shrink-0 fixed at bottom of the modal */}
+            <div className="shrink-0 pt-3 border-t border-white/10 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerImpact?.('light');
+                  setShowGuideModal(false);
+                }}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-cyan-400 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-orbitron font-black text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-all"
+              >
+                {t('shotgun.guideGotIt')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
