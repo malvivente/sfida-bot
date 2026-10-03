@@ -700,7 +700,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
                 <>
                   <Swords className="w-16 h-16 text-amber-400 mb-3 animate-pulse" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
-                    ⚔️ DUELLO CONCLUSO
+                    {t('arena.duelConcluded')}
                   </h2>
                 </>
               )}
@@ -726,7 +726,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
                 </div>
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isWinner ? t('cubecount.victoryTitle') : role === 'player' ? t('cubecount.defeatTitle') : '⚔️ DUELLO CONCLUSO'}
+                {isWinner ? t('cubecount.victoryTitle') : role === 'player' ? t('cubecount.defeatTitle') : t('arena.duelConcluded')}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}

@@ -306,29 +306,29 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                 <>
                   <Trophy className="w-16 h-16 text-cyber-amber animate-bounce mb-3 filter drop-shadow-[0_0_15px_#ffb800]" />
                   <h2 className="text-2xl font-orbitron font-black text-cyber-green tracking-wider uppercase animate-pulse">
-                    🏆 VITTORIA!
+                    {t('glassbridge.victoryTitle')}
                   </h2>
                   <p className="text-xs font-chakra text-slate-200 mt-2">
-                    Hai superato l'avversario sul Ponte di Vetro!
+                    {t('glassbridge.victoryDesc')}
                   </p>
                 </>
               ) : role === 'player' ? (
                 <>
-                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-3xl animate-pulse">
-                    💀
+                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-rose-400 animate-pulse">
+                    <Swords className="w-8 h-8" />
                   </div>
                   <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
-                    💀 SCONFITTA!
+                    {t('glassbridge.defeatTitle')}
                   </h2>
                   <p className="text-xs font-chakra text-slate-300 mt-2">
-                    Hai esaurito le tue 3 vite nel vuoto.
+                    {t('glassbridge.defeatDesc')}
                   </p>
                 </>
               ) : (
                 <>
                   <Swords className="w-16 h-16 text-cyber-cyan mb-3 animate-pulse" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
-                    ⚔️ DUELLO CONCLUSO
+                    {t('arena.duelConcluded')}
                   </h2>
                 </>
               )}
@@ -349,18 +349,18 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               {isWinner ? (
                 <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
               ) : (
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-2xl">
-                  💀
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
+                  <Swords className="w-6 h-6" />
                 </div>
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isWinner ? '🏆 VITTORIA!' : role === 'player' ? '💀 DUELLO CONCLUSO' : '⚔️ DUELLO CONCLUSO'}
+                {isWinner ? t('glassbridge.victoryTitle') : role === 'player' ? t('glassbridge.defeatTitle') : t('arena.duelConcluded')}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}
               {isWinner && (
                 <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-green/50 w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-300">Winner Prize:</span>
+                  <span className="text-slate-300">{t('arena.winnerPrize')}:</span>
                   <span className="font-bold text-cyber-green flex items-center space-x-1">
                     <span>+{winnerPayoutTon}</span>
                     <GramIcon className="w-3.5 h-3.5 text-cyber-green inline" />

@@ -9,6 +9,8 @@ import {
   Loader2,
   Swords,
   Zap,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 import { CyberShotgunState, ShotgunItem, ShotgunTarget } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
@@ -190,6 +192,7 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   const myItems = userSide === 'A' ? itemsA : itemsB;
   const isMyTurn = role === 'player' && currentTurn === userSide;
   const activeTurnName = currentTurn === 'A' ? playerAName : playerBName;
+  const isOpponentHandcuffed = userSide === 'A' ? isHandcuffedB : isHandcuffedA;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 2.0).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
@@ -198,6 +201,7 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
   const [outcomePhase, setOutcomePhase] = useState<'splash' | 'settled' | 'none'>('none');
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
     if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
@@ -219,6 +223,8 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
 
   const handleUseItemClick = (item: ShotgunItem) => {
     if (!isMyTurn) return;
+    if (item === 'saw' && isSawActive) return;
+    if (item === 'handcuffs' && isOpponentHandcuffed) return;
     triggerImpact?.('medium');
     onUseItem(item);
   };
@@ -519,40 +525,171 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               </motion.div>
             )}
 
-            {/* Tactical Items Inventory (No Emojis!) */}
+            {/* Tactical Items Inventory Header with Info button */}
             <div className="w-full flex flex-col items-center space-y-1 pt-1">
-              <span className="text-[10px] font-orbitron uppercase tracking-wider text-slate-400">
-                {t('shotgun.tacticalItems')} ({myItems.length}/4)
-              </span>
-              <div className="flex items-center justify-center space-x-2 flex-wrap gap-y-1">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-[10px] font-orbitron uppercase tracking-wider text-slate-400">
+                  {t('shotgun.tacticalItems')} ({myItems.length}/4)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowGuideModal(true)}
+                  className="p-0.5 text-cyan-400 hover:text-cyan-300 transition-colors"
+                  title={t('shotgun.boostGuideTitle')}
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex items-center justify-center space-x-2 flex-wrap gap-y-1.5">
                 {myItems.length === 0 ? (
                   <span className="text-[10px] font-chakra text-slate-600 italic">{t('shotgun.emptyInventory')}</span>
                 ) : (
                   myItems.map((item, idx) => {
                     const itemName = t(`shotgun.item${item.charAt(0).toUpperCase() + item.slice(1)}` as any);
+                    const itemShort = t(`shotgun.item${item.charAt(0).toUpperCase() + item.slice(1)}Short` as any);
+                    const isSawDisabled = item === 'saw' && isSawActive;
+                    const isCuffsDisabled = item === 'handcuffs' && isOpponentHandcuffed;
+                    const canUse = isMyTurn && !isSawDisabled && !isCuffsDisabled;
+
                     return (
                       <button
                         key={`${item}-${idx}`}
-                        disabled={!isMyTurn}
+                        disabled={!canUse}
                         onClick={() => handleUseItemClick(item)}
-                        className={`px-3 py-1.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
-                          isMyTurn
+                        className={`px-2.5 py-1.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                          canUse
                             ? 'bg-gradient-to-r from-red-950/60 to-slate-900 border-red-500/60 text-white shadow-sm hover:scale-105 active:scale-95 cursor-pointer'
                             : 'bg-black/40 border-white/10 opacity-50 cursor-not-allowed text-slate-400'
                         }`}
                       >
-                        <div className="p-1 rounded-lg bg-white/10 text-red-400">
+                        <div className="p-1 rounded-lg bg-white/10 text-red-400 shrink-0">
                           <ItemIcon item={item} className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-chakra font-bold">{itemName}</span>
-                          {isMyTurn && <span className="text-[8px] font-mono text-cyan-300 font-bold">{t('shotgun.clickToUse')}</span>}
+                          <div className="flex items-center space-x-1">
+                            <span className="text-[11px] font-chakra font-bold">{itemName}</span>
+                            {isSawDisabled && (
+                              <span className="text-[8px] font-mono bg-red-500/20 text-red-300 px-1 py-0.2 rounded border border-red-500/40">
+                                {t('shotgun.sawAlreadyActive')}
+                              </span>
+                            )}
+                            {isCuffsDisabled && (
+                              <span className="text-[8px] font-mono bg-purple-500/20 text-purple-300 px-1 py-0.2 rounded border border-purple-500/40">
+                                {t('shotgun.opponentAlreadyHandcuffed')}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[9px] font-chakra text-slate-400 leading-tight">{itemShort}</span>
+                          {canUse && (
+                            <span className="text-[8px] font-mono text-cyan-300 font-bold mt-0.5">{t('shotgun.clickToUse')}</span>
+                          )}
                         </div>
                       </button>
                     );
                   })
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tactical Boost Guide Modal */}
+        {showGuideModal && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="flex flex-col p-4 rounded-3xl bg-[#121520] border border-cyan-500/40 shadow-2xl max-w-sm w-full text-slate-200 max-h-[90%] overflow-y-auto">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 rounded-xl bg-cyan-500/20 text-cyan-300">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-orbitron font-bold text-white uppercase tracking-wider">
+                      {t('shotgun.boostGuideTitle')}
+                    </h3>
+                    <p className="text-[10px] font-chakra text-slate-400">
+                      {t('shotgun.boostGuideSubtitle')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuideModal(false)}
+                  className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-2 text-xs font-chakra">
+                {/* Saw */}
+                <div className="p-2.5 rounded-2xl bg-black/50 border border-red-500/30 flex space-x-2.5">
+                  <div className="p-2 rounded-xl bg-red-500/20 text-red-400 self-start shrink-0">
+                    <ItemIcon item="saw" className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col space-y-0.5">
+                    <span className="font-orbitron font-bold text-red-300 text-[11px]">
+                      {t('shotgun.guideSawTitle')}
+                    </span>
+                    <span className="text-[10px] text-slate-300 leading-snug">
+                      {t('shotgun.guideSawDesc')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Ejector */}
+                <div className="p-2.5 rounded-2xl bg-black/50 border border-amber-500/30 flex space-x-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 self-start shrink-0">
+                    <ItemIcon item="ejector" className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col space-y-0.5">
+                    <span className="font-orbitron font-bold text-amber-300 text-[11px]">
+                      {t('shotgun.guideEjectorTitle')}
+                    </span>
+                    <span className="text-[10px] text-slate-300 leading-snug">
+                      {t('shotgun.guideEjectorDesc')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Handcuffs */}
+                <div className="p-2.5 rounded-2xl bg-black/50 border border-purple-500/30 flex space-x-2.5">
+                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 self-start shrink-0">
+                    <ItemIcon item="handcuffs" className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col space-y-0.5">
+                    <span className="font-orbitron font-bold text-purple-300 text-[11px]">
+                      {t('shotgun.guideHandcuffsTitle')}
+                    </span>
+                    <span className="text-[10px] text-slate-300 leading-snug">
+                      {t('shotgun.guideHandcuffsDesc')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Inverter */}
+                <div className="p-2.5 rounded-2xl bg-black/50 border border-cyan-500/30 flex space-x-2.5">
+                  <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 self-start shrink-0">
+                    <ItemIcon item="inverter" className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col space-y-0.5">
+                    <span className="font-orbitron font-bold text-cyan-300 text-[11px]">
+                      {t('shotgun.guideInverterTitle')}
+                    </span>
+                    <span className="text-[10px] text-slate-300 leading-snug">
+                      {t('shotgun.guideInverterDesc')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="mt-3 w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-orbitron font-black text-xs uppercase tracking-wider transition-all"
+              >
+                {t('shotgun.guideGotIt')}
+              </button>
             </div>
           </div>
         )}
@@ -611,7 +748,7 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                 <>
                   <Swords className="w-16 h-16 text-cyan-400 mb-3 animate-pulse" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
-                    ⚔️ DUELLO CONCLUSO
+                    {t('arena.duelConcluded')}
                   </h2>
                 </>
               )}
@@ -637,7 +774,7 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                 </div>
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isWinner ? t('shotgun.victoryTitle') : role === 'player' ? t('shotgun.defeatTitle') : '⚔️ DUELLO CONCLUSO'}
+                {isWinner ? t('shotgun.victoryTitle') : role === 'player' ? t('shotgun.defeatTitle') : t('arena.duelConcluded')}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}

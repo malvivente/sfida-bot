@@ -341,29 +341,29 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                 <>
                   <Trophy className="w-16 h-16 text-cyber-amber animate-bounce mb-3 filter drop-shadow-[0_0_15px_#ffb800]" />
                   <h2 className="text-2xl font-orbitron font-black text-cyber-green tracking-wider uppercase animate-pulse">
-                    🏆 VITTORIA!
+                    {t('blackjack.victoryTitle')}
                   </h2>
                   <p className="text-xs font-chakra text-slate-200 mt-2">
-                    Hai battuto il banco avversario a 21!
+                    {t('blackjack.victoryDesc')}
                   </p>
                 </>
               ) : role === 'player' ? (
                 <>
-                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-3xl animate-pulse">
-                    💀
+                  <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-rose-400 animate-pulse">
+                    <Swords className="w-8 h-8" />
                   </div>
                   <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
-                    💀 SCONFITTA!
+                    {t('blackjack.defeatTitle')}
                   </h2>
                   <p className="text-xs font-chakra text-slate-300 mt-2">
-                    L'avversario ha avuto la mano migliore.
+                    {t('blackjack.defeatDesc')}
                   </p>
                 </>
               ) : (
                 <>
                   <Swords className="w-16 h-16 text-cyber-cyan mb-3 animate-pulse" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
-                    ⚔️ DUELLO CONCLUSO
+                    {t('arena.duelConcluded')}
                   </h2>
                 </>
               )}
@@ -384,12 +384,12 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               {isWinner ? (
                 <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
               ) : (
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-2xl">
-                  💀
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
+                  <Swords className="w-6 h-6" />
                 </div>
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isWinner ? '🏆 VITTORIA!' : role === 'player' ? '💀 DUELLO CONCLUSO' : '⚔️ DUELLO CONCLUSO'}
+                {isWinner ? t('blackjack.victoryTitle') : role === 'player' ? t('blackjack.defeatTitle') : t('arena.duelConcluded')}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}

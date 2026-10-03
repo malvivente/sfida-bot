@@ -179,6 +179,17 @@ export class CyberShotgunRoom extends BaseGameRoom {
       return;
     }
 
+    if (item === 'saw' && this.isSawActive) {
+      this.sendError(wallet, 'La canna è già tagliata! Il prossimo colpo infligge già 2X danno.');
+      return;
+    }
+
+    const opponentHandcuffed = isA ? this.isHandcuffedB : this.isHandcuffedA;
+    if (item === 'handcuffs' && opponentHandcuffed) {
+      this.sendError(wallet, "L'avversario è già ammanettato per il prossimo turno!");
+      return;
+    }
+
     // Consume item
     items.splice(itemIndex, 1);
     const playerName = isA ? this.playerA.username : (this.playerB?.username || 'Player B');

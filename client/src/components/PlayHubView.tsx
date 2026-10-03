@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Sparkles, Flame, ArrowRight, Zap, Target } from 'lucide-react';
+import { ArrowLeft, Flame, ArrowRight, Zap, Target } from 'lucide-react';
 import { GameType, MatchData } from '../types/index.js';
-import { LiveActivityTicker } from './LiveActivityTicker.js';
 import { GameIcon } from './GameIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
@@ -41,7 +40,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
   return (
     <div className="w-full max-w-md mx-auto space-y-4 select-none pb-8 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
       {/* Top Header Row with Back Button */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center px-1">
         <button
           type="button"
           onClick={() => {
@@ -53,19 +52,6 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           <ArrowLeft className="w-4 h-4 text-cyan-400" />
           <span>{t('epic.back')}</span>
         </button>
-
-        <div className="flex items-center space-x-1.5">
-          <Sparkles className="w-4 h-4 text-purple-400" />
-          <h2 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-            {activeCategory === 'quick'
-              ? t('playHub.quickMatchSection')
-              : activeCategory === 'strategy'
-              ? t('playHub.strategySection')
-              : t('epic.playHubTitle')}
-          </h2>
-        </div>
-
-        <div className="w-16" /> {/* Spacer */}
       </div>
 
       {/* Category Filter Switcher Tabs */}
@@ -113,18 +99,6 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           {t('playHub.strategyTab')}
         </button>
       </div>
-
-      {/* Live Winnings Ticker */}
-      <LiveActivityTicker
-        matches={matches}
-        onSelectGame={(g) => {
-          if (onNavigateToDuels) {
-            onNavigateToDuels(g);
-          } else {
-            onCreateMatchForGame(g);
-          }
-        }}
-      />
 
       {/* ============================================================= */}
       {/* SECTION 1: TATTICA & STRATEGIA (GIOCHI LUNGHI • 2-3 MINUTI)    */}

@@ -451,7 +451,7 @@ export const Connect4Arena: React.FC<Connect4ArenaProps> = ({
                 <>
                   <Swords className="w-16 h-16 text-cyan-400 mb-3 animate-pulse" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
-                    ⚔️ DUELLO CONCLUSO
+                    {t('arena.duelConcluded')}
                   </h2>
                 </>
               )}
@@ -481,7 +481,7 @@ export const Connect4Arena: React.FC<Connect4ArenaProps> = ({
                 </div>
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isDraw ? t('connect4.drawTitle') : isWinner ? t('connect4.victoryTitle') : role === 'player' ? t('connect4.defeatTitle') : '⚔️ DUELLO CONCLUSO'}
+                {isDraw ? t('connect4.drawTitle') : isWinner ? t('connect4.victoryTitle') : role === 'player' ? t('connect4.defeatTitle') : t('arena.duelConcluded')}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}

@@ -354,6 +354,9 @@ export const translations: Translations = {
   'arena.shareSpectatorText': { it: '👀 Guarda il duello su {title} per {wager} GRAM in corso su Sfida! Fai il tuo pronostico e scommetti sullo sfidante vincente:', en: '👀 Watch the live {title} duel for {wager} GRAM on Sfida! Predict the winner and place your bets:' },
   'arena.bettingWindowTitle': { it: 'FINESTRA SCOMMESSE PARI-MUTUEL', en: 'PARI-MUTUEL BETTING WINDOW' },
   'arena.bettingWindowActiveDesc': { it: 'Entrambi i duellanti sono pronti. La partita inizierà a 00:00!', en: 'Both duelists confirmed. Round 1 starts at 00:00!' },
+  'arena.duelConcluded': { it: 'DUELLO CONCLUSO', en: 'DUEL CONCLUDED' },
+  'arena.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
+  'arena.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
 
   // Cyber Shotgun Arena Translations
   'shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },
@@ -374,15 +377,32 @@ export const translations: Translations = {
   'shotgun.spectatorNotice': { it: '👁️ VISTA SPETTATORE • CALCOLA LE PROBABILITÀ E SCOMMETTI', en: '👁️ SPECTATOR VIEW • CALCULATE ODDS & BET' },
   'shotgun.itemSaw': { it: 'Sega', en: 'Saw' },
   'shotgun.itemSawDesc': { it: 'Raddoppia il danno del prossimo colpo a 2 HP', en: 'Doubles next shot damage to 2 HP' },
+  'shotgun.itemSawShort': { it: '+1 Danno (2 HP)', en: '+1 Damage (2 HP)' },
   'shotgun.itemEjector': { it: 'Ejector', en: 'Ejector' },
   'shotgun.itemEjectorDesc': { it: 'Espelle la cartuccia in canna mostrandola a tutti', en: 'Racks slide and ejects chambered shell to all' },
+  'shotgun.itemEjectorShort': { it: 'Espelle colpo', en: 'Eject shell' },
   'shotgun.itemHandcuffs': { it: 'Manette', en: 'Handcuffs' },
   'shotgun.itemHandcuffsDesc': { it: 'Fa saltare il prossimo turno all\'avversario', en: 'Skips opponent\'s next turn' },
+  'shotgun.itemHandcuffsShort': { it: 'Salta turno avv.', en: 'Skip foe\'s turn' },
   'shotgun.itemInverter': { it: 'Invertitore', en: 'Inverter' },
   'shotgun.itemInverterDesc': { it: 'Inverte la polarità del colpo: Vera ↔ Salve', en: 'Inverts shell polarity: Live ↔ Blank' },
-  'shotgun.victoryTitle': { it: '🏆 VITTORIA!', en: '🏆 VICTORY!' },
+  'shotgun.itemInverterShort': { it: 'Inverte Vera/Salve', en: 'Invert Live/Blank' },
+  'shotgun.sawAlreadyActive': { it: '2X Attivo', en: '2X Active' },
+  'shotgun.opponentAlreadyHandcuffed': { it: 'Avv. Bloccato', en: 'Foe Cuffed' },
+  'shotgun.boostGuideTitle': { it: 'GUIDA OGGETTI TATTICI', en: 'TACTICAL ITEMS GUIDE' },
+  'shotgun.boostGuideSubtitle': { it: 'Tattiche e funzionamento di ogni potenziamento', en: 'Tactics & mechanics for each boost' },
+  'shotgun.guideSawTitle': { it: 'Sega (Canna Mozzata)', en: 'Saw (Sawed-Off)' },
+  'shotgun.guideSawDesc': { it: 'Taglia la canna del fucile. Il prossimo colpo sparato infligge 2 PUNTI VITA di danno invece di 1! Attenzione: se ti spari da solo con un colpo vero, subirai tu stesso 2 HP. Non è cumulabile nello stesso turno.', en: 'Saws off the barrel. The next shot deals 2 HP damage instead of 1! Caution: shooting yourself with a live shell deals 2 HP to you. Does not stack in the same turn.' },
+  'shotgun.guideEjectorTitle': { it: 'Ejector (Espulsore)', en: 'Ejector (Rack Slide)' },
+  'shotgun.guideEjectorDesc': { it: 'Espelle la cartuccia attualmente in canna senza spararla, mostrandola a tutti (Vera o A Salve). Ottimo per liberarsi di un colpo rischioso o per verificare lo stato del caricatore senza cedere il turno.', en: 'Ejects the chambered round without firing and reveals it publicly (Live or Blank). Great for discarding a risky round or scouting without losing your turn.' },
+  'shotgun.guideHandcuffsTitle': { it: 'Manette Tattiche', en: 'Tactical Handcuffs' },
+  'shotgun.guideHandcuffsDesc': { it: 'Ammanetta l\'avversario. Quando il turno dovrebbe passare a lui, l\'avversario salta la manche e il turno torna immediatamente a te! Non puoi ammanettare un avversario già ammanettato.', en: 'Restrains the opponent. When their turn comes, it gets skipped and passes immediately back to you! Cannot cuff an already restrained opponent.' },
+  'shotgun.guideInverterTitle': { it: 'Invertitore Quantico', en: 'Quantum Inverter' },
+  'shotgun.guideInverterDesc': { it: 'Inverte la cartuccia attualmente in canna: se era VERA diventa A SALVE; se era A SALVE diventa VERA. Trasforma colpi a salve in attacchi letali o colpi veri in turni extra sparandoti addosso in sicurezza!', en: 'Inverts the chambered round: Live becomes Blank, Blank becomes Live. Turn blanks into lethal attacks or live shells into safe extra turns by shooting yourself!' },
+  'shotgun.guideGotIt': { it: 'HO CAPITO', en: 'GOT IT' },
+  'shotgun.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
   'shotgun.victoryDesc': { it: 'Sei sopravvissuto al Cyber Shotgun!', en: 'You survived Cyber Shotgun!' },
-  'shotgun.defeatTitle': { it: '💀 SCONFITTA!', en: '💀 DEFEAT!' },
+  'shotgun.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
   'shotgun.defeatDesc': { it: 'Punti vita azzerati dal Cyber Shotgun.', en: 'HP depleted by Cyber Shotgun.' },
 
   // Connect 4 Arena Translations
@@ -450,6 +470,33 @@ export const translations: Translations = {
   'blackjack.bettingWindow': { it: 'CARTE SCOPERTE • FINESTRA SCOMMESSE ATTIVA', en: 'DEALING FACE-UP SHOE • BETTING WINDOW ACTIVE' },
   'blackjack.waitingDecide': { it: 'sta decidendo se chiamare Carta o Stare...', en: 'is deciding to Hit or Stand...' },
   'blackjack.prizeCredited': { it: '✅ PREMIO ACCREDITATO AUTOMATICAMENTE', en: '✅ PRIZE AUTO-CREDITED' },
+  'blackjack.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
+  'blackjack.victoryDesc': { it: 'Hai battuto il banco avversario a 21!', en: 'You beat your opponent with 21!' },
+  'blackjack.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
+  'blackjack.defeatDesc': { it: 'L\'avversario ha avuto la mano migliore.', en: 'The opponent had the better hand.' },
+
+  // Chrono Blind Arena Outcome
+  'chronoblind.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
+  'chronoblind.victoryDesc': { it: 'Hai trionfato nel duello Chrono Blind!', en: 'You triumphed in the Chrono Blind duel!' },
+  'chronoblind.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
+  'chronoblind.defeatDesc': { it: 'Il tuo avversario è stato più preciso.', en: 'Your opponent timed closer to target.' },
+
+  // Glass Bridge Arena Outcome
+  'glassbridge.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
+  'glassbridge.victoryDesc': { it: 'Hai superato l\'avversario sul Ponte di Vetro!', en: 'You outlasted your rival on the Glass Bridge!' },
+  'glassbridge.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
+  'glassbridge.defeatDesc': { it: 'Hai esaurito le tue 3 vite nel vuoto.', en: 'You lost all 3 lives into the void.' },
+
+  // Russian Roulette Arena Outcome
+  'roulette.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
+  'roulette.victoryDesc': { it: 'Sei sopravvissuto alla Roulette Russa!', en: 'You survived the Russian Roulette!' },
+  'roulette.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
+  'roulette.defeatDesc': { it: 'Il colpo letale è andato a segno.', en: 'The lethal shot found its mark.' },
+
+  // Split or Steal Extra Outcome
+  'split.duelVictoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
+  'split.duelDefeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
+  'split.duelVictoryDesc': { it: 'Hai vinto il duello Split or Steal!', en: 'You won the Split or Steal duel!' },
 
   // Spectator Odds Extra Translations
   'spectator.oddsSpectators': { it: 'SCOMMESSE SPETTATORI (PARI-MUTUEL)', en: 'PARI-MUTUEL ODDS (SPECTATORS)' },
