@@ -53,26 +53,36 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   // Dynamic sparks for saw cutting
   const [sparks, setSparks] = useState<SparkParticle[]>([]);
 
-  // Track previous saw and lastAction to avoid redundant triggers
+  // Track previous saw state and lastAction ID to avoid redundant triggers
   const prevSawActiveRef = useRef<boolean>(isSawActive);
   const lastActionIdRef = useRef<string>('');
+  const isSawCuttingRef = useRef<boolean>(false);
 
   // Synchronize barrel state if prop changes directly (e.g. initial load or rematch reset)
   useEffect(() => {
-    if (isSawActive && barrelState === 'long' && !isSawCutting) {
-      setBarrelState('short');
+    // If an active saw cut animation is in progress, let it finish naturally
+    if (isSawCuttingRef.current) return;
+
+    if (isSawActive && barrelState === 'long') {
+      // If saw was just activated from false -> true, play full saw cutting animation
+      if (!prevSawActiveRef.current) {
+        triggerSawCutAnimation();
+      } else {
+        // Already active on mount / re-render
+        setBarrelState('short');
+      }
     } else if (!isSawActive && barrelState === 'short') {
       setBarrelState('long');
       setIsSeveredBarrelFalling(false);
       setIsPolarityReversed(false);
     }
+    prevSawActiveRef.current = isSawActive;
   }, [isSawActive]);
 
-  // Handle Action-driven animations
+  // Handle Action-driven animations from server
   useEffect(() => {
     if (!lastAction) return;
 
-    // Create unique key for action to ensure single trigger
     const actionKey = `${lastAction.player}-${lastAction.type}-${lastAction.result}-${lastAction.message}`;
     if (lastActionIdRef.current === actionKey) {
       return;
@@ -80,7 +90,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     lastActionIdRef.current = actionKey;
 
     // --- ANIMATION 1: SAW CUT ---
-    if (lastAction.result === 'SAWED' || (!prevSawActiveRef.current && isSawActive)) {
+    if (lastAction.result === 'SAWED') {
       triggerSawCutAnimation();
     }
     // --- ANIMATION 2: EMPTY EJECTION (Ejector Item) ---
@@ -101,45 +111,47 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     else if (lastAction.result === 'CONVERTED') {
       triggerPolarityInversionAnimation();
     }
-
-    prevSawActiveRef.current = isSawActive;
-  }, [lastAction, isSawActive]);
+  }, [lastAction]);
 
   // ==========================================
   // ANIMATION 1: SAW CUT (Taglio Canna)
+  // Well-timed, dramatic sequence (~1.8 seconds)
   // ==========================================
   const triggerSawCutAnimation = () => {
+    if (isSawCuttingRef.current) return;
+    isSawCuttingRef.current = true;
     setIsSawCutting(true);
     setBarrelState('long');
     setIsSeveredBarrelFalling(false);
-    triggerImpact?.('light');
+    triggerImpact?.('medium');
 
-    // Generate cluster of dynamic spark particles
-    const newSparks: SparkParticle[] = Array.from({ length: 18 }).map((_, i) => ({
+    // Continuous shower of orange & cyan sparks
+    const newSparks: SparkParticle[] = Array.from({ length: 24 }).map((_, i) => ({
       id: Date.now() + i,
       x: 0,
       y: 0,
-      vx: (Math.random() - 0.35) * 85,
-      vy: Math.random() * 65 + 20,
+      vx: (Math.random() - 0.35) * 95,
+      vy: Math.random() * 70 + 25,
       color: Math.random() > 0.4 ? '#f59e0b' : '#22d3ee',
-      size: Math.random() * 3 + 2,
+      size: Math.random() * 3.5 + 2,
     }));
     setSparks(newSparks);
 
-    // Slicing duration: at 650ms, blade completes cut
+    // At 1100ms: laser blade finishes slicing through barrel
     setTimeout(() => {
-      // Switch instantly to shotgun_short
+      // Instant switch to shotgun_short
       setBarrelState('short');
-      // Drop severed barrel piece
+      // Drop severed barrel piece with tumbling physics
       setIsSeveredBarrelFalling(true);
       setSparks([]);
       triggerImpact?.('heavy');
-    }, 650);
+    }, 1100);
 
-    // Complete saw animation
+    // Blade retracts and sequence wraps up at 1800ms
     setTimeout(() => {
       setIsSawCutting(false);
-    }, 1100);
+      isSawCuttingRef.current = false;
+    }, 1800);
   };
 
   // ==========================================
@@ -147,50 +159,51 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   // ==========================================
   const triggerEjectionAnimation = (shellType: 'LIVE' | 'BLANK' = 'LIVE') => {
     setEjectedShellType(shellType);
-    // 1. Pump racks backward
+    // 1. Pump racks backward along X axis
     setIsPumpRacking(true);
     triggerImpact?.('medium');
 
     // 2. Chamber opens and cartridge launches at peak rack
     setTimeout(() => {
       setIsEjectingCartridge(true);
-    }, 120);
+    }, 150);
 
     // 3. Pump slides forward
     setTimeout(() => {
       setIsPumpRacking(false);
-    }, 420);
+    }, 450);
 
-    // 4. Cartridge completes trajectory
+    // 4. Cartridge completes parabolic flight
     setTimeout(() => {
       setIsEjectingCartridge(false);
-    }, 900);
+    }, 950);
   };
 
   // ==========================================
   // ANIMATION 3: SHOT + RECOIL + MUZZLE FLASH
+  // Explosive plasma burst with ample visible room
   // ==========================================
   const triggerShotAnimation = (isLive: boolean) => {
     // 1. Violent recoil kick along X axis
     setIsRecoilActive(true);
-    // 2. Muzzle flash burst
+    // 2. Muzzle flash burst (prominent, high-energy plasma)
     setIsMuzzleFlashActive(true);
     triggerImpact?.('heavy');
 
-    // Muzzle flash ends quickly
+    // Muzzle flash visible for 380ms
     setTimeout(() => {
       setIsMuzzleFlashActive(false);
-    }, 220);
+    }, 380);
 
     // Recoil settles
     setTimeout(() => {
       setIsRecoilActive(false);
-    }, 380);
+    }, 450);
 
-    // 3. Subito dopo (160ms): rack pump and eject spent cartridge
+    // 3. Rack pump and eject spent cartridge after recoil peak
     setTimeout(() => {
       triggerEjectionAnimation(isLive ? 'LIVE' : 'BLANK');
-    }, 180);
+    }, 240);
   };
 
   // Subtle blank shot
@@ -199,11 +212,11 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     triggerImpact?.('light');
     setTimeout(() => {
       setIsRecoilActive(false);
-    }, 200);
+    }, 220);
 
     setTimeout(() => {
       triggerEjectionAnimation('BLANK');
-    }, 120);
+    }, 150);
   };
 
   // ==========================================
@@ -216,14 +229,14 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
 
     setTimeout(() => {
       triggerImpact?.('medium');
-    }, 400);
+    }, 450);
 
     setTimeout(() => {
       setIsInvertingPolarity(false);
     }, 1800);
   };
 
-  // Coordinate constants based on 1307 x 413 weapon geometry
+  // Coordinates based on 1307 x 413 weapon geometry:
   // Cut line: 1041px / 1307px = 79.65%
   // Long barrel muzzle tip: 99.2% X, 32.4% Y
   // Short barrel muzzle tip: 79.9% X, 32.4% Y
@@ -241,25 +254,27 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
         {/* High-Tech Cyber Grid Background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:12px_12px]" />
 
-        {/* Gun Chamber Ambient Glow (Reacts to shots & inversions) */}
+        {/* Ambient Chamber Shockwave Glow (Explosive plasma flash on firing) */}
         <motion.div
           animate={{
-            opacity: isMuzzleFlashActive ? 0.85 : isInvertingPolarity ? [0.2, 0.7, 0.3, 0.8, 0.4] : 0.15,
-            background: isInvertingPolarity
-              ? 'radial-gradient(ellipse at center, rgba(236,72,153,0.4) 0%, transparent 70%)'
-              : isMuzzleFlashActive
-              ? 'radial-gradient(ellipse at right, rgba(239,68,68,0.7) 0%, transparent 70%)'
+            opacity: isMuzzleFlashActive ? 0.95 : isInvertingPolarity ? [0.2, 0.7, 0.3, 0.8, 0.4] : 0.15,
+            background: isMuzzleFlashActive
+              ? 'radial-gradient(ellipse at 80% 50%, rgba(239,68,68,0.85) 0%, rgba(249,115,22,0.5) 45%, transparent 80%)'
+              : isInvertingPolarity
+              ? 'radial-gradient(ellipse at center, rgba(236,72,153,0.5) 0%, transparent 70%)'
               : 'radial-gradient(ellipse at center, rgba(34,211,238,0.2) 0%, transparent 70%)',
           }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: isMuzzleFlashActive ? 0.08 : 0.25 }}
           className="absolute inset-0 pointer-events-none"
         />
 
-        {/* WEAPON FRAME CONTAINER (Holds main gun, pump, flash, sparks) */}
+        {/* WEAPON FRAME CONTAINER
+            Width is 265px and slightly left-aligned (-translate-x-3)
+            This leaves over 85px of visible clearance on the right for the full muzzle flash! */}
         <motion.div
           animate={{
-            x: isRecoilActive ? [-26, 6, -3, 0] : isSawCutting ? [0, -2, 2, -1, 1, 0] : 0,
-            rotate: isRecoilActive ? [-1.8, 0.4, 0] : 0,
+            x: isRecoilActive ? [-28, -26, 8, -3, 0] : isSawCutting ? [0, -2, 2, -1, 1, 0] : 0,
+            rotate: isRecoilActive ? [-2.4, 0.6, 0] : 0,
             filter: isInvertingPolarity
               ? [
                   'hue-rotate(0deg) brightness(1.2)',
@@ -274,14 +289,14 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             opacity: isInvertingPolarity ? [1, 0.5, 1, 0.35, 1, 0.7, 1] : 1,
           }}
           transition={{
-            x: isRecoilActive ? { duration: 0.38, ease: 'easeOut' } : isSawCutting ? { duration: 0.15, repeat: 4 } : { duration: 0.2 },
-            rotate: { duration: 0.38, ease: 'easeOut' },
+            x: isRecoilActive ? { duration: 0.42, ease: 'easeOut' } : isSawCutting ? { duration: 0.15, repeat: 7 } : { duration: 0.2 },
+            rotate: { duration: 0.42, ease: 'easeOut' },
             filter: { duration: isInvertingPolarity ? 1.8 : 0.3 },
             opacity: { duration: isInvertingPolarity ? 1.8 : 0.2 },
           }}
-          className="relative w-[310px] h-[98px] flex items-center justify-center"
+          className="relative w-[265px] h-[84px] flex items-center justify-center -translate-x-3.5"
         >
-          {/* BASE WEAPON SPRITE: shotgun_long or shotgun_short */}
+          {/* BASE WEAPON SPRITE: shotgun_long or shotgun_short (with bare magazine tube underneath pump) */}
           <motion.img
             key={barrelState}
             src={isShortBarrel ? shotgunShortImg : shotgunLongImg}
@@ -290,16 +305,18 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[0_0_15px_rgba(239,68,68,0.45)]"
           />
 
-          {/* PUMP SLIDE (Layered over pump grip for racking animation) */}
+          {/* PUMP SLIDE (Layered over the bare magazine tube)
+              At x: 0 (idle) it completely covers the tube.
+              When racking, it slides back to x: -18px, exposing the bare tube behind it without any duplicate pump! */}
           <motion.img
             src={pumpSlideImg}
             alt="Pump Slide"
             draggable={false}
             animate={{
-              x: isPumpRacking ? [-16, -16, 0] : 0,
+              x: isPumpRacking ? [-18, -18, 0] : 0,
             }}
             transition={{
-              duration: 0.38,
+              duration: 0.42,
               ease: 'easeInOut',
             }}
             style={{
@@ -309,7 +326,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
               width: '19.3%',
               height: '23.0%',
             }}
-            className="object-contain pointer-events-none drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]"
+            className="object-contain pointer-events-none drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]"
           />
 
           {/* MOLTEN EDGE GLOW ON SHORT BARREL CUT LINE */}
@@ -320,13 +337,13 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 left: '79.65%',
                 top: '25%',
                 height: '26%',
-                width: '3px',
+                width: '3.5px',
               }}
-              className="rounded-full bg-gradient-to-b from-amber-400 via-orange-500 to-red-500 shadow-[0_0_10px_#f59e0b] animate-pulse pointer-events-none"
+              className="rounded-full bg-gradient-to-b from-amber-400 via-orange-500 to-red-500 shadow-[0_0_12px_#f59e0b] animate-pulse pointer-events-none z-10"
             />
           )}
 
-          {/* ANIMATION 1: SEVERED BARREL PIECE FALLING */}
+          {/* ANIMATION 1: SEVERED BARREL PIECE FALLING WITH GRAVITY */}
           <AnimatePresence>
             {isSeveredBarrelFalling && (
               <motion.img
@@ -342,7 +359,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                   opacity: [1, 1, 0.85, 0],
                 }}
                 transition={{
-                  duration: 0.75,
+                  duration: 0.85,
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
                 style={{
@@ -357,18 +374,18 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             )}
           </AnimatePresence>
 
-          {/* ANIMATION 1: LASER SAW CUTTING */}
+          {/* ANIMATION 1: LASER SAW CUTTING (Dramatic vertical drop & continuous 1440° spin) */}
           <AnimatePresence>
             {isSawCutting && (
               <motion.div
                 key="laser-saw"
-                initial={{ y: -55, opacity: 0 }}
+                initial={{ y: -65, opacity: 0 }}
                 animate={{
-                  y: [-55, -15, 20, 50],
+                  y: [-65, -20, 10, 48],
                   opacity: [0, 1, 1, 0],
                 }}
                 transition={{
-                  duration: 0.7,
+                  duration: 1.1,
                   ease: 'easeInOut',
                 }}
                 style={{
@@ -382,9 +399,9 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 <motion.img
                   src={laserSawImg}
                   alt="Laser Saw Blade"
-                  animate={{ rotate: 1080 }}
-                  transition={{ duration: 0.7, ease: 'linear' }}
-                  className="w-16 h-16 drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]"
+                  animate={{ rotate: 1440 }}
+                  transition={{ duration: 1.1, ease: 'linear' }}
+                  className="w-18 h-18 drop-shadow-[0_0_16px_rgba(34,211,238,0.95)]"
                 />
               </motion.div>
             )}
@@ -401,7 +418,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 opacity: 0,
                 scale: 0.2,
               }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
               style={{
                 position: 'absolute',
                 left: '79.65%',
@@ -416,50 +433,51 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             />
           ))}
 
-          {/* ANIMATION 3: MUZZLE FLASH VFX */}
+          {/* ANIMATION 3: MUZZLE FLASH VFX
+              Anchored with transform: translate(0, -50%) so left edge touches muzzle tip and expands rightwards */}
           <AnimatePresence>
             {isMuzzleFlashActive && (
               <motion.div
                 key="muzzle-flash"
-                initial={{ scale: 0.2, opacity: 0 }}
+                initial={{ scale: 0.3, opacity: 0 }}
                 animate={{
-                  scale: [0.2, 1.25, 0.9, 0],
-                  opacity: [0, 1, 0.85, 0],
-                  filter: ['brightness(2.2)', 'brightness(1.5)', 'brightness(1)'],
+                  scale: [0.3, 1.35, 1.05, 0],
+                  opacity: [0, 1, 0.9, 0],
+                  filter: ['brightness(2.4)', 'brightness(1.7)', 'brightness(1)'],
                 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
+                transition={{ duration: 0.36, ease: 'easeOut' }}
                 style={{
                   position: 'absolute',
                   left: muzzleTipX,
                   top: muzzleTipY,
-                  transform: 'translate(-5%, -50%)',
+                  transform: 'translate(0, -50%)',
                 }}
                 className="z-30 pointer-events-none flex items-center"
               >
                 <img
                   src={muzzleFlashImg}
                   alt="Muzzle Flash"
-                  className="w-28 h-16 object-contain drop-shadow-[0_0_20px_rgba(239,68,68,0.9)]"
+                  className="w-28 h-18 object-contain drop-shadow-[0_0_25px_rgba(239,68,68,0.95)]"
                 />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ANIMATION 2 & 3: EJECTING CARTRIDGE */}
+          {/* ANIMATION 2 & 3: EJECTING CARTRIDGE (Parabolic arc with full rotation) */}
           <AnimatePresence>
             {isEjectingCartridge && (
               <motion.div
                 key="ejected-cartridge"
                 initial={{ x: 0, y: 0, rotate: 0, opacity: 1, scale: 0.8 }}
                 animate={{
-                  x: [0, -16, -34, -48],
-                  y: [0, -42, -28, 30],
+                  x: [0, -18, -36, -52],
+                  y: [0, -45, -30, 32],
                   rotate: [0, -180, -360, -540],
-                  scale: [0.8, 1.1, 0.95, 0.75],
+                  scale: [0.8, 1.15, 0.95, 0.75],
                   opacity: [1, 1, 0.9, 0],
                 }}
                 transition={{
-                  duration: 0.75,
+                  duration: 0.8,
                   ease: [0.22, 1, 0.36, 1],
                 }}
                 style={{
@@ -474,7 +492,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                   alt="Cartridge Shell"
                   className={`w-3.5 h-8 object-contain ${
                     ejectedShellType === 'LIVE'
-                      ? 'drop-shadow-[0_0_10px_rgba(239,68,68,0.9)]'
+                      ? 'drop-shadow-[0_0_12px_rgba(239,68,68,0.95)]'
                       : 'drop-shadow-[0_0_10px_rgba(148,163,184,0.7)]'
                   }`}
                 />
@@ -499,40 +517,6 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
           </div>
         )}
       </div>
-
-      {/* DEV TEST CONTROLS (Only visible in development mode for live previewing animations) */}
-      {import.meta.env.DEV && (
-        <div className="flex items-center space-x-1.5 mt-1.5 opacity-60 hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            onClick={triggerSawCutAnimation}
-            className="px-2 py-0.5 text-[8px] font-mono font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded border border-amber-500/30 transition-colors"
-          >
-            1. Saw Cut
-          </button>
-          <button
-            type="button"
-            onClick={() => triggerEjectionAnimation('LIVE')}
-            className="px-2 py-0.5 text-[8px] font-mono font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded border border-cyan-500/30 transition-colors"
-          >
-            2. Rack
-          </button>
-          <button
-            type="button"
-            onClick={() => triggerShotAnimation(true)}
-            className="px-2 py-0.5 text-[8px] font-mono font-bold bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded border border-red-500/30 transition-colors"
-          >
-            3. Fire
-          </button>
-          <button
-            type="button"
-            onClick={triggerPolarityInversionAnimation}
-            className="px-2 py-0.5 text-[8px] font-mono font-bold bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 rounded border border-pink-500/30 transition-colors"
-          >
-            4. Invert
-          </button>
-        </div>
-      )}
     </div>
   );
 };
