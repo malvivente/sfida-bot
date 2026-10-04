@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Flame, ArrowRight, Zap, Target } from 'lucide-react';
 import { GameType, MatchData } from '../types/index.js';
-import { GameIcon } from './GameIcon.js';
+import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 
@@ -123,12 +123,18 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('medium');
             onCreateMatchForGame('shotgun');
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-amber-800 p-4 sm:p-5 shadow-xl border border-red-400/40 cursor-pointer active:scale-[0.99] transition-all group"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-amber-800 p-4 sm:p-5 shadow-xl border border-red-400/40 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
         >
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-red-400/25 blur-2xl pointer-events-none" />
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-1.5 max-w-[65%]">
+          {/* 2D Minimal Graphic in Background */}
+          <CardBackgroundArt
+            type="shotgun"
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-45 transition-all duration-300 pointer-events-none text-red-200"
+          />
+
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="space-y-1.5 max-w-[68%]">
               <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white text-red-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
                 <Flame className="w-3 h-3 fill-red-500 text-red-500" />
                 <span>NUOVO GIOCO</span>
@@ -160,13 +166,6 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                 </span>
               </div>
             </div>
-
-            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex flex-col items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform shadow-md">
-              <GameIcon type="shotgun" className="w-9 h-9 text-white mb-1" />
-              <span className="text-[10px] font-heading font-black tracking-widest uppercase">
-                {t('playHub.badgeShotgun')}
-              </span>
-            </div>
           </div>
         </div>
 
@@ -182,23 +181,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
 
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
-              <GameIcon type="connect4" className="w-7 h-7 text-white" />
-            </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="connect4"
+              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-blue-200"
+            />
 
-            <div className="space-y-1">
+            <div className="relative z-10 space-y-1.5 pt-1">
               <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                 {t('playHub.badgeConnect4')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
                 FORZA 4
               </h4>
-              <p className="text-[10px] text-blue-100 font-medium leading-tight line-clamp-2">
+              <p className="text-[10px] text-blue-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.connect4Desc')}
               </p>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
               <span className="text-[10px] font-bold text-white/90">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('connect4') })}
               </span>
@@ -219,23 +220,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-purple-400/20 blur-2xl pointer-events-none" />
 
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
-              <GameIcon type="split" className="w-7 h-7 text-white" />
-            </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="split"
+              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-purple-200"
+            />
 
-            <div className="space-y-1">
+            <div className="relative z-10 space-y-1.5 pt-1">
               <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                 {t('playHub.splitBadge')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
                 SPLIT OR STEAL
               </h4>
-              <p className="text-[10px] text-purple-100 font-medium leading-tight line-clamp-2">
+              <p className="text-[10px] text-purple-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.splitDesc')}
               </p>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
               <span className="text-[10px] font-bold text-white/90">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('split') })}
               </span>
@@ -256,12 +259,14 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
 
-            <div className="flex items-center space-x-3.5 min-w-0 flex-1 pr-3">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md shrink-0">
-                <GameIcon type="cubecount" className="w-7 h-7 text-white" />
-              </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="cubecount"
+              className="absolute right-14 top-1/2 -translate-y-1/2 w-44 h-auto opacity-30 group-hover:scale-105 group-hover:opacity-45 transition-all duration-300 pointer-events-none text-amber-200"
+            />
 
-              <div className="space-y-0.5 min-w-0">
+            <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
+              <div className="space-y-1 min-w-0 max-w-[68%]">
                 <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                   {t('playHub.badgeCubeCount')}
                 </span>
@@ -274,7 +279,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               </div>
             </div>
 
-            <div className="shrink-0 flex flex-col items-end justify-between self-stretch">
+            <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch">
               <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('cubecount') })}
               </span>
@@ -317,23 +322,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
 
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
-              <GameIcon type="roulette" className="w-7 h-7 text-white" />
-            </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="roulette"
+              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-emerald-200"
+            />
 
-            <div className="space-y-1">
+            <div className="relative z-10 space-y-1.5 pt-1">
               <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                 {t('playHub.badgeRoulette')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
                 ROULETTE
               </h4>
-              <p className="text-[10px] text-emerald-100 font-medium leading-tight line-clamp-2">
+              <p className="text-[10px] text-emerald-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.rouletteDesc')}
               </p>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
               <span className="text-[10px] font-bold text-white/90">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('roulette') })}
               </span>
@@ -354,23 +361,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-pink-500/20 blur-2xl pointer-events-none" />
 
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
-              <GameIcon type="blackjack" className="w-7 h-7 text-white" />
-            </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="blackjack"
+              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-pink-200"
+            />
 
-            <div className="space-y-1">
+            <div className="relative z-10 space-y-1.5 pt-1">
               <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                 {t('playHub.badgeBlackjack')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
                 BLACKJACK
               </h4>
-              <p className="text-[10px] text-pink-100 font-medium leading-tight line-clamp-2">
+              <p className="text-[10px] text-pink-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.blackjackDesc')}
               </p>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
               <span className="text-[10px] font-bold text-white/90">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('blackjack') })}
               </span>
@@ -391,23 +400,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-sky-500/20 blur-2xl pointer-events-none" />
 
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
-              <GameIcon type="bridge" className="w-7 h-7 text-white" />
-            </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="bridge"
+              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-sky-200"
+            />
 
-            <div className="space-y-1">
+            <div className="relative z-10 space-y-1.5 pt-1">
               <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                 {t('playHub.badgeBridge')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
                 GLASS BRIDGE
               </h4>
-              <p className="text-[10px] text-sky-100 font-medium leading-tight line-clamp-2">
+              <p className="text-[10px] text-sky-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.bridgeDesc')}
               </p>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
               <span className="text-[10px] font-bold text-white/90">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('bridge') })}
               </span>
@@ -428,23 +439,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
 
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md mb-2">
-              <GameIcon type="chrono" className="w-7 h-7 text-white" />
-            </div>
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="chrono"
+              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-amber-200"
+            />
 
-            <div className="space-y-1">
+            <div className="relative z-10 space-y-1.5 pt-1">
               <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
                 {t('playHub.badgeChrono')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
                 CHRONO BLIND
               </h4>
-              <p className="text-[10px] text-amber-100 font-medium leading-tight line-clamp-2">
+              <p className="text-[10px] text-amber-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.chronoDesc')}
               </p>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
               <span className="text-[10px] font-bold text-white/90">
                 {t('playHub.openRooms', { count: getOpenRoomsCount('chrono') })}
               </span>

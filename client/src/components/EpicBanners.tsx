@@ -1,5 +1,6 @@
 import React from 'react';
 import { MatchData, GameType } from '../types/index.js';
+import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { GramIcon } from './GramIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
@@ -40,13 +41,19 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           triggerImpact('medium');
           onOpenCreateModal('split');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 p-4 sm:p-5 shadow-xl border border-sky-400/30 cursor-pointer group active:scale-[0.99] transition-all"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 p-4 sm:p-5 shadow-xl border border-sky-400/30 cursor-pointer group active:scale-[0.99] transition-all min-h-[145px]"
       >
         {/* Ambient glow */}
         <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-cyan-400/25 blur-3xl pointer-events-none" />
 
+        {/* 2D Minimal Graphic in Background */}
+        <CardBackgroundArt
+          type="menu_split"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-sky-200"
+        />
+
         <div className="relative z-10 flex items-center justify-between">
-          <div className="max-w-[62%] space-y-1.5">
+          <div className="max-w-[65%] space-y-1.5">
             {/* Top Badge */}
             <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/95 text-orange-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
               <Flame className="w-3 h-3 fill-orange-500 text-orange-500" />
@@ -80,14 +87,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             </div>
           </div>
 
-          {/* Right Floating Badges (Ready for PNG Illustration) */}
-          <div className="flex flex-col items-end space-y-1.5 shrink-0">
-            <div className="px-2.5 py-1 rounded-xl bg-emerald-500/90 text-white font-heading font-black text-xs shadow-md border border-emerald-300/40">
-              {t('epic.splitPeaceBadge')}
-            </div>
-            <div className="px-2.5 py-1 rounded-xl bg-amber-500/90 text-white font-heading font-black text-xs shadow-md border border-amber-300/40">
-              {t('epic.splitStealBadge')}
-            </div>
+          {/* Right Clean Badge */}
+          <div className="hidden sm:flex flex-col items-end space-y-1.5 shrink-0">
             <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
               {t('epic.zeroRake')}
             </div>
@@ -97,19 +98,24 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
 
       {/* ------------------------------------------------------------- */}
       {/* 2. PVP DUELS HUB (Opens dedicated Play Hub Section Page)       */}
-      {/* Static banner without carousel - ready for PNG artwork         */}
       {/* ------------------------------------------------------------- */}
       <div
         onClick={() => {
           triggerImpact('medium');
           onOpenPlayHub?.('quick');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 p-4 sm:p-5 shadow-xl border border-amber-400/30 cursor-pointer active:scale-[0.99] transition-all group"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 p-4 sm:p-5 shadow-xl border border-amber-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-orange-300/25 blur-2xl pointer-events-none" />
 
+        {/* 2D Minimal Graphic in Background */}
+        <CardBackgroundArt
+          type="menu_quick"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-amber-200"
+        />
+
         <div className="relative z-10 flex items-center justify-between">
-          <div className="max-w-[62%] space-y-1.5">
+          <div className="max-w-[65%] space-y-1.5">
             <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/95 text-orange-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
               <Swords className="w-3 h-3 text-orange-600" />
               <span>{t('epic.pvpArenaTag')}</span>
@@ -139,14 +145,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             </div>
           </div>
 
-          {/* Right Static Badges (No carousel, ready for PNG) */}
-          <div className="flex flex-col items-end space-y-1.5 shrink-0">
-            <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-white font-heading font-black text-xs shadow-md border border-white/20">
-              {t('epic.fiveDisciplines')}
-            </div>
-            <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
-              {t('epic.allGames')}
-            </div>
+          {/* Right Clean Badge */}
+          <div className="hidden sm:flex flex-col items-end space-y-1.5 shrink-0">
             <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-amber-200 font-heading font-bold text-[10px] border border-white/20">
               100% FAIRPLAY
             </div>
@@ -162,12 +162,18 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           triggerImpact('medium');
           onOpenPlayHub?.('strategy');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-indigo-800 p-4 sm:p-5 shadow-xl border border-red-400/30 cursor-pointer active:scale-[0.99] transition-all group"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-indigo-800 p-4 sm:p-5 shadow-xl border border-red-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-red-400/20 blur-2xl pointer-events-none" />
 
+        {/* 2D Minimal Graphic in Background */}
+        <CardBackgroundArt
+          type="menu_strategy"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-rose-200"
+        />
+
         <div className="relative z-10 flex items-center justify-between">
-          <div className="max-w-[62%] space-y-1.5">
+          <div className="max-w-[65%] space-y-1.5">
             <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/95 text-red-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
               <Flame className="w-3 h-3 text-red-600 fill-red-600" />
               <span>{t('epic.strategyTag')}</span>
@@ -197,14 +203,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             </div>
           </div>
 
-          {/* Right Static Badges */}
-          <div className="flex flex-col items-end space-y-1.5 shrink-0">
-            <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-white font-heading font-black text-xs shadow-md border border-white/20">
-              SHOTGUN & FORZA 4
-            </div>
-            <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
-              ABILITÀ PURA
-            </div>
+          {/* Right Clean Badge */}
+          <div className="hidden sm:flex flex-col items-end space-y-1.5 shrink-0">
             <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-amber-200 font-heading font-bold text-[10px] border border-white/20">
               100% STRATEGIA
             </div>
@@ -214,19 +214,24 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
 
       {/* ------------------------------------------------------------- */}
       {/* 3. SPECTATE & BETTING HUB (Opens Duels Tab directly)           */}
-      {/* Static banner without carousel - ready for PNG artwork         */}
       {/* ------------------------------------------------------------- */}
       <div
         onClick={() => {
           triggerImpact('medium');
           onOpenSpectate?.();
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-700 via-indigo-700 to-cyan-800 p-4 sm:p-5 shadow-xl border border-cyan-400/30 cursor-pointer active:scale-[0.99] transition-all group"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-700 via-indigo-700 to-cyan-800 p-4 sm:p-5 shadow-xl border border-cyan-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-cyan-400/20 blur-2xl pointer-events-none" />
 
+        {/* 2D Minimal Graphic in Background */}
+        <CardBackgroundArt
+          type="menu_spectate"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-cyan-200"
+        />
+
         <div className="relative z-10 flex items-center justify-between">
-          <div className="max-w-[62%] space-y-1.5">
+          <div className="max-w-[65%] space-y-1.5">
             <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/95 text-purple-700 text-[10px] font-heading font-black tracking-wide shadow-sm">
               <Eye className="w-3 h-3 text-purple-700" />
               <span>{t('epic.spectateBadge')}</span>
@@ -256,16 +261,10 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             </div>
           </div>
 
-          {/* Right Static Badges (No carousel, ready for PNG) */}
-          <div className="flex flex-col items-end space-y-1.5 shrink-0">
+          {/* Right Clean Badge */}
+          <div className="hidden sm:flex flex-col items-end space-y-1.5 shrink-0">
             <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-cyan-300 font-heading font-black text-xs shadow-md border border-cyan-400/40">
               {t('epic.pariMutuel')}
-            </div>
-            <div className="px-2.5 py-1 rounded-xl bg-white/20 backdrop-blur-md text-white font-heading font-bold text-[10px] border border-white/30">
-              {t('epic.spectateOddsBadge')}
-            </div>
-            <div className="px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-md text-emerald-300 font-heading font-bold text-[10px] border border-white/20">
-              {t('epic.zeroFee')}
             </div>
           </div>
         </div>
