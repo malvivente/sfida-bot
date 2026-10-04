@@ -236,15 +236,15 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     }, 1800);
   };
 
-  // Coordinates based on 1307 x 413 weapon geometry:
-  // Cut line: 1041px / 1307px = 79.65%
-  // Long barrel muzzle tip: 99.2% X, 32.4% Y
-  // Short barrel muzzle tip: 79.9% X, 32.4% Y
-  // Ejection port: 46.0% X, 39.0% Y
-  // Pump slide: left 60.9%, top 40.4%, width 19.3%, height 23.0%
+  // Coordinates based on 1300 x 406 weapon geometry:
+  // Cut line: 1068px / 1300px = 82.15%
+  // Long barrel muzzle tip: 99.46% X, 31.53% Y
+  // Short barrel muzzle tip: 82.15% X, 31.53% Y
+  // Ejection port: 43.0% X, 38.0% Y
+  // Pump slide: left 61.15%, top 36.95%, width 20.31%, height 25.62%
   const isShortBarrel = barrelState === 'short';
-  const muzzleTipX = isShortBarrel ? '79.9%' : '99.2%';
-  const muzzleTipY = '32.4%';
+  const muzzleTipX = isShortBarrel ? '82.15%' : '99.46%';
+  const muzzleTipY = '31.53%';
 
   return (
     <div className="flex flex-col items-center w-full max-w-[340px]">
@@ -294,7 +294,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             filter: { duration: isInvertingPolarity ? 1.8 : 0.3 },
             opacity: { duration: isInvertingPolarity ? 1.8 : 0.2 },
           }}
-          className="relative w-[265px] h-[84px] flex items-center justify-center -translate-x-3.5"
+          className="relative w-[265px] h-[83px] flex items-center justify-center -translate-x-3.5"
         >
           {/* BASE WEAPON SPRITE: shotgun_long or shotgun_short (with bare magazine tube underneath pump) */}
           <motion.img
@@ -321,10 +321,10 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             }}
             style={{
               position: 'absolute',
-              left: '58.76%',
-              top: '51.33%',
-              width: '20.20%',
-              height: '24.70%',
+              left: '61.15%',
+              top: '36.95%',
+              width: '20.31%',
+              height: '25.62%',
             }}
             className="object-contain pointer-events-none drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]"
           />
@@ -334,9 +334,9 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             <div
               style={{
                 position: 'absolute',
-                left: '79.65%',
-                top: '19.13%',
-                height: '56.90%',
+                left: '82.15%',
+                top: '17.24%',
+                height: '45.32%',
                 width: '3.5px',
               }}
               className="rounded-full bg-gradient-to-b from-amber-400 via-orange-500 to-red-500 shadow-[0_0_12px_#f59e0b] animate-pulse pointer-events-none z-10"
@@ -364,10 +364,10 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 }}
                 style={{
                   position: 'absolute',
-                  left: '79.65%',
-                  top: '19.13%',
-                  width: '19.66%',
-                  height: '56.90%',
+                  left: '82.15%',
+                  top: '17.24%',
+                  width: '17.54%',
+                  height: '45.32%',
                 }}
                 className="object-contain pointer-events-none z-20"
               />
@@ -390,8 +390,8 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 }}
                 style={{
                   position: 'absolute',
-                  left: '79.65%',
-                  top: '32%',
+                  left: '82.15%',
+                  top: '31.5%',
                   transform: 'translate(-50%, -50%)',
                 }}
                 className="z-30 pointer-events-none flex items-center justify-center"
@@ -421,8 +421,8 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
               transition={{ duration: 0.55, ease: 'easeOut' }}
               style={{
                 position: 'absolute',
-                left: '79.65%',
-                top: '32.4%',
+                left: '82.15%',
+                top: '31.5%',
                 width: `${spark.size}px`,
                 height: `${spark.size}px`,
                 backgroundColor: spark.color,
@@ -482,8 +482,8 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 }}
                 style={{
                   position: 'absolute',
-                  left: '46.0%',
-                  top: '36.0%',
+                  left: '43.0%',
+                  top: '38.0%',
                 }}
                 className="z-30 pointer-events-none flex items-center justify-center"
               >
