@@ -16,6 +16,7 @@ import { CyberShotgunState, ShotgunItem, ShotgunTarget } from '../../types/index
 import { GramIcon } from '../GramIcon.js';
 import { useI18n } from '../../i18n/index.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
+import { CyberShotgunWeapon } from './CyberShotgunWeapon.js';
 
 interface CyberShotgunArenaProps {
   gameData?: CyberShotgunState;
@@ -405,108 +406,11 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               </div>
             </div>
 
-            {/* Central Badass Cyber Shotgun SVG Graphic */}
-            <motion.div
-              animate={lastAction?.type === 'SHOOT' ? { x: [-14, 10, -6, 2, 0], scale: [1, 1.04, 1] } : {}}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="relative w-full max-w-[340px] h-28 rounded-2xl bg-gradient-to-b from-slate-900/90 via-[#10131e]/90 to-black/95 border border-red-500/30 flex items-center justify-center shadow-[0_0_35px_rgba(239,68,68,0.2)] overflow-hidden"
-            >
-              {/* Neon Grid Ambient Lines in Shotgun Chamber */}
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:12px_12px]" />
-
-              {/* Badass Cyber Shotgun Silhouette with Mechanical Details */}
-              <svg viewBox="0 0 320 90" className="w-[300px] h-[82px] drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-                <defs>
-                  <linearGradient id="metalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#475569" />
-                    <stop offset="50%" stopColor="#1e293b" />
-                    <stop offset="100%" stopColor="#0f172a" />
-                  </linearGradient>
-                  <linearGradient id="gripGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#334155" />
-                    <stop offset="100%" stopColor="#090d16" />
-                  </linearGradient>
-                  <linearGradient id="sawGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#f59e0b" />
-                    <stop offset="100%" stopColor="#ef4444" />
-                  </linearGradient>
-                </defs>
-
-                {/* Stock & Recoil Pad */}
-                <path d="M 12 36 L 42 22 L 72 22 L 80 40 L 64 68 L 32 68 L 18 56 Z" fill="url(#metalGrad)" stroke="#64748b" strokeWidth="1.8" />
-                <rect x="8" y="34" width="6" height="24" rx="2" fill="#090d16" stroke="#475569" strokeWidth="1" />
-                <line x1="28" y1="36" x2="56" y2="36" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3" />
-
-                {/* Trigger & Trigger Guard */}
-                <path d="M 80 50 C 80 64 96 64 96 50 Z" fill="none" stroke="#64748b" strokeWidth="1.8" />
-                <path d="M 88 50 Q 86 58 90 60" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
-
-                {/* Main Heavy Receiver */}
-                <rect x="76" y="28" width="74" height="26" rx="3" fill="url(#metalGrad)" stroke="#94a3b8" strokeWidth="2" />
-                {/* Cyber LED Status Bar on Receiver */}
-                <rect x="84" y="32" width="22" height="4" rx="1" fill="#ef4444" className="animate-pulse" />
-                <rect x="110" y="32" width="6" height="4" rx="1" fill="#22d3ee" />
-                {/* Ejection Port with Brass Cartridge visible */}
-                <rect x="100" y="38" width="28" height="11" rx="2" fill="#090d16" stroke="#e2e8f0" strokeWidth="1.5" />
-                <rect x="104" y="41" width="16" height="6" rx="1" fill="#f59e0b" />
-
-                {/* Top Picatinny Rail */}
-                <rect x="72" y="24" width="80" height="4" rx="1" fill="#334155" stroke="#64748b" strokeWidth="1" />
-                {/* Red Dot Holographic Sight */}
-                <rect x="114" y="16" width="24" height="8" rx="2" fill="#1e293b" stroke="#38bdf8" strokeWidth="1.2" />
-                <circle cx="126" cy="20" r="1.5" fill="#ef4444" className="animate-ping" />
-
-                {/* Magazine Tube Underneath */}
-                <rect x="150" y="42" width="110" height="10" rx="2" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
-
-                {/* Tactical Ribbed Pump Slider */}
-                <rect x="162" y="44" width="46" height="15" rx="3" fill="url(#gripGrad)" stroke="#94a3b8" strokeWidth="2" />
-                <line x1="172" y1="46" x2="172" y2="57" stroke="#64748b" strokeWidth="1.8" />
-                <line x1="182" y1="46" x2="182" y2="57" stroke="#64748b" strokeWidth="1.8" />
-                <line x1="192" y1="46" x2="192" y2="57" stroke="#64748b" strokeWidth="1.8" />
-                <line x1="200" y1="46" x2="200" y2="57" stroke="#64748b" strokeWidth="1.8" />
-
-                {/* Main Barrel (Normal vs Sawed-Off) */}
-                {isSawActive ? (
-                  <>
-                    {/* Chopped-off Barrel */}
-                    <rect x="150" y="30" width="70" height="12" rx="1" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1.8" />
-                    {/* Red-Hot Sheared Cut Edge */}
-                    <line x1="220" y1="28" x2="220" y2="54" stroke="url(#sawGlow)" strokeWidth="4" strokeLinecap="round" className="animate-pulse" />
-                    {/* Sparks */}
-                    <circle cx="224" cy="32" r="2" fill="#f59e0b" className="animate-ping" />
-                    <circle cx="226" cy="48" r="1.5" fill="#ef4444" className="animate-ping" />
-                  </>
-                ) : (
-                  <>
-                    {/* Full Length Tactical Barrel */}
-                    <rect x="150" y="30" width="138" height="12" rx="1" fill="#0f172a" stroke="#94a3b8" strokeWidth="1.8" />
-                    {/* Heat Vent Slots */}
-                    <circle cx="220" cy="36" r="2" fill="#334155" />
-                    <circle cx="236" cy="36" r="2" fill="#334155" />
-                    <circle cx="252" cy="36" r="2" fill="#334155" />
-                    <circle cx="268" cy="36" r="2" fill="#334155" />
-                    {/* Tactical Muzzle Brake Choke */}
-                    <rect x="288" y="28" width="16" height="16" rx="2" fill="#1e293b" stroke="#cbd5e1" strokeWidth="1.8" />
-                    <line x1="294" y1="29" x2="294" y2="43" stroke="#ef4444" strokeWidth="1.5" />
-                    <line x1="299" y1="29" x2="299" y2="43" stroke="#ef4444" strokeWidth="1.5" />
-                  </>
-                )}
-
-                {/* Muzzle Flash if Bang */}
-                {lastAction?.result === 'BANG' && (
-                  <circle cx={isSawActive ? 222 : 306} cy="36" r="14" fill="#ef4444" opacity="0.8" className="animate-ping" />
-                )}
-              </svg>
-
-              {/* Sawed-Off Visual Badge Overlay */}
-              {isSawActive && (
-                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400 text-[9px] font-orbitron font-black text-amber-300 flex items-center space-x-1 shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                  <ItemIcon item="saw" className="w-3 h-3 text-amber-300" />
-                  <span>{t('shotgun.sawedOffDmg')}</span>
-                </div>
-              )}
-            </motion.div>
+            {/* Central Animated Cyber Shotgun Weapon */}
+            <CyberShotgunWeapon
+              isSawActive={isSawActive}
+              lastAction={lastAction}
+            />
 
             {/* Last Action Announcement Banner */}
             {lastAction && (
