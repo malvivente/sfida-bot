@@ -321,10 +321,10 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
             }}
             style={{
               position: 'absolute',
-              left: '60.9%',
-              top: '40.4%',
-              width: '19.3%',
-              height: '23.0%',
+              left: '58.76%',
+              top: '51.33%',
+              width: '20.20%',
+              height: '24.70%',
             }}
             className="object-contain pointer-events-none drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]"
           />
@@ -335,8 +335,8 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
               style={{
                 position: 'absolute',
                 left: '79.65%',
-                top: '25%',
-                height: '26%',
+                top: '19.13%',
+                height: '56.90%',
                 width: '3.5px',
               }}
               className="rounded-full bg-gradient-to-b from-amber-400 via-orange-500 to-red-500 shadow-[0_0_12px_#f59e0b] animate-pulse pointer-events-none z-10"
@@ -365,9 +365,9 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
                 style={{
                   position: 'absolute',
                   left: '79.65%',
-                  top: '17.0%',
+                  top: '19.13%',
                   width: '19.66%',
-                  height: '44.3%',
+                  height: '56.90%',
                 }}
                 className="object-contain pointer-events-none z-20"
               />
