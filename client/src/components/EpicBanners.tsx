@@ -49,7 +49,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* 2D Minimal Graphic in Background */}
         <CardBackgroundArt
           type="menu_split"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-sky-200"
+          className="absolute -right-1 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
         />
 
         <div className="relative z-10 flex items-center justify-between">
@@ -111,7 +111,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* 2D Minimal Graphic in Background */}
         <CardBackgroundArt
           type="menu_quick"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-amber-200"
+          className="absolute -right-1 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
         />
 
         <div className="relative z-10 flex items-center justify-between">
@@ -169,7 +169,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* 2D Minimal Graphic in Background */}
         <CardBackgroundArt
           type="menu_strategy"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-rose-200"
+          className="absolute right-0 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
         />
 
         <div className="relative z-10 flex items-center justify-between">
@@ -227,7 +227,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* 2D Minimal Graphic in Background */}
         <CardBackgroundArt
           type="menu_spectate"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-50 transition-all duration-300 pointer-events-none text-cyan-200"
+          className="absolute right-0 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
         />
 
         <div className="relative z-10 flex items-center justify-between">

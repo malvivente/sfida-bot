@@ -130,7 +130,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           {/* 2D Minimal Graphic in Background */}
           <CardBackgroundArt
             type="shotgun"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-48 sm:w-56 h-auto opacity-35 group-hover:scale-105 group-hover:opacity-45 transition-all duration-300 pointer-events-none text-red-200"
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-44 sm:w-52 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
           />
 
           <div className="relative z-10 flex items-center justify-between">
@@ -184,7 +184,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="connect4"
-              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-blue-200"
+              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 space-y-1.5 pt-1">
@@ -223,7 +223,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="split"
-              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-purple-200"
+              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 space-y-1.5 pt-1">
@@ -262,7 +262,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="cubecount"
-              className="absolute right-14 top-1/2 -translate-y-1/2 w-44 h-auto opacity-30 group-hover:scale-105 group-hover:opacity-45 transition-all duration-300 pointer-events-none text-amber-200"
+              className="absolute right-20 top-1/2 -translate-y-1/2 w-28 h-28 opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
@@ -325,7 +325,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="roulette"
-              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-emerald-200"
+              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 space-y-1.5 pt-1">
@@ -364,7 +364,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="blackjack"
-              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-pink-200"
+              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 space-y-1.5 pt-1">
@@ -403,7 +403,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="bridge"
-              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-sky-200"
+              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 space-y-1.5 pt-1">
@@ -442,7 +442,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="chrono"
-              className="absolute -right-3 -top-2 w-32 h-32 opacity-25 group-hover:scale-110 group-hover:opacity-40 transition-all duration-300 pointer-events-none text-amber-200"
+              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
             />
 
             <div className="relative z-10 space-y-1.5 pt-1">
