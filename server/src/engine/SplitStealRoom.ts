@@ -5,7 +5,15 @@ import { feeConfig } from '../config/feeConfig.js';
 import { signerService } from '../services/signer.js';
 
 export class SplitStealRoom extends BaseGameRoom {
-  public phase: 'COUNTDOWN' | 'REVEALED' = 'COUNTDOWN';
+  public phase: 'COUNTDOWN' | 'REVEALED' | 'ROUND_TRANSITION' = 'COUNTDOWN';
+  public currentRound: number = 1;
+  public maxRounds: number = 3;
+  public roundHistory: Array<{
+    round: number;
+    choiceA: SplitStealChoice;
+    choiceB: SplitStealChoice;
+    outcome: string;
+  }> = [];
   public choicesRevealed: boolean = false;
   public choiceA?: SplitStealChoice;
   public choiceB?: SplitStealChoice;
@@ -19,7 +27,7 @@ export class SplitStealRoom extends BaseGameRoom {
   public message?: string;
 
   private countdownTimer?: NodeJS.Timeout;
-  private secondsLeft: number = 30;
+  private secondsLeft: number = 15;
 
   constructor(
     config: RoomConfig,
@@ -28,6 +36,30 @@ export class SplitStealRoom extends BaseGameRoom {
     super(config, 'split', onSettled);
     this.jackpotGram = dbService.getTrustJackpotSync();
     this.jackpotStatus = dbService.isTrustJackpotActiveSync() ? 'ACTIVE' : 'CHARGING';
+    this.secondsLeft = feeConfig.getConfig().splitTurnDurationSeconds || 15;
+  }
+
+  public getRoundConfig(round: number) {
+    const cfg = feeConfig.getConfig();
+    if (round === 1) {
+      return {
+        peaceBonusPercent: cfg.splitRound1PeaceBonusPercent ?? 15,
+        stealBonusPercent: cfg.splitRound1StealBonusPercent ?? 10,
+        probabilityPercent: cfg.splitRound1ProbabilityPercent ?? 20,
+      };
+    } else if (round === 2) {
+      return {
+        peaceBonusPercent: cfg.splitRound2PeaceBonusPercent ?? 30,
+        stealBonusPercent: cfg.splitRound2StealBonusPercent ?? 25,
+        probabilityPercent: cfg.splitRound2ProbabilityPercent ?? 40,
+      };
+    } else {
+      return {
+        peaceBonusPercent: cfg.splitRound3PeaceBonusPercent ?? 50,
+        stealBonusPercent: cfg.splitRound3StealBonusPercent ?? 40,
+        probabilityPercent: cfg.splitRound3ProbabilityPercent ?? 70,
+      };
+    }
   }
 
   public getGamePayload(): SplitStealState {
@@ -35,11 +67,17 @@ export class SplitStealRoom extends BaseGameRoom {
     const liveStatus = dbService.isTrustJackpotActiveSync() ? 'ACTIVE' : 'CHARGING';
     this.jackpotGram = liveJackpot;
     this.jackpotStatus = liveStatus;
+    const roundCfg = this.getRoundConfig(this.currentRound);
+    const duration = feeConfig.getConfig().splitTurnDurationSeconds || 15;
 
     return {
       phase: this.phase,
+      currentRound: this.currentRound,
+      maxRounds: this.maxRounds,
+      roundHistory: this.roundHistory,
+      roundProbabilities: roundCfg,
       secondsLeft: this.secondsLeft,
-      durationSeconds: 30,
+      durationSeconds: duration,
       choicesRevealed: this.choicesRevealed,
       choiceA: this.choicesRevealed ? this.choiceA : undefined,
       choiceB: this.choicesRevealed ? this.choiceB : undefined,
@@ -59,6 +97,9 @@ export class SplitStealRoom extends BaseGameRoom {
   public async onGameStart() {
     this.state = 'GAME_ACTIVE';
     this.phase = 'COUNTDOWN';
+    this.currentRound = 1;
+    this.maxRounds = 3;
+    this.roundHistory = [];
     this.choicesRevealed = false;
     this.choiceA = undefined;
     this.choiceB = undefined;
@@ -67,17 +108,19 @@ export class SplitStealRoom extends BaseGameRoom {
     this.outcome = undefined;
     this.bonusAwardedGram = undefined;
     this.bonusPerPlayerGram = undefined;
-    this.secondsLeft = 30;
+    this.secondsLeft = feeConfig.getConfig().splitTurnDurationSeconds || 15;
 
     // Fetch live Trust Jackpot
     this.jackpotGram = await dbService.getTrustJackpot();
     this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
 
-    this.message = 'Decisione in segreto! Scegli SPLIT (coopera) o STEAL (tradisci) entro 30 secondi!';
+    this.message = `⚔️ ROUND 1 / 3: Scegli SPLIT (coopera) o STEAL (tradisci) entro ${this.secondsLeft} secondi!`;
     this.broadcast({
       type: 'SPLIT_STEAL_START',
-      durationSeconds: 30,
-      secondsLeft: 30,
+      currentRound: this.currentRound,
+      maxRounds: this.maxRounds,
+      durationSeconds: this.secondsLeft,
+      secondsLeft: this.secondsLeft,
       message: this.message,
       gameData: this.getGamePayload(),
     });
@@ -94,6 +137,7 @@ export class SplitStealRoom extends BaseGameRoom {
 
       this.broadcast({
         type: 'SPLIT_STEAL_TICK',
+        currentRound: this.currentRound,
         secondsLeft: this.secondsLeft,
         hasChosenA: this.hasChosenA,
         hasChosenB: this.hasChosenB,
@@ -113,7 +157,7 @@ export class SplitStealRoom extends BaseGameRoom {
           this.hasChosenB = true;
         }
 
-        this.revealAndSettle();
+        this.evaluateRound();
       }
     }, 1000);
   }
@@ -149,16 +193,18 @@ export class SplitStealRoom extends BaseGameRoom {
         type: 'CHOICE_CONFIRMED',
         choice,
         side,
-        message: `Decisione registrata: ${choice}. Attendi lo showdown!`,
+        currentRound: this.currentRound,
+        message: `Decisione Round ${this.currentRound} registrata: ${choice}. Attendi lo showdown!`,
       });
     }
 
     this.broadcast({
       type: 'SPLIT_STEAL_CHOICE_LOCKED',
       side,
+      currentRound: this.currentRound,
       hasChosenA: this.hasChosenA,
       hasChosenB: this.hasChosenB,
-      message: `${side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B')} ha preso la sua decisione!`,
+      message: `${side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B')} ha preso la sua decisione per il Round ${this.currentRound}!`,
       gameData: this.getGamePayload(),
     });
 
@@ -166,12 +212,79 @@ export class SplitStealRoom extends BaseGameRoom {
       this.cleanupGameTimers();
       this.broadcast({
         type: 'SPLIT_STEAL_REVEALING',
-        message: 'Entrambi i giocatori hanno confermato la scelta! Showdown imminente...',
+        currentRound: this.currentRound,
+        message: `Entrambi i giocatori hanno confermato la scelta per il Round ${this.currentRound}! Rivelazione in corso...`,
       });
       setTimeout(() => {
-        this.revealAndSettle();
-      }, 2000);
+        this.evaluateRound();
+      }, 1500);
     }
+  }
+
+  private async evaluateRound() {
+    this.cleanupGameTimers();
+    this.choicesRevealed = true;
+
+    // Safety checks
+    if (!this.choiceA) this.choiceA = 'SPLIT';
+    if (!this.choiceB) this.choiceB = 'SPLIT';
+
+    const pA = this.choiceA;
+    const pB = this.choiceB;
+
+    // Both chose SPLIT: check if we advance or settle
+    if (pA === 'SPLIT' && pB === 'SPLIT') {
+      if (this.currentRound < this.maxRounds) {
+        // COOPERATION! Advance to next round!
+        this.roundHistory.push({
+          round: this.currentRound,
+          choiceA: 'SPLIT',
+          choiceB: 'SPLIT',
+          outcome: 'COOPERATION',
+        });
+        this.phase = 'ROUND_TRANSITION';
+        const nextRound = this.currentRound + 1;
+        const nextCfg = this.getRoundConfig(nextRound);
+        this.message = `🤝 PATTO MANTENUTO AL ROUND ${this.currentRound}! La fiducia regge. La posta sale: passaggio al Round ${nextRound}...`;
+
+        this.broadcast({
+          type: 'SPLIT_STEAL_ROUND_COOPERATION',
+          currentRound: this.currentRound,
+          nextRound,
+          nextProbabilities: nextCfg,
+          message: this.message,
+          gameData: this.getGamePayload(),
+        });
+        this.broadcastRoomState();
+
+        setTimeout(() => {
+          this.currentRound = nextRound;
+          this.phase = 'COUNTDOWN';
+          this.choicesRevealed = false;
+          this.choiceA = undefined;
+          this.choiceB = undefined;
+          this.hasChosenA = false;
+          this.hasChosenB = false;
+          this.secondsLeft = feeConfig.getConfig().splitTurnDurationSeconds || 15;
+          this.message = `⚔️ ROUND ${this.currentRound} / ${this.maxRounds}: Scegli SPLIT o STEAL entro ${this.secondsLeft} secondi!`;
+
+          this.broadcast({
+            type: 'SPLIT_STEAL_ROUND_START',
+            currentRound: this.currentRound,
+            maxRounds: this.maxRounds,
+            secondsLeft: this.secondsLeft,
+            message: this.message,
+            gameData: this.getGamePayload(),
+          });
+          this.broadcastRoomState();
+          this.startChoiceCountdown();
+        }, 3000);
+        return;
+      }
+    }
+
+    // Either betrayal, double betrayal, or Round 3 Peace -> Settle the match!
+    await this.revealAndSettle();
   }
 
   private async revealAndSettle() {
@@ -200,11 +313,11 @@ export class SplitStealRoom extends BaseGameRoom {
     let outcomeMessage: string = '';
     let winningSpectatorSide: 'A' | 'B' | 'X' | 'NONE' = 'NONE';
 
-    const {
-      splitPeaceBonusPercent = 25,
-      splitStealBonusPercent = 20,
-      splitJackpotProbabilityPercent = 30,
-    } = feeConfig.getConfig();
+    const roundCfg = this.getRoundConfig(this.currentRound);
+    const splitStealBonusPercent = roundCfg.stealBonusPercent;
+    const splitPeaceBonusPercent = roundCfg.peaceBonusPercent;
+    const splitJackpotProbabilityPercent = roundCfg.probabilityPercent;
+
     const isPublicMatch = !this.isPrivate && !this.config.groupChatId;
 
     if (pA === 'STEAL' && pB === 'SPLIT') {
@@ -268,12 +381,12 @@ export class SplitStealRoom extends BaseGameRoom {
       }
 
       if (this.bonusAwardedGram && this.bonusAwardedGram > 0) {
-        outcomeMessage = `🗡️ TRADIMENTO RIUSCITO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM) + BONUS TENTAZIONE JACKPOT ${splitStealBonusPercent}% (+${this.bonusAwardedGram.toFixed(2)} GRAM)!`;
+        outcomeMessage = `🗡️ TRADIMENTO AL ROUND ${this.currentRound}! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM) + BONUS TENTAZIONE JACKPOT ${splitStealBonusPercent}% (+${this.bonusAwardedGram.toFixed(2)} GRAM)!`;
       } else {
-        outcomeMessage = `🗡️ TRADIMENTO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
+        outcomeMessage = `🗡️ TRADIMENTO AL ROUND ${this.currentRound}! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
       }
     } else if (pB === 'STEAL' && pA === 'SPLIT') {
-      // 2. Player 2 Steals, Player 1 Splits -> Player 2 wins entire pot + chance of 20% Steal Temptation Jackpot Bounty!
+      // 2. Player 2 Steals, Player 1 Splits -> Player 2 wins entire pot + chance of Steal Temptation Jackpot Bounty!
       this.outcome = 'P2_STEAL';
       winnerAddress = this.playerB?.walletAddress || '';
       winnerName = this.playerB?.username || 'Player B';
@@ -290,7 +403,7 @@ export class SplitStealRoom extends BaseGameRoom {
         await dbService.creditTreasury(duelRakeGram, 'DUEL_RAKE', this.matchId.toString());
       }
 
-      // Check Steal Temptation Bounty (20% of winner's wager from Trust Jackpot)
+      // Check Steal Temptation Bounty from Trust Jackpot
       if (isPublicMatch && isJackpotActive) {
         const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
         if (luckyDrop) {
@@ -333,9 +446,9 @@ export class SplitStealRoom extends BaseGameRoom {
       }
 
       if (this.bonusAwardedGram && this.bonusAwardedGram > 0) {
-        outcomeMessage = `🗡️ TRADIMENTO RIUSCITO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM) + BONUS TENTAZIONE JACKPOT ${splitStealBonusPercent}% (+${this.bonusAwardedGram.toFixed(2)} GRAM)!`;
+        outcomeMessage = `🗡️ TRADIMENTO AL ROUND ${this.currentRound}! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM) + BONUS TENTAZIONE JACKPOT ${splitStealBonusPercent}% (+${this.bonusAwardedGram.toFixed(2)} GRAM)!`;
       } else {
-        outcomeMessage = `🗡️ TRADIMENTO! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
+        outcomeMessage = `🗡️ TRADIMENTO AL ROUND ${this.currentRound}! ${winnerName} sceglie STEAL e incassa l'intero piatto (${duelPayoutGram} GRAM)!`;
       }
     } else if (pA === 'SPLIT' && pB === 'SPLIT') {
       // 3. Peace: Both Split -> Refund original wagers + Trust Jackpot bonus if qualified
@@ -425,9 +538,9 @@ export class SplitStealRoom extends BaseGameRoom {
               this.jackpotGram = await dbService.getTrustJackpot();
               this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
 
-              outcomeMessage = `🎉 TRUST JACKPOT ATTIVATO (DROP ${splitJackpotProbabilityPercent}%)! Entrambi hanno scelto SPLIT! Puntata rimborsata + BONUS JACKPOT ${eachPercent}% (+${bonusPerPlayer.toFixed(2)} GRAM a testa)!`;
+              outcomeMessage = `🎉 PATTO DEI CAMPIONI (ROUND 3/3)! Entrambi hanno scelto SPLIT fino alla fine! Puntata rimborsata + BONUS JACKPOT ${eachPercent}% (+${bonusPerPlayer.toFixed(2)} GRAM a testa, DROP ${splitJackpotProbabilityPercent}%)!`;
             } else {
-              outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%.`;
+              outcomeMessage = `🤝 PACE ASSOLUTA AL ROUND 3! Entrambi i duellanti hanno scelto SPLIT per tutti i round! Puntate rimborsate al 100%.`;
             }
           }
         }
@@ -481,8 +594,15 @@ export class SplitStealRoom extends BaseGameRoom {
       // Credit remaining net share to Treasury
       await dbService.creditTreasury(treasuryShare.toFixed(2), 'DOUBLE_STEAL_HOUSE_SHARE', this.matchId.toString());
 
-      outcomeMessage = `💀 DOPPIO TRADIMENTO! Entrambi hanno scelto STEAL! 100% del piatto bruciato: 50% al Jackpot della Fiducia (+${jackpotShare.toFixed(2)} GRAM), 10% Taglia Affiliati & Ref, e il resto alla Treasury!`;
+      outcomeMessage = `💀 DOPPIO TRADIMENTO AL ROUND ${this.currentRound}! Entrambi hanno scelto STEAL! 100% del piatto bruciato: 50% al Jackpot della Fiducia (+${jackpotShare.toFixed(2)} GRAM), 10% Taglia Affiliati & Ref, e il resto alla Treasury!`;
     }
+
+    this.roundHistory.push({
+      round: this.currentRound,
+      choiceA: pA,
+      choiceB: pB,
+      outcome: this.outcome || 'SETTLED',
+    });
 
     this.message = outcomeMessage;
 
@@ -697,6 +817,9 @@ export class SplitStealRoom extends BaseGameRoom {
 
   public override resetForRematch() {
     this.phase = 'COUNTDOWN';
+    this.currentRound = 1;
+    this.maxRounds = 3;
+    this.roundHistory = [];
     this.choicesRevealed = false;
     this.choiceA = undefined;
     this.choiceB = undefined;
@@ -706,7 +829,7 @@ export class SplitStealRoom extends BaseGameRoom {
     this.bonusAwardedGram = undefined;
     this.bonusPerPlayerGram = undefined;
     this.message = undefined;
-    this.secondsLeft = 30;
+    this.secondsLeft = feeConfig.getConfig().splitTurnDurationSeconds || 15;
     this.cleanupGameTimers();
   }
 }

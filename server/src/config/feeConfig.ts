@@ -21,6 +21,16 @@ export interface FeeConfig {
   splitPeaceBonusPercent: number;
   splitStealBonusPercent: number;
   splitJackpotProbabilityPercent: number;
+  splitTurnDurationSeconds: number;
+  splitRound1PeaceBonusPercent: number;
+  splitRound1StealBonusPercent: number;
+  splitRound1ProbabilityPercent: number;
+  splitRound2PeaceBonusPercent: number;
+  splitRound2StealBonusPercent: number;
+  splitRound2ProbabilityPercent: number;
+  splitRound3PeaceBonusPercent: number;
+  splitRound3StealBonusPercent: number;
+  splitRound3ProbabilityPercent: number;
   splitJackpotCooldownHours: number;
   presetsWagerGram: string[];
   bettingWindowSeconds: number;
@@ -42,6 +52,16 @@ const DEFAULT_CONFIG: FeeConfig = {
   splitPeaceBonusPercent: 25,
   splitStealBonusPercent: 20,
   splitJackpotProbabilityPercent: 30,
+  splitTurnDurationSeconds: 15,
+  splitRound1PeaceBonusPercent: 15,
+  splitRound1StealBonusPercent: 10,
+  splitRound1ProbabilityPercent: 20,
+  splitRound2PeaceBonusPercent: 30,
+  splitRound2StealBonusPercent: 25,
+  splitRound2ProbabilityPercent: 40,
+  splitRound3PeaceBonusPercent: 50,
+  splitRound3StealBonusPercent: 40,
+  splitRound3ProbabilityPercent: 70,
   splitJackpotCooldownHours: 48,
   presetsWagerGram: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
   bettingWindowSeconds: process.env.BETTING_WINDOW_SECONDS ? parseInt(process.env.BETTING_WINDOW_SECONDS, 10) : 20,

@@ -88,9 +88,13 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const [localChoice, setLocalChoice] = useState<SplitStealChoice | null>(null);
 
   const phase = gameData?.phase ?? 'COUNTDOWN';
+  const currentRound = gameData?.currentRound ?? 1;
+  const maxRounds = gameData?.maxRounds ?? 3;
+  const roundProbabilities = gameData?.roundProbabilities;
+  const roundHistory = gameData?.roundHistory ?? [];
   const secondsLeft = countdownSeconds !== null && countdownSeconds !== undefined
     ? countdownSeconds
-    : (gameData?.secondsLeft ?? 30);
+    : (gameData?.secondsLeft ?? 15);
   const choicesRevealed = gameData?.choicesRevealed ?? false;
   const choiceA = gameData?.choiceA;
   const choiceB = gameData?.choiceB;
@@ -143,10 +147,8 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
 
   // Reset choice on new round / lobby / betting window
   React.useEffect(() => {
-    if (isLobby || isBetting) {
-      setLocalChoice(null);
-    }
-  }, [isLobby, isBetting]);
+    setLocalChoice(null);
+  }, [currentRound, isLobby, isBetting]);
 
   const myChoice = userSide === 'A' ? choiceA : choiceB;
   const myHasChosen = userSide === 'A' ? hasChosenA : hasChosenB;
@@ -289,6 +291,52 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
         </div>
       </div>
 
+      {/* 3-Round Escalation Stepper */}
+      {(isCombatActive || choicesRevealed) && !isLobby && (
+        <div className="w-full z-10 my-2 px-0.5">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            {[1, 2, 3].map((r) => {
+              const isCurrent = currentRound === r && !isSettled;
+              const isPast = currentRound > r;
+              const roundLabel = r === 1 ? t('split.stagePact') : r === 2 ? t('split.stageTemptation') : t('split.stageClimax');
+              const dropProb = r === 1 ? '20%' : r === 2 ? '40%' : '70%';
+              const stealPct = r === 1 ? '10%' : r === 2 ? '25%' : '40%';
+              const peacePct = r === 1 ? '15%' : r === 2 ? '30%' : '50%';
+
+              return (
+                <div
+                  key={r}
+                  className={`relative p-2 rounded-xl border text-center transition-all ${
+                    isCurrent
+                      ? 'bg-purple-900/50 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)] ring-1 ring-purple-400/80'
+                      : isPast
+                      ? 'bg-cyber-green/10 border-cyber-green/40 opacity-90'
+                      : 'bg-black/30 border-white/10 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[8.5px] sm:text-[9px] font-orbitron font-extrabold">
+                    <span className={isCurrent ? 'text-purple-300' : isPast ? 'text-cyber-green' : 'text-slate-400'}>
+                      R{r} {isPast && '✓'}
+                    </span>
+                    <span className={`text-[7.5px] sm:text-[8px] font-mono ${isCurrent ? 'text-amber-300 font-extrabold animate-pulse' : 'text-slate-400'}`}>
+                      Drop {dropProb}
+                    </span>
+                  </div>
+                  <div className={`text-[10px] sm:text-[11px] font-chakra font-extrabold mt-0.5 truncate ${isCurrent ? 'text-white' : 'text-slate-300'}`}>
+                    {roundLabel}
+                  </div>
+                  <div className="text-[7.5px] sm:text-[8.5px] font-chakra text-slate-400 flex items-center justify-center space-x-1 mt-0.5">
+                    <span className="text-cyber-pink font-bold">🗡️+{stealPct}</span>
+                    <span>•</span>
+                    <span className="text-cyber-green font-bold">🤝+{peacePct}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Main Center Gameplay Stage */}
       <div className="w-full flex-1 flex flex-col items-center justify-center my-3 relative z-10">
         {/* State: LOBBY */}
@@ -330,20 +378,47 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
           </div>
         )}
 
+        {/* State: ROUND TRANSITION (Cooperation in Round 1 or 2) */}
+        {isCombatActive && phase === 'ROUND_TRANSITION' && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-sm bg-gradient-to-b from-purple-900/60 via-purple-950/80 to-black/90 border-2 border-purple-400/80 rounded-2xl p-5 text-center shadow-[0_0_40px_rgba(168,85,247,0.4)] space-y-3"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-cyber-green/20 border-2 border-cyber-green flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(0,255,102,0.4)] animate-bounce">
+              <Handshake className="w-8 h-8 text-cyber-green" />
+            </div>
+            <div>
+              <span className="text-[10px] font-orbitron font-extrabold px-2.5 py-0.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/50 uppercase tracking-widest">
+                ROUND {currentRound} SUPERATO
+              </span>
+              <h3 className="text-lg font-orbitron font-black text-white tracking-wider mt-1.5">
+                {t('split.roundAdvanceTitle')}
+              </h3>
+              <p className="text-xs font-chakra text-slate-200 mt-1">
+                {t('split.roundAdvanceDesc', { nextRound: currentRound + 1 })}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-[11px] font-chakra text-purple-300">
+              🔥 Prossimo Round: Steal Bounty +{currentRound === 1 ? '25%' : '40%'} | Jackpot Drop {currentRound === 1 ? '40%' : '70%'}!
+            </div>
+          </motion.div>
+        )}
+
         {/* State: GAME ACTIVE / COUNTDOWN */}
-        {isCombatActive && !choicesRevealed && (
+        {isCombatActive && phase === 'COUNTDOWN' && !choicesRevealed && (
           <div className="w-full flex flex-col items-center justify-center space-y-4 py-2">
             {/* Countdown Badge */}
             <div className="flex flex-col items-center">
               <div className="relative flex items-center justify-center">
                 <div className="w-20 h-20 rounded-full border-4 border-purple-500/30 flex items-center justify-center shadow-[0_0_25px_rgba(168,85,247,0.35)]">
                   <span className="text-3xl font-orbitron font-black text-white animate-pulse">
-                    0{Math.max(0, secondsLeft)}
+                    {secondsLeft < 10 ? `0${Math.max(0, secondsLeft)}` : Math.max(0, secondsLeft)}
                   </span>
                 </div>
               </div>
               <span className="text-[11px] font-chakra text-purple-300 font-bold tracking-widest uppercase mt-2">
-                {t('split.secondsLeft')}
+                ROUND {currentRound} / {maxRounds} • {t('split.secondsLeft')}
               </span>
             </div>
 
@@ -376,12 +451,14 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                           <Handshake className="w-5 h-5 text-cyber-cyan" />
                         </div>
                         <span className="text-[9px] font-orbitron font-extrabold text-cyber-cyan bg-cyber-cyan/15 px-2 py-0.5 rounded-full border border-cyber-cyan/40">
-                          {t('split.btnSplitTag')}
+                          {currentRound < 3 ? `AVANZA AL R${currentRound + 1}` : 'JACKPOT 50%'}
                         </span>
                       </div>
                       <div className="text-base font-orbitron font-black text-white">{t('split.btnSplit')}</div>
                       <p className="text-[10px] font-rajdhani text-slate-300 mt-1 leading-tight">
-                        {t('split.btnSplitDesc')}
+                        {currentRound < 3
+                          ? `Coopera e passa al Round ${currentRound + 1} per aumentare il Jackpot!`
+                          : `Patto finale! Rimborso 100% e sblocca il 50% del Trust Jackpot (Drop 70%)!`}
                       </p>
                     </button>
 
@@ -396,12 +473,12 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                           <Swords className="w-5 h-5 text-cyber-pink" />
                         </div>
                         <span className="text-[9px] font-orbitron font-extrabold text-cyber-pink bg-cyber-pink/15 px-2 py-0.5 rounded-full border border-cyber-pink/40">
-                          {t('split.btnStealTag')}
+                          {`RUBA +${currentRound === 1 ? '10%' : currentRound === 2 ? '25%' : '40%'}`}
                         </span>
                       </div>
                       <div className="text-base font-orbitron font-black text-white">{t('split.btnSteal')}</div>
                       <p className="text-[10px] font-rajdhani text-slate-300 mt-1 leading-tight">
-                        {t('split.btnStealDesc')}
+                        {`Tradimento immediato! Prendi tutto il piatto (${(parseFloat(wagerTon) * 2).toFixed(2)} GRAM) + Taglia ${currentRound === 1 ? '10%' : currentRound === 2 ? '25%' : '40%'}!`}
                       </p>
                     </button>
                   </div>
@@ -481,7 +558,11 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             )}
 
             {/* Revealed Choices Comparison */}
-            <div className="grid grid-cols-2 gap-3 w-full max-w-sm pt-2">
+            <div className="flex items-center space-x-2 text-[10px] font-orbitron font-extrabold text-purple-300 bg-purple-950/40 px-3 py-1 rounded-full border border-purple-500/40 uppercase tracking-wider">
+              <span>ESITO FINALE AL ROUND {currentRound} / {maxRounds}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 w-full max-w-sm pt-1">
               <div
                 className={`p-3 rounded-2xl border text-center ${
                   choiceA === 'SPLIT'

@@ -113,7 +113,20 @@ export type SplitStealChoice = 'SPLIT' | 'STEAL';
 export type SplitStealOutcome = 'P1_STEAL' | 'P2_STEAL' | 'PEACE' | 'DOUBLE_STEAL';
 
 export interface SplitStealState {
-  phase: 'COUNTDOWN' | 'REVEALED';
+  phase: 'COUNTDOWN' | 'REVEALED' | 'ROUND_TRANSITION';
+  currentRound: number;
+  maxRounds: number;
+  roundHistory?: Array<{
+    round: number;
+    choiceA: SplitStealChoice;
+    choiceB: SplitStealChoice;
+    outcome: string;
+  }>;
+  roundProbabilities?: {
+    peaceBonusPercent: number;
+    stealBonusPercent: number;
+    probabilityPercent: number;
+  };
   secondsLeft?: number;
   durationSeconds?: number;
   choicesRevealed: boolean;
