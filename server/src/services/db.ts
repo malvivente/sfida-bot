@@ -785,7 +785,7 @@ export class DatabaseService {
     const existing = this.groupAffiliates.get(cleanChatId);
 
     const friendlyWallet = this.toFriendlyAddress(config.walletAddress) || config.walletAddress.trim();
-    const rate = config.commissionRatePercent !== undefined ? config.commissionRatePercent : (existing?.commissionRatePercent ?? 20);
+    const rate = config.commissionRatePercent !== undefined ? config.commissionRatePercent : (existing?.commissionRatePercent ?? 30);
 
     const record: GroupAffiliate = {
       chatId: cleanChatId,

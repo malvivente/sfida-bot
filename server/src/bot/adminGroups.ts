@@ -19,28 +19,28 @@ export async function handleSetGroupCommand(ctx: Context): Promise<void> {
   }
 
   const text = ctx.message?.text?.trim() || '';
-  // Expected format: /setgroup <chatId> <walletAddress> [commission%] [managerTelegramId]
+  // Expected format: /setgroup <chatId> <walletAddress> [managerTelegramId]
   const parts = text.split(/\s+/).slice(1);
 
   if (parts.length < 2) {
     const helpMsg =
       `{{emoji.gear}} <b>CONFIGURAZIONE MANUALE AFFILIAZIONE GRUPPO</b>\n\n` +
       `<b>Sintassi del comando:</b>\n` +
-      `<code>/setgroup &lt;CHAT_ID&gt; &lt;WALLET_TON&gt; [PERCENTUALE] [TELEGRAM_ID_MANAGER]</code>\n\n` +
+      `<code>/setgroup &lt;CHAT_ID&gt; &lt;WALLET_TON&gt; [TELEGRAM_ID_MANAGER]</code>\n\n` +
       `<b>Parametri:</b>\n` +
       `• <code>CHAT_ID</code>: ID del gruppo Telegram (es. <code>-1001234567890</code>)\n` +
       `• <code>WALLET_TON</code>: Indirizzo wallet per ricevere le commissioni (es. <code>UQA...</code>)\n` +
-      `• <code>PERCENTUALE</code> (opzionale): % del Rake (default: <code>20</code>%)\n` +
       `• <code>TELEGRAM_ID_MANAGER</code> (opzionale): ID Telegram dell'admin del gruppo per fargli vedere le statistiche nella Mini App\n\n` +
+      `<b>Pool di Affiliazione:</b>\n` +
+      `• <b>30% del Rake</b> (accreditato al gruppo, oppure diviso 15%/15% se il giocatore ha anche un referrer personale)\n\n` +
       `<b>Esempio pratico:</b>\n` +
-      `<code>/setgroup -1002345678901 UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx 25 123456789</code>`;
+      `<code>/setgroup -1002345678901 UQDB50s2jHBMMrq5VKt2ChdvDBJ3uqgsDnxrMckjNT1V2wVx 123456789</code>`;
 
     await ctx.reply(renderCustomEmojis(helpMsg), { parse_mode: 'HTML' });
     return;
   }
 
-  const [chatId, walletAddress, rateStr, managerIdStr] = parts;
-  const rate = rateStr ? parseInt(rateStr, 10) : 20;
+  const [chatId, walletAddress, managerIdStr] = parts;
   const managerTelegramId = managerIdStr ? managerIdStr.trim() : undefined;
 
   let groupTitle = `Gruppo ${chatId}`;
@@ -63,7 +63,7 @@ export async function handleSetGroupCommand(ctx: Context): Promise<void> {
     chatId,
     title: groupTitle,
     walletAddress,
-    commissionRatePercent: isNaN(rate) ? 20 : rate,
+    commissionRatePercent: 30,
     managerTelegramId,
     managerUsername,
     configuredByAdminId: fromId!,
@@ -74,7 +74,7 @@ export async function handleSetGroupCommand(ctx: Context): Promise<void> {
     `• <b>Gruppo</b>: <b>${record.title}</b>\n` +
     `• <b>Chat ID</b>: <code>${record.chatId}</code>\n` +
     `• <b>Wallet Beneficiario</b>: <code>${record.walletAddress}</code>\n` +
-    `• <b>Quota Commissione</b>: <b>${record.commissionRatePercent}% del Rake</b>\n` +
+    `• <b>Pool Affiliazione</b>: <b>30% (15% con split o 30% diretto)</b>\n` +
     (record.managerTelegramId ? `• <b>Manager Telegram ID</b>: <code>${record.managerTelegramId}</code> (@${record.managerUsername || 'N/A'})\n` : '') +
     `\n<i>Le partite create in questo gruppo accrediteranno automaticamente le commissioni a questo wallet!</i>`;
 
@@ -110,7 +110,7 @@ export async function handleGetGroupCommand(ctx: Context): Promise<void> {
     `• <b>Nome</b>: <b>${group.title}</b>\n` +
     `• <b>Chat ID</b>: <code>${group.chatId}</code>\n` +
     `• <b>Wallet</b>: <code>${group.walletAddress}</code>\n` +
-    `• <b>Commissione</b>: <code>${group.commissionRatePercent}%</code>\n` +
+    `• <b>Commissione</b>: <code>30% Pool (15% split / 30% diretto)</code>\n` +
     `• <b>Manager ID</b>: <code>${group.managerTelegramId || 'Non impostato'}</code>\n` +
     `• <b>Partite Ospitate</b>: <code>${group.totalMatchesHosted}</code>\n` +
     `• <b>Volume Totale</b>: <code>${group.totalVolumeGram} GRAM</code>\n` +
@@ -138,7 +138,7 @@ export async function handleListGroupsCommand(ctx: Context): Promise<void> {
   let msg = `🏛 <b>GRUPPI AFFILIATI CONFIGURATI (${list.length})</b>\n\n`;
   list.forEach((g, idx) => {
     msg += `${idx + 1}. <b>${g.title}</b> (<code>${g.chatId}</code>)\n`;
-    msg += `   • Wallet: <code>${g.walletAddress.slice(0, 6)}...${g.walletAddress.slice(-4)}</code> | Cut: ${g.commissionRatePercent}%\n`;
+    msg += `   • Wallet: <code>${g.walletAddress.slice(0, 6)}...${g.walletAddress.slice(-4)}</code> | Pool: 30%\n`;
     msg += `   • Match: <b>${g.totalMatchesHosted}</b> | Volume: <b>${g.totalVolumeGram} GRAM</b> | Guadagni: <b>${g.totalEarningsGram} GRAM</b>\n\n`;
   });
 
