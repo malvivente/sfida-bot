@@ -77,8 +77,30 @@ export function useSocket({
   const [playerAConnected, setPlayerAConnected] = useState(true);
   const [playerBConnected, setPlayerBConnected] = useState(true);
   const [socketError, setSocketError] = useState<string | null>(null);
+  const [rematchDeclined, setRematchDeclined] = useState<boolean>(false);
 
   useEffect(() => {
+    // Reset room state when entering a new match or switching rooms
+    setRoomState('LOBBY');
+    setCurrentRound(1);
+    setScoreA(0);
+    setScoreB(0);
+    setPlayerAName('Player A');
+    setPlayerBName(null);
+    setPlayerAReady(false);
+    setPlayerBReady(false);
+    setPlayerAConnected(true);
+    setPlayerBConnected(true);
+    setGameData(null);
+    setRematchOffer(null);
+    setRematchDeclined(false);
+    setRoundWinner(null);
+    setMatchWinner(null);
+    setMatchWinnerName(null);
+    setResolution(null);
+    setSocketError(null);
+    setCountdownSeconds(null);
+
     if (!matchId) return;
 
     const wsEndpoint = resolveWsUrl(serverUrl);
@@ -336,7 +358,11 @@ export function useSocket({
           case 'REMATCH_DECLINED':
             setRematchOffer(null);
             setSocketError(null);
+            setRematchDeclined(true);
             if (msg.message) setFeedMessage(msg.message);
+            setTimeout(() => {
+              setRematchDeclined(false);
+            }, 6000);
             break;
 
           case 'ERROR':
@@ -389,6 +415,7 @@ export function useSocket({
 
   const requestRematch = useCallback(() => {
     setSocketError(null);
+    setRematchDeclined(false);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
     }
@@ -396,6 +423,7 @@ export function useSocket({
 
   const acceptRematch = useCallback(() => {
     setSocketError(null);
+    setRematchDeclined(false);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_ACCEPT' }));
     }
@@ -403,6 +431,7 @@ export function useSocket({
 
   const declineRematch = useCallback(() => {
     setSocketError(null);
+    setRematchDeclined(false);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_DECLINE' }));
     }
@@ -493,6 +522,7 @@ export function useSocket({
     playerAName,
     playerBName,
     rematchOffer,
+    rematchDeclined,
     activeWagerTon,
     gameType,
     gameData,

@@ -339,8 +339,10 @@ export class SplitStealRoom extends BaseGameRoom {
       }
 
       // Check Steal Temptation Bounty (20% of winner's wager from Trust Jackpot)
+      console.log(`[SplitStealRoom] Steal Bounty Check #${this.matchId} R${this.currentRound}: isPublicMatch=${isPublicMatch}, isJackpotActive=${isJackpotActive}, prob=${splitJackpotProbabilityPercent}%`);
       if (isPublicMatch && isJackpotActive) {
         const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
+        console.log(`[SplitStealRoom] Steal Bounty luckyDrop rolled: ${luckyDrop}`);
         if (luckyDrop) {
           const pairEligibility = await dbService.canPairReceiveJackpot(
             this.playerA.walletAddress,
@@ -348,6 +350,7 @@ export class SplitStealRoom extends BaseGameRoom {
             this.playerA.telegramId,
             this.playerB?.telegramId
           );
+          console.log(`[SplitStealRoom] Steal Bounty pairEligibility:`, pairEligibility);
           if (pairEligibility.eligible) {
             const maxBonusFromJackpot = Number((this.jackpotGram * 0.25).toFixed(2));
             const stealBonus = Math.min(
@@ -404,8 +407,10 @@ export class SplitStealRoom extends BaseGameRoom {
       }
 
       // Check Steal Temptation Bounty from Trust Jackpot
+      console.log(`[SplitStealRoom] Steal Bounty Check #${this.matchId} R${this.currentRound}: isPublicMatch=${isPublicMatch}, isJackpotActive=${isJackpotActive}, prob=${splitJackpotProbabilityPercent}%`);
       if (isPublicMatch && isJackpotActive) {
         const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
+        console.log(`[SplitStealRoom] Steal Bounty luckyDrop rolled: ${luckyDrop}`);
         if (luckyDrop) {
           const pairEligibility = await dbService.canPairReceiveJackpot(
             this.playerA.walletAddress,
@@ -413,6 +418,7 @@ export class SplitStealRoom extends BaseGameRoom {
             this.playerA.telegramId,
             this.playerB?.telegramId
           );
+          console.log(`[SplitStealRoom] Steal Bounty pairEligibility:`, pairEligibility);
           if (pairEligibility.eligible) {
             const maxBonusFromJackpot = Number((this.jackpotGram * 0.25).toFixed(2));
             const stealBonus = Math.min(
@@ -471,6 +477,7 @@ export class SplitStealRoom extends BaseGameRoom {
         );
       }
 
+      console.log(`[SplitStealRoom] Final Split Jackpot Check #${this.matchId}: isPublicMatch=${isPublicMatch}, isJackpotActive=${isJackpotActive}, prob=${splitJackpotProbabilityPercent}%`);
       if (!isPublicMatch) {
         outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Il Bonus Trust Jackpot è attivo solo nelle partite pubbliche del Lobby).`;
       } else if (!isJackpotActive) {
@@ -478,6 +485,7 @@ export class SplitStealRoom extends BaseGameRoom {
       } else {
         // Roll for Lucky Drop (e.g. 30% probability)
         const luckyDrop = Math.random() < (splitJackpotProbabilityPercent / 100);
+        console.log(`[SplitStealRoom] Final Split luckyDrop rolled: ${luckyDrop}`);
 
         if (!luckyDrop) {
           outcomeMessage = `🤝 PACE ASSOLUTA! Entrambi i duellanti hanno scelto SPLIT! Puntate rimborsate al 100%. (Jackpot Lucky Drop ${splitJackpotProbabilityPercent}% non estratto questa volta).`;
@@ -489,6 +497,7 @@ export class SplitStealRoom extends BaseGameRoom {
             this.playerA.telegramId,
             this.playerB?.telegramId
           );
+          console.log(`[SplitStealRoom] Final Split pairEligibility:`, pairEligibility);
 
           if (!pairEligibility.eligible) {
             if (pairEligibility.reason === 'COOLDOWN_48H') {
