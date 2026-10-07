@@ -21,6 +21,7 @@ import { useI18n } from '../../i18n/index.js';
 import { TrustJackpotWheel } from './TrustJackpotWheel.js';
 
 interface SplitStealArenaProps {
+  matchId?: number | string | null;
   gameData?: SplitStealState;
   role: 'player' | 'spectator';
   isPlayerTurn: boolean;
@@ -59,6 +60,7 @@ interface SplitStealArenaProps {
 }
 
 export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
+  matchId,
   gameData,
   role,
   onChoice,
@@ -137,25 +139,63 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const isSettled = roomState === 'MATCH_SETTLED';
   const isCombatActive = roomState === 'GAME_ACTIVE';
 
+  const matchStorageKey = matchId ? `split_wheel_done_${matchId}` : null;
+  const [wheelCompleted, setWheelCompleted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    if (matchStorageKey && sessionStorage.getItem(matchStorageKey) === 'true') {
+      return true;
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    if (matchStorageKey && sessionStorage.getItem(matchStorageKey) === 'true') {
+      setWheelCompleted(true);
+    }
+  }, [matchStorageKey]);
+
+  // Outcomes that involve a wheel spin: PEACE or Winner of STEAL
+  const hasWheelOutcome = outcome === 'PEACE' || isUserStealWinner;
+
   // Manage Outcome Modal and delayed wheel spin
   React.useEffect(() => {
     if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
+      // If the wheel has already completed or outcome has no wheel:
+      // Show the permanent settled conclusion modal directly!
+      if (wheelCompleted || !hasWheelOutcome) {
+        setShowOutcomeModal(true);
+        setWheelCanSpin(false);
+        return;
+      }
+
+      // First time with wheel live: brief intro modal, then start wheel
       setShowOutcomeModal(true);
       setWheelCanSpin(false);
       const timer = setTimeout(() => {
         setShowOutcomeModal(false);
         setWheelCanSpin(true);
-      }, 2500);
+      }, 2000);
       return () => clearTimeout(timer);
     } else {
       setShowOutcomeModal(false);
       setWheelCanSpin(false);
     }
-  }, [roomState]);
+  }, [roomState, wheelCompleted, hasWheelOutcome]);
 
-  const dismissOutcomeModal = () => {
+  const dismissIntroOutcomeModal = () => {
     setShowOutcomeModal(false);
     setWheelCanSpin(true);
+  };
+
+  const handleWheelFinish = () => {
+    setWheelCompleted(true);
+    setWheelCanSpin(false);
+    if (matchStorageKey) {
+      try {
+        sessionStorage.setItem(matchStorageKey, 'true');
+      } catch {}
+    }
+    setShowOutcomeModal(true);
   };
 
 
@@ -230,9 +270,8 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             <div className="text-[9px] font-mono text-slate-400 truncate">
               {isLobby ? (
                 playerAReady ? (
-                  <span className="text-cyber-green font-bold flex items-center space-x-0.5">
-                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                    <span>{t('arena.readyBadge')}</span>
+                  <span className="text-cyber-green font-bold">
+                    {t('arena.readyBadge')}
                   </span>
                 ) : (
                   <span className="text-slate-500 font-bold">{t('arena.notReadyBadge')}</span>
@@ -275,8 +314,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             <div className="text-[9px] font-mono text-slate-400 truncate text-right">
               {isLobby ? (
                 playerBReady ? (
-                  <span className="text-cyber-green font-bold inline-flex items-center space-x-0.5 truncate max-w-full">
-                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                  <span className="text-cyber-green font-bold inline-flex truncate max-w-full">
                     <span className="truncate">{t('arena.readyBadge')}</span>
                   </span>
                 ) : (
@@ -405,7 +443,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-orbitron font-extrabold px-2.5 py-0.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/50 uppercase tracking-widest">
-                ROUND {currentRound} SUPERATO
+                {t('split.roundPassed', { round: currentRound })}
               </span>
               <h3 className="text-lg font-orbitron font-black text-white tracking-wider mt-1.5">
                 {t('split.roundAdvanceTitle')}
@@ -415,7 +453,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
               </p>
             </div>
             <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-[11px] font-chakra text-purple-300">
-              🔥 Prossimo Round: Steal Bounty +{currentRound === 1 ? '25%' : '40%'} | Jackpot Drop {currentRound === 1 ? '40%' : '70%'}!
+              {t('split.nextRoundBanner', { steal: currentRound === 1 ? 25 : 40, drop: currentRound === 1 ? 40 : 70 })}
             </div>
           </motion.div>
         )}
@@ -465,7 +503,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                         <div className="w-8 h-8 rounded-xl bg-cyber-cyan/20 flex items-center justify-center">
                           <Handshake className="w-5 h-5 text-cyber-cyan" />
                         </div>
-                        <span className="text-[9px] font-orbitron font-extrabold text-cyber-cyan bg-cyber-cyan/15 px-2 py-0.5 rounded-full border border-cyber-cyan/40">
+                        <span className="text-[8.5px] sm:text-[9px] font-orbitron font-extrabold text-cyber-cyan bg-cyber-cyan/15 px-2 py-0.5 rounded-full border border-cyber-cyan/40 shrink-0 whitespace-nowrap">
                           {currentRound < 3 ? t('split.advanceToRound', { round: currentRound + 1 }) : t('split.jackpot50')}
                         </span>
                       </div>
@@ -521,16 +559,19 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
           <div className="w-full flex flex-col items-center justify-center space-y-2 py-1 animate-in fade-in zoom-in-95 duration-300">
             {/* Outcome Big Banner / Wheel */}
             {outcome === 'PEACE' && (
-              <div className="w-full flex flex-col items-center">
-                <TrustJackpotWheel
-                  autoSpin={wheelCanSpin}
-                  isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
-                  bonusPerPlayerGram={bonusPerPlayerGram}
-                  wagerGram={wagerTon}
-                  probabilityPercent={roundProbabilities?.probabilityPercent ?? 70}
-                  bonusPercent={roundProbabilities?.peaceBonusPercent ?? 20}
-                />
-              </div>
+              !wheelCompleted ? (
+                <div className="w-full flex flex-col items-center">
+                  <TrustJackpotWheel
+                    autoSpin={wheelCanSpin}
+                    onFinish={handleWheelFinish}
+                    isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
+                    bonusPerPlayerGram={bonusPerPlayerGram}
+                    wagerGram={wagerTon}
+                    probabilityPercent={roundProbabilities?.probabilityPercent ?? 70}
+                    bonusPercent={roundProbabilities?.peaceBonusPercent ?? 20}
+                  />
+                </div>
+              ) : null
             )}
 
             {(outcome === 'P1_STEAL' || outcome === 'P2_STEAL') && (
@@ -548,17 +589,20 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="w-full flex flex-col items-center">
-                  <TrustJackpotWheel
-                    autoSpin={wheelCanSpin}
-                    mode="steal"
-                    isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
-                    bonusPerPlayerGram={bonusPerPlayerGram}
-                    wagerGram={wagerTon}
-                    probabilityPercent={roundProbabilities?.probabilityPercent ?? (currentRound === 1 ? 20 : currentRound === 2 ? 40 : 70)}
-                    bonusPercent={roundProbabilities?.stealBonusPercent ?? (currentRound === 1 ? 10 : currentRound === 2 ? 25 : 40)}
-                  />
-                </div>
+                !wheelCompleted ? (
+                  <div className="w-full flex flex-col items-center">
+                    <TrustJackpotWheel
+                      autoSpin={wheelCanSpin}
+                      mode="steal"
+                      onFinish={handleWheelFinish}
+                      isWon={Boolean(bonusPerPlayerGram && bonusPerPlayerGram > 0)}
+                      bonusPerPlayerGram={bonusPerPlayerGram}
+                      wagerGram={wagerTon}
+                      probabilityPercent={roundProbabilities?.probabilityPercent ?? (currentRound === 1 ? 20 : currentRound === 2 ? 40 : 70)}
+                      bonusPercent={roundProbabilities?.stealBonusPercent ?? (currentRound === 1 ? 10 : currentRound === 2 ? 25 : 40)}
+                    />
+                  </div>
+                ) : null
               )
             )}
 
@@ -767,19 +811,19 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
         ) : null}
       </div>
 
-      {/* Victory / Defeat Compact Outcome Modal Overlay */}
+      {/* Victory / Defeat Outcome Modal Overlay */}
       <AnimatePresence>
         {showOutcomeModal && (
           <div
-            onClick={dismissOutcomeModal}
-            className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
+            onClick={!wheelCompleted && hasWheelOutcome ? dismissIntroOutcomeModal : undefined}
+            className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200 overflow-y-auto"
           >
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.85, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className={`flex flex-col items-center p-5 bg-[#121520] border rounded-3xl shadow-2xl max-w-xs w-full text-center ${
+              className={`flex flex-col items-center p-4 sm:p-5 bg-[#121520] border rounded-3xl shadow-2xl max-w-xs w-full text-center ${
                 outcome === 'PEACE'
                   ? 'border-cyber-cyan shadow-[0_0_30px_rgba(6,182,212,0.3)]'
                   : isUserStealWinner
@@ -790,15 +834,15 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
               }`}
             >
               {outcome === 'PEACE' ? (
-                <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 border border-cyber-cyan flex items-center justify-center mb-2.5 text-cyber-cyan shadow-lg">
+                <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 border border-cyber-cyan flex items-center justify-center mb-2 text-cyber-cyan shadow-lg">
                   <Handshake className="w-8 h-8 animate-pulse" />
                 </div>
               ) : isUserStealWinner ? (
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center mb-2.5 text-amber-400 shadow-lg animate-bounce">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center mb-2 text-amber-400 shadow-lg animate-bounce">
                   <Trophy className="w-8 h-8" />
                 </div>
               ) : isUserStealLoser || outcome === 'DOUBLE_STEAL' ? (
-                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2.5 text-rose-400 shadow-lg">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400 shadow-lg">
                   <Skull className="w-8 h-8" />
                 </div>
               ) : (
@@ -829,32 +873,147 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                   : ''}
               </p>
 
-              {outcome === 'PEACE' && (
-                <div className="my-2.5 p-2 rounded-xl bg-black/60 border border-cyber-cyan/30 w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-400">{t('split.outcomePeaceRefund', { amount: wagerTon })}</span>
-                  <span className="font-bold text-cyber-cyan flex items-center space-x-1">
-                    <span>+{wagerTon}</span>
-                    <GramIcon className="w-3 h-3 text-cyan-400 inline" />
-                  </span>
+              {/* Live match Intro popup before Wheel spin */}
+              {!wheelCompleted && hasWheelOutcome ? (
+                <button
+                  onClick={dismissIntroOutcomeModal}
+                  className="mt-3 w-full py-2.5 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-orbitron font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all active:scale-95"
+                >
+                  {t('split.spinWheel')}
+                </button>
+              ) : (
+                /* Permanent Settled Conclusion Modal (like Connect4 / CyberShotgun) */
+                <div className="w-full mt-2.5 space-y-2">
+                  {/* Prize breakdown */}
+                  {outcome === 'PEACE' && (
+                    <div className="space-y-1.5 w-full">
+                      <div className="p-2 rounded-xl bg-black/60 border border-cyber-cyan/30 w-full flex justify-between items-center text-xs font-chakra">
+                        <span className="text-slate-400">{t('split.outcomePeaceRefund', { amount: wagerTon })}</span>
+                        <span className="font-bold text-cyber-cyan flex items-center space-x-1">
+                          <span>+{wagerTon}</span>
+                          <GramIcon className="w-3 h-3 text-cyan-400 inline" />
+                        </span>
+                      </div>
+                      {bonusPerPlayerGram && bonusPerPlayerGram > 0 ? (
+                        <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-400/40 w-full flex justify-between items-center text-xs font-chakra">
+                          <span className="text-amber-300 font-bold">{t('split.trustJackpot')}</span>
+                          <span className="font-bold text-amber-300 flex items-center space-x-1">
+                            <span>+{bonusPerPlayerGram.toFixed(2)}</span>
+                            <GramIcon className="w-3 h-3 text-amber-400 inline" />
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {isUserStealWinner && (
+                    <div className="space-y-1.5 w-full">
+                      <div className="p-2 rounded-xl bg-black/60 border border-cyber-green/30 w-full flex justify-between items-center text-xs font-chakra">
+                        <span className="text-slate-400">{t('arena.winnerPrize')}</span>
+                        <span className="font-bold text-cyber-green flex items-center space-x-1">
+                          <span>+{Number(wagerTon) * 2}</span>
+                          <GramIcon className="w-3 h-3 text-green-400 inline" />
+                        </span>
+                      </div>
+                      {bonusPerPlayerGram && bonusPerPlayerGram > 0 ? (
+                        <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-400/40 w-full flex justify-between items-center text-xs font-chakra">
+                          <span className="text-amber-300 font-bold">{t('split.trustJackpot')}</span>
+                          <span className="font-bold text-amber-300 flex items-center space-x-1">
+                            <span>+{bonusPerPlayerGram.toFixed(2)}</span>
+                            <GramIcon className="w-3 h-3 text-amber-400 inline" />
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {outcome === 'DOUBLE_STEAL' && (
+                    <div className="p-2 rounded-xl bg-red-950/40 border border-red-500/40 text-[11px] font-chakra text-amber-300">
+                      {t('split.outcomeDoubleStealPot')}
+                    </div>
+                  )}
+
+                  {/* Rematch Section */}
+                  {rematchOffer && isRematchProposer && (
+                    <div className="w-full p-2.5 rounded-xl bg-purple-900/30 border border-purple-500/50 flex flex-col space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                          <span>{t('split.rematchOfferSent')}</span>
+                        </span>
+                        <span className="text-xs font-mono font-bold text-purple-300">{rematchOffer.newWagerTon} GRAM</span>
+                      </div>
+                      <span className="text-[10px] font-chakra text-slate-300 text-left">
+                        {t('split.rematchWaitingOpponent')}
+                      </span>
+                    </div>
+                  )}
+
+                  {rematchOffer && !isRematchProposer && (
+                    <div className="w-full p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/60 flex flex-col space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-orbitron font-bold text-white">{t('rematch.offerTitle')}</span>
+                        <span className="text-xs font-mono font-bold text-cyan-300">{rematchOffer.newWagerTon} GRAM</span>
+                      </div>
+                      <p className="text-[10px] font-chakra text-slate-300 text-left">
+                        {t('split.rematchOffer', { name: rematchOffer.proposerName, amount: rematchOffer.newWagerTon })}
+                      </p>
+                      <div className="flex space-x-2 pt-1">
+                        <button
+                          onClick={onDeclineRematch}
+                          className="flex-1 py-1.5 rounded-lg bg-black/60 border border-slate-600 text-xs text-slate-300 hover:text-white"
+                        >
+                          {t('rematch.decline')}
+                        </button>
+                        <button
+                          onClick={onAcceptRematch}
+                          className="flex-1 py-1.5 rounded-lg bg-cyber-green text-cyber-bg text-xs font-bold font-orbitron shadow-md"
+                        >
+                          {t('rematch.accept')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {rematchDeclined && (
+                    <div className="w-full p-2 rounded-xl bg-red-950/40 border border-red-500/60 flex items-center space-x-2 text-xs font-chakra text-red-200">
+                      <X className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                      <span>{t('split.rematchDeclinedNotice')}</span>
+                    </div>
+                  )}
+
+                  {!rematchOffer && role === 'player' && (
+                    !opponentConnected ? (
+                      <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center">
+                        {t('arena.opponentLeft')}
+                      </div>
+                    ) : (
+                      onRequestRematch && (
+                        <button
+                          onClick={() => {
+                            triggerImpact('medium');
+                            onRequestRematch();
+                          }}
+                          disabled={isRematchProposer}
+                          className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white shadow-lg active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                        >
+                          <RotateCcw className="w-4 h-4 shrink-0 text-purple-300" />
+                          <span>{isRematchProposer ? t('split.rematchRequested') : t('split.rematchRequest')}</span>
+                        </button>
+                      )
+                    )
+                  )}
+
+                  {onReturnToLobby && (
+                    <button
+                      onClick={onReturnToLobby}
+                      className="w-full py-2 rounded-xl bg-white/10 text-slate-300 hover:text-white text-xs font-chakra font-bold transition-all flex items-center justify-center"
+                    >
+                      {t('split.returnToArena')}
+                    </button>
+                  )}
                 </div>
               )}
-
-              {isUserStealWinner && (
-                <div className="my-2.5 p-2 rounded-xl bg-black/60 border border-cyber-green/30 w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-400">{t('arena.winnerPrize')}</span>
-                  <span className="font-bold text-cyber-green flex items-center space-x-1">
-                    <span>+{Number(wagerTon) * 2}</span>
-                    <GramIcon className="w-3 h-3 text-green-400 inline" />
-                  </span>
-                </div>
-              )}
-
-              <button
-                onClick={dismissOutcomeModal}
-                className="mt-2 w-full py-2.5 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-orbitron font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all active:scale-95"
-              >
-                {outcome === 'PEACE' || isUserStealWinner ? t('split.spinWheel') : t('split.continueBtn')}
-              </button>
             </motion.div>
           </div>
         )}

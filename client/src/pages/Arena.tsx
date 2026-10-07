@@ -1061,6 +1061,7 @@ export const Arena: React.FC<ArenaProps> = ({
             />
           ) : effectiveGameType === 'split' ? (
             <SplitStealArena
+              matchId={activeMatchId || currentActiveMatch?.matchId}
               gameData={socketData.gameData as any}
               role={effectiveRole}
               isPlayerTurn={isPlayerTurn}
