@@ -741,6 +741,12 @@ export class SplitStealRoom extends BaseGameRoom {
       };
     } catch {}
 
+    // Calculate final winner payout including any jackpot bonus
+    const totalWinnerPayoutGram = (totalPot + (this.bonusAwardedGram || 0)).toFixed(2);
+    const finalPayoutGram = winnerAddress
+      ? totalWinnerPayoutGram
+      : (this.outcome === 'PEACE' ? (wagerNum + (this.bonusPerPlayerGram || 0)).toFixed(2) : '0.00');
+
     // Save match to database
     await dbService.saveMatch({
       matchId: this.matchId.toString(),
@@ -748,8 +754,8 @@ export class SplitStealRoom extends BaseGameRoom {
       wagerAmountNano: this.config.wagerAmountNano.toString(),
       wagerTon: wagerNum.toFixed(2),
       wagerGram: wagerNum.toFixed(2),
-      payoutTon: duelPayoutGram,
-      payoutGram: duelPayoutGram,
+      payoutTon: finalPayoutGram,
+      payoutGram: finalPayoutGram,
       playerAAddress: this.playerA.walletAddress,
       playerAName: this.playerA.username,
       playerATelegramId: this.playerA.telegramId,
@@ -787,7 +793,7 @@ export class SplitStealRoom extends BaseGameRoom {
       resolution: this.resolution,
       scoreA: pA === 'STEAL' ? 1 : 0,
       scoreB: pB === 'STEAL' ? 1 : 0,
-      payoutTon: duelPayoutGram,
+      payoutTon: finalPayoutGram,
       message: this.message,
       gameData: this.getGamePayload(),
     });

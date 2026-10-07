@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Sparkles, Handshake, CheckCircle2, FastForward } from 'lucide-react';
+import { Trophy, Sparkles, CheckCircle2, FastForward } from 'lucide-react';
 import { GramIcon } from '../GramIcon.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useLanguage } from '../../i18n/index.js';
@@ -12,6 +12,8 @@ interface TrustJackpotWheelProps {
   onFinish?: () => void;
   autoSpin?: boolean;
   mode?: 'peace' | 'steal';
+  probabilityPercent?: number;
+  bonusPercent?: number;
 }
 
 export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
@@ -21,6 +23,8 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
   onFinish,
   autoSpin = true,
   mode = 'peace',
+  probabilityPercent = 30,
+  bonusPercent = 20,
 }) => {
   const { t } = useLanguage();
   const { triggerImpact } = useHaptics();
@@ -31,10 +35,24 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
   const tickIntervalRef = useRef<any>(null);
 
   // 10 sectors (36° each).
-  // Winning sectors: 2, 5, 8 (30% total)
-  // Safe sectors: 0, 1, 3, 4, 6, 7, 9 (70% total)
-  const winningIndices = [2, 5, 8];
-  const safeIndices = [0, 1, 3, 4, 6, 7, 9];
+  // Distribute winning sectors evenly around the 10 sectors according to probabilityPercent
+  const numWinners = Math.max(1, Math.min(9, Math.round((probabilityPercent ?? 30) / 10)));
+  const winningIndices = useMemo(() => {
+    const step = 10 / numWinners;
+    const indices: number[] = [];
+    for (let i = 0; i < numWinners; i++) {
+      const idx = Math.floor(i * step) % 10;
+      if (!indices.includes(idx)) indices.push(idx);
+    }
+    for (let i = 0; i < 10 && indices.length < numWinners; i++) {
+      if (!indices.includes(i)) indices.push(i);
+    }
+    return indices.sort((a, b) => a - b);
+  }, [numWinners]);
+
+  const safeIndices = useMemo(() => {
+    return Array.from({ length: 10 }, (_, i) => i).filter((i) => !winningIndices.includes(i));
+  }, [winningIndices]);
 
   const startSpin = () => {
     if (isSpinning) return;
@@ -108,10 +126,10 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
     };
   }, []);
 
-  // Generate SVG pie sectors
-  const radius = 110;
-  const cx = 130;
-  const cy = 130;
+  // Generate SVG pie sectors (Compact 220x220 layout)
+  const radius = 92;
+  const cx = 110;
+  const cy = 110;
 
   const sectors = Array.from({ length: 10 }, (_, i) => {
     const isWinnerSector = winningIndices.includes(i);
@@ -143,22 +161,22 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
   });
 
   return (
-    <div className="w-full flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#181528] to-[#0f111a] border border-amber-500/30 rounded-3xl shadow-2xl my-2 relative overflow-hidden backdrop-blur-md">
+    <div className="w-full flex flex-col items-center justify-center p-3 bg-gradient-to-b from-[#181528] to-[#0f111a] border border-amber-500/30 rounded-2xl shadow-xl my-1 relative overflow-hidden backdrop-blur-md">
       {/* Background glow effect */}
       <div className="absolute inset-0 bg-radial-gradient from-amber-500/10 via-purple-900/10 to-transparent pointer-events-none" />
 
       {/* Header Banner */}
-      <div className="text-center mb-3 z-10">
-        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
-          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-          <span className="text-[11px] font-heading font-extrabold uppercase tracking-wider">
+      <div className="text-center mb-2 z-10">
+        <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+          <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+          <span className="text-[10px] font-heading font-extrabold uppercase tracking-wider">
             {mode === 'steal' ? t('wheel.stealDropTitle') : t('wheel.peaceDropTitle')}
           </span>
-          <span className="text-[10px] font-heading font-black bg-amber-400/30 px-1.5 py-0.5 rounded-full text-amber-200">
-            {t('wheel.dropRate')}
+          <span className="text-[9px] font-heading font-black bg-amber-400/30 px-1.5 py-0.5 rounded-full text-amber-200">
+            {`DROP ${probabilityPercent}%`}
           </span>
         </div>
-        <p className="text-xs text-slate-300 mt-1 font-medium">
+        <p className="text-[11px] text-slate-300 mt-0.5 font-medium">
           {isSpinning
             ? (mode === 'steal' ? t('wheel.spinningSteal') : t('wheel.spinningPeace'))
             : showResult
@@ -171,16 +189,16 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
         </p>
       </div>
 
-      {/* Wheel Stage */}
-      <div className="relative w-[260px] h-[260px] flex items-center justify-center z-10 my-1">
+      {/* Wheel Stage (Compact 220px) */}
+      <div className="relative w-[220px] h-[220px] flex items-center justify-center z-10 my-0.5">
         {/* Top Pointer Arrow */}
-        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none filter drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]">
-          <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[16px] border-t-amber-400 animate-bounce" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-300 -mt-1 shadow-[0_0_8px_#f59e0b]" />
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none filter drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]">
+          <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[14px] border-t-amber-400 animate-bounce" />
+          <div className="w-2 h-2 rounded-full bg-amber-300 -mt-1 shadow-[0_0_6px_#f59e0b]" />
         </div>
 
         {/* Outer Bezel Rim */}
-        <div className="absolute inset-0 rounded-full border-4 border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.3)] pointer-events-none" />
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] pointer-events-none" />
 
         {/* Rotating SVG Wheel */}
         <motion.div
@@ -191,7 +209,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
           }}
           className="w-full h-full"
         >
-          <svg viewBox="0 0 260 260" className="w-full h-full select-none">
+          <svg viewBox="0 0 220 220" className="w-full h-full select-none">
             <defs>
               <radialGradient id="goldJackpotGrad" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#fef08a" />
@@ -212,7 +230,7 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
                   d={s.pathData}
                   fill={s.isWinnerSector ? 'url(#goldJackpotGrad)' : 'url(#safeRefundGrad)'}
                   stroke={s.isWinnerSector ? '#fde047' : '#334155'}
-                  strokeWidth="1.5"
+                  strokeWidth="1.2"
                   className="transition-colors"
                 />
                 {/* Sector Text & Icon */}
@@ -221,15 +239,15 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
                     <text
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="text-[8px] font-heading font-black fill-slate-950 tracking-tight"
+                      className="text-[7.5px] font-heading font-black fill-slate-950 tracking-tight"
                     >
-                      {mode === 'steal' ? '🗡️ +20%' : '🏆 +12.5%'}
+                      {mode === 'steal' ? `🗡️ +${bonusPercent}%` : `🏆 +${((bonusPercent) / 2).toFixed(1)}%`}
                     </text>
                   ) : (
                     <text
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="text-[7.5px] font-sans font-bold fill-slate-400 tracking-tight"
+                      className="text-[7px] font-sans font-bold fill-slate-400 tracking-tight"
                     >
                       {mode === 'steal' ? 'POT 2X' : '100% REF'}
                     </text>
@@ -241,14 +259,14 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
             {/* Outer LED Dots */}
             {Array.from({ length: 20 }, (_, i) => {
               const dotAngle = (i * 18 * Math.PI) / 180;
-              const dx = cx + (radius + 1.5) * Math.cos(dotAngle);
-              const dy = cy + (radius + 1.5) * Math.sin(dotAngle);
+              const dx = cx + (radius + 1.2) * Math.cos(dotAngle);
+              const dy = cy + (radius + 1.2) * Math.sin(dotAngle);
               return (
                 <circle
                   key={i}
                   cx={dx}
                   cy={dy}
-                  r="2"
+                  r="1.8"
                   fill={i % 2 === 0 ? '#f59e0b' : '#a855f7'}
                   className="opacity-90"
                 />
@@ -256,14 +274,14 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
             })}
 
             {/* Center Hub */}
-            <circle cx={cx} cy={cy} r="28" fill="#090d16" stroke="#f59e0b" strokeWidth="2.5" />
-            <circle cx={cx} cy={cy} r="20" fill="#1e1b4b" stroke="#a855f7" strokeWidth="1" />
+            <circle cx={cx} cy={cy} r="24" fill="#090d16" stroke="#f59e0b" strokeWidth="2" />
+            <circle cx={cx} cy={cy} r="17" fill="#1e1b4b" stroke="#a855f7" strokeWidth="1" />
             <text
               x={cx}
               y={cy + 1}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="text-[9px] font-heading font-black fill-amber-300 tracking-wider select-none"
+              className="text-[8px] font-heading font-black fill-amber-300 tracking-wider select-none"
             >
               {mode === 'steal' ? 'BOUNTY' : 'TRUST'}
             </text>
@@ -276,40 +294,40 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
         {showResult ? (
           <motion.div
             key="result"
-            initial={{ opacity: 0, scale: 0.9, y: 8 }}
+            initial={{ opacity: 0, scale: 0.9, y: 6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className={`w-full max-w-sm rounded-2xl p-4 text-center border mt-2 shadow-xl transition-all ${
+            className={`w-full max-w-sm rounded-xl p-3 text-center border mt-1.5 shadow-lg transition-all ${
               isWon
-                ? 'bg-gradient-to-r from-amber-500/20 via-purple-900/30 to-amber-500/20 border-amber-400/60 shadow-[0_0_24px_rgba(245,158,11,0.25)]'
+                ? 'bg-gradient-to-r from-amber-500/20 via-purple-900/30 to-amber-500/20 border-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
                 : 'bg-[#151926]/95 border-emerald-500/40 text-slate-200'
             }`}
           >
             {isWon ? (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-center space-x-1.5 text-amber-300 font-heading font-extrabold text-sm">
-                  <Trophy className="w-4 h-4 text-amber-300 animate-bounce" />
+              <div className="space-y-1">
+                <div className="flex items-center justify-center space-x-1.5 text-amber-300 font-heading font-extrabold text-xs">
+                  <Trophy className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
                   <span>{mode === 'steal' ? t('wheel.wonStealBanner') : t('wheel.wonPeaceBanner')}</span>
-                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 </div>
-                <p className="text-xs text-slate-200 font-medium">
+                <p className="text-[11px] text-slate-200 font-medium">
                   {mode === 'steal'
                     ? t('wheel.wonStealDesc', { pot: (parseFloat(wagerGram) * 2).toFixed(2) })
                     : t('wheel.wonPeaceDesc', { wager: wagerGram })}
                 </p>
-                <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-400/20 border border-amber-400/60 rounded-xl text-amber-300 font-heading font-black text-sm mt-1">
+                <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-amber-400/20 border border-amber-400/60 rounded-lg text-amber-300 font-heading font-black text-xs mt-0.5">
                   <span>+{bonusPerPlayerGram.toFixed(2)}</span>
-                  <GramIcon className="w-3.5 h-3.5 text-amber-300" />
+                  <GramIcon className="w-3 h-3 text-amber-300" />
                   <span>{mode === 'steal' ? t('wheel.extraBonus') : t('wheel.each')}</span>
                 </div>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <div className="flex items-center justify-center space-x-1.5 text-emerald-400 font-heading font-extrabold text-xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span>{mode === 'steal' ? t('wheel.potWonBanner') : t('wheel.refundBanner')}</span>
                 </div>
-                <p className="text-xs text-slate-300 font-medium">
+                <p className="text-[11px] text-slate-300 font-medium">
                   {mode === 'steal'
                     ? t('wheel.potCollected', { pot: (parseFloat(wagerGram) * 2).toFixed(2) })
                     : t('wheel.refundPreserved', { wager: wagerGram })}
@@ -318,14 +336,14 @@ export const TrustJackpotWheel: React.FC<TrustJackpotWheelProps> = ({
             )}
           </motion.div>
         ) : (
-          <div className="flex items-center space-x-2 mt-2">
+          <div className="flex items-center space-x-2 mt-1">
             {isSpinning && (
               <button
                 type="button"
                 onClick={skipSpin}
-                className="px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/15 hover:border-amber-400/50 text-slate-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95"
+                className="px-3 py-1 rounded-lg bg-white/5 border border-white/15 hover:border-amber-400/50 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
               >
-                <FastForward className="w-3.5 h-3.5 text-amber-300" />
+                <FastForward className="w-3 h-3 text-amber-300" />
                 <span>{t('wheel.skipAnimation')}</span>
               </button>
             )}

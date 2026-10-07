@@ -40,7 +40,11 @@ export class RoomManager {
       if (winner && r.winnerName && !r.winnerName.includes('Nessun Vincitore') && !r.winnerName.includes('Pace')) {
         const wagerNum = Number(r.config.wagerAmountNano) / 1e9;
         const totalPot = wagerNum * 2;
-        const payout = (r.gameType === 'split' ? totalPot : totalPot * 0.96).toFixed(2);
+        let finalPayout = r.gameType === 'split' ? totalPot : totalPot * 0.96;
+        if (r.gameType === 'split' && (r as any).bonusAwardedGram) {
+          finalPayout += Number((r as any).bonusAwardedGram) || 0;
+        }
+        const payout = finalPayout.toFixed(2);
         this.broadcastGlobal({
           type: 'GLOBAL_WIN',
           data: {
