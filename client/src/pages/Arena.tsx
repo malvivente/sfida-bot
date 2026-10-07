@@ -1086,7 +1086,6 @@ export const Arena: React.FC<ArenaProps> = ({
                 fetchUserBalance();
               }}
               rematchOffer={socketData.rematchOffer}
-              rematchDeclined={socketData.rematchDeclined}
               onRequestRematch={socketData.requestRematch}
               onAcceptRematch={socketData.acceptRematch}
               onDeclineRematch={socketData.declineRematch}

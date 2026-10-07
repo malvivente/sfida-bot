@@ -69,7 +69,6 @@ export function useSocket({
   const [playerAName, setPlayerAName] = useState<string>('Player A');
   const [playerBName, setPlayerBName] = useState<string | null>(null);
   const [rematchOffer, setRematchOffer] = useState<{ proposerWallet: string; proposerName: string; newWagerTon: string } | null>(null);
-  const [rematchDeclined, setRematchDeclined] = useState<boolean>(false);
   const [activeWagerTon, setActiveWagerTon] = useState<string>('1.00');
   const [gameType, setGameType] = useState<GameType | undefined>(undefined);
   const [gameData, setGameData] = useState<any>(null);
@@ -78,26 +77,6 @@ export function useSocket({
   const [playerAConnected, setPlayerAConnected] = useState(true);
   const [playerBConnected, setPlayerBConnected] = useState(true);
   const [socketError, setSocketError] = useState<string | null>(null);
-
-  // Reset all room-specific state immediately when matchId changes
-  useEffect(() => {
-    setPlayerBName(null);
-    setPlayerBReady(false);
-    setPlayerBConnected(false);
-    setPlayerAReady(false);
-    setRematchOffer(null);
-    setRematchDeclined(false);
-    setGameData(null);
-    setRoomState('LOBBY');
-    setCurrentRound(1);
-    setScoreA(0);
-    setScoreB(0);
-    setMatchWinner(null);
-    setMatchWinnerName(null);
-    setResolution(null);
-    setCountdownSeconds(null);
-    setSocketError(null);
-  }, [matchId]);
 
   useEffect(() => {
     if (!matchId) return;
@@ -146,14 +125,14 @@ export function useSocket({
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.resolution) setResolution(msg.resolution);
             if (msg.playerAName) setPlayerAName(msg.playerAName);
-            setPlayerBName(msg.playerBName || null);
+            if (msg.playerBName) setPlayerBName(msg.playerBName);
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             if (msg.gameType) setGameType(msg.gameType);
             if (msg.gameData) setGameData(msg.gameData);
-            setPlayerAReady(msg.playerA?.ready !== undefined ? Boolean(msg.playerA.ready) : false);
-            setPlayerBReady(msg.playerB?.ready !== undefined ? Boolean(msg.playerB.ready) : false);
-            setPlayerAConnected(msg.playerA?.connected !== undefined ? Boolean(msg.playerA.connected) : false);
-            setPlayerBConnected(msg.playerB?.connected !== undefined ? Boolean(msg.playerB.connected) : false);
+            if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
+            if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
+            if (msg.playerA?.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
+            if (msg.playerB?.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
             break;
 
           case 'ROOM_UPDATE':
@@ -330,7 +309,6 @@ export function useSocket({
             break;
 
           case 'REMATCH_OFFERED':
-            setRematchDeclined(false);
             if (msg.proposerWallet && msg.proposerName && msg.newWagerTon) {
               setRematchOffer({
                 proposerWallet: msg.proposerWallet,
@@ -343,7 +321,6 @@ export function useSocket({
 
           case 'REMATCH_ACCEPTED':
             setRematchOffer(null);
-            setRematchDeclined(false);
             setSocketError(null);
             setMatchWinner(null);
             setMatchWinnerName(null);
@@ -358,7 +335,6 @@ export function useSocket({
 
           case 'REMATCH_DECLINED':
             setRematchOffer(null);
-            setRematchDeclined(true);
             setSocketError(null);
             if (msg.message) setFeedMessage(msg.message);
             break;
@@ -413,7 +389,6 @@ export function useSocket({
 
   const requestRematch = useCallback(() => {
     setSocketError(null);
-    setRematchDeclined(false);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_REQUEST' }));
     }
@@ -421,7 +396,6 @@ export function useSocket({
 
   const acceptRematch = useCallback(() => {
     setSocketError(null);
-    setRematchDeclined(false);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REMATCH_ACCEPT' }));
     }
@@ -519,7 +493,6 @@ export function useSocket({
     playerAName,
     playerBName,
     rematchOffer,
-    rematchDeclined,
     activeWagerTon,
     gameType,
     gameData,
