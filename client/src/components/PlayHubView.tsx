@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Flame, ArrowRight, Zap, Target } from 'lucide-react';
+import { ArrowLeft, Flame, ArrowRight, Zap, Target, Info } from 'lucide-react';
 import { GameType, MatchData } from '../types/index.js';
 import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
+import { GameRulesModal } from './GameRulesModal.js';
 
 interface PlayHubViewProps {
   onBack: () => void;
@@ -25,6 +26,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
   const { t } = useI18n();
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'quick' | 'strategy'>(initialSection);
+  const [selectedRulesGame, setSelectedRulesGame] = useState<GameType | null>(null);
 
   useEffect(() => {
     if (initialSection) {
@@ -125,6 +127,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           }}
           className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-amber-800 p-4 sm:p-5 shadow-xl border border-red-400/40 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
         >
+          {/* Rules info button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerImpact('light');
+              setSelectedRulesGame('shotgun');
+            }}
+            className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+            title={t('gameRules.infoTooltip')}
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-red-400/25 blur-2xl pointer-events-none" />
 
           {/* 2D Minimal Graphic in Background */}
@@ -179,6 +195,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             }}
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-900 p-4 border border-blue-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
+            {/* Rules info button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerImpact('light');
+                setSelectedRulesGame('connect4');
+              }}
+              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+              title={t('gameRules.infoTooltip')}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
 
             {/* 2D Minimal Graphic in Background */}
@@ -218,6 +248,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             }}
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-700 to-slate-900 p-4 border border-purple-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
+            {/* Rules info button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerImpact('light');
+                setSelectedRulesGame('split');
+              }}
+              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+              title={t('gameRules.infoTooltip')}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-purple-400/20 blur-2xl pointer-events-none" />
 
             {/* 2D Minimal Graphic in Background */}
@@ -280,9 +324,23 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             </div>
 
             <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch">
-              <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('cubecount') })}
-              </span>
+              <div className="flex items-center space-x-1.5">
+                <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
+                  {t('playHub.openRooms', { count: getOpenRoomsCount('cubecount') })}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerImpact('light');
+                    setSelectedRulesGame('cubecount');
+                  }}
+                  className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+                  title={t('gameRules.infoTooltip')}
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform mt-auto">
                 <span>{t('playHub.playNow')}</span>
                 <ArrowRight className="w-3 h-3" />
@@ -320,6 +378,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             }}
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 p-4 border border-emerald-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
+            {/* Rules info button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerImpact('light');
+                setSelectedRulesGame('roulette');
+              }}
+              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+              title={t('gameRules.infoTooltip')}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
 
             {/* 2D Minimal Graphic in Background */}
@@ -359,6 +431,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             }}
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#e11d48] to-[#881337] p-4 border border-rose-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
+            {/* Rules info button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerImpact('light');
+                setSelectedRulesGame('blackjack');
+              }}
+              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+              title={t('gameRules.infoTooltip')}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-pink-500/20 blur-2xl pointer-events-none" />
 
             {/* 2D Minimal Graphic in Background */}
@@ -398,6 +484,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             }}
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0284c7] to-[#0c4a6e] p-4 border border-cyan-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
+            {/* Rules info button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerImpact('light');
+                setSelectedRulesGame('bridge');
+              }}
+              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+              title={t('gameRules.infoTooltip')}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-sky-500/20 blur-2xl pointer-events-none" />
 
             {/* 2D Minimal Graphic in Background */}
@@ -437,6 +537,20 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             }}
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#d97706] to-[#78350f] p-4 border border-amber-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
+            {/* Rules info button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerImpact('light');
+                setSelectedRulesGame('chrono');
+              }}
+              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+              title={t('gameRules.infoTooltip')}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
 
             {/* 2D Minimal Graphic in Background */}
@@ -470,6 +584,14 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         </div>
       </div>
       )}
+
+      {/* Dedicated Game-Specific Rules Modal */}
+      <GameRulesModal
+        isOpen={selectedRulesGame !== null}
+        onClose={() => setSelectedRulesGame(null)}
+        gameType={selectedRulesGame}
+        onPlayGame={(gType) => onCreateMatchForGame(gType)}
+      />
     </div>
   );
 };

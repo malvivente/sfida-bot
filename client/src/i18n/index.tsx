@@ -608,10 +608,9 @@ export const translations: Translations = {
   'affiliates.noGroupsDesc': { it: 'Aggiungi il bot nel tuo gruppo e contatta l\'amministratore per attivare le commissioni affiliate sulle partite giocate nella community (fino al 15% delle quote fisse di partecipazione e taglie del 5% su Split or Steal).', en: 'Add the bot to your community and contact the admin to activate affiliate commissions on matches played in your group (up to 15% of fixed participation fees and 5% bounties on Split or Steal).' },
   'affiliates.contactAdminBtn': { it: 'CONTATTA ADMIN', en: 'CONTACT ADMIN' },
 
-  // Rules & ToS Modal
-  'rules.title': { it: 'REGOLAMENTO & TERMINI (ToS)', en: 'RULES & TERMS (ToS)' },
+  // Rules & ToS Modal (Terms of Service)
+  'rules.title': { it: 'TERMINI DI SERVIZIO (ToS)', en: 'TERMS OF SERVICE (ToS)' },
   'rules.fairplay': { it: 'FAIR PLAY', en: 'FAIR PLAY' },
-  'rules.duels': { it: 'DUELLI 1V1', en: '1V1 DUELS' },
   'rules.fees': { it: 'COMMISSIONI & PREMI', en: 'FEES & PRIZES' },
   'rules.affiliates': { it: 'AFFILIATI', en: 'AFFILIATES' },
   'rules.understood': { it: 'HO CAPITO', en: 'UNDERSTOOD' },
@@ -620,53 +619,71 @@ export const translations: Translations = {
   'rules.escrowP2': { it: 'Nessun intermediario o server può trattenere o sequestrare i fondi degli utenti: gli esiti sono firmati crittograficamente con firme Ed25519 e accreditati automaticamente al vincitore alla fine di ogni duello.', en: 'No intermediary or server can seize user funds: outcomes are cryptographically signed with authoritative Ed25519 signatures and settled automatically to the winner at the conclusion of each duel.' },
   'rules.transparency': { it: 'Trasparenza Totale: ogni transazione e risoluzione è verificabile pubblicamente sul TON Explorer.', en: 'Total Transparency: Every transaction and resolution is publicly verifiable on the TON Explorer.' },
   'rules.autoRefund': { it: 'Rimborso Automatico: se crei un duello e nessun avversario si unisce, puoi annullare e recuperare l\'intera puntata in qualsiasi momento.', en: 'Automatic Refund: If you create a duel and no opponent joins, you can cancel and refund the full wager at any time.' },
-  'rules.duelsTitle': { it: 'DISCIPLINE DEI DUELLI 1V1 E REGOLE', en: '1V1 DUEL DISCIPLINES & RULES' },
-  'rules.duelsDesc': { it: 'I duellanti puntano GRAM in giochi PvP ad alta tensione. Tutti gli esiti sono risolti lato server e accreditati automaticamente sul saldo del vincitore.', en: 'Duelists wager GRAM in high-stakes PvP games. All outcomes are resolved server-side and settled automatically to the winner\'s balance.' },
-  'rules.rrRule': { it: '<b>Russian Roulette:</b> I duellanti a turno scelgono se spararsi (`SHOOT SELF`). A salve passa il turno con probabilità letali crescenti. Ogni giocatore ha a disposizione 1 singolo colpo offensivo contro il rivale: se va a vuoto, dovrà spararsi per tutti i turni successivi! Un colpo letale istantaneo chiude la partita.', en: '<b>Russian Roulette:</b> Duelists take turns shooting themselves (`SHOOT SELF`). Blank passes the turn with increasing lethal odds. Each player has 1 single offensive shot against the rival: if missed, you must shoot yourself on all future turns! Instant fatal shot settles the match.' },
-  'rules.bjRule': { it: '<b>Face-Up Blackjack:</b> Le carte vengono distribuite scoperte da un mazzo comune condiviso visibile a entrambi i duellanti e agli spettatori. Scegli HIT o STAND. Vince la puntata chi si avvicina di più a 21 senza sballare.', en: '<b>Face-Up Blackjack:</b> Cards are dealt face-up from a shared common deck visible to both duelists and spectators. Choose HIT or STAND. Closest to 21 without busting wins the wager.' },
-  'rules.gbRule': { it: '<b>Glass Bridge:</b> Attraversa un ponte infinito di lastre di vetro temperato o fragile. 2 vite a testa. Ogni giocatore può usare 1 singolo PASS per cedere l\'iniziativa all\'avversario. Infrangi tutte le vite e precipita nell\'abisso: l\'ultimo guerriero in piedi vince!', en: '<b>Glass Bridge:</b> Step across an endless bridge of tempered vs fragile glass tiles. 2 lives each. Each player can use 1 single PASS to shift the lead to the opponent. Shatter all lives and fall into the abyss—last warrior standing wins!' },
-  'rules.cbRule': { it: '<b>Chrono Blind:</b> Un timer casuale sprofonda nella Blind Zone buia tra 2.0s e 4.0s. Premi STOP più vicino possibile a 0.000s. Fermare dopo lo 0.000s è BUST. I pareggi attivano il Sudden Death overtime! Il primo a conquistare 2 round vince il match.', en: '<b>Chrono Blind:</b> A random timer plunges into the dark Blind Zone between 2.0s and 4.0s. Hit STOP as close to 0.000s as you dare. Stopping past 0.000s is a BUST. Ties trigger Sudden Death overtime! First to secure 2 rounds wins the match.' },
-  'rules.ssRule': {
-    it: `<b>Split or Steal:</b> Dilemma del Prigioniero ad alta tensione (puntata min. 5.00 GRAM):
-⏱️ Decisione Segreta (30s): Entrambi i duellanti scelgono in segreto tra SPLIT (Coopera) o STEAL (Tradisci). Le scelte rimangono crittografate fino allo scadere del tempo.
 
-🤝 Doppio Split (Pace Assoluta):
-• Rimborso 100% della puntata a entrambi i giocatori.
-• Nelle partite pubbliche della lobby, se il Trust Jackpot è attivo (≥ 5.0 GRAM), gira la Ruota Lucky Drop (30% probabilità) con un Bonus del 25% della puntata diviso equamente (12.5% a testa) prelevato dal Jackpot!
+  // Individual Game Rules Modal
+  'gameRules.modalTitle': { it: 'REGOLE DEL GIOCO', en: 'GAME RULES' },
+  'gameRules.goal': { it: 'OBIETTIVO', en: 'OBJECTIVE' },
+  'gameRules.howItWorks': { it: 'COME SI GIOCA', en: 'HOW IT WORKS' },
+  'gameRules.victoryCondition': { it: 'VITTORIA & PREMI', en: 'VICTORY & PRIZES' },
+  'gameRules.playNow': { it: 'GIOCA ORA', en: 'PLAY NOW' },
+  'gameRules.close': { it: 'CHIUDI', en: 'CLOSE' },
+  'gameRules.infoTooltip': { it: 'Regole del gioco', en: 'Game rules' },
 
-🗡️ Steal vs Split (Tradimento & Taglia Tentazione):
-• Chi sceglie STEAL vince il 100% del piatto (2x la puntata). Chi ha scelto SPLIT perde la puntata.
-• Nelle partite pubbliche con Jackpot attivo, chi ruba gira la Ruota Lucky Drop (30% probabilità) per una Taglia Tentazione extra del 20% della propria puntata dal Trust Jackpot!
+  // Shotgun
+  'gameRules.shotgun.goal': { it: 'Azzera i 3 Punti Vita (HP) dell\'avversario con cartucce calibro 12 in un duello tattico a probabilità calcolate.', en: 'Eliminate the opponent\'s 3 Hit Points (HP) with 12-gauge shotgun shells in a calculated tactical duel.' },
+  'gameRules.shotgun.r1': { it: 'A ogni round il fucile viene caricato con una sequenza casuale e segreta di cartucce: Rosse (Cariche / 1 Danno) e Blu (A Salve / 0 Danni).', en: 'Each round the shotgun is chambered with a secret random sequence of shells: Red (Live / 1 Damage) and Blue (Blank / 0 Damage).' },
+  'gameRules.shotgun.r2': { it: 'Al tuo turno scegli se sparare all\'avversario (SHOOT ENEMY) o spararti addosso (SHOOT SELF). Se ti spari a salve, non subisci danni e MANTIENI il turno!', en: 'On your turn, shoot the enemy (SHOOT ENEMY) or shoot yourself (SHOOT SELF). If you shoot yourself with a blank, you take 0 damage and RETAIN your turn!' },
+  'gameRules.shotgun.r3': { it: 'Oggetti Tattici: Lama Laser (danno raddoppiato a 2), Espulsore (scarta la cartuccia corrente), Manette (salta il prossimo turno dell\'avversario), Invertitore (trasforma una carica in salve o viceversa).', en: 'Tactical Items: Laser Saw (2x damage), Ejector (discards chambered shell), Handcuffs (skips opponent\'s next turn), Inverter (inverts shell from live to blank or vice versa).' },
+  'gameRules.shotgun.win': { it: 'Chi azzera per primo gli HP del rivale incassa l\'intero montepremi del duello.', en: 'The first duelist to reduce the rival to 0 HP collects the entire prize pool.' },
 
-💀 Doppio Steal (Avidità & Distruzione):
-• Se entrambi scelgono STEAL, nessuno vince ed entrambi perdono il 100% della puntata.
-• Il piatto bruciato alimenta per il 50% il Trust Jackpot, il 10% va in taglie per la community/referrer (5% gruppo e 2.5% a ciascun referrer) e il 40% alla Treasury.
+  // Russian Roulette
+  'gameRules.roulette.goal': { it: 'Sopravvivi al tamburo a 8 camere e anticipa il colpo letale prima dell\'avversario.', en: 'Survive the 8-chamber cylinder and anticipate the lethal round before your opponent.' },
+  'gameRules.roulette.r1': { it: 'Il tamburo contiene 8 camere e 1 singolo proiettile letale reale.', en: 'The cylinder holds 8 chambers and 1 single real lethal bullet.' },
+  'gameRules.roulette.r2': { it: 'A turno i duellanti premono SHOOT SELF. Se il colpo è a salve, passi il turno e la probabilità che il colpo successivo sia letale aumenta per entrambi.', en: 'Duelists take turns pressing SHOOT SELF. If blank, the turn passes and lethal odds increase for the next player.' },
+  'gameRules.roulette.r3': { it: 'Colpo Offensivo: Hai a disposizione 1 singolo colpo offensivo contro l\'avversario (SHOOT ENEMY). Se va a segno vinci subito; se fallisce a salve, sarai costretto a spararti per tutti i turni successivi!', en: 'Offensive Shot: You have 1 single offensive shot (SHOOT ENEMY). If it hits, you win instantly; if it misses blank, you are forced to shoot yourself on all remaining turns!' },
+  'gameRules.roulette.win': { it: 'Chi sopravvive allo sparo letale incassa il 100% del piatto.', en: 'The sole survivor of the fatal chamber claims 100% of the pot.' },
 
-🛡️ Regole Anti-Abuso & Limiti:
-• Bonus Jackpot validi SOLO nelle stanze pubbliche della lobby (non disponibili nelle stanze private).
-• Cooldown 48 ore: la stessa coppia di giocatori può riscuotere il bonus Jackpot una sola volta ogni 48 ore.
-• Blocco Referral: due utenti legati da invito diretto non possono incassare bonus Jackpot sfidandosi tra loro.`,
-    en: `High-stakes Prisoner's Dilemma showdown (min. wager 5.00 GRAM):
-⏱️ Secret Decision Window (30s): Both duelists secretly choose SPLIT (Cooperate) or STEAL (Betray). Choices remain encrypted until the timer expires.
+  // Blackjack
+  'gameRules.blackjack.goal': { it: 'Avvicinati il più possibile a 21 senza sballare da un mazzo comune visibile in tempo reale.', en: 'Get as close as possible to 21 without busting from a shared face-up deck.' },
+  'gameRules.blackjack.r1': { it: 'Tutte le carte vengono distribuite scoperte (Face-Up) da un mazzo comune visibile a entrambi i duellanti e agli spettatori.', en: 'All cards are dealt face-up from a shared common shoe visible to both duelists and spectators.' },
+  'gameRules.blackjack.r2': { it: 'Scegli tra HIT (pesca carta) o STAND (fermati con il tuo punteggio corrente).', en: 'Choose between HIT (draw a card) or STAND (lock your current score).' },
+  'gameRules.blackjack.r3': { it: 'Valori: Figure valgono 10, Assi valgono 1 o 11, carte numeriche il loro valore nominale. Chi supera 21 fa BUST e perde immediatamente.', en: 'Values: Face cards count as 10, Aces as 1 or 11, numbers at face value. Exceeding 21 is an instant BUST.' },
+  'gameRules.blackjack.win': { it: 'Vince chi realizza il punteggio più alto senza superare 21. In caso di parità, la puntata viene rimborsata.', en: 'Closest to 21 without busting wins the pot. On exact tie, stakes are refunded.' },
 
-🤝 Mutual Split (Absolute Peace):
-• 100% full wager refund to both players.
-• In open public lobby matches with an active Trust Jackpot (≥ 5.0 GRAM), the 30% Lucky Drop Wheel spins for a 25% wager bonus shared equally (12.5% each) from the Jackpot!
+  // Glass Bridge
+  'gameRules.bridge.goal': { it: 'Attraversa il ponte sospeso scegliendo tra lastre di vetro temperato o fragile senza cadere.', en: 'Cross the suspension bridge choosing between tempered or fragile glass without falling.' },
+  'gameRules.bridge.r1': { it: 'A ogni passo ci sono 2 lastre: una è di vetro temperato (sicura) e l\'altra è fragile (si infrange all\'istante).', en: 'Each step presents 2 tiles: one is tempered glass (safe) and the other is fragile (shatters instantly).' },
+  'gameRules.bridge.r2': { it: 'Ogni duellante inizia con 2 vite. Se una lastra cede, perdi 1 vita e la lastra corretta viene rivelata.', en: 'Each duelist starts with 2 lives. If a pane breaks, you lose 1 life and the safe tile is revealed.' },
+  'gameRules.bridge.r3': { it: 'Bonus PASS: Una sola volta durante il duello puoi usare il tasto PASS per cedere l\'iniziativa all\'avversario e costringerlo a rischiare il salto successivo!', en: 'PASS Ability: Once per match, use PASS to transfer initiative to your opponent and force them to make the next leap!' },
+  'gameRules.bridge.win': { it: 'Chi esaurisce per primo le 2 vite precipita e perde; l\'ultimo giocatore in piedi vince l\'intero piatto.', en: 'The first player to lose both lives falls; the last duelist standing wins the entire pot.' },
 
-🗡️ Steal vs Split (Betrayal & Temptation Bounty):
-• The stealer wins the entire pot (100% pot / 2x wager). The cooperating player loses their stake.
-• In public matches with active Jackpot, the stealer also spins the 30% Lucky Drop Wheel for an extra 20% Temptation Bounty on their wager taken from the Trust Jackpot!
+  // Chrono Blind
+  'gameRules.chrono.goal': { it: 'Ferma il cronometro il più vicino possibile a 0.000s dopo che piomba nell\'oscurità assoluta.', en: 'Stop the timer as close as possible to 0.000s after it plunges into total darkness.' },
+  'gameRules.chrono.r1': { it: 'Il cronometro parte e scorre rapidamente verso 0.000s.', en: 'The timer counts down rapidly towards 0.000s.' },
+  'gameRules.chrono.r2': { it: 'Blind Zone: A un istante casuale tra 2.0s e 4.0s il display si oscura completamente! Devi calcolare mentalmente lo scorrere dei millisecondi al buio.', en: 'Blind Zone: At an unpredictable moment between 2.0s and 4.0s the screen goes pitch black! You must time milliseconds purely in the dark.' },
+  'gameRules.chrono.r3': { it: 'Regola BUST: Premi STOP prima dello zero. Se premi dopo lo 0.000s (tempo negativo) è BUST e perdi il round!', en: 'Bust Rule: Hit STOP before zero. If you stop past 0.000s (negative time), it\'s a BUST and you lose the round!' },
+  'gameRules.chrono.win': { it: 'Sfida al meglio dei 3 round (vince chi conquista 2 round). I pareggi attivano il Sudden Death overtime!', en: 'Best of 3 rounds (first to 2 round wins). Exact ties trigger Sudden Death overtime!' },
 
-💀 Double Steal (Greed & Total Loss):
-• If both duelists choose STEAL, zero winners and both lose 100% of their stakes.
-• The burned pot is redistributed: 50% feeds the Trust Jackpot, 10% to community & referrers (5% group & 2.5% to each referrer), and 40% to Platform Treasury.
+  // Forza 4
+  'gameRules.connect4.goal': { it: 'Allinea 4 gettoni del tuo colore in orizzontale, verticale o diagonale su una griglia verticale 7x6.', en: 'Connect 4 chips of your color horizontally, vertically, or diagonally on a 7x6 vertical grid.' },
+  'gameRules.connect4.r1': { it: 'Griglia 7 colonne x 6 righe. I gettoni cadono per gravità fino alla posizione libera più bassa della colonna scelta.', en: '7 columns x 6 rows grid. Chips drop by gravity to the lowest available slot in the chosen column.' },
+  'gameRules.connect4.r2': { it: 'Turni Rapidi: Hai 10 secondi per ciascuna mossa. Se scade il tempo senza scegliere, una mossa casuale viene effettuata automaticamente.', en: 'Speed Turns: 10 seconds per turn. If timer expires, an automatic random drop is triggered.' },
+  'gameRules.connect4.r3': { it: 'Condizione di Pareggio: Se la griglia si riempie completamente senza alcun allineamento da 4, le puntate vengono integralmente rimborsate.', en: 'Draw Condition: If the entire board fills without any 4-in-a-row connection, wagers are refunded 100%.' },
+  'gameRules.connect4.win': { it: 'Il primo che crea una linea ininterrotta di 4 gettoni (orizzontale, verticale o diagonale) vince istantaneamente l\'intero piatto.', en: 'The first duelist to form an unbroken line of 4 chips (horizontal, vertical, or diagonal) wins the full pot.' },
 
-🛡️ Anti-Collusion Rules & Safeguards:
-• Jackpot bonuses trigger ONLY in public lobby matches (unavailable in private rooms).
-• 48-Hour Cooldown: The same pair of players can only trigger a Jackpot bonus once every 48 hours.
-• Referral Lock: Players connected by direct invite/referral cannot trigger Jackpot bonuses against each other.`
-  },
-  'rules.settleRule': { it: 'I premi vengono accreditati automaticamente sul saldo in-app al termine del duello. Alla fine di ogni match, entrambi i giocatori possono proporre una rivincita immediata 2X!', en: 'Prizes are automatically credited to your in-bot balance upon duel settlement. At the end of any duel, either player can propose an immediate 2X rematch!' },
+  // Split or Steal
+  'gameRules.split.goal': { it: 'Coopera o tradisci in un dilemma a 3 turni con moltiplicatori crescenti e Trust Jackpot fino al 50%.', en: 'Cooperate or betray in a 3-round dilemma with escalating multipliers and up to 50% Trust Jackpot.' },
+  'gameRules.split.r1': { it: 'Fino a 3 Round: A ogni round i giocatori scelgono in segreto SPLIT (Coopera) o STEAL (Tradisci).', en: 'Up to 3 Rounds: Each round, duelists secretly pick SPLIT (Cooperate) or STEAL (Betray).' },
+  'gameRules.split.r2': { it: 'Patto (Split / Split): Nei primi 2 round si avanza al round successivo aumentando le quote. Al Round 3: rimborso 100% della puntata e accesso alla Ruota Lucky Drop (70% probabilità) con bonus del 50% dal Trust Jackpot diviso a metà!', en: 'Pact (Split / Split): Rounds 1 & 2 advance with increased stakes. Round 3 gives 100% refund plus the Lucky Drop Wheel (70% chance) for a 50% Trust Jackpot bonus split equally!' },
+  'gameRules.split.r3': { it: 'Tradimento (Steal vs Split): Chi ruba incassa il 100% del piatto (2x puntata) e gira la Ruota per la Taglia Tentazione extra (fino a +40%) dal Trust Jackpot! L\'altro giocatore perde la puntata.', en: 'Betrayal (Steal vs Split): The stealer takes 100% of the pot (2x wager) and spins the Wheel for an extra Temptation Bounty (up to +40%) from the Trust Jackpot! Cooperating duelist loses stake.' },
+  'gameRules.split.win': { it: 'Se entrambi scelgono STEAL, entrambi perdono il 100% della puntata (il piatto alimenta il Trust Jackpot al 50% e la Treasury al 40%).', en: 'If both choose STEAL, both lose 100% of their stakes (the burned pot feeds the Trust Jackpot at 50% and Treasury at 40%).' },
+
+  // Cube Count
+  'gameRules.cubecount.goal': { it: 'Conta il numero esatto di cubi 3D impilati visualizzati per una frazione di secondo sullo schermo.', en: 'Count the exact number of stacked 3D cubes flashed on screen for a split second.' },
+  'gameRules.cubecount.r1': { it: 'Una composizione isometrica di cubi 3D impilati viene mostrata per pochi millisecondi (Flash Duration) prima di scomparire.', en: 'A complex 3D cube stack is displayed for a fraction of a second before vanishing.' },
+  'gameRules.cubecount.r2': { it: 'Digita il numero totale di cubi visibili e di supporto sul tastierino numerico e conferma prima dello scadere del timer.', en: 'Enter the exact total of visible and supporting cubes on the numpad and submit before countdown ends.' },
+  'gameRules.cubecount.r3': { it: 'Duello a 3 Vite: Ogni risposta errata costa 1 vita. Il primo a esaurire le 3 vite viene eliminato.', en: '3 Lives Duel: Each incorrect count costs 1 life. The first duelist to lose all 3 lives is eliminated.' },
+  'gameRules.cubecount.win': { it: 'Vince l\'ultimo sopravvissuto, oppure chi ha totalizzato più punti precisione se entrambi superano i round.', en: 'The last survivor wins, or the duelist with highest accuracy and speed if both survive all rounds.' },
   'rules.feesTitle': { it: 'COME FUNZIONANO VINCITE E COMMISSIONI', en: 'HOW WINNINGS & FEES WORK' },
   'rules.feesDesc': { it: 'Nessun margine nascosto. Il vincitore del duello 1v1 riscuote il 100% del montepremi generato dalle puntate di entrambi i giocatori (0% commissione trattenuta dal banco). È prevista solo una quota fissa di partecipazione di 0.05 GRAM per giocatore. Prelievo minimo consentito: 1.00 GRAM.', en: 'Zero hidden rake. The 1v1 winner collects 100% of the prize pool generated by both players\' wagers (0% platform rake). There is only a fixed participation fee of 0.05 GRAM per player. Minimum withdrawal allowed: 1.00 GRAM.' },
   'rules.example': { it: 'Esempio Pratico:', en: 'Practical Example:' },
@@ -729,14 +746,6 @@ export const translations: Translations = {
   'jackpotModal.safeguardMinBet': { it: 'Puntata Minima: 5.00 GRAM per duello.', en: 'Minimum Stake: 5.00 GRAM per duel.' },
   'jackpotModal.close': { it: 'CHIUDI', en: 'CLOSE' },
   'jackpotModal.playSplitSteal': { it: 'GIOCA SPLIT/STEAL', en: 'PLAY SPLIT/STEAL' },
-
-  // Rules Game Titles
-  'rules.gameRoulette': { it: '1. Russian Roulette (8 Camere, 1 Proiettile)', en: '1. Russian Roulette (8 Chambers, 1 Bullet)' },
-  'rules.gameBlackjack': { it: '2. Blackjack Face-Up (Duello al 21)', en: '2. Blackjack Face-Up (Duel to 21)' },
-  'rules.gameBridge': { it: '3. Endless Glass Bridge (Ponte di Vetro)', en: '3. Endless Glass Bridge (Survival Leap)' },
-  'rules.gameChrono': { it: '4. Chrono Blind (Precision Countdown)', en: '4. Chrono Blind (Precision Countdown)' },
-  'rules.gameSplit': { it: '5. Split or Steal (Dilemma della Fiducia & Jackpot Condiviso)', en: '5. Split or Steal (Trust Dilemma & Shared Jackpot)' },
-  'rules.gameSettle': { it: '6. Risoluzione Automatica Vincite & Rivincite', en: '6. Automated Prize Settlement & Rematches' },
 
   // Profile outcome badges
   'profile.win': { it: 'VITTORIA', en: 'VICTORY' },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Swords, TrendingUp, Users, X, FileText, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Users, X, FileText, CheckCircle2 } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { useI18n } from '../i18n/index.js';
@@ -14,7 +14,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
   const { isFullscreen, topInset } = useTelegramViewport();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
-  const [activeSection, setActiveSection] = useState<'fairplay' | 'duels' | 'fees' | 'affiliates'>('fairplay');
+  const [activeSection, setActiveSection] = useState<'fairplay' | 'fees' | 'affiliates'>('fairplay');
 
   if (!isOpen) return null;
 
@@ -54,7 +54,6 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         <div className="flex border-b border-white/10 bg-black/40 p-1.5 space-x-1 text-xs">
           {[
             { id: 'fairplay', label: t('rules.fairplay'), icon: ShieldCheck },
-            { id: 'duels', label: t('rules.duels'), icon: Swords },
             { id: 'fees', label: t('rules.fees'), icon: TrendingUp },
             { id: 'affiliates', label: t('rules.affiliates'), icon: Users },
           ].map((tab) => {
@@ -106,47 +105,6 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 <div className="flex items-start space-x-2 bg-white/5 p-3 rounded-2xl border border-white/10">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <span className="text-slate-200">{t('rules.autoRefund')}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'duels' && (
-            <div className="space-y-3">
-              <div className="bg-[#141724]/90 border border-white/10 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center space-x-2 text-pink-400 font-heading font-bold text-xs uppercase tracking-wider">
-                  <Swords className="w-4 h-4 text-pink-400" />
-                  <span>{t('rules.duelsTitle')}</span>
-                </div>
-                <p className="text-xs text-slate-200 font-medium">
-                  {t('rules.duelsDesc')}
-                </p>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-pink-300 font-heading font-bold block mb-0.5">{t('rules.gameRoulette')}</strong>
-                  <span className="text-slate-300 font-medium">{t('rules.rrRule')}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-cyan-300 font-heading font-bold block mb-0.5">{t('rules.gameBlackjack')}</strong>
-                  <span className="text-slate-300 font-medium">{t('rules.bjRule')}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-emerald-300 font-heading font-bold block mb-0.5">{t('rules.gameBridge')}</strong>
-                  <span className="text-slate-300 font-medium">{t('rules.gbRule')}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-amber-300 font-heading font-bold block mb-0.5">{t('rules.gameChrono')}</strong>
-                  <span className="text-slate-300 font-medium">{t('rules.cbRule')}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-yellow-300 font-heading font-bold block mb-1">{t('rules.gameSplit')}</strong>
-                  <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[11.5px] font-medium">{t('rules.ssRule')}</div>
-                </div>
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                  <strong className="text-slate-200 font-heading font-bold block mb-0.5">{t('rules.gameSettle')}</strong>
-                  <span className="text-slate-300 font-medium">{t('rules.settleRule')}</span>
                 </div>
               </div>
             </div>
