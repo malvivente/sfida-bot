@@ -542,6 +542,7 @@ export const translations: Translations = {
   'split.outcomeSteal': { it: '🗡️ TRADIMENTO VINCENTE!', en: '🗡️ SUCCESSFUL BETRAYAL!' },
   'split.outcomeStealDesc': { it: '{winner} ha scelto STEAL mentre l\'avversario ha scelto SPLIT!', en: '{winner} chose STEAL while the opponent chose SPLIT!' },
   'split.outcomeStealPot': { it: '{winner} incassa l\'intero piatto!', en: '{winner} collects the entire pot!' },
+  'split.youCollectPot': { it: 'Incassi l\'intero piatto!', en: 'You collect the entire pot!' },
   'split.betrayedTitle': { it: '🗡️ SEI STATO TRADITO!', en: '🗡️ YOU WERE BETRAYED!' },
   'split.betrayedDesc': { it: 'Hai scelto SPLIT, ma {winner} ha scelto STEAL e ha incassato l\'intero piatto!', en: 'You chose SPLIT, but {winner} chose STEAL and collected the whole pot!' },
   'split.betrayedLoss': { it: 'Puntata persa: -{amount} GRAM', en: 'Stake lost: -{amount} GRAM' },

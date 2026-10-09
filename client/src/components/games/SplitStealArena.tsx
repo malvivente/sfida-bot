@@ -865,11 +865,13 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                 {outcome === 'PEACE'
                   ? t('split.outcomePeaceDesc')
                   : isUserStealWinner
-                  ? t('split.outcomeStealPot', { winner: 'Tu' })
+                  ? t('split.youCollectPot')
                   : isUserStealLoser
                   ? t('split.betrayedLoss', { amount: wagerTon })
                   : outcome === 'DOUBLE_STEAL'
                   ? t('split.outcomeDoubleStealDesc')
+                  : (outcome === 'P1_STEAL' || outcome === 'P2_STEAL')
+                  ? t('split.outcomeStealPot', { winner: stealWinnerName })
                   : ''}
               </p>
 
