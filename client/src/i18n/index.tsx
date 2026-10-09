@@ -772,9 +772,6 @@ export const translations: Translations = {
   'arena.duelUnavailableTitle': { it: 'DUELLO NON PIÙ DISPONIBILE', en: 'DUEL NO LONGER AVAILABLE' },
   'arena.duelUnavailableDesc': { it: 'Questo duello è stato annullato dal creatore, i fondi sono stati rimborsati o la partita è già terminata.', en: 'This duel was cancelled by the creator, funds have been refunded, or the match has already concluded.' },
   'arena.goToDuelsBtn': { it: 'VEDI TUTTI I DUELLI', en: 'EXPLORE ALL DUELS' },
-
-  // Footer & Common
-  'footer.escrow': { it: 'Smart Contract Escrow TON • Gioco Equo Senza Rischio Banco', en: 'TON Smart Contract Escrow • Fair Play Zero House Risk' },
 };
 
 interface LanguageContextType {

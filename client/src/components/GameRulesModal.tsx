@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Trophy, X, ArrowRight, ShieldCheck, Zap, Info } from 'lucide-react';
+import { Target, Trophy, X, ArrowRight, Zap, Info } from 'lucide-react';
 import { GameType } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
@@ -229,12 +229,6 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
             <p className="text-emerald-100 font-medium leading-relaxed">
               {winText}
             </p>
-          </div>
-
-          {/* Safe Escrow Notice */}
-          <div className="flex items-center space-x-2 px-1 text-[10.5px] text-slate-400">
-            <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
-            <span>{t('footer.escrow')}</span>
           </div>
         </div>
 

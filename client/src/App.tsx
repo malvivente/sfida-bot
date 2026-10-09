@@ -9,7 +9,6 @@ import { DepositModal } from './components/DepositModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { EpicHeader } from './components/EpicHeader.js';
 import { EpicBottomNav, EpicTab } from './components/EpicBottomNav.js';
-import { ShieldCheck } from 'lucide-react';
 import { useI18n } from './i18n/index.js';
 import { useTelegramViewport, isDesktopPlatform, isHorizontalScreen } from './hooks/useTelegramViewport.js';
 import { requestTelegramFullscreen, exitTelegramFullscreen, getTelegramWebApp } from './utils/telegram.js';
@@ -415,14 +414,6 @@ export const App: React.FC = () => {
           />
         )}
       </main>
-
-      {/* Subtle Footer (Visible only when not in active match) */}
-      {!isInsideMatch && (
-        <footer className="w-full max-w-md pb-24 pt-2 flex items-center justify-center text-[10px] text-slate-500 font-medium space-x-1.5 text-center">
-          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-          <span>{t('footer.escrow')}</span>
-        </footer>
-      )}
 
       {/* Epic Bottom Navigation Dock (Hidden during active combat arena) */}
       {!isInsideMatch && (
