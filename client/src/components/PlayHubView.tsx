@@ -153,7 +153,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             <div className="space-y-1.5 max-w-[68%]">
               <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white text-red-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
                 <Flame className="w-3 h-3 fill-red-500 text-red-500" />
-                <span>NUOVO GIOCO</span>
+                <span>{t('playHub.newGame')}</span>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
@@ -222,7 +222,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                 {t('playHub.badgeConnect4')}
               </span>
               <h4 className="text-base font-heading font-black text-white">
-                FORZA 4
+                {t('playHub.titleConnect4')}
               </h4>
               <p className="text-[10px] text-blue-100 font-medium leading-tight line-clamp-3">
                 {t('playHub.connect4Desc')}

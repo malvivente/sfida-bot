@@ -13,9 +13,7 @@ interface GameRulesModalProps {
   onPlayGame?: (gameType: GameType) => void;
 }
 
-interface GameMeta {
-  title: string;
-  badge: string;
+interface GameStyleConfig {
   gradient: string;
   border: string;
   glow: string;
@@ -23,10 +21,8 @@ interface GameMeta {
   badgeBg: string;
 }
 
-const GAME_CONFIGS: Record<GameType, GameMeta> = {
+const GAME_CONFIGS: Record<GameType, GameStyleConfig> = {
   shotgun: {
-    title: 'CYBER SHOTGUN',
-    badge: '1V1 BUCKSHOT',
     gradient: 'from-red-600 via-rose-700 to-amber-800',
     border: 'border-red-500/40',
     glow: 'shadow-[0_0_30px_rgba(239,68,68,0.25)]',
@@ -34,8 +30,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-red-500/20 text-red-300 border-red-500/30',
   },
   connect4: {
-    title: 'FORZA 4',
-    badge: 'STRATEGIA 7x6',
     gradient: 'from-blue-600 via-indigo-700 to-blue-950',
     border: 'border-blue-500/40',
     glow: 'shadow-[0_0_30px_rgba(59,130,246,0.25)]',
@@ -43,8 +37,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   },
   split: {
-    title: 'SPLIT OR STEAL',
-    badge: '3 TURNI • JACKPOT',
     gradient: 'from-purple-700 via-indigo-900 to-slate-900',
     border: 'border-purple-500/40',
     glow: 'shadow-[0_0_30px_rgba(168,85,247,0.25)]',
@@ -52,8 +44,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   },
   cubecount: {
-    title: 'CUBE COUNT',
-    badge: 'FLASH IQ • 3 VITE',
     gradient: 'from-amber-600 via-orange-700 to-amber-900',
     border: 'border-amber-500/40',
     glow: 'shadow-[0_0_30px_rgba(245,158,11,0.25)]',
@@ -61,8 +51,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   },
   roulette: {
-    title: 'RUSSIAN ROULETTE',
-    badge: '8 CAMERE • 1 VERA',
     gradient: 'from-emerald-600 via-teal-700 to-slate-900',
     border: 'border-emerald-500/40',
     glow: 'shadow-[0_0_30px_rgba(16,185,129,0.25)]',
@@ -70,8 +58,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   },
   blackjack: {
-    title: 'BLACKJACK FACE-UP',
-    badge: 'CARTE SCOPERTE • 21',
     gradient: 'from-rose-600 via-red-800 to-slate-900',
     border: 'border-rose-500/40',
     glow: 'shadow-[0_0_30px_rgba(244,63,94,0.25)]',
@@ -79,8 +65,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   },
   bridge: {
-    title: 'GLASS BRIDGE',
-    badge: '12 PANNELLI • 2 VITE',
     gradient: 'from-sky-600 via-cyan-800 to-slate-900',
     border: 'border-cyan-500/40',
     glow: 'shadow-[0_0_30px_rgba(6,182,212,0.25)]',
@@ -88,8 +72,6 @@ const GAME_CONFIGS: Record<GameType, GameMeta> = {
     badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   },
   chrono: {
-    title: 'CHRONO BLIND',
-    badge: 'BLIND ZONE • TEMPO ZERO',
     gradient: 'from-amber-600 via-yellow-700 to-amber-950',
     border: 'border-amber-500/40',
     glow: 'shadow-[0_0_30px_rgba(217,119,6,0.25)]',
@@ -114,6 +96,8 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
   const modalBottomOffset = isFullscreen ? 24 : 12;
 
+  const title = t(`gameRules.${gameType}.title`);
+  const badge = t(`gameRules.${gameType}.badge`);
   const goalText = t(`gameRules.${gameType}.goal`);
   const r1Text = t(`gameRules.${gameType}.r1`);
   const r2Text = t(`gameRules.${gameType}.r2`);
@@ -144,10 +128,10 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
                 <span>{t('gameRules.modalTitle')}</span>
               </div>
               <h3 className="text-lg sm:text-xl font-heading font-black text-white tracking-wide drop-shadow-md">
-                {config.title}
+                {title}
               </h3>
               <span className={`inline-block text-[9.5px] font-heading font-bold px-2 py-0.5 rounded-lg border ${config.badgeBg}`}>
-                {config.badge}
+                {badge}
               </span>
             </div>
 
