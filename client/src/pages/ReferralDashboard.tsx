@@ -36,6 +36,38 @@ interface ManagedGroup {
   totalEarningsGram: string;
 }
 
+interface AffiliateCacheData {
+  totalEarnedGram: string;
+  friendsInvited: number;
+  groups: ManagedGroup[];
+}
+
+const memoryAffiliateCache: Record<string, AffiliateCacheData> = {};
+
+function getCachedAffiliate(key: string): AffiliateCacheData | null {
+  if (memoryAffiliateCache[key]) {
+    return memoryAffiliateCache[key];
+  }
+  try {
+    const raw = localStorage.getItem(`sfida_affiliate_${key}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.totalEarnedGram === 'string') {
+        memoryAffiliateCache[key] = parsed;
+        return parsed;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+function setCachedAffiliate(key: string, data: AffiliateCacheData) {
+  memoryAffiliateCache[key] = data;
+  try {
+    localStorage.setItem(`sfida_affiliate_${key}`, JSON.stringify(data));
+  } catch {}
+}
+
 export const ReferralDashboard: React.FC = () => {
   const { userAddress } = useTonClashContract();
   const { userId, username, fullName, botUsername } = useTelegram();
@@ -43,16 +75,28 @@ export const ReferralDashboard: React.FC = () => {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
-  const [totalEarnings, setTotalEarnings] = useState<string>('0.00');
-  const [friendsInvited, setFriendsInvited] = useState<number>(0);
-  const [managedGroups, setManagedGroups] = useState<ManagedGroup[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const cacheKey = userId ? `tg_${userId}` : (userAddress || 'guest');
+  const initialCached = getCachedAffiliate(cacheKey);
+
+  const [totalEarnings, setTotalEarnings] = useState<string>(() => initialCached?.totalEarnedGram || '0.00');
+  const [friendsInvited, setFriendsInvited] = useState<number>(() => initialCached?.friendsInvited || 0);
+  const [managedGroups, setManagedGroups] = useState<ManagedGroup[]>(() => initialCached?.groups || []);
+  const [loading, setLoading] = useState<boolean>(() => !initialCached);
 
   // Referral code tied to Telegram ID or wallet fallback
   const refCode = userId ? `ref_${userId}` : (userAddress ? `ref_${userAddress}` : 'ref_arena');
   const refLink = `https://t.me/${botUsername || 'sfida_bot'}?start=${refCode}`;
 
   useEffect(() => {
+    // If cache has data for current key, sync immediately
+    const currentCached = getCachedAffiliate(cacheKey);
+    if (currentCached) {
+      setTotalEarnings(currentCached.totalEarnedGram || '0.00');
+      setFriendsInvited(currentCached.friendsInvited || 0);
+      setManagedGroups(currentCached.groups || []);
+      setLoading(false);
+    }
+
     const fetchAffiliateData = async () => {
       try {
         const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
@@ -60,11 +104,19 @@ export const ReferralDashboard: React.FC = () => {
         const res = await fetch(`${serverUrl}/api/affiliate/${identifier}?telegramId=${userId || ''}`);
         if (res.ok) {
           const data = await res.json();
-          setTotalEarnings(data.totalEarnedGram || '0.00');
-          setFriendsInvited(data.friendsInvited || 0);
-          if (Array.isArray(data.groups)) {
-            setManagedGroups(data.groups);
-          }
+          const earned = data.totalEarnedGram || '0.00';
+          const friends = data.friendsInvited || 0;
+          const groups = Array.isArray(data.groups) ? data.groups : [];
+
+          setTotalEarnings(earned);
+          setFriendsInvited(friends);
+          setManagedGroups(groups);
+
+          setCachedAffiliate(cacheKey, {
+            totalEarnedGram: earned,
+            friendsInvited: friends,
+            groups: groups,
+          });
         }
       } catch (err) {
         console.warn('[Affiliates] Failed to fetch live data:', err);
@@ -74,7 +126,7 @@ export const ReferralDashboard: React.FC = () => {
     };
 
     fetchAffiliateData();
-  }, [userId, userAddress]);
+  }, [userId, userAddress, cacheKey]);
 
   const copyRefLink = () => {
     triggerImpact('light');
