@@ -395,7 +395,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               {/* Winner Prize row shown ONLY to the winner! */}
               {isWinner && (
                 <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-400">{t('arena.winnerPrize')}:</span>
+                  <span className="text-slate-400">{t('arena.winnerPrize')}</span>
                   <span className="font-bold text-cyber-cyan flex items-center space-x-1">
                     <span>+{winnerPayoutTon}</span>
                     <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
@@ -483,7 +483,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               {isWinner && (
                 <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
                   <span className="text-xs font-orbitron font-bold text-cyber-green">
-                    ✅ {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
+                    {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
                   </span>
                 </div>
               )}

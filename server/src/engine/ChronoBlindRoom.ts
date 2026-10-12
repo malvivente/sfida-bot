@@ -137,8 +137,8 @@ export class ChronoBlindRoom extends BaseGameRoom {
     const elapsedMs = now - this.startEpochMs;
     const remainingMs = this.targetDurationMs - elapsedMs;
 
-    // Disallow stop while countdown is still in visible zone (150ms grace for network latency)
-    if (remainingMs > this.blindThresholdMs + 150) {
+    // Disallow stop while countdown is still in visible zone (300ms grace for network latency and clock sync)
+    if (remainingMs > this.blindThresholdMs + 300) {
       console.warn(`[ChronoBlind] Stop rejected: time still visible (${remainingMs}ms > ${this.blindThresholdMs}ms).`);
       return;
     }

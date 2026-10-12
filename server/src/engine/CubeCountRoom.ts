@@ -12,46 +12,67 @@ function generateCubeGrid(round: number, isSuddenDeath: boolean): { grid: number
   let maxHeight: number;
 
   if (isSuddenDeath) {
-    targetMin = 10;
-    targetMax = 14;
-    maxHeight = 3;
+    // In Sudden Death: balanced, readable 3D layout (7 to 10 cubes, max height 2)
+    targetMin = 7;
+    targetMax = 10;
+    maxHeight = 2;
   } else if (round === 1) {
-    // Round 1: Ultra-simple onboarding. Exactly 3 to 4 flat cubes (height 1), spread on the grid.
+    // Round 1: 3 to 4 flat cubes (height 1)
     targetMin = 3;
     targetMax = 4;
     maxHeight = 1;
   } else if (round === 2) {
-    // Round 2: 5 to 6 cubes, still completely flat (height 1) for crystal clear counting.
+    // Round 2: 4 to 5 flat cubes (height 1)
+    targetMin = 4;
+    targetMax = 5;
+    maxHeight = 1;
+  } else if (round === 3) {
+    // Round 3: 5 to 6 flat cubes (height 1)
     targetMin = 5;
     targetMax = 6;
     maxHeight = 1;
-  } else if (round === 3) {
-    // Round 3: 7 to 9 cubes, introducing light vertical stacking (max height 2).
+  } else if (round === 4) {
+    // Round 4: 6 to 7 cubes (light stacking, max height 2)
+    targetMin = 6;
+    targetMax = 7;
+    maxHeight = 2;
+  } else if (round === 5) {
+    // Round 5: 7 to 9 cubes (max height 2)
     targetMin = 7;
     targetMax = 9;
     maxHeight = 2;
-  } else if (round === 4) {
-    // Round 4: 10 to 13 cubes, stacks up to height 3.
-    targetMin = 10;
+  } else if (round === 6) {
+    // Round 6: 9 to 11 cubes (max height 2)
+    targetMin = 9;
+    targetMax = 11;
+    maxHeight = 2;
+  } else if (round === 7) {
+    // Round 7: 11 to 13 cubes (max height 3)
+    targetMin = 11;
     targetMax = 13;
     maxHeight = 3;
-  } else if (round === 5) {
-    // Round 5: 14 to 18 cubes, stacks up to height 4.
-    targetMin = 14;
+  } else if (round === 8) {
+    // Round 8: 13 to 15 cubes (max height 3)
+    targetMin = 13;
+    targetMax = 15;
+    maxHeight = 3;
+  } else if (round === 9) {
+    // Round 9: 15 to 18 cubes (max height 3)
+    targetMin = 15;
     targetMax = 18;
-    maxHeight = 4;
+    maxHeight = 3;
   } else {
-    // Round 6+: 19 to 25 cubes, high density 3D structures.
-    targetMin = 19;
-    targetMax = 25;
-    maxHeight = 5;
+    // Round 10+: 18 to 22 cubes (max height 4)
+    targetMin = 18;
+    targetMax = 22;
+    maxHeight = 4;
   }
 
   const targetCount = Math.floor(Math.random() * (targetMax - targetMin + 1)) + targetMin;
   let remaining = targetCount;
 
-  // For rounds 1 & 2: ensure cubes are distributed flat on distinct cells across the grid (no stacking)
-  if (round <= 2 && !isSuddenDeath) {
+  // For rounds 1, 2 & 3: ensure cubes are distributed flat on distinct cells across the grid (no stacking)
+  if (round <= 3 && !isSuddenDeath) {
     const availableCoords: [number, number][] = [];
     for (let x = 0; x < GRID_SIZE; x++) {
       for (let y = 0; y < GRID_SIZE; y++) {
@@ -70,7 +91,7 @@ function generateCubeGrid(round: number, isSuddenDeath: boolean): { grid: number
       grid[x][y] = 1;
     }
   } else {
-    // Rounds 3+: Natural vertical stacking and clustering
+    // Rounds 4+: Natural vertical stacking and clustering
     let attempts = 0;
     while (remaining > 0 && attempts < 1000) {
       attempts++;
@@ -78,8 +99,7 @@ function generateCubeGrid(round: number, isSuddenDeath: boolean): { grid: number
       const y = Math.floor(Math.random() * GRID_SIZE);
       const currentHeight = grid[x][y];
       if (currentHeight < maxHeight) {
-        // In round 3, prefer gentle stacking of 1 at a time
-        const maxAddPerStep = round <= 3 ? 1 : Math.min(2, maxHeight - currentHeight);
+        const maxAddPerStep = round <= 5 ? 1 : Math.min(2, maxHeight - currentHeight);
         const add = Math.min(remaining, Math.min(maxHeight - currentHeight, maxAddPerStep));
         grid[x][y] += add;
         remaining -= add;
@@ -99,13 +119,17 @@ function generateCubeGrid(round: number, isSuddenDeath: boolean): { grid: number
 }
 
 function getFlashDurationMs(round: number, isSuddenDeath: boolean): number {
-  if (isSuddenDeath) return 800;
-  if (round === 1) return 3500; // 3.5s for initial 3-4 flat cubes (very relaxed)
-  if (round === 2) return 3000; // 3.0s for 5-6 flat cubes
-  if (round === 3) return 2400; // 2.4s for 7-9 cubes (height 2)
-  if (round === 4) return 1800; // 1.8s for 10-13 cubes (height 3)
-  if (round === 5) return 1300; // 1.3s for 14-18 cubes
-  return 900;                  // 0.9s for round 6+ extreme
+  if (isSuddenDeath) return 2400; // 2.4s: comfortable, humanly readable, intense skill duel
+  if (round === 1) return 3800;   // 3.8s for initial 3-4 flat cubes
+  if (round === 2) return 3400;   // 3.4s for 4-5 flat cubes
+  if (round === 3) return 3100;   // 3.1s for 5-6 flat cubes
+  if (round === 4) return 2800;   // 2.8s for 6-7 cubes (height 2)
+  if (round === 5) return 2500;   // 2.5s for 7-9 cubes (height 2)
+  if (round === 6) return 2300;   // 2.3s for 9-11 cubes (height 2)
+  if (round === 7) return 2100;   // 2.1s for 11-13 cubes (height 3)
+  if (round === 8) return 1900;   // 1.9s for 13-15 cubes (height 3)
+  if (round === 9) return 1700;   // 1.7s for 15-18 cubes (height 3)
+  return 1500;                    // 1.5s for round 10+
 }
 
 export class CubeCountRoom extends BaseGameRoom {
@@ -340,31 +364,69 @@ export class CubeCountRoom extends BaseGameRoom {
       // In Sudden Death:
       // 1. If one got it exact and other didn't: exact wins
       if (isACorrect && !isBCorrect) {
-        this.resolveTimer = setTimeout(() => this.settleMatch('A'), 3500);
+        this.hpA = 1;
+        this.hpB = 0;
+        this.roundMessage = `🎯 Totale: ${this.exactCount} cubi! • ${pAName} indovina esatto! Vince il Death Match!`;
+        this.broadcast({
+          type: 'CUBECOUNT_REVEAL',
+          exactCount: this.exactCount,
+          answerA: this.answerA,
+          answerB: this.answerB,
+          roundDamageA: 0,
+          roundDamageB: 1,
+          hpA: 1,
+          hpB: 0,
+          roundMessage: this.roundMessage,
+          gameData: this.getGamePayload(),
+        });
+        this.resolveTimer = setTimeout(() => this.settleWinner('A'), 3500);
         return;
       }
       if (isBCorrect && !isACorrect) {
-        this.resolveTimer = setTimeout(() => this.settleMatch('B'), 3500);
-        return;
-      }
-
-      // 2. Both wrong or both correct: whoever is closer wins!
-      const diffA = Math.abs((this.answerA ?? 999) - this.exactCount);
-      const diffB = Math.abs((this.answerB ?? 999) - this.exactCount);
-
-      if (diffA < diffB) {
-        this.resolveTimer = setTimeout(() => this.settleWinner('A'), 3500);
-        return;
-      } else if (diffB < diffA) {
+        this.hpA = 0;
+        this.hpB = 1;
+        this.roundMessage = `🎯 Totale: ${this.exactCount} cubi! • ${pBName} indovina esatto! Vince il Death Match!`;
+        this.broadcast({
+          type: 'CUBECOUNT_REVEAL',
+          exactCount: this.exactCount,
+          answerA: this.answerA,
+          answerB: this.answerB,
+          roundDamageA: 1,
+          roundDamageB: 0,
+          hpA: 0,
+          hpB: 1,
+          roundMessage: this.roundMessage,
+          gameData: this.getGamePayload(),
+        });
         this.resolveTimer = setTimeout(() => this.settleWinner('B'), 3500);
         return;
-      } else {
-        // Equal distance! Another sudden death round
-        this.resolveTimer = setTimeout(() => {
-          this.startRound(this.currentRound + 1);
-        }, 3500);
-        return;
       }
+
+      // 2. Both wrong OR both correct:
+      // Death Match continues round after round until one player loses!
+      this.hpA = 1;
+      this.hpB = 1;
+      if (isACorrect && isBCorrect) {
+        this.roundMessage = `🎯 Totale: ${this.exactCount} cubi! • Entrambi corretti (✓)! Il Death Match continua...`;
+      } else {
+        this.roundMessage = `🎯 Totale: ${this.exactCount} cubi! • Entrambi hanno sbagliato! Il Death Match continua...`;
+      }
+      this.broadcast({
+        type: 'CUBECOUNT_REVEAL',
+        exactCount: this.exactCount,
+        answerA: this.answerA,
+        answerB: this.answerB,
+        roundDamageA: this.roundDamageA,
+        roundDamageB: this.roundDamageB,
+        hpA: 1,
+        hpB: 1,
+        roundMessage: this.roundMessage,
+        gameData: this.getGamePayload(),
+      });
+      this.resolveTimer = setTimeout(() => {
+        this.startRound(this.currentRound + 1);
+      }, 3500);
+      return;
     } else {
       // Standard 3 Lives mode
       if (this.hpA > 0 && this.hpB === 0) {
@@ -380,6 +442,19 @@ export class CubeCountRoom extends BaseGameRoom {
         this.isSuddenDeath = true;
         this.hpA = 1;
         this.hpB = 1;
+        this.roundMessage = `🎯 Totale: ${this.exactCount} cubi! • Parità a 0 vite! Si va al DEATH MATCH!`;
+        this.broadcast({
+          type: 'CUBECOUNT_REVEAL',
+          exactCount: this.exactCount,
+          answerA: this.answerA,
+          answerB: this.answerB,
+          roundDamageA: this.roundDamageA,
+          roundDamageB: this.roundDamageB,
+          hpA: 1,
+          hpB: 1,
+          roundMessage: this.roundMessage,
+          gameData: this.getGamePayload(),
+        });
         this.resolveTimer = setTimeout(() => {
           this.startRound(this.currentRound + 1);
         }, 3500);

@@ -732,7 +732,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
               {/* Winner Prize row shown ONLY to the winner! */}
               {isWinner && (
                 <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-amber-400/50 w-full flex justify-between items-center text-xs font-chakra">
-                  <span className="text-slate-300">{t('arena.winnerPrize')}:</span>
+                  <span className="text-slate-300">{t('arena.winnerPrize')}</span>
                   <span className="font-bold text-amber-400 flex items-center space-x-1">
                     <span>+{winnerPayoutTon}</span>
                     <GramIcon className="w-3.5 h-3.5 text-amber-400 inline" />
@@ -821,7 +821,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
               {isWinner && (
                 <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-950/40 border border-emerald-500/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                   <span className="text-xs font-orbitron font-bold text-emerald-400">
-                    ✅ {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
+                    {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
                   </span>
                 </div>
               )}
