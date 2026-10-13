@@ -278,23 +278,25 @@ export const ReferralDashboard: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/10 text-center">
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <span className="text-[10px] text-slate-400 block font-medium">{t('affiliates.groupMatches')}</span>
-                    <span className="text-xs font-heading font-extrabold text-white">{group.totalMatchesHosted}</span>
+                  <div className="bg-white/5 rounded-xl p-2 border border-white/5 flex flex-col justify-center items-center min-h-[52px]">
+                    <span className="text-[10px] text-slate-400 block font-medium leading-tight mb-1">{t('affiliates.groupMatches')}</span>
+                    <div className="flex items-center justify-center h-5">
+                      <span className="text-xs font-heading font-extrabold text-white leading-none">{group.totalMatchesHosted}</span>
+                    </div>
                   </div>
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <span className="text-[10px] text-slate-400 block font-medium">{t('affiliates.groupVolume')}</span>
-                    <span className="text-xs font-heading font-extrabold text-white flex items-center justify-center space-x-0.5">
-                      <span>{parseFloat(group.totalVolumeGram || '0').toFixed(1)}</span>
-                      <GramIcon className="w-2.5 h-2.5 text-slate-400" />
-                    </span>
+                  <div className="bg-white/5 rounded-xl p-2 border border-white/5 flex flex-col justify-center items-center min-h-[52px]">
+                    <span className="text-[10px] text-slate-400 block font-medium leading-tight mb-1">{t('affiliates.groupVolume')}</span>
+                    <div className="flex items-center justify-center h-5 space-x-0.5">
+                      <span className="text-xs font-heading font-extrabold text-white leading-none">{parseFloat(group.totalVolumeGram || '0').toFixed(1)}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                    </div>
                   </div>
-                  <div className="bg-white/5 rounded-xl p-2 border border-cyan-400/30">
-                    <span className="text-[10px] text-cyan-300 block font-medium">{t('affiliates.groupEarnings')}</span>
-                    <span className="text-xs font-heading font-black text-cyan-300 flex items-center justify-center space-x-0.5">
-                      <span>{group.totalEarningsGram}</span>
-                      <GramIcon className="w-2.5 h-2.5 text-cyan-300" />
-                    </span>
+                  <div className="bg-white/5 rounded-xl p-2 border border-cyan-400/30 flex flex-col justify-center items-center min-h-[52px]">
+                    <span className="text-[10px] text-cyan-300 block font-medium leading-tight mb-1">{t('affiliates.groupEarnings')}</span>
+                    <div className="flex items-center justify-center h-5 space-x-0.5">
+                      <span className="text-xs font-heading font-black text-cyan-300 leading-none">{group.totalEarningsGram}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-cyan-300 shrink-0" />
+                    </div>
                   </div>
                 </div>
               </div>

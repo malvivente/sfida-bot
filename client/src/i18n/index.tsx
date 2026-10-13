@@ -87,8 +87,8 @@ export const translations: Translations = {
   'playHub.quickMatchTab': { it: 'QUICK MATCH (4)', en: 'QUICK MATCH (4)' },
   'playHub.quickMatchLabel': { it: 'QUICK MATCH', en: 'QUICK MATCH' },
   'playHub.strategyTab': { it: 'STRATEGY DUELS (4)', en: 'STRATEGY DUELS (4)' },
-  'playHub.strategyLabel': { it: 'STRATEGY', en: 'STRATEGY' },
-  'playHub.strategyCount': { it: 'DUELLI (4)', en: 'DUELS (4)' },
+  'playHub.strategyLabel': { it: 'STRATEGY DUELS', en: 'STRATEGY DUELS' },
+  'playHub.strategyCount': { it: '(4)', en: '(4)' },
 
   'playHub.rouletteDesc': { it: '8 colpi tattici, 1 proiettile mortale. Spara all\'avversario o tenta la sorte.', en: '8 tactical shots, 1 live round. Shoot your foe or test your luck.' },
   'playHub.blackjackDesc': { it: 'Carte scoperte da un mazzo comune visibile a tutti.', en: 'Cards revealed from a public shared deck.' },

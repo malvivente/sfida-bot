@@ -16,6 +16,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
 /* Subtle modern mesh pattern */
 .cyber-grid {
   background-image: radial-gradient(rgba(112, 89, 226, 0.08) 1px, transparent 1px);

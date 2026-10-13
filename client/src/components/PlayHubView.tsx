@@ -64,13 +64,14 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('light');
             setActiveCategory('all');
           }}
-          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center active:scale-95 transition-all ${
+          style={{ outline: 'none' }}
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] active:scale-95 transition-all border ${
             activeCategory === 'all'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm border border-white/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm border-white/20'
+              : 'border-transparent text-slate-400 hover:text-white'
           }`}
         >
-          <span className="text-[10px] sm:text-[11px] font-heading font-black uppercase tracking-wider leading-tight block truncate max-w-full">
+          <span className="text-[9.5px] sm:text-[11px] font-heading font-black uppercase tracking-tight sm:tracking-wider leading-tight block truncate max-w-full">
             {t('playHub.allGamesLabel')}
           </span>
           <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
@@ -83,13 +84,14 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('light');
             setActiveCategory('quick');
           }}
-          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center active:scale-95 transition-all ${
+          style={{ outline: 'none' }}
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] active:scale-95 transition-all border ${
             activeCategory === 'quick'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm border border-white/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm border-white/20'
+              : 'border-transparent text-slate-400 hover:text-white'
           }`}
         >
-          <span className="text-[10px] sm:text-[11px] font-heading font-black uppercase tracking-wider leading-tight block truncate max-w-full">
+          <span className="text-[9.5px] sm:text-[11px] font-heading font-black uppercase tracking-tight sm:tracking-wider leading-tight block truncate max-w-full">
             {t('playHub.quickMatchLabel')}
           </span>
           <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
@@ -102,13 +104,14 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('light');
             setActiveCategory('strategy');
           }}
-          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center active:scale-95 transition-all ${
+          style={{ outline: 'none' }}
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] active:scale-95 transition-all border ${
             activeCategory === 'strategy'
-              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-sm border border-white/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-sm border-white/20'
+              : 'border-transparent text-slate-400 hover:text-white'
           }`}
         >
-          <span className="text-[10px] sm:text-[11px] font-heading font-black uppercase tracking-wider leading-tight block truncate max-w-full">
+          <span className="text-[9.5px] sm:text-[11px] font-heading font-black uppercase tracking-tight sm:tracking-wider leading-tight block truncate max-w-full">
             {t('playHub.strategyLabel')}
           </span>
           <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
