@@ -493,7 +493,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
               </div>
             ) : (
               <p className="text-xs text-slate-400 font-rajdhani max-w-xs mb-1">
-                Duel concluded. Prize settled on-chain by smart contract.
+                Duel concluded. Prize settled and credited to winner balance.
               </p>
             )}
 

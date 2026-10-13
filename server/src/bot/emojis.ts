@@ -22,7 +22,7 @@ export const BOT_EMOJIS: Record<string, CustomEmojiConfig> = {
   lightning: { id: '5438539112070002676', fallback: '⚡️', description: 'Lightning for cyber speed / reflex' },
   fire: { id: '5289722755871162900', fallback: '🔥', description: 'Flame for high-stakes and hot duels' },
   eye: { id: '5305584572606466086', fallback: '👁', description: 'Eye for spectator mode & totalizer' },
-  shield: { id: '5902016123972358349', fallback: '🛡', description: 'Shield for security, anti-cheat & contracts' },
+  shield: { id: '5902016123972358349', fallback: '🛡', description: 'Shield for security and anti-cheat' },
   trophy: { id: '5870684638195748414', fallback: '🏆', description: 'Trophy for winner payout and leaderboard' },
   coin: { id: '6007983438294949171', fallback: '🪙', description: 'Coin for GRAM currency' },
   moneyBag: { id: '5316979275461573049', fallback: '💰', description: 'Money bag for pool and wager' },

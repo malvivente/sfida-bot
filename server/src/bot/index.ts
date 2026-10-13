@@ -201,15 +201,15 @@ export function createTelegramBot(token?: string): Bot {
 
     if (parsed.matchId) {
       welcomeText = lang === 'it'
-        ? `⚔️ <b>SFIDA ARENA • INVITO DUELLO</b>\n\nSei stato invitato a un duello nella stanza <b>#${parsed.matchId}</b>!\n\nPremi il pulsante qui sotto per scendere nell'arena:`
-        : `⚔️ <b>SFIDA ARENA • DUEL INVITE</b>\n\nYou have been invited to a duel in room <b>#${parsed.matchId}</b>!\n\nTap below to enter the arena and battle:`;
+        ? `⚔️ <b>SFIDA ARENA • INVITO A GIOCARE</b>\n\nSei stato invitato a una sfida nella stanza <b>#${parsed.matchId}</b>!\n\nPremi il pulsante qui sotto per entrare e giocare:`
+        : `⚔️ <b>SFIDA ARENA • MATCH INVITE</b>\n\nYou have been invited to a duel in room <b>#${parsed.matchId}</b>!\n\nTap below to enter and play:`;
     } else if (parsed.recruiterWallet) {
       const truncatedRecruiter = `${parsed.recruiterWallet.slice(0, 8)}...${parsed.recruiterWallet.slice(-6)}`;
       welcomeText += botT(lang, 'welcome_recruited', { recruiter: truncatedRecruiter });
     }
 
     const buttonLabel = parsed.matchId
-      ? (lang === 'it' ? '{{emoji.swords}} ENTRA NEL DUELLO' : '{{emoji.swords}} ENTER DUEL')
+      ? (lang === 'it' ? '{{emoji.swords}} ENTRA NELLA SFIDA' : '{{emoji.swords}} JOIN MATCH')
       : botT(lang, 'btn_enter_arena');
 
     const isPrivateChat = ctx.chat?.type === 'private';
@@ -414,10 +414,10 @@ export function createTelegramBot(token?: string): Bot {
       : `Type @${botUser} <game> <wager> (e.g. @${botUser} roulette 2)`;
 
     const rawGuideText = lang === 'it'
-      ? `{{emoji.swords}} <b>SFIDA ARENA • GUIDA DUELLI INLINE</b> {{emoji.swords}}\n\n` +
-        `Puoi sfidare direttamente chiunque in questa chat digitando:\n` +
-        `<code>@${botUser} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
-        `<b>Discipline disponibili:</b>\n` +
+      ? `{{emoji.swords}} <b>SFIDA ARENA • GUIDA SFIDE INLINE</b> {{emoji.swords}}\n\n` +
+        `Puoi sfidare chiunque direttamente in questa chat digitando:\n` +
+        `<code>@${botUser} &lt;gioco&gt; &lt;puntata&gt;</code>\n\n` +
+        `<b>Giochi disponibili:</b>\n` +
         `• <code>@${botUser} roulette 1</code> — Russian Roulette (1 GRAM)\n` +
         `• <code>@${botUser} blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
         `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
@@ -426,11 +426,11 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
         `• <code>@${botUser} connect4 1</code> — Forza 4 (1 GRAM)\n` +
         `• <code>@${botUser} cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
-        `<i>Tocca il pulsante in basso per entrare subito nell'Arena Sfida:</i>`
+        `<i>Premi il pulsante qui sotto per aprire Sfida Arena:</i>`
       : `{{emoji.swords}} <b>SFIDA ARENA • INLINE DUEL GUIDE</b> {{emoji.swords}}\n\n` +
         `Challenge anyone directly in this chat by typing:\n` +
         `<code>@${botUser} &lt;game&gt; &lt;wager&gt;</code>\n\n` +
-        `<b>Available disciplines:</b>\n` +
+        `<b>Available games:</b>\n` +
         `• <code>@${botUser} roulette 1</code> — Russian Roulette (1 GRAM)\n` +
         `• <code>@${botUser} blackjack 2</code> — Face-Up Blackjack (2 GRAM)\n` +
         `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
@@ -477,20 +477,20 @@ export function createTelegramBot(token?: string): Bot {
         : `${g.descEn} | Payout: ${payout} GRAM`;
 
       const rawCardMsg = lang === 'it'
-        ? `{{emoji.swords}} <b>SFIDA DUELLO 1v1 • ${g.title.toUpperCase()}</b> {{emoji.swords}}\n\n` +
+        ? `{{emoji.swords}} <b>SFIDA 1v1 • ${g.title.toUpperCase()}</b> {{emoji.swords}}\n\n` +
           `{{emoji.user}} <b>Sfidante</b>: ${challenger}\n` +
-          `{{emoji.controller}} <b>Disciplina</b>: <b>${g.title}</b>\n` +
-          `{{emoji.moneyBag}} <b>Puntata</b>: <b>${wager} GRAM</b> ciascuno\n` +
-          `{{emoji.trophy}} <b>Montepremi Vincitore</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
-          `{{emoji.eye}} <b>Spettatori</b>: Finestra totalizzatore Pari-Mutuel aperta\n\n` +
-          `<i>Chi osa raccogliere la sfida? Tocca sotto per entrare nell'Arena!</i>`
-        : `{{emoji.swords}} <b>1v1 DUEL CHALLENGE • ${g.title.toUpperCase()}</b> {{emoji.swords}}\n\n` +
+          `{{emoji.controller}} <b>Gioco</b>: <b>${g.title}</b>\n` +
+          `{{emoji.moneyBag}} <b>Puntata</b>: <b>${wager} GRAM</b> a testa\n` +
+          `{{emoji.trophy}} <b>Montepremi</b>: <b>${payout} GRAM</b> (100% al vincitore)\n` +
+          `{{emoji.eye}} <b>Spettatori</b>: Scommesse live aperte\n\n` +
+          `<i>Chi accetta la sfida? Premi qui sotto per giocare!</i>`
+        : `{{emoji.swords}} <b>1v1 DUEL • ${g.title.toUpperCase()}</b> {{emoji.swords}}\n\n` +
           `{{emoji.user}} <b>Challenger</b>: ${challenger}\n` +
-          `{{emoji.controller}} <b>Discipline</b>: <b>${g.title}</b>\n` +
+          `{{emoji.controller}} <b>Game</b>: <b>${g.title}</b>\n` +
           `{{emoji.moneyBag}} <b>Wager</b>: <b>${wager} GRAM</b> each\n` +
-          `{{emoji.trophy}} <b>Winner Payout</b>: <b>${payout} GRAM</b> (100% no rake)\n` +
-          `{{emoji.eye}} <b>Spectators</b>: Pari-Mutuel betting window open\n\n` +
-          `<i>Who dares to accept? Tap below to enter the Arena!</i>`;
+          `{{emoji.trophy}} <b>Winner Pot</b>: <b>${payout} GRAM</b> (100% to winner)\n` +
+          `{{emoji.eye}} <b>Spectators</b>: Live betting open\n\n` +
+          `<i>Who wants to play? Tap below to join!</i>`;
 
       const cardKeyboard = new InlineKeyboard()
         .url(

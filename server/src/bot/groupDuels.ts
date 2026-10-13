@@ -103,7 +103,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
   // If user calls /duel without parameters, show interactive syntax guide with examples
   if (parts.length === 0) {
     const rawGuide = lang === 'it'
-      ? `{{emoji.swords}} <b>COME CREARE UN DUELLO NEL GRUPPO:</b> {{emoji.swords}}\n\n` +
+      ? `{{emoji.swords}} <b>COME CREARE UNA SFIDA NEL GRUPPO:</b> {{emoji.swords}}\n\n` +
         `Usa la sintassi:\n` +
         `<code>/duel &lt;gioco&gt; &lt;puntata&gt;</code> oppure <code>/duel &lt;puntata&gt;</code>\n\n` +
         `<b>Esempi:</b>\n` +
@@ -115,9 +115,9 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
         `• <code>/duel connect4 1</code> — Forza 4 (1 GRAM)\n` +
         `• <code>/duel cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
-        `<b>Modalità Inline in qualsiasi chat:</b>\n` +
-        `Digita semplicemente: <code>@${botUsername} &lt;gioco&gt; &lt;importo&gt;</code>\n\n` +
-        `<i>Tocca sotto per entrare nell'Arena Sfida:</i>`
+        `<b>In qualsiasi chat o privato:</b>\n` +
+        `Digita semplicemente: <code>@${botUsername} &lt;gioco&gt; &lt;puntata&gt;</code>\n\n` +
+        `<i>Premi qui sotto per aprire Sfida Arena:</i>`
       : `{{emoji.swords}} <b>HOW TO CREATE A GROUP DUEL:</b> {{emoji.swords}}\n\n` +
         `Use the syntax:\n` +
         `<code>/duel &lt;game&gt; &lt;wager&gt;</code> or <code>/duel &lt;wager&gt;</code>\n\n` +
@@ -130,7 +130,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
         `• <code>/duel connect4 1</code> — Connect 4 (1 GRAM)\n` +
         `• <code>/duel cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
-        `<b>Inline Mode in any chat:</b>\n` +
+        `<b>In any chat:</b>\n` +
         `Type: <code>@${botUsername} &lt;game&gt; &lt;wager&gt;</code>\n\n` +
         `<i>Tap below to open Sfida Arena:</i>`;
 
@@ -167,7 +167,10 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
   // Validate wager range
   if (isNaN(wager) || wager < minWagerForGame || wager > 100) {
     if (gameType === 'split' && wager < minWagerForGame) {
-      await ctx.reply(renderCustomEmojis(`{{emoji.warning}} <b>Puntata non valida:</b> La puntata minima per <b>Split or Steal</b> è di <b>5.00 GRAM</b>.`), {
+      const splitWarn = lang === 'it'
+        ? `{{emoji.warning}} <b>Puntata non valida:</b> la puntata minima per <b>Split or Steal</b> è di <b>5.00 GRAM</b>.`
+        : `{{emoji.warning}} <b>Invalid Wager:</b> minimum stake for <b>Split or Steal</b> is <b>5.00 GRAM</b>.`;
+      await ctx.reply(renderCustomEmojis(splitWarn), {
         parse_mode: 'HTML',
       });
       return;
@@ -285,7 +288,7 @@ export async function handleConfirmGroupDuelCallback(ctx: Context, pendingId: st
   const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
   if (currentBal < pending.totalDeduct) {
     await ctx.answerCallbackQuery({
-      text: 'Insufficient balance!',
+      text: lang === 'it' ? 'Saldo insufficiente!' : 'Insufficient balance!',
       show_alert: true,
     });
     await ctx.editMessageText(
@@ -403,7 +406,9 @@ export async function handleConfirmGroupDuelCallback(ctx: Context, pendingId: st
     reply_markup: publicKeyboard,
   });
 
-  await ctx.answerCallbackQuery({ text: '⚔️ Duel created successfully!' });
+  await ctx.answerCallbackQuery({
+    text: lang === 'it' ? '⚔️ Sfida creata con successo!' : '⚔️ Duel created successfully!',
+  });
 }
 
 /**

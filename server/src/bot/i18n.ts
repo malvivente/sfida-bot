@@ -30,45 +30,48 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
   // ENGLISH (Default Fallback)
   // -------------------------------------------------------------
   en: {
-    welcome_header: `{{emoji.lightning}} <b>WELCOME TO SFIDA CYBER ARENA</b> {{emoji.lightning}}`,
+    welcome_header: `{{emoji.lightning}} <b>WELCOME TO SFIDA ARENA</b> {{emoji.lightning}}`,
     welcome_body:
-      `{{emoji.fire}} <b>1v1 High-Stakes PvP Reflex Arena on TON & GRAM</b>\n` +
-      `{{emoji.eye}} <b>Live Spectator Pari-Mutuel Betting Totalizer</b>\n` +
-      `{{emoji.shield}} <b>Verified Smart Contracts & Anti-Cheat Authority</b>\n\n` +
-      `<i>Select your game mode, challenge rivals in real time, or climb the global leaderboard!</i>`,
-    welcome_recruited: `{{emoji.handshake}} Recruited by: <code>{recruiter}</code>\n\n`,
+      `{{emoji.fire}} <b>Real-time 1v1 PvP duels with GRAM stakes</b>\n` +
+      `{{emoji.eye}} <b>Live spectator betting on every match</b>\n` +
+      `{{emoji.shield}} <b>Instant settlement & verified anti-cheat protection</b>\n\n` +
+      `<i>Pick your game, challenge rivals in real time, and climb the leaderboard!</i>`,
+    welcome_recruited: `{{emoji.handshake}} Invited by: <code>{recruiter}</code>\n\n`,
     btn_enter_arena: `{{emoji.swords}} Enter Arena`,
     btn_official_channel: `{{emoji.megaphone}} Official Channel`,
     btn_how_to_play: `{{emoji.controller}} How to Play`,
 
-    inline_challenge_title: `{{emoji.swords}} Cyber Duel Challenge - {wager} GRAM`,
-    inline_challenge_desc: `1v1 Duel. Winner takes {payout} GRAM (100% of pot)!`,
+    inline_challenge_title: `{{emoji.swords}} 1v1 Duel - {wager} GRAM`,
+    inline_challenge_desc: `1v1 duel: winner takes the entire {payout} GRAM pot!`,
     inline_challenge_msg:
-      `{{emoji.swords}} <b>CYBER DUEL CHALLENGE INITIATED</b> {{emoji.swords}}\n\n` +
+      `{{emoji.swords}} <b>1v1 DUEL CHALLENGE</b> {{emoji.swords}}\n\n` +
       `{{emoji.user}} <b>Challenger</b>: @{challenger}\n` +
       `{{emoji.coin}} <b>Wager</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.trophy}} <b>Winner Payout</b>: <b>{payout} GRAM</b>\n` +
-      `{{emoji.eye}} <b>Spectators</b>: Pari-Mutuel Betting Window Open\n\n` +
-      `<i>Tap the button below to accept the challenge or spectate live!</i>`,
+      `{{emoji.trophy}} <b>Winner Pot</b>: <b>{payout} GRAM</b>\n` +
+      `{{emoji.eye}} <b>Spectators</b>: Live betting open\n\n` +
+      `<i>Tap below to accept the challenge or watch the match live!</i>`,
     inline_accept_btn: `{{emoji.swords}} Accept Challenge ({wager} GRAM)`,
-    inline_watch_btn: `{{emoji.eye}} Watch & Bet (Totalizer)`,
+    inline_watch_btn: `{{emoji.eye}} Watch & Bet Live`,
 
     help_text:
-      `{{emoji.bot}} <b>SFIDA ARENA BOT HELP</b> {{emoji.bot}}\n\n` +
+      `{{emoji.bot}} <b>SFIDA ARENA GUIDE</b> {{emoji.bot}}\n\n` +
       `<b>Available Commands:</b>\n` +
-      `• /start - Launch the bot and open Arena\n` +
-      `• /lang - Change interface language\n` +
+      `• /start - Open Arena and launch bot\n` +
+      `• /lang - Change language\n` +
       `• /help - Show this guide\n\n` +
-      `<b>Inline Duels:</b>\n` +
-      `In any chat, type <code>@{botUsername} duel &lt;amount&gt;</code> to create an instant duel invitation widget!\n\n` +
-      `<b>Game Modes Available:</b>\n` +
-      `• Russian Roulette (Tactical cylinder chamber)\n` +
-      `• Blackjack (Cyber 21 duel)\n` +
-      `• Glass Bridge (Memory & stepping stones)\n` +
-      `• Chrono Blind (Millisecond reflex timing)\n` +
-      `• Split or Steal (Casino Prisoner's Dilemma + Shared Jackpot)`,
+      `<b>Group Duels:</b>\n` +
+      `Use <code>/duel &lt;wager&gt; [game]</code> in any group, or type <code>@{botUsername} duel &lt;wager&gt;</code> in any chat to launch an instant challenge card!\n\n` +
+      `<b>Available Games:</b>\n` +
+      `• Russian Roulette (8 shots, 1 live round)\n` +
+      `• Blackjack Face-Up (Shared deck, face-up cards)\n` +
+      `• Glass Bridge (Stepping glass panels & memory)\n` +
+      `• Chrono Blind (Blind timer, millisecond reflexes)\n` +
+      `• Split or Steal (Prisoner's dilemma with Trust Jackpot)\n` +
+      `• Cyber Shotgun (Pump shotgun with shells & tactical items)\n` +
+      `• Connect 4 (Turn-based 7x6 strategy grid)\n` +
+      `• Cube Count (Rapid 3D isometric counting)`,
 
-    lang_select_title: `{{emoji.gear}} <b>Select your preferred language:</b>`,
+    lang_select_title: `{{emoji.gear}} <b>Select your language:</b>`,
     lang_changed: `{{emoji.check}} Language updated to <b>{language}</b>!`,
 
     // Admin Broadcast Messages
@@ -95,36 +98,37 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     broadcast_finished:
       `{{emoji.check}} <b>BROADCAST COMPLETED!</b>\n\n` +
       `• <b>Total Recipients</b>: <code>{total}</code>\n` +
+      `• {{emoji.check}} <b>Delivered</b>: <code>{delivered}</code> ({successRate}%)\n` +
       `• {{emoji.cross}} <b>Blocked/Deactivated</b>: <code>{failed}</code>\n` +
       `• {{emoji.clock}} <b>Time Taken</b>: <code>{duration}s</code>\n` +
       `• {{emoji.chart}} <b>Average Speed</b>: <code>{speed} msg/s</code>`,
 
     // Group In-Chat Duel Messages
-    group_duel_private_hint: `{{emoji.swords}} <b>CREATE DUEL</b>\n\nYou can use <code>/duel &lt;amount&gt; [game]</code> directly in any Telegram group to challenge members! Or tap below to enter the Arena:`,
-    group_duel_invalid_wager: `{{emoji.warning}} <b>Invalid Wager</b>: Stake must be between 0.1 and 100 GRAM. Example: <code>/duel 2</code>`,
-    group_duel_insufficient: `{{emoji.warning}} <b>INSUFFICIENT BALANCE</b>\n\nHey @{username}, to create this <b>{wager} GRAM</b> duel you need <b>{total} GRAM</b> (including 0.05 GRAM creation fee).\n\n{{emoji.gem}} Your balance: <b>{balance} GRAM</b> (need {missing} GRAM more).`,
+    group_duel_private_hint: `{{emoji.swords}} <b>CREATE A DUEL</b>\n\nUse <code>/duel &lt;wager&gt; [game]</code> directly in groups to challenge members, or tap below to open the Arena:`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>Invalid Wager</b>: stake must be between 0.1 and 100 GRAM (e.g. <code>/duel 2</code>).`,
+    group_duel_insufficient: `{{emoji.warning}} <b>INSUFFICIENT BALANCE</b>\n\n@{username}, you need <b>{total} GRAM</b> to create this <b>{wager} GRAM</b> duel (includes 0.05 GRAM creation fee).\n\n{{emoji.gem}} Current balance: <b>{balance} GRAM</b> (missing {missing} GRAM).`,
     group_duel_deposit_btn: `{{emoji.gem}} Deposit GRAM`,
     group_duel_confirm_title: `{{emoji.swords}} <b>CONFIRM DUEL CREATION</b>`,
     group_duel_confirm_desc:
       `{{emoji.user}} <b>Challenger</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>Discipline</b>: <b>{gameTitle}</b>\n` +
-      `{{emoji.moneyBag}} <b>Wager Stake</b>: <b>{wager} GRAM</b>\n` +
+      `{{emoji.controller}} <b>Game</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.moneyBag}} <b>Wager</b>: <b>{wager} GRAM</b>\n` +
       `{{emoji.coin}} <b>Creation Fee</b>: <b>0.05 GRAM</b>\n` +
-      `{{emoji.gem}} <b>Total to Deduct</b>: <b>{total} GRAM</b>\n\n` +
-      `<i>Tap Confirm below to deduct funds and publish the open duel challenge to the group!</i>`,
+      `{{emoji.gem}} <b>Total</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Tap Confirm below to deduct funds and post the open challenge to the group!</i>`,
     group_duel_confirm_btn: `{{emoji.check}} Confirm & Create`,
     group_duel_cancel_btn: `{{emoji.cross}} Cancel`,
     group_duel_cancelled: `{{emoji.cross}} Duel creation cancelled by @{creator}.`,
     group_duel_not_author_alert: `{{emoji.cross}} Only the creator of this duel (@{creator}) can confirm or cancel!`,
     group_duel_expired: `{{emoji.warning}} This duel creation request has expired. Type /duel again.`,
-    group_duel_card_title: `{{emoji.swords}} <b>NEW CYBER DUEL ACTIVE IN GROUP!</b> {{emoji.swords}}`,
+    group_duel_card_title: `{{emoji.swords}} <b>NEW DUEL IN THE GROUP!</b> {{emoji.swords}}`,
     group_duel_card_desc:
       `{{emoji.user}} <b>Challenger</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>Discipline</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.controller}} <b>Game</b>: <b>{gameTitle}</b>\n` +
       `{{emoji.moneyBag}} <b>Wager</b>: <b>{wager} GRAM</b> each\n` +
-      `{{emoji.trophy}} <b>Winner Pot</b>: <b>{payout} GRAM</b> (100%)\n` +
-      `{{emoji.eye}} <b>Spectators</b>: Pari-Mutuel totalizer window open\n\n` +
-      `<i>Who dares to challenge @{creator}? Tap below to fight!</i>`,
+      `{{emoji.trophy}} <b>Winner Pot</b>: <b>{payout} GRAM</b> (100% to winner)\n` +
+      `{{emoji.eye}} <b>Spectators</b>: Live betting open\n\n` +
+      `<i>Who wants to take on @{creator}? Tap below to play!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} Accept Challenge ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} Watch & Bet`,
   },
@@ -133,102 +137,105 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
   // ITALIAN (Italiano)
   // -------------------------------------------------------------
   it: {
-    welcome_header: `{{emoji.lightning}} <b>BENVENUTO SU SFIDA CYBER ARENA</b> {{emoji.lightning}}`,
+    welcome_header: `{{emoji.lightning}} <b>BENVENUTO SU SFIDA ARENA</b> {{emoji.lightning}}`,
     welcome_body:
-      `{{emoji.fire}} <b>Duelli PvP 1v1 ad Alta Posta su TON & GRAM</b>\n` +
-      `{{emoji.eye}} <b>Totalizzatore Scommesse Pari-Mutuel per Spettatori</b>\n` +
-      `{{emoji.shield}} <b>Smart Contract Verificati & Server Autorevole Anti-Cheat</b>\n\n` +
-      `<i>Scegli la tua disciplina di gioco, sfida guerrieri in tempo reale o scala la classifica globale!</i>`,
-    welcome_recruited: `{{emoji.handshake}} Reclutato da: <code>{recruiter}</code>\n\n`,
+      `{{emoji.fire}} <b>Sfide 1v1 in tempo reale con puntate in GRAM</b>\n` +
+      `{{emoji.eye}} <b>Scommesse live per gli spettatori su ogni partita</b>\n` +
+      `{{emoji.shield}} <b>Partite istantanee e sistema anti-cheat garantito</b>\n\n` +
+      `<i>Scegli il tuo gioco preferito, sfida altri utenti o scala la classifica!</i>`,
+    welcome_recruited: `{{emoji.handshake}} Invitato da: <code>{recruiter}</code>\n\n`,
     btn_enter_arena: `{{emoji.swords}} Entra nell'Arena`,
     btn_official_channel: `{{emoji.megaphone}} Canale Ufficiale`,
     btn_how_to_play: `{{emoji.controller}} Come Giocare`,
 
-    inline_challenge_title: `{{emoji.swords}} Sfida Duello Cyber - {wager} GRAM`,
-    inline_challenge_desc: `Duello 1v1. Il vincitore si aggiudica {payout} GRAM (100% montepremi)!`,
+    inline_challenge_title: `{{emoji.swords}} Sfida 1v1 - {wager} GRAM`,
+    inline_challenge_desc: `Sfida 1v1: chi vince prende l'intero piatto da {payout} GRAM!`,
     inline_challenge_msg:
-      `{{emoji.swords}} <b>SFIDA DUELLO INIZIATA</b> {{emoji.swords}}\n\n` +
+      `{{emoji.swords}} <b>SFIDA 1v1 LANCIATA</b> {{emoji.swords}}\n\n` +
       `{{emoji.user}} <b>Sfidante</b>: @{challenger}\n` +
       `{{emoji.coin}} <b>Puntata</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.trophy}} <b>Vincita Netta</b>: <b>{payout} GRAM</b>\n` +
-      `{{emoji.eye}} <b>Spettatori</b>: Finestra Scommesse Pari-Mutuel Aperta\n\n` +
-      `<i>Tocca il pulsante in basso per accettare la sfida o guardare in diretta!</i>`,
+      `{{emoji.trophy}} <b>Premio Vincitore</b>: <b>{payout} GRAM</b>\n` +
+      `{{emoji.eye}} <b>Spettatori</b>: Scommesse live aperte\n\n` +
+      `<i>Premi il pulsante qui sotto per accettare o entra per guardare la partita!</i>`,
     inline_accept_btn: `{{emoji.swords}} Accetta Sfida ({wager} GRAM)`,
-    inline_watch_btn: `{{emoji.eye}} Guarda & Scommetti (Totalizzatore)`,
+    inline_watch_btn: `{{emoji.eye}} Guarda & Scommetti Live`,
 
     help_text:
-      `{{emoji.bot}} <b>GUIDA SFIDA ARENA BOT</b> {{emoji.bot}}\n\n` +
-      `<b>Comandi Disponibili:</b>\n` +
-      `• /start - Avvia il bot e apri l'Arena\n` +
-      `• /lang - Cambia la lingua dell'interfaccia\n` +
+      `{{emoji.bot}} <b>GUIDA SFIDA ARENA</b> {{emoji.bot}}\n\n` +
+      `<b>Comandi disponibili:</b>\n` +
+      `• /start - Apri l'Arena e avvia il bot\n` +
+      `• /lang - Cambia la lingua\n` +
       `• /help - Mostra questa guida\n\n` +
-      `<b>Duelli nei Gruppi (Inline):</b>\n` +
-      `In qualsiasi chat o gruppo, digita <code>@{botUsername} duel &lt;importo&gt;</code> per generare il widget di sfida immediato!\n\n` +
-      `<b>Discipline di Gioco Disponibili:</b>\n` +
-      `• Russian Roulette (Tamburo tattico a revolver)\n` +
-      `• Blackjack (Duello 21 cyber)\n` +
-      `• Glass Bridge (Memoria e passi su vetro)\n` +
-      `• Chrono Blind (Riflesso e tempismo al millisecondo)\n` +
-      `• Split or Steal (Dilemma del Prigioniero + Jackpot Condiviso)`,
+      `<b>Sfide nei gruppi:</b>\n` +
+      `Nei gruppi usa <code>/duel &lt;puntata&gt; [gioco]</code>, oppure in qualsiasi chat digita <code>@{botUsername} duel &lt;importo&gt;</code> per lanciare una sfida al volo!\n\n` +
+      `<b>Giochi disponibili:</b>\n` +
+      `• Russian Roulette (8 colpi, 1 proiettile)\n` +
+      `• Blackjack Face-Up (Mazzo comune a carte scoperte)\n` +
+      `• Glass Bridge (Pannelli di vetro e memoria)\n` +
+      `• Chrono Blind (Timer al buio, riflessi al millisecondo)\n` +
+      `• Split or Steal (Dilemma del prigioniero con Trust Jackpot)\n` +
+      `• Cyber Shotgun (Fucile con cartucce e oggetti tattici)\n` +
+      `• Forza 4 (Griglia 7x6 strategica a turni)\n` +
+      `• Cube Count (Conteggio rapido in 3D isometrico)`,
 
-    lang_select_title: `{{emoji.gear}} <b>Seleziona la tua lingua preferita:</b>`,
-    lang_changed: `{{emoji.check}} Lingua aggiornata in <b>{language}</b>!`,
+    lang_select_title: `{{emoji.gear}} <b>Seleziona la tua lingua:</b>`,
+    lang_changed: `{{emoji.check}} Lingua impostata su <b>{language}</b>!`,
 
     // Admin Broadcast Messages
-    broadcast_unauthorized: `{{emoji.cross}} <b>Accesso Negato</b>: Questo comando è riservato all'amministratore del bot.`,
+    broadcast_unauthorized: `{{emoji.cross}} <b>Accesso negato</b>: comando riservato all'amministratore.`,
     broadcast_no_reply:
-      `{{emoji.warning}} <b>COME UTILIZZARE IL BROADCAST:</b>\n\n` +
-      `1. Invia a questa chat il messaggio che vuoi trasmettere (testo, foto, video, album, audio, ecc. con tutte le entità e custom emoji).\n` +
-      `2. <b>Rispondi</b> a quel messaggio con <code>/broadcast</code> (per copiarlo senza intestazione di inoltro) oppure <code>/broadcast forward</code> (per inoltrarlo).\n\n` +
-      `<i>Il bot invierà il messaggio a tutti gli utenti registrati rispettando i rate limit di Telegram (~25 msg/s).</i>`,
+      `{{emoji.warning}} <b>COME INVIARE UN BROADCAST:</b>\n\n` +
+      `1. Invia in questa chat il messaggio che vuoi inoltrare (testo, foto, video, album, audio, ecc. con formattazione e custom emoji).\n` +
+      `2. <b>Rispondi</b> a quel messaggio scrivendo <code>/broadcast</code> (per inviarlo come copia) oppure <code>/broadcast forward</code> (per inoltrarlo direttamente).\n\n` +
+      `<i>Il bot distribuirà il messaggio a tutti gli utenti registrati (~25 msg/s).</i>`,
     broadcast_no_recipients: `{{emoji.warning}} Nessun utente registrato trovato nel database.`,
-    broadcast_already_running: `{{emoji.warning}} Un broadcast è già in corso! Attendi il termine prima di avviarne un altro.`,
+    broadcast_already_running: `{{emoji.warning}} C'è già un broadcast in corso! Attendi che finisca prima di avviarne un altro.`,
     broadcast_started:
       `{{emoji.rocket}} <b>BROADCAST AVVIATO</b>\n\n` +
       `• <b>Destinatari</b>: <code>{total}</code> utenti\n` +
       `• <b>Modalità</b>: <code>{mode}</code>\n` +
-      `• <b>Frequenza</b>: <code>~25 msg/s</code> (limite di sicurezza Telegram)\n\n` +
+      `• <b>Velocità</b>: <code>~25 msg/s</code>\n\n` +
       `{{emoji.hourglass}} <i>Invio in corso...</i>`,
     broadcast_progress:
       `{{emoji.hourglass}} <b>BROADCAST IN CORSO...</b>\n\n` +
       `• <b>Avanzamento</b>: <code>{current} / {total}</code> ({percent}%)\n` +
-      `• {{emoji.check}} <b>Consegnati</b>: <code>{delivered}</code>\n` +
-      `• {{emoji.cross}} <b>Bloccati/Falliti</b>: <code>{failed}</code>\n` +
-      `• {{emoji.clock}} <b>Tempo Trascorso</b>: <code>{elapsed}s</code>`,
+      `• {{emoji.check}} <b>Inviati</b>: <code>{delivered}</code>\n` +
+      `• {{emoji.cross}} <b>Falliti/Bloccati</b>: <code>{failed}</code>\n` +
+      `• {{emoji.clock}} <b>Tempo trascorso</b>: <code>{elapsed}s</code>`,
     broadcast_finished:
       `{{emoji.check}} <b>BROADCAST COMPLETATO!</b>\n\n` +
-      `• <b>Totale Destinatari</b>: <code>{total}</code>\n` +
+      `• <b>Totale destinatari</b>: <code>{total}</code>\n` +
       `• {{emoji.check}} <b>Consegnati</b>: <code>{delivered}</code> ({successRate}%)\n` +
       `• {{emoji.cross}} <b>Bloccati/Inattivi</b>: <code>{failed}</code>\n` +
-      `• {{emoji.clock}} <b>Tempo Impiegato</b>: <code>{duration}s</code>\n` +
-      `• {{emoji.chart}} <b>Velocità Media</b>: <code>{speed} msg/s</code>`,
+      `• {{emoji.clock}} <b>Tempo impiegato</b>: <code>{duration}s</code>\n` +
+      `• {{emoji.chart}} <b>Velocità media</b>: <code>{speed} msg/s</code>`,
 
     // Group In-Chat Duel Messages
-    group_duel_private_hint: `{{emoji.swords}} <b>CREA DUELLO</b>\n\nPuoi usare <code>/duel &lt;importo&gt; [gioco]</code> direttamente in qualsiasi gruppo Telegram per sfidare i membri! Oppure tocca in basso per entrare nell'Arena:`,
-    group_duel_invalid_wager: `{{emoji.warning}} <b>Puntata non valida</b>: La puntata deve essere compresa tra 0.1 e 100 GRAM. Esempio: <code>/duel 2</code>`,
-    group_duel_insufficient: `{{emoji.warning}} <b>SALDO INSUFFICIENTE</b>\n\nEhi @{username}, per creare questo duello da <b>{wager} GRAM</b> hai bisogno di <b>{total} GRAM</b> (inclusa la commissione di creazione di 0.05 GRAM).\n\n{{emoji.gem}} Il tuo saldo: <b>{balance} GRAM</b> (mancano {missing} GRAM).`,
+    group_duel_private_hint: `{{emoji.swords}} <b>CREA UNA SFIDA</b>\n\nPuoi usare il comando <code>/duel &lt;importo&gt; [gioco]</code> direttamente nei gruppi per sfidare gli altri utenti, oppure premi il pulsante qui sotto per aprire l'Arena:`,
+    group_duel_invalid_wager: `{{emoji.warning}} <b>Puntata non valida</b>: la puntata deve essere compresa tra 0.1 e 100 GRAM (es. <code>/duel 2</code>).`,
+    group_duel_insufficient: `{{emoji.warning}} <b>SALDO INSUFFICIENTE</b>\n\n@{username}, per creare questa sfida da <b>{wager} GRAM</b> servono <b>{total} GRAM</b> (inclusi 0.05 GRAM di commissione di creazione).\n\n{{emoji.gem}} Saldo attuale: <b>{balance} GRAM</b> (ti mancano {missing} GRAM).`,
     group_duel_deposit_btn: `{{emoji.gem}} Deposita GRAM`,
-    group_duel_confirm_title: `{{emoji.swords}} <b>CONFERMA CREAZIONE DUELLO</b>`,
+    group_duel_confirm_title: `{{emoji.swords}} <b>CONFERMA CREAZIONE SFIDA</b>`,
     group_duel_confirm_desc:
-      `{{emoji.user}} <b>Sfidante</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>Disciplina</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.user}} <b>Creatore</b>: @{creator}\n` +
+      `{{emoji.controller}} <b>Gioco</b>: <b>{gameTitle}</b>\n` +
       `{{emoji.moneyBag}} <b>Puntata</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.coin}} <b>Costo Creazione</b>: <b>0.05 GRAM</b>\n` +
-      `{{emoji.gem}} <b>Totale da Addebitare</b>: <b>{total} GRAM</b>\n\n` +
-      `<i>Tocca Conferma in basso per scalare il saldo e pubblicare la sfida aperta nel gruppo!</i>`,
+      `{{emoji.coin}} <b>Commissione creazione</b>: <b>0.05 GRAM</b>\n` +
+      `{{emoji.gem}} <b>Totale</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Premi Conferma per scalare l'importo dal saldo e pubblicare la sfida nel gruppo!</i>`,
     group_duel_confirm_btn: `{{emoji.check}} Conferma & Crea`,
     group_duel_cancel_btn: `{{emoji.cross}} Annulla`,
-    group_duel_cancelled: `{{emoji.cross}} Creazione duello annullata da @{creator}.`,
-    group_duel_not_author_alert: `{{emoji.cross}} Solo il creatore di questo duello (@{creator}) può confermare o annullare!`,
-    group_duel_expired: `{{emoji.warning}} Questa richiesta di duello è scaduta. Digita nuovamente /duel.`,
-    group_duel_card_title: `{{emoji.swords}} <b>NUOVO DUELLO ATTIVO NEL GRUPPO!</b> {{emoji.swords}}`,
+    group_duel_cancelled: `{{emoji.cross}} Creazione della sfida annullata da @{creator}.`,
+    group_duel_not_author_alert: `{{emoji.cross}} Solo @{creator} può confermare o annullare questa sfida!`,
+    group_duel_expired: `{{emoji.warning}} Richiesta di sfida scaduta. Digita di nuovo /duel.`,
+    group_duel_card_title: `{{emoji.swords}} <b>NUOVA SFIDA NEL GRUPPO!</b> {{emoji.swords}}`,
     group_duel_card_desc:
       `{{emoji.user}} <b>Sfidante</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>Disciplina</b>: <b>{gameTitle}</b>\n` +
-      `{{emoji.moneyBag}} <b>Puntata</b>: <b>{wager} GRAM</b> ciascuno\n` +
-      `{{emoji.trophy}} <b>Montepremi Vincitore</b>: <b>{payout} GRAM</b> (100%)\n` +
-      `{{emoji.eye}} <b>Spettatori</b>: Finestra totalizzatore Pari-Mutuel aperta\n\n` +
-      `<i>Chi ha il coraggio di sfidare @{creator}? Tocca sotto per combattere!</i>`,
+      `{{emoji.controller}} <b>Gioco</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.moneyBag}} <b>Puntata</b>: <b>{wager} GRAM</b> a testa\n` +
+      `{{emoji.trophy}} <b>Montepremi</b>: <b>{payout} GRAM</b> (100% al vincitore)\n` +
+      `{{emoji.eye}} <b>Spettatori</b>: Scommesse live aperte\n\n` +
+      `<i>Chi accetta la sfida di @{creator}? Premi qui sotto per giocare!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} Accetta Sfida ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} Guarda & Scommetti`,
   },
@@ -237,39 +244,39 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
   // RUSSIAN (Русский)
   // -------------------------------------------------------------
   ru: {
-    welcome_header: `{{emoji.lightning}} <b>ДОБРО ПОЖАЛОВАТЬ В SFIDA CYBER ARENA</b> {{emoji.lightning}}`,
+    welcome_header: `{{emoji.lightning}} <b>ДОБРО ПОЖАЛОВАТЬ В SFIDA ARENA</b> {{emoji.lightning}}`,
     welcome_body:
-      `{{emoji.fire}} <b>PvP-дуэли 1 на 1 на высоких ставках в сети TON & GRAM</b>\n` +
-      `{{emoji.eye}} <b>Пари-мютюэль тотализатор для зрителей в реальном времени</b>\n` +
-      `{{emoji.shield}} <b>Проверенные смарт-контракты и античит-сервер</b>\n\n` +
-      `<i>Выбирай игровую дисциплину, вызывай соперников на дуэль и покоряй глобальный рейтинг!</i>`,
+      `{{emoji.fire}} <b>PvP-дуэли 1 на 1 в реальном времени со ставками в GRAM</b>\n` +
+      `{{emoji.eye}} <b>Прямые ставки для зрителей на каждую дуэль</b>\n` +
+      `{{emoji.shield}} <b>Мгновенные выплаты и надежная защита от читеров</b>\n\n` +
+      `<i>Выбирай игру, вызывай соперников в реальном времени и поднимайся в рейтинге!</i>`,
     welcome_recruited: `{{emoji.handshake}} Приглашен: <code>{recruiter}</code>\n\n`,
     btn_enter_arena: `{{emoji.swords}} Войти на Арену`,
     btn_official_channel: `{{emoji.megaphone}} Официальный канал`,
     btn_how_to_play: `{{emoji.controller}} Как играть`,
 
-    inline_challenge_title: `{{emoji.swords}} Дуэль-вызов Cyber - {wager} GRAM`,
-    inline_challenge_desc: `1 на 1. Победитель забирает {payout} GRAM (100% банка)!`,
+    inline_challenge_title: `{{emoji.swords}} Дуэль 1 на 1 - {wager} GRAM`,
+    inline_challenge_desc: `Дуэль 1 на 1: победитель забирает весь банк {payout} GRAM!`,
     inline_challenge_msg:
-      `{{emoji.swords}} <b>ВЫЗОВ НА ДУЭЛЬ ОТКРЫТ</b> {{emoji.swords}}\n\n` +
+      `{{emoji.swords}} <b>ВЫЗОВ НА ДУЭЛЬ 1 НА 1</b> {{emoji.swords}}\n\n` +
       `{{emoji.user}} <b>Инициатор</b>: @{challenger}\n` +
       `{{emoji.coin}} <b>Ставка</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.trophy}} <b>Выигрыш</b>: <b>{payout} GRAM</b>\n` +
-      `{{emoji.eye}} <b>Зрители</b>: Окно ставок пари-мютюэль открыто\n\n` +
-      `<i>Нажми кнопку ниже, чтобы принять вызов или смотреть дуэль в прямом эфире!</i>`,
+      `{{emoji.trophy}} <b>Банк победителя</b>: <b>{payout} GRAM</b>\n` +
+      `{{emoji.eye}} <b>Зрители</b>: Ставки в прямом эфире открыты\n\n` +
+      `<i>Нажми кнопку ниже, чтобы принять вызов или смотреть дуэль!</i>`,
     inline_accept_btn: `{{emoji.swords}} Принять вызов ({wager} GRAM)`,
     inline_watch_btn: `{{emoji.eye}} Смотреть и ставить`,
 
     help_text:
-      `{{emoji.bot}} <b>ПОМОЩЬ SFIDA ARENA BOT</b> {{emoji.bot}}\n\n` +
+      `{{emoji.bot}} <b>ПОМОЩЬ SFIDA ARENA</b> {{emoji.bot}}\n\n` +
       `<b>Команды:</b>\n` +
       `• /start - Запустить бота и открыть Арену\n` +
       `• /lang - Изменить язык интерфейса\n` +
       `• /help - Справка\n\n` +
-      `<b>Дуэли в чатах (Inline):</b>\n` +
+      `<b>Дуэли в чатах:</b>\n` +
       `В любом чате введите <code>@{botUsername} duel &lt;сумма&gt;</code>, чтобы мгновенно вызвать оппонента!`,
 
-    lang_select_title: `{{emoji.gear}} <b>Выберите желаемый язык интерфейса:</b>`,
+    lang_select_title: `{{emoji.gear}} <b>Выберите язык интерфейса:</b>`,
     lang_changed: `{{emoji.check}} Язык успешно изменен на <b>{language}</b>!`,
 
     broadcast_unauthorized: `{{emoji.cross}} <b>Доступ запрещен</b>: Эта команда доступна только администратору.`,
@@ -307,7 +314,7 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     group_duel_confirm_title: `{{emoji.swords}} <b>ПОДТВЕРЖДЕНИЕ СОЗДАНИЯ ДУЭЛИ</b>`,
     group_duel_confirm_desc:
       `{{emoji.user}} <b>Инициатор</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>Дисциплина</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.controller}} <b>Игра</b>: <b>{gameTitle}</b>\n` +
       `{{emoji.moneyBag}} <b>Ставка</b>: <b>{wager} GRAM</b>\n` +
       `{{emoji.coin}} <b>Комиссия создания</b>: <b>0.05 GRAM</b>\n` +
       `{{emoji.gem}} <b>Сумма списания</b>: <b>{total} GRAM</b>\n\n` +
@@ -320,11 +327,11 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     group_duel_card_title: `{{emoji.swords}} <b>НОВАЯ ДУЭЛЬ В ГРУППЕ!</b> {{emoji.swords}}`,
     group_duel_card_desc:
       `{{emoji.user}} <b>Инициатор</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>Дисциплина</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.controller}} <b>Игра</b>: <b>{gameTitle}</b>\n` +
       `{{emoji.moneyBag}} <b>Ставка</b>: <b>{wager} GRAM</b> с каждого\n` +
       `{{emoji.trophy}} <b>Банк победителя</b>: <b>{payout} GRAM</b> (100%)\n` +
-      `{{emoji.eye}} <b>Зрители</b>: Окно ставок пари-мютюэль открыто\n\n` +
-      `<i>Кто осмелится бросить вызов @{creator}? Нажмите ниже для битвы!</i>`,
+      `{{emoji.eye}} <b>Зрители</b>: Окно ставок открыто\n\n` +
+      `<i>Кто примет вызов @{creator}? Нажмите ниже для битвы!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} Принять вызов ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} Смотреть и ставить`,
   },
@@ -333,28 +340,28 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
   // CHINESE (中文)
   // -------------------------------------------------------------
   zh: {
-    welcome_header: `{{emoji.lightning}} <b>欢迎来到 SFIDA 赛博对决竞技场</b> {{emoji.lightning}}`,
+    welcome_header: `{{emoji.lightning}} <b>欢迎来到 SFIDA 对决竞技场</b> {{emoji.lightning}}`,
     welcome_body:
-      `{{emoji.fire}} <b>基于 TON & GRAM 的 1v1 高额赛博 PvP 竞技场</b>\n` +
-      `{{emoji.eye}} <b>观众实时彩池分红博彩系统 (Pari-Mutuel)</b>\n` +
-      `{{emoji.shield}} <b>经审计的智能合约与权威防作弊系统</b>\n\n` +
-      `<i>选择竞技项目，实时向对手发起对决，登顶全球排行榜！</i>`,
+      `{{emoji.fire}} <b>基于 TON & GRAM 的 1v1 实时 PvP 对决</b>\n` +
+      `{{emoji.eye}} <b>观众实时直播竞猜与分红系统</b>\n` +
+      `{{emoji.shield}} <b>秒级即时结算与权威反作弊保障</b>\n\n` +
+      `<i>选择游戏模式，实时向对手发起挑战，冲刺全球排行榜！</i>`,
     welcome_recruited: `{{emoji.handshake}} 邀请人: <code>{recruiter}</code>\n\n`,
     btn_enter_arena: `{{emoji.swords}} 进入竞技场`,
     btn_official_channel: `{{emoji.megaphone}} 官方频道`,
     btn_how_to_play: `{{emoji.controller}} 玩法说明`,
 
-    inline_challenge_title: `{{emoji.swords}} 赛博对决挑战 - {wager} GRAM`,
-    inline_challenge_desc: `1v1 对决。赢家独揽全部奖池 {payout} GRAM (100%)！`,
+    inline_challenge_title: `{{emoji.swords}} 1v1 对决挑战 - {wager} GRAM`,
+    inline_challenge_desc: `1v1 对决：胜者独揽全部奖池 {payout} GRAM (100%)！`,
     inline_challenge_msg:
-      `{{emoji.swords}} <b>对决挑战已发起</b> {{emoji.swords}}\n\n` +
+      `{{emoji.swords}} <b>1v1 对决挑战已发起</b> {{emoji.swords}}\n\n` +
       `{{emoji.user}} <b>挑战者</b>: @{challenger}\n` +
       `{{emoji.coin}} <b>赌注</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.trophy}} <b>胜者奖励</b>: <b>{payout} GRAM</b>\n` +
-      `{{emoji.eye}} <b>观战模式</b>: 彩池博彩通道已开启\n\n` +
-      `<i>点击下方按钮接受挑战或实时观战！</i>`,
+      `{{emoji.trophy}} <b>胜者奖池</b>: <b>{payout} GRAM</b>\n` +
+      `{{emoji.eye}} <b>观战</b>: 实时竞猜通道已开启\n\n` +
+      `<i>点击下方按钮应战或实时观战！</i>`,
     inline_accept_btn: `{{emoji.swords}} 接受挑战 ({wager} GRAM)`,
-    inline_watch_btn: `{{emoji.eye}} 观战并下注`,
+    inline_watch_btn: `{{emoji.eye}} 观战并竞猜`,
 
     help_text:
       `{{emoji.bot}} <b>SFIDA ARENA 帮助指南</b> {{emoji.bot}}\n\n` +
@@ -404,7 +411,7 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     group_duel_confirm_title: `{{emoji.swords}} <b>确认创建对决</b>`,
     group_duel_confirm_desc:
       `{{emoji.user}} <b>挑战者</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>竞技项目</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.controller}} <b>游戏</b>: <b>{gameTitle}</b>\n` +
       `{{emoji.moneyBag}} <b>对决赌注</b>: <b>{wager} GRAM</b>\n` +
       `{{emoji.coin}} <b>创建费用</b>: <b>0.05 GRAM</b>\n` +
       `{{emoji.gem}} <b>扣除总额</b>: <b>{total} GRAM</b>\n\n` +
@@ -417,41 +424,41 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     group_duel_card_title: `{{emoji.swords}} <b>群内新对决已开启！</b> {{emoji.swords}}`,
     group_duel_card_desc:
       `{{emoji.user}} <b>挑战者</b>: @{creator}\n` +
-      `{{emoji.controller}} <b>竞技项目</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.controller}} <b>游戏</b>: <b>{gameTitle}</b>\n` +
       `{{emoji.moneyBag}} <b>每人赌注</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.trophy}} <b>胜者奖池</b>: <b>{payout} GRAM</b> (100%)\n` +
-      `{{emoji.eye}} <b>观众模式</b>: 彩池博彩通道已开启\n\n` +
+      `{{emoji.trophy}} <b>胜者奖池</b>: <b>{payout} GRAM</b> (100% 独揽)\n` +
+      `{{emoji.eye}} <b>观战</b>: 实时竞猜已开启\n\n` +
       `<i>谁敢应战 @{creator}？点击下方迎战！</i>`,
     group_duel_accept_btn: `{{emoji.swords}} 接受挑战 ({wager} GRAM)`,
-    group_duel_spectate_btn: `{{emoji.eye}} 观战并下注`,
+    group_duel_spectate_btn: `{{emoji.eye}} 观战并竞猜`,
   },
 
   // -------------------------------------------------------------
   // ARABIC (العربية)
   // -------------------------------------------------------------
   ar: {
-    welcome_header: `{{emoji.lightning}} <b>مرحبًا بك في ساحة SFIDA CYBER ARENA</b> {{emoji.lightning}}`,
+    welcome_header: `{{emoji.lightning}} <b>مرحبًا بك في ساحة SFIDA ARENA</b> {{emoji.lightning}}`,
     welcome_body:
-      `{{emoji.fire}} <b>مبارزات PvP 1v1 بحصص عالية على شبكة TON & GRAM</b>\n` +
-      `{{emoji.eye}} <b>نظام مراهنات Pari-Mutuel المباشر للمشاهدين</b>\n` +
-      `{{emoji.shield}} <b>عقود ذكية موثوقة ونظام محكم لمكافحة الغش</b>\n\n` +
-      `<i>اختر وضع لعبتك، وتحدَّ الخصوم مباشرة، وتصدر قائمة المتصدرين العالمية!</i>`,
+      `{{emoji.fire}} <b>مبارزات PvP 1v1 مباشرة برهانات GRAM</b>\n` +
+      `{{emoji.eye}} <b>مراهنات حية للمشاهدين على كل نزال</b>\n` +
+      `{{emoji.shield}} <b>تسوية فورية ونظام موثوق لمكافحة الغش</b>\n\n` +
+      `<i>اختر لعبتك المفضلة، وتحدَّ الخصوم مباشرة، وتصدر قائمة المتصدرين!</i>`,
     welcome_recruited: `{{emoji.handshake}} تمت دعوتك بواسطة: <code>{recruiter}</code>\n\n`,
     btn_enter_arena: `{{emoji.swords}} دخول الساحة`,
     btn_official_channel: `{{emoji.megaphone}} القناة الرسمية`,
     btn_how_to_play: `{{emoji.controller}} طريقة اللعب`,
 
-    inline_challenge_title: `{{emoji.swords}} تحدي المبارزة - {wager} GRAM`,
-    inline_challenge_desc: `مبارزة 1 ضد 1. الفائز يحصل على {payout} GRAM (100% من الجائزة)!`,
+    inline_challenge_title: `{{emoji.swords}} تحدي 1 ضد 1 - {wager} GRAM`,
+    inline_challenge_desc: `مبارزة 1 ضد 1: الفائز يحصل على كامل الجائزة {payout} GRAM!`,
     inline_challenge_msg:
-      `{{emoji.swords}} <b>تم إطلاق تحدي المبارزة</b> {{emoji.swords}}\n\n` +
+      `{{emoji.swords}} <b>تم إطلاق تحدي 1 ضد 1</b> {{emoji.swords}}\n\n` +
       `{{emoji.user}} <b>المتحدي</b>: @{challenger}\n` +
       `{{emoji.coin}} <b>الرهان</b>: <b>{wager} GRAM</b>\n` +
-      `{{emoji.trophy}} <b>مكافأة الفائز</b>: <b>{payout} GRAM</b>\n` +
-      `{{emoji.eye}} <b>المشاهدون</b>: نافذة المراهنات مفتوحة الآن\n\n` +
-      `<i>اضغط على الزر أدناه لقبول التحدي أو المشاهدة مباشرة!</i>`,
+      `{{emoji.trophy}} <b>جائزة الفائز</b>: <b>{payout} GRAM</b>\n` +
+      `{{emoji.eye}} <b>المشاهدون</b>: المراهنات المباشرة مفتوحة الآن\n\n` +
+      `<i>اضغط بالأسفل لقبول التحدي أو المشاهدة مباشرة!</i>`,
     inline_accept_btn: `{{emoji.swords}} قبول التحدي ({wager} GRAM)`,
-    inline_watch_btn: `{{emoji.eye}} مشاهدة ومراهنة`,
+    inline_watch_btn: `{{emoji.eye}} مشاهدة ومراهنة حية`,
 
     help_text:
       `{{emoji.bot}} <b>دليل بوت SFIDA ARENA</b> {{emoji.bot}}\n\n` +
