@@ -15,6 +15,7 @@ import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { EpicBanners } from './EpicBanners.js';
 import { LiveActivityTicker } from './LiveActivityTicker.js';
 import { PlayHubView } from './PlayHubView.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 interface DuelLobbyProps {
   matches: MatchData[];
@@ -778,7 +779,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 </p>
                 <button
                   onClick={() => handleOpenModal()}
-                  className="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-bold rounded-2xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all inline-flex items-center space-x-1.5"
+                  className="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-bold rounded-2xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all inline-flex items-center space-x-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   <span>{t('lobby.createDuelBtn')}</span>
@@ -863,12 +864,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           <span className="text-[11px] text-slate-400">{t('lobby.createdByName')}</span>
                           <span className="inline-flex items-center space-x-1.5 text-slate-200 font-semibold">
                             <UserAvatar
-                              name={m.playerA.name}
+                              name={cleanPlayerName(m.playerA.name)}
                               photoUrl={m.playerA.photoUrl}
                               sizeClass="w-4 h-4"
                               textClass="text-[8px]"
                             />
-                            <span>{m.playerA.name}</span>
+                            <span>{cleanPlayerName(m.playerA.name)}</span>
                           </span>
                           {isCreator && (
                             <span className="text-[10px] text-purple-300 font-bold font-sans bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded-md">
@@ -881,12 +882,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             <span>vs</span>
                             <span className="inline-flex items-center space-x-1.5 text-purple-300 font-semibold">
                               <UserAvatar
-                                name={m.playerB.name}
+                                name={cleanPlayerName(m.playerB.name)}
                                 photoUrl={m.playerB.photoUrl}
                                 sizeClass="w-4 h-4"
                                 textClass="text-[8px]"
                               />
-                              <span>{m.playerB.name}</span>
+                              <span>{cleanPlayerName(m.playerB.name)}</span>
                             </span>
                           </div>
                         )}
@@ -934,7 +935,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <>
                           <button
                             onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
-                            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1"
                           >
                             <Swords className="w-3.5 h-3.5" />
                             <span className="flex items-center space-x-1">
@@ -1093,8 +1094,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               {lockedGameType ? (
                 <div className={`p-3.5 rounded-2xl border transition-all ${
                   selectedGameType === 'split'
-                    ? 'bg-gradient-to-r from-sky-950/60 via-indigo-950/50 to-blue-950/60 border-sky-400/40 shadow-[0_0_20px_rgba(56,189,248,0.15)]'
-                    : 'bg-gradient-to-r from-purple-950/50 via-indigo-950/40 to-purple-950/50 border-purple-500/40 shadow-epic-purple'
+                    ? 'bg-gradient-to-r from-sky-950/60 via-indigo-950/50 to-blue-950/60 border-sky-400/40 shadow-sm'
+                    : 'bg-gradient-to-r from-purple-950/50 via-indigo-950/40 to-purple-950/50 border-purple-500/30 shadow-sm'
                 }`}>
                   <div className="flex items-center justify-between gap-3">
                     <div className="space-y-1 min-w-0 flex-1">
@@ -1112,7 +1113,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </div>
 
                     {selectedGameType === 'split' && (
-                      <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/20 via-purple-900/40 to-amber-500/20 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                      <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/20 via-purple-900/40 to-amber-500/20 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-sm">
                         <Trophy className="w-4 h-4 text-amber-300 shrink-0" />
                         <div className="text-left">
                           <div className="text-[8px] font-heading font-black text-amber-300 tracking-wider">
@@ -1150,7 +1151,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             isSplit ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
                           } ${
                             isSelected
-                              ? `bg-purple-950/60 border-2 border-purple-500 shadow-epic-purple`
+                              ? `bg-purple-950/60 border-2 border-purple-500/80 shadow-sm`
                               : 'bg-white/[0.03] border-white/10 hover:border-white/20 opacity-70'
                           }`}
                         >
@@ -1173,7 +1174,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                               </div>
 
                               {/* Right: Adapted Trust Jackpot Mini-Card */}
-                              <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                              <div className="shrink-0 flex items-center space-x-2 bg-gradient-to-r from-amber-500/15 via-purple-900/30 to-amber-500/15 border border-amber-400/50 rounded-2xl px-2.5 py-1.5 shadow-sm">
                                 <div className="w-7 h-7 rounded-xl bg-amber-400/20 border border-amber-400/60 flex items-center justify-center shrink-0 relative">
                                   <Trophy className="w-3.5 h-3.5 text-amber-300" />
                                   <Sparkles className="w-2 h-2 text-amber-300 absolute -top-0.5 -right-0.5 animate-pulse" />
@@ -1225,7 +1226,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     }}
                     className={`p-2.5 rounded-2xl border text-left transition-all ${
                       !isPrivateRoom
-                        ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-lg'
+                        ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-sm'
                         : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
                     }`}
                   >
@@ -1246,7 +1247,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     }}
                     className={`p-2.5 rounded-2xl border text-left transition-all ${
                       isPrivateRoom
-                        ? 'bg-purple-500/20 border-purple-400 text-white shadow-epic-purple'
+                        ? 'bg-purple-500/20 border-purple-400 text-white shadow-sm'
                         : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
                     }`}
                   >
@@ -1301,7 +1302,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       }}
                       className={`py-2 rounded-2xl font-heading text-xs font-black border transition-all flex items-center justify-center space-x-0.5 active:scale-95 ${
                         wagerChoice === amt
-                          ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-purple-400/60 shadow-epic-purple'
+                          ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-purple-400/60 shadow-sm'
                           : 'bg-white/[0.04] border-white/10 text-slate-200 hover:border-white/20'
                       }`}
                     >
@@ -1407,7 +1408,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     setShowCreateModal(false);
                     onOpenDeposit?.(missingAmount);
                   }}
-                  className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
                 >
                   <ArrowDownLeft className="w-4 h-4" />
                   <span>{t('lobby.depositMissingBtn', { missing: missingAmount })}</span>
@@ -1420,7 +1421,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   className={`flex-1 py-2.5 font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${
                     !wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting
                       ? 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-epic-purple active:scale-95'
+                      : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-sm active:scale-95'
                   }`}
                 >
                   {isSubmitting ? (

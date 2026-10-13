@@ -237,7 +237,7 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
                 onClose();
                 onPlayGame(gameType);
               }}
-              className={`flex-1 py-2.5 rounded-2xl bg-gradient-to-r ${config.gradient} text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center justify-center space-x-1 border border-white/20`}
+              className={`flex-1 py-2.5 rounded-2xl bg-gradient-to-r ${config.gradient} bg-no-repeat bg-[length:100%_100%] overflow-hidden bg-clip-padding text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center justify-center space-x-1 border border-white/20`}
             >
               <span>{t('gameRules.playNow')}</span>
               <ArrowRight className="w-3.5 h-3.5" />

@@ -260,7 +260,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               }}
               className={`py-1.5 rounded-xl text-xs font-heading font-bold border transition-all text-center ${
                 depositAmount === amt
-                  ? 'bg-purple-600 text-white border-purple-500 shadow-epic-purple'
+                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
                   : 'bg-white/5 text-slate-300 border-white/10 hover:border-white/20'
               }`}
             >
@@ -282,7 +282,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             type="button"
             onClick={handleDeposit}
             disabled={loading}
-            className="flex-1 py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-heading font-black rounded-2xl shadow-epic-purple active:scale-95 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+            className="flex-1 py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-heading font-black rounded-2xl shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />

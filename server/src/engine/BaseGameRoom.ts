@@ -4,6 +4,7 @@ import { GameType, RoomState } from '../types/gameTypes.js';
 import { signerService } from '../services/signer.js';
 import { dbService } from '../services/db.js';
 import { feeConfig } from '../config/feeConfig.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 export interface RoomConfig {
   matchId: bigint;
@@ -156,7 +157,7 @@ export abstract class BaseGameRoom {
       this.playerB = {
         walletAddress: wallet,
         telegramId,
-        username,
+        username: cleanPlayerName(username),
         ws,
         connected: true,
         ready: false,
@@ -178,7 +179,7 @@ export abstract class BaseGameRoom {
   ) {
     player.ws = ws;
     if (telegramId) player.telegramId = telegramId;
-    if (username) player.username = username;
+    if (username) player.username = cleanPlayerName(username);
     player.connected = true;
 
     // Clear grace timer if reconnecting

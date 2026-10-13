@@ -5,6 +5,7 @@ import { GramIcon } from './GramIcon.js';
 import { GameIcon } from './GameIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 export interface WinItem {
   id: string;
@@ -54,7 +55,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
             setWinsList((prev) => {
               const incoming: WinItem[] = data.wins.map((w: any) => ({
                 id: w.id,
-                winnerName: w.winnerName,
+                winnerName: cleanPlayerName(w.winnerName),
                 gameType: (w.gameType || 'roulette') as GameType,
                 payoutGram: w.payoutGram,
                 timestamp: w.timestamp,
@@ -96,7 +97,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
 
       const newWin: WinItem = {
         id: winData.id || `win_${Date.now()}`,
-        winnerName: winData.winnerName.replace(/^@/, ''),
+        winnerName: cleanPlayerName(winData.winnerName),
         gameType: (winData.gameType || 'roulette') as GameType,
         payoutGram: winData.payoutGram || '1.92',
         timestamp: winData.timestamp || Date.now(),
@@ -213,7 +214,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
                     ? 'ring-2 ring-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.7)] animate-pulse'
                     : ''
                 }`}
-                title={`${win.winnerName} ${t('epic.won')} ${win.payoutGram} GRAM su ${meta.title}`}
+                title={`${cleanPlayerName(win.winnerName)} ${t('epic.won')} ${win.payoutGram} GRAM su ${meta.title}`}
               >
                 {/* Game SVG Icon */}
                 <div className="w-5 h-5 rounded-lg bg-black/20 flex items-center justify-center shrink-0">
@@ -223,7 +224,7 @@ export const LiveActivityTicker: React.FC<LiveActivityTickerProps> = ({
                 {/* Winner Name & Amount Won */}
                 <div className="text-left leading-tight">
                   <span className="text-[10px] font-heading font-bold text-white/90 truncate max-w-[70px] sm:max-w-[90px] block">
-                    {win.winnerName}
+                    {cleanPlayerName(win.winnerName)}
                   </span>
                   <span className="text-[11px] font-heading font-black text-amber-300 flex items-center space-x-0.5">
                     <span>+{win.payoutGram}</span>

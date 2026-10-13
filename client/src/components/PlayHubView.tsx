@@ -57,20 +57,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
       </div>
 
       {/* Category Filter Switcher Tabs */}
-      <div className="flex items-center justify-between p-1 bg-black/40 border border-white/10 rounded-2xl gap-1">
+      <div className="grid grid-cols-3 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1 items-stretch">
         <button
           type="button"
           onClick={() => {
             triggerImpact('light');
             setActiveCategory('all');
           }}
-          className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-heading font-black uppercase tracking-wider transition-all text-center ${
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center active:scale-95 transition-all ${
             activeCategory === 'all'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border border-white/20'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm border border-white/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          {t('playHub.allGamesTab')}
+          <span className="text-[10px] sm:text-[11px] font-heading font-black uppercase tracking-wider leading-tight block truncate max-w-full">
+            {t('playHub.allGamesLabel')}
+          </span>
+          <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
+            (8)
+          </span>
         </button>
         <button
           type="button"
@@ -78,13 +83,18 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('light');
             setActiveCategory('quick');
           }}
-          className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-heading font-black uppercase tracking-wider transition-all text-center ${
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center active:scale-95 transition-all ${
             activeCategory === 'quick'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md border border-white/20'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm border border-white/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          {t('playHub.quickMatchTab')}
+          <span className="text-[10px] sm:text-[11px] font-heading font-black uppercase tracking-wider leading-tight block truncate max-w-full">
+            {t('playHub.quickMatchLabel')}
+          </span>
+          <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
+            (4)
+          </span>
         </button>
         <button
           type="button"
@@ -92,13 +102,18 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('light');
             setActiveCategory('strategy');
           }}
-          className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-heading font-black uppercase tracking-wider transition-all text-center ${
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center active:scale-95 transition-all ${
             activeCategory === 'strategy'
-              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-md border border-white/20'
+              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-sm border border-white/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          {t('playHub.strategyTab')}
+          <span className="text-[10px] sm:text-[11px] font-heading font-black uppercase tracking-wider leading-tight block truncate max-w-full">
+            {t('playHub.strategyLabel')}
+          </span>
+          <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
+            {t('playHub.strategyCount')}
+          </span>
         </button>
       </div>
 

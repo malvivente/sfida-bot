@@ -11,6 +11,7 @@ import { DuelHistoryRecord, UserStats, UserBalance, MatchData, GameType } from '
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useI18n } from '../i18n/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 interface ProfileProps {
   onResumeDuel?: (matchId: string) => void;
@@ -246,7 +247,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
           <div className="relative">
             <UserAvatar
               photoUrl={photoUrl}
-              name={displayName || fullName || username}
+              name={cleanPlayerName(displayName || fullName || username)}
               sizeClass="w-14 h-14"
               roundedClass="rounded-2xl"
               className="ring-2 ring-purple-500/50 shadow-md"
@@ -261,11 +262,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-1.5">
               <h2 className="text-base font-heading font-black text-white truncate">
-                {displayName || fullName || username}
+                {cleanPlayerName(displayName || fullName || username)}
               </h2>
             </div>
             <div className="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
-              {username && <span className="text-purple-300 font-bold">@{username}</span>}
+              {username && <span className="text-purple-300 font-bold">@{username.replace(/^@/, '')}</span>}
               {userId && <span className="text-slate-500 font-mono text-[11px]">ID: {userId}</span>}
             </div>
             <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 mt-1">
@@ -278,19 +279,28 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
         </div>
 
         {/* In-Bot Internal Balance Card */}
-        <div className="bg-gradient-to-r from-purple-950/40 via-[#181a29] to-indigo-950/40 border border-purple-500/40 rounded-2xl p-4 mb-4 shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-heading font-extrabold text-slate-400 uppercase tracking-wider">
-              {t('profile.balance')}
-            </span>
-            <div className="flex items-center space-x-2">
+        <div className="bg-gradient-to-r from-purple-950/40 via-[#181a29] to-indigo-950/40 border border-purple-500/30 rounded-2xl p-4 mb-4 shadow-sm">
+          <div className="text-[11px] font-heading font-extrabold text-slate-400 uppercase tracking-wider mb-2">
+            {t('profile.balance')}
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-baseline space-x-1.5">
+              <span className="text-2xl font-heading font-black text-white">
+                {displayBalance}
+              </span>
+              <GramIcon className="w-4 h-4 text-purple-400 inline shrink-0" />
+              <span className="text-xs text-slate-400 font-medium ml-1">{t('profile.availableGram')}</span>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
               <button
                 onClick={() => {
                   triggerImpact('medium');
                   if (!userAddress) { openWalletModal(); return; }
                   setShowDepositModal(true);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center space-x-1"
+                className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1"
               >
                 <ArrowDownLeft className="w-3.5 h-3.5" />
                 <span>{t('profile.deposit')}</span>
@@ -301,20 +311,12 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                   if (!userAddress) { openWalletModal(); return; }
                   setShowWithdrawModal(true);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-95 transition-all flex items-center space-x-1"
+                className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
               >
                 <ArrowUpRight className="w-3.5 h-3.5" />
                 <span>{t('profile.withdraw')}</span>
               </button>
             </div>
-          </div>
-
-          <div className="flex items-baseline space-x-1.5">
-            <span className="text-2xl font-heading font-black text-white">
-              {displayBalance}
-            </span>
-            <GramIcon className="w-4 h-4 text-purple-400 inline" />
-            <span className="text-xs text-slate-400 font-medium ml-2">{t('profile.availableGram')}</span>
           </div>
         </div>
 
@@ -442,7 +444,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                         </span>
                       </div>
                       <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
-                        vs <strong className="text-white">{opponent.replace(/^@/, '')}</strong> • Piatto: {wagerGram} GRAM
+                        vs <strong className="text-white">{cleanPlayerName(opponent)}</strong> • Piatto: {wagerGram} GRAM
                       </span>
                     </div>
                   </div>
@@ -486,7 +488,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                   triggerImpact('medium');
                   onGoToDuels();
                 }}
-                className="mt-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all inline-flex items-center space-x-1.5"
+                className="mt-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all inline-flex items-center space-x-1.5"
               >
                 <Swords className="w-4 h-4" />
                 <span>{t('activity.playNow')}</span>
@@ -530,7 +532,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                         >
                           {isWin ? t('profile.win') : isDraw ? t('profile.draw') : t('profile.loss')}
                         </span>
-                        <span className="text-white font-heading font-bold">{t('profile.vs')} {item.opponentName.replace(/^@/, '')}</span>
+                        <span className="text-white font-heading font-bold">{t('profile.vs')} {cleanPlayerName(item.opponentName)}</span>
                       </div>
                       <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
                         {dateStr}
@@ -635,7 +637,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
               <button
                 onClick={handleWithdraw}
                 disabled={balanceLoading}
-                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-heading font-black rounded-2xl shadow-epic-purple hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
+                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-heading font-black rounded-2xl shadow-sm hover:brightness-110 active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1"
               >
                 {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>{t('profile.withdrawModalTitle')}</span>}
               </button>

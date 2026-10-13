@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Address } from '@ton/ton';
 import { feeConfig } from '../config/feeConfig.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1269,7 +1270,7 @@ export class DatabaseService {
       result.push({
         matchId: m.matchId,
         timestamp: m.settledAt,
-        opponentName,
+        opponentName: cleanPlayerName(opponentName),
         opponentWallet,
         wagerTon,
         wagerGram: wagerTon,
@@ -1309,7 +1310,7 @@ export class DatabaseService {
         (parseFloat(m.wagerGram || m.wagerTon || '1.0') * (m.gameType === 'split' ? 2.0 : 1.92)).toFixed(2);
       return {
         id: `win_${m.matchId}`,
-        winnerName: (m.winnerName || 'Sfida Duelist').replace(/^@/, ''),
+        winnerName: cleanPlayerName(m.winnerName || 'Sfida Duelist'),
         gameType: m.gameType || 'roulette',
         payoutGram: payout,
         timestamp: m.settledAt || m.createdAt || Date.now(),
@@ -1456,10 +1457,7 @@ export class DatabaseService {
 
         const friendlyWallet = wallet ? this.toFriendlyAddress(wallet) : (userAcc?.walletAddress || '');
 
-        let cleanName = userAcc?.displayName || userAcc?.username || name || '';
-        if (cleanName.startsWith('@')) {
-          cleanName = cleanName.substring(1);
-        }
+        let cleanName = cleanPlayerName(userAcc?.displayName || userAcc?.username || name);
         if (!cleanName && friendlyWallet) {
           cleanName = friendlyWallet.length > 10 ? `${friendlyWallet.slice(0, 4)}...${friendlyWallet.slice(-4)}` : friendlyWallet;
         }

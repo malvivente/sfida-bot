@@ -68,7 +68,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 }}
                 className={`flex-1 py-2 rounded-xl font-heading font-bold flex items-center justify-center space-x-1 transition-all active:scale-95 ${
                   isActive
-                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-epic-purple'
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -190,7 +190,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               triggerImpact('light');
               onClose();
             }}
-            className="w-full py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white font-heading font-black text-xs uppercase tracking-wider rounded-2xl shadow-epic-purple active:scale-95 transition-all"
+            className="w-full py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white font-heading font-black text-xs uppercase tracking-wider rounded-2xl shadow-sm active:scale-95 transition-all"
           >
             {t('rules.understood')}
           </button>

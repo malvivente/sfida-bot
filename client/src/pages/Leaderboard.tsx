@@ -7,6 +7,7 @@ import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 interface LeaderboardProps {
   onBack?: () => void;
@@ -110,7 +111,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
   const renderAvatar = (entry: LeaderboardEntry, sizeClass: string = 'w-9 h-9', textClass: string = 'text-xs') => (
     <UserAvatar
       photoUrl={entry.photoUrl}
-      name={entry.username}
+      name={cleanPlayerName(entry.username)}
       sizeClass={sizeClass}
       textClass={textClass}
     />
@@ -217,7 +218,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                   </span>
                 </div>
                 <span className="text-xs font-heading font-extrabold text-white truncate max-w-full block mt-1">
-                  {top2.username.replace(/^@/, '')}
+                  {cleanPlayerName(top2.username)}
                 </span>
                 <div className="mt-1 text-xs">
                   {getPrimaryStatDisplay(top2)}
@@ -227,7 +228,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
 
             {/* 1st Place Gold (Center Hero) */}
             {top1 && (
-              <div className="bg-gradient-to-b from-amber-500/25 via-[#231d16] to-[#16131b] border-2 border-amber-400/60 rounded-3xl p-3.5 text-center flex flex-col items-center relative shadow-epic-gold -translate-y-2">
+              <div className="bg-gradient-to-b from-amber-500/25 via-[#231d16] to-[#16131b] border-2 border-amber-400/60 rounded-3xl p-3.5 text-center flex flex-col items-center relative shadow-sm -translate-y-2">
                 <Crown className="w-6 h-6 text-amber-300 absolute -top-3 left-1/2 -translate-x-1/2 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
                 <div className="relative mb-1 w-16 h-16 flex items-center justify-center shrink-0 mx-auto mt-1">
                   {renderAvatar(top1, 'w-16 h-16', 'text-base')}
@@ -236,7 +237,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                   </span>
                 </div>
                 <span className="text-xs font-heading font-black text-amber-200 truncate max-w-full block mt-1">
-                  {top1.username.replace(/^@/, '')}
+                  {cleanPlayerName(top1.username)}
                 </span>
                 <div className="mt-1 text-xs font-extrabold">
                   {getPrimaryStatDisplay(top1)}
@@ -254,7 +255,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                   </span>
                 </div>
                 <span className="text-xs font-heading font-extrabold text-white truncate max-w-full block mt-1">
-                  {top3.username.replace(/^@/, '')}
+                  {cleanPlayerName(top3.username)}
                 </span>
                 <div className="mt-1 text-xs">
                   {getPrimaryStatDisplay(top3)}
@@ -276,7 +277,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                     key={entry.rank}
                     className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
                       isCurrentUser
-                        ? 'bg-purple-950/40 border-purple-500/60 shadow-epic-purple'
+                        ? 'bg-purple-950/40 border-purple-500/60 shadow-sm'
                         : 'bg-[#141724]/90 border-white/10 hover:border-white/20'
                     }`}
                   >
@@ -287,7 +288,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onBack }) => {
                       {renderAvatar(entry, 'w-8 h-8', 'text-xs')}
                       <div className="min-w-0">
                         <span className="text-xs font-heading font-bold text-white truncate block">
-                          {entry.username.replace(/^@/, '')}
+                          {cleanPlayerName(entry.username)}
                         </span>
                         <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-0.5">
                           <span>{entry.duelsWon}W / {entry.duelsPlayed}G</span>

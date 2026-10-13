@@ -24,6 +24,7 @@ import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 interface ArenaProps {
   initialMatchId?: string;
@@ -217,7 +218,7 @@ export const Arena: React.FC<ArenaProps> = ({
     wallet: userAddress,
     role: effectiveRole,
     telegramId: userId,
-    username: displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior'),
+    username: cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior')),
     serverUrl,
   });
 
@@ -323,7 +324,7 @@ export const Arena: React.FC<ArenaProps> = ({
     }
 
     try {
-      const playerName = displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (username ? `@${username}` : 'Warrior'));
+      const playerName = cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (username ? username.replace(/^@/, '') : 'Warrior')));
 
       // Call server to create match with in-bot balance
       const res = await fetch(`${serverUrl}/api/matches`, {
@@ -333,7 +334,7 @@ export const Arena: React.FC<ArenaProps> = ({
           wagerAmountNano: (parseFloat(wagerGram) * 1e9).toString(),
           playerAAddress: playerAddress,
           telegramUserId: userId,
-          telegramUsername: displayName || fullName || username || 'Player A',
+          telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player A'),
           photoUrl: photoUrl || '',
           gameType,
           isPrivate: Boolean(isPrivate),
@@ -455,7 +456,7 @@ export const Arena: React.FC<ArenaProps> = ({
         body: JSON.stringify({
           playerBAddress: playerAddress,
           telegramUserId: userId,
-          telegramUsername: displayName || fullName || username || 'Player B',
+          telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player B'),
           photoUrl: photoUrl || '',
           inviteCode: resolvedCode,
         }),
@@ -702,8 +703,8 @@ export const Arena: React.FC<ArenaProps> = ({
   );
 
   const hasPlayerB = Boolean(socketData.playerBName || currentActiveMatch?.playerB);
-  const playerA_Name = socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A';
-  const playerB_Name = socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent'));
+  const playerA_Name = cleanPlayerName(socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A');
+  const playerB_Name = cleanPlayerName(socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent')));
 
   const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
   const effectiveInviteCode = initialInviteCode || currentActiveMatch?.inviteCode || (activeMatchId ? (() => {

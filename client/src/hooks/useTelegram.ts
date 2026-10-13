@@ -32,18 +32,17 @@ export function useTelegram() {
   const username = user?.username;
   const firstName = user?.first_name || '';
   const lastName = user?.last_name || '';
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (username ? `@${username}` : 'Cyber Duelist');
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (username ? username.replace(/^@/, '') : 'Warrior');
   const photoUrl = user?.photo_url;
   const isPremium = !!user?.is_premium;
 
-  // Dynamic display name according to user specification:
-  // First name (with username in parenthesis if available), fallback to Telegram ID, fallback to Warrior
+  // Clean display name: real name (first_name + last_name), fallback to clean username, fallback to Telegram ID, fallback to Warrior
   const displayName = (() => {
     if (firstName) {
-      return username ? `${firstName} (@${username})` : firstName;
+      return [firstName, lastName].filter(Boolean).join(' ');
     }
     if (username) {
-      return `@${username}`;
+      return username.replace(/^@/, '');
     }
     if (userId) {
       return `User #${userId}`;
@@ -51,7 +50,7 @@ export function useTelegram() {
     return 'Warrior';
   })();
 
-  const shortDisplayName = firstName || (username ? `@${username}` : (userId ? `ID:${userId}` : 'Warrior'));
+  const shortDisplayName = firstName || (username ? username.replace(/^@/, '') : (userId ? `ID:${userId}` : 'Warrior'));
 
   return {
     WebApp,
