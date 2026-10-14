@@ -10,7 +10,8 @@ export type RoomState =
   | 'SIGNAL_FIRED'
   | 'ROUND_END'
   | 'MATCH_SETTLED'
-  | 'FORFEITED';
+  | 'FORFEITED'
+  | 'CANCELLED';
 
 export interface PlayerInfo {
   wallet: string;
@@ -101,6 +102,8 @@ export interface BlackjackState {
   bustB: boolean;
   bustOddsPercentA: number;
   bustOddsPercentB: number;
+  isDeathMatch?: boolean;
+  deathMatchRound?: number;
   lastAction?: {
     player: 'A' | 'B';
     action: 'HIT' | 'STAND';
@@ -235,6 +238,14 @@ export interface WsMessage {
   jackpotGram?: number;
   amountGram?: string;
   feePaidGram?: string;
+  spectatorSettlements?: Array<{
+    walletAddress: string;
+    telegramId?: string;
+    target: string;
+    won: boolean;
+    payoutGram: string;
+    refunded?: boolean;
+  }>;
 }
 
 export interface FeeConfig {

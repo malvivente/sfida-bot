@@ -131,6 +131,8 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   const bustB = gameData?.bustB ?? false;
   const bustOddsA = gameData?.bustOddsPercentA ?? 0;
   const bustOddsB = gameData?.bustOddsPercentB ?? 0;
+  const isDeathMatch = gameData?.isDeathMatch ?? false;
+  const deathMatchRound = gameData?.deathMatchRound ?? 1;
   const lastAction = gameData?.lastAction;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 2.0).toFixed(2);
@@ -208,6 +210,18 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
 
       {/* Duel Cards Table */}
       <div className="my-auto w-full flex flex-col space-y-3 py-2 z-10">
+        {isDeathMatch && (
+          <div className="flex items-center justify-center space-x-2 py-1.5 px-3 rounded-xl bg-rose-950/80 border border-rose-500/80 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse">
+            <span className="text-base">💀</span>
+            <span className="text-xs font-orbitron font-extrabold tracking-wider uppercase text-rose-200">
+              DEATH MATCH • ROUND {deathMatchRound}
+            </span>
+            <span className="text-xs font-chakra text-rose-400">
+              (Parità - Round a oltranza)
+            </span>
+          </div>
+        )}
+
         {roomState === 'LOBBY' ? (
           <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-cyber-border text-center space-y-2">
             <Layers className="w-12 h-12 text-cyber-cyan/60 animate-pulse" />

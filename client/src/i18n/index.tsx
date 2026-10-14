@@ -222,6 +222,16 @@ export const translations: Translations = {
   'spectator.betFee': { it: 'Commissione:', en: 'Bet fee:' },
   'spectator.totalNeeded': { it: 'Totale necessario:', en: 'Total needed:' },
   'spectator.pariMutuelNotice': { it: 'Pool Pari-Mutuel (100% payout, 0% rake)', en: 'Pari-Mutuel Pool (100% payout, 0% rake)' },
+  'spectator.outcomeWonTitle': { it: 'SCOMMESSA VINTA!', en: 'BET WON!' },
+  'spectator.payoutAutoCredited': { it: 'Accreditati automaticamente al tuo saldo in-app', en: 'Automatically credited to your in-app balance' },
+  'spectator.outcomeRefundTitle': { it: 'SCOMMESSA RIMBORSATA', en: 'BET REFUNDED' },
+  'spectator.refundNotice': { it: 'Puntata restituita al tuo saldo in-app', en: 'Stake refunded to your in-app balance' },
+  'spectator.outcomeLostTitle': { it: 'SCOMMESSA NON VINCENTE', en: 'BET LOST' },
+  'spectator.lossNotice': { it: 'Pronostico non andato a segno', en: 'Prediction did not win' },
+  'arena.matchCancelledTitle': { it: 'DUELLO ANNULLATO', en: 'DUEL CANCELLED' },
+  'arena.matchCancelledDesc': { it: 'La partita è stata annullata. La tua puntata è stata interamente restituita al tuo saldo in-app.', en: 'The match was cancelled. Your wager has been fully refunded to your in-app balance.' },
+  'arena.wagerRefundedNotice': { it: 'Wager e quote rimborsati al 100%', en: 'Wagers & fees 100% refunded' },
+  'arena.returnToLobbyBtn': { it: 'TORNA ALLA LOBBY', en: 'RETURN TO LOBBY' },
 
   // Match Detail
   'matchDetail.settledOnTon': { it: 'CONCLUSO SU TON', en: 'SETTLED ON TON' },

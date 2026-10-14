@@ -8,7 +8,8 @@ export type RoomState =
   | 'ROUND_START'
   | 'ROUND_END'
   | 'MATCH_SETTLED'
-  | 'FORFEITED';
+  | 'FORFEITED'
+  | 'CANCELLED';
 
 // --- Russian Roulette Types ---
 export type RouletteTarget = 'self' | 'opponent';
@@ -48,6 +49,8 @@ export interface BlackjackState {
   bustB: boolean;
   bustOddsPercentA: number;
   bustOddsPercentB: number;
+  isDeathMatch?: boolean;
+  deathMatchRound?: number;
   lastAction?: {
     player: 'A' | 'B';
     action: 'HIT' | 'STAND';

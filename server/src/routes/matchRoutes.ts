@@ -885,7 +885,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
     await dbService.refundUserBalance(
       room.playerA.walletAddress,
       refundPlayerATotal,
-      `Refund for cancelled match #${id}`
+      `Refund for cancelled match #${id}`,
+      room.playerA.telegramId
     );
     console.log(`[matchRoutes] Refunded ${refundPlayerATotal} GRAM to Player A (${room.playerA.walletAddress}) for cancelled match #${id}`);
 
@@ -897,7 +898,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       await dbService.refundUserBalance(
         room.playerB.walletAddress,
         refundPlayerBTotal,
-        `Refund for cancelled match #${id}`
+        `Refund for cancelled match #${id}`,
+        room.playerB.telegramId
       );
       console.log(`[matchRoutes] Refunded ${refundPlayerBTotal} GRAM to Player B (${room.playerB.walletAddress}) for cancelled match #${id}`);
     }

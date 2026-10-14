@@ -13,7 +13,8 @@ export type RoomState =
   | 'SIGNAL_FIRED'
   | 'ROUND_END'
   | 'MATCH_SETTLED'
-  | 'FORFEITED';
+  | 'FORFEITED'
+  | 'CANCELLED';
 
 export interface MatchResolutionPayload {
   matchId: string;
@@ -842,7 +843,7 @@ export class QuickdrawRoom {
 
   public abortRoom(reason: string = 'Match was cancelled.') {
     this.cleanupTimers();
-    this.state = 'FORFEITED';
+    this.state = 'CANCELLED';
     this.broadcast({
       type: 'ROOM_CANCELLED',
       state: 'CANCELLED',

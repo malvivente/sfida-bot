@@ -31,6 +31,13 @@ interface SpectatorOddsBarProps {
   betStatus?: 'idle' | 'placing' | 'confirmed' | 'error';
   betError?: string | null;
   onClearPlacedBet?: () => void;
+  spectatorOutcome?: {
+    won: boolean;
+    payoutGram: string;
+    refunded?: boolean;
+  } | null;
+  winnerName?: string;
+  winnerSide?: 'A' | 'B' | 'X';
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -52,6 +59,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   betStatus = 'idle',
   betError,
   onClearPlacedBet,
+  spectatorOutcome,
+  winnerName,
+  winnerSide,
 }) => {
   const { t } = useLanguage();
   const { triggerImpact } = useHaptics();
@@ -601,12 +611,60 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 </div>
               </div>
 
-              <div className="w-full py-2 px-3 rounded-lg bg-black/60 border border-cyber-green/40 text-center flex items-center justify-center space-x-2">
-                <Lock className="w-3.5 h-3.5 text-cyber-green" />
-                <span className="text-[11px] font-chakra font-bold text-cyber-green uppercase tracking-wider">
-                  {t('spectator.betLockedNotice')}
-                </span>
-              </div>
+              {roomState === 'MATCH_SETTLED' ? (
+                spectatorOutcome?.won || (winnerSide && placedBet.target === winnerSide) ? (
+                  <div className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyber-green/20 to-emerald-600/30 border border-cyber-green text-center flex flex-col items-center justify-center space-y-1 shadow-[0_0_20px_rgba(0,255,136,0.25)] animate-pulse">
+                    <div className="flex items-center space-x-1.5 text-cyber-green font-chakra font-black text-xs uppercase tracking-wider">
+                      <span>🎉</span>
+                      <span>{t('spectator.outcomeWonTitle') || 'SCOMMESSA VINTA!'}</span>
+                    </div>
+                    <div className="text-base font-orbitron font-black text-white flex items-center space-x-1">
+                      <span className="text-cyber-green">
+                        +{spectatorOutcome?.payoutGram || (parseFloat(placedBet.amountGram) * (placedBet.odds || (placedBet.target === 'A' ? oddsA : placedBet.target === 'X' ? (oddsX || 2.0) : oddsB))).toFixed(2)}
+                      </span>
+                      <GramIcon className="w-4 h-4 text-cyber-green" />
+                    </div>
+                    <span className="text-[10px] text-slate-300 font-chakra">
+                      {t('spectator.payoutAutoCredited') || 'Accreditati automaticamente al tuo saldo in-app'}
+                    </span>
+                  </div>
+                ) : spectatorOutcome?.refunded ? (
+                  <div className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500 text-center flex flex-col items-center justify-center space-y-1 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                    <div className="flex items-center space-x-1.5 text-amber-400 font-chakra font-black text-xs uppercase tracking-wider">
+                      <span>↩️</span>
+                      <span>{t('spectator.outcomeRefundTitle') || 'SCOMMESSA RIMBORSATA'}</span>
+                    </div>
+                    <div className="text-base font-orbitron font-black text-white flex items-center space-x-1">
+                      <span className="text-amber-400">+{spectatorOutcome.payoutGram}</span>
+                      <GramIcon className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <span className="text-[10px] text-slate-300 font-chakra">
+                      {t('spectator.refundNotice') || 'Puntata restituita al tuo saldo in-app'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-950/40 to-rose-900/40 border border-rose-500 text-center flex flex-col items-center justify-center space-y-1 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+                    <div className="flex items-center space-x-1.5 text-rose-400 font-chakra font-black text-xs uppercase tracking-wider">
+                      <span>💀</span>
+                      <span>{t('spectator.outcomeLostTitle') || 'SCOMMESSA NON VINCENTE'}</span>
+                    </div>
+                    <div className="text-sm font-chakra font-bold text-slate-300 flex items-center space-x-1">
+                      <span className="text-rose-400">-{placedBet.amountGram}</span>
+                      <GramIcon className="w-3.5 h-3.5 text-rose-400" />
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-chakra">
+                      {t('spectator.lossNotice') || 'Pronostico non andato a segno'}
+                    </span>
+                  </div>
+                )
+              ) : (
+                <div className="w-full py-2 px-3 rounded-lg bg-black/60 border border-cyber-green/40 text-center flex items-center justify-center space-x-2">
+                  <Lock className="w-3.5 h-3.5 text-cyber-green" />
+                  <span className="text-[11px] font-chakra font-bold text-cyber-green uppercase tracking-wider">
+                    {t('spectator.betLockedNotice')}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

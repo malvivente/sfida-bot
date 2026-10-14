@@ -13,6 +13,8 @@ export class BlackjackRoom extends BaseGameRoom {
   public standB: boolean = false;
   public bustA: boolean = false;
   public bustB: boolean = false;
+  public isDeathMatch: boolean = false;
+  public deathMatchRound: number = 0;
   public lastAction?: BlackjackState['lastAction'];
 
   private turnTimeout?: NodeJS.Timeout;
@@ -107,6 +109,8 @@ export class BlackjackRoom extends BaseGameRoom {
       bustB: this.bustB,
       bustOddsPercentA: this.calculateBustOdds(this.scoreA),
       bustOddsPercentB: this.calculateBustOdds(this.scoreB),
+      isDeathMatch: this.isDeathMatch,
+      deathMatchRound: this.deathMatchRound,
       lastAction: this.lastAction,
     };
   }
@@ -272,58 +276,104 @@ export class BlackjackRoom extends BaseGameRoom {
     let winnerWallet = '';
     let winReason = '';
 
+    const isTie = (this.bustA && this.bustB) || (!this.bustA && !this.bustB && this.scoreA === this.scoreB);
+
+    if (isTie) {
+      this.isDeathMatch = true;
+      this.deathMatchRound = (this.deathMatchRound || 0) + 1;
+      const tieReason = this.bustA && this.bustB
+        ? `Entrambi i giocatori hanno sballato (${this.scoreA} vs ${this.scoreB})!`
+        : `Punteggio identico (${this.scoreA} a ${this.scoreB})!`;
+      
+      const deathMatchMsg = `💀 PARITÀ! ${tieReason} Inizia il DEATH MATCH (Round ${this.deathMatchRound})!`;
+      console.log(`[Blackjack] Match #${this.matchId}: ${deathMatchMsg}`);
+
+      this.lastAction = {
+        player: 'A',
+        action: 'STAND',
+        message: deathMatchMsg,
+      };
+
+      this.broadcast({
+        type: 'BLACKJACK_TIE',
+        message: deathMatchMsg,
+        isDeathMatch: true,
+        deathMatchRound: this.deathMatchRound,
+        gameData: this.getGamePayload(),
+      });
+      this.broadcastRoomState();
+
+      // Start Death Match Round after 2.5 seconds
+      setTimeout(() => {
+        this.startDeathMatchRound();
+      }, 2500);
+      return;
+    }
+
     if (this.bustA && !this.bustB) {
       winnerWallet = walletB;
-      winReason = `${this.playerB?.username} wins because ${this.playerA.username} busted!`;
+      winReason = `${this.playerB?.username} vince perché ${this.playerA.username} ha sballato!`;
     } else if (!this.bustA && this.bustB) {
       winnerWallet = walletA;
-      winReason = `${this.playerA.username} wins because ${this.playerB?.username} busted!`;
-    } else if (this.bustA && this.bustB) {
-      // Both busted: lower score wins or sudden death card
-      if (this.scoreA < this.scoreB) {
-        winnerWallet = walletA;
-        winReason = `Both players busted, but ${this.playerA.username} was closer with ${this.scoreA} vs ${this.scoreB}!`;
-      } else {
-        winnerWallet = walletB;
-        winReason = `Both players busted, but ${this.playerB?.username} was closer with ${this.scoreB} vs ${this.scoreA}!`;
-      }
+      winReason = `${this.playerA.username} vince perché ${this.playerB?.username} ha sballato!`;
+    } else if (this.scoreA > this.scoreB) {
+      winnerWallet = walletA;
+      winReason = `${this.playerA.username} vince con ${this.scoreA} contro ${this.scoreB}!`;
     } else {
-      // Neither busted: closest to 21
-      if (this.scoreA > this.scoreB) {
-        winnerWallet = walletA;
-        winReason = `${this.playerA.username} wins with ${this.scoreA} against ${this.scoreB}!`;
-      } else if (this.scoreB > this.scoreA) {
-        winnerWallet = walletB;
-        winReason = `${this.playerB?.username} wins with ${this.scoreB} against ${this.scoreA}!`;
-      } else {
-        // Equal Score! First Tiebreaker: Hand Efficiency (fewer cards in hand wins)
-        if (this.handA.length < this.handB.length) {
-          winnerWallet = walletA;
-          winReason = `🎯 Hand Efficiency! ${this.playerA.username} wins on ${this.scoreA} with ${this.handA.length} cards vs ${this.playerB?.username}'s ${this.handB.length} cards!`;
-        } else if (this.handB.length < this.handA.length) {
-          winnerWallet = walletB;
-          winReason = `🎯 Hand Efficiency! ${this.playerB?.username} wins on ${this.scoreB} with ${this.handB.length} cards vs ${this.playerA.username}'s ${this.handA.length} cards!`;
-        } else {
-          // Second Tiebreaker: Highest single card in hand (Rank, then Suit: ♠ > ♥ > ♦ > ♣)
-          const scoreCard = (c: Card) => this.getCardRank(c.value) * 10 + this.getSuitRank(c.suit);
-          const sortedA = [...this.handA].sort((a, b) => scoreCard(b) - scoreCard(a));
-          const sortedB = [...this.handB].sort((a, b) => scoreCard(b) - scoreCard(a));
-          const topA = sortedA[0];
-          const topB = sortedB[0];
-
-          if (scoreCard(topA) >= scoreCard(topB)) {
-            winnerWallet = walletA;
-            winReason = `Exact Tie on ${this.scoreA} (${this.handA.length} cards)! ${this.playerA.username} wins on card hierarchy: ${topA.value}${topA.suit} vs ${topB.value}${topB.suit}!`;
-          } else {
-            winnerWallet = walletB;
-            winReason = `Exact Tie on ${this.scoreB} (${this.handB.length} cards)! ${this.playerB?.username} wins on card hierarchy: ${topB.value}${topB.suit} vs ${topA.value}${topA.suit}!`;
-          }
-        }
-      }
+      winnerWallet = walletB;
+      winReason = `${this.playerB?.username} vince con ${this.scoreB} contro ${this.scoreA}!`;
     }
 
     console.log(`[Blackjack] Match #${this.matchId} outcome: ${winReason}`);
     this.settleMatch(winnerWallet);
+  }
+
+  private startDeathMatchRound() {
+    this.cleanupGameTimers();
+
+    // Check if deck has enough cards for a new round (at least 15 cards)
+    if (this.deck.length < 15) {
+      this.deck = this.initDeck();
+    }
+
+    this.handA = [];
+    this.handB = [];
+    this.standA = false;
+    this.standB = false;
+    this.bustA = false;
+    this.bustB = false;
+
+    // Coin toss for who plays first in this death match round
+    this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
+    const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+
+    // Deal 2 face-up cards to each player
+    this.handA.push(this.deck.pop()!);
+    this.handB.push(this.deck.pop()!);
+    this.handA.push(this.deck.pop()!);
+    this.handB.push(this.deck.pop()!);
+
+    this.scoreA = this.calculateHandScore(this.handA);
+    this.scoreB = this.calculateHandScore(this.handB);
+
+    const roundMsg = `⚔️ DEATH MATCH R${this.deathMatchRound}: Turno a ${firstPlayerName}! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}`;
+
+    this.lastAction = {
+      player: this.currentTurn,
+      action: 'HIT',
+      message: roundMsg,
+    };
+
+    this.broadcast({
+      type: 'BLACKJACK_ROUND_START',
+      message: roundMsg,
+      isDeathMatch: true,
+      deathMatchRound: this.deathMatchRound,
+      gameData: this.getGamePayload(),
+    });
+
+    this.startTurnTimer();
+    this.broadcastRoomState();
   }
 
   private getCardRank(value: string): number {

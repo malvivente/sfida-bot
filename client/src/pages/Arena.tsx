@@ -243,12 +243,16 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   }, [socketData.feedMessage, activeMatchId, initialMatchId, onClearDeepMatch]);
 
-  // Auto-refresh user balance when match settles
+  // Auto-refresh user balance when match settles or is cancelled
   useEffect(() => {
-    if (socketData.roomState === 'MATCH_SETTLED') {
+    if (socketData.roomState === 'MATCH_SETTLED' || socketData.roomState === 'CANCELLED') {
       fetchUserBalance();
-      const t = setTimeout(fetchUserBalance, 1500);
-      return () => clearTimeout(t);
+      const t1 = setTimeout(fetchUserBalance, 1200);
+      const t2 = setTimeout(fetchUserBalance, 2500);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
   }, [socketData.roomState]);
 
@@ -902,6 +906,38 @@ export const Arena: React.FC<ArenaProps> = ({
         }}
       />
 
+      {/* Match Cancelled / Wager Refunded Friendly Notice Modal */}
+      {activeMatchId && socketData.roomState === 'CANCELLED' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-sm rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-amber-500/40 p-6 shadow-[0_0_30px_rgba(245,158,11,0.2)] text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-2xl">
+              ⚠️
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-heading font-black text-white uppercase tracking-wider">
+                {t('arena.matchCancelledTitle')}
+              </h3>
+              <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                {socketData.feedMessage || t('arena.matchCancelledDesc')}
+              </p>
+            </div>
+            <div className="py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-mono font-bold text-amber-300 flex items-center justify-center space-x-1.5">
+              <span>✓ {t('arena.wagerRefundedNotice')}</span>
+            </div>
+            <button
+              onClick={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-heading font-black text-xs uppercase tracking-wider shadow-lg transition-all active:scale-95"
+            >
+              {t('arena.returnToLobbyBtn')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {activeMatchId ? (
         <div className="space-y-4">
           {/* Top Header Controls: Back to Lobby + Share + Cancel Duel if Creator */}
@@ -1318,6 +1354,15 @@ export const Arena: React.FC<ArenaProps> = ({
               betStatus={socketData.betStatus}
               betError={socketData.betError}
               onClearPlacedBet={socketData.clearPlacedBet}
+              spectatorOutcome={socketData.spectatorOutcome}
+              winnerName={socketData.matchWinnerName || undefined}
+              winnerSide={
+                socketData.matchWinner
+                  ? currentActiveMatch?.playerA && areAddressesEqual(socketData.matchWinner, currentActiveMatch.playerA.wallet)
+                    ? 'A'
+                    : 'B'
+                  : undefined
+              }
             />
           )}
         </div>

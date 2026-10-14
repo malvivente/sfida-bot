@@ -9,6 +9,12 @@ export interface PlacedSpectatorBet {
   odds?: number;
 }
 
+export interface SpectatorOutcome {
+  won: boolean;
+  payoutGram: string;
+  refunded?: boolean;
+}
+
 interface UseSocketProps {
   matchId: string;
   wallet?: string;
@@ -89,6 +95,7 @@ export function useSocket({
   const [placedBet, setPlacedBet] = useState<PlacedSpectatorBet | null>(null);
   const [betStatus, setBetStatus] = useState<'idle' | 'placing' | 'confirmed' | 'error'>('idle');
   const [betError, setBetError] = useState<string | null>(null);
+  const [spectatorOutcome, setSpectatorOutcome] = useState<SpectatorOutcome | null>(null);
 
   useEffect(() => {
     // Reset room state when entering a new match or switching rooms
@@ -114,6 +121,7 @@ export function useSocket({
     setPlacedBet(null);
     setBetStatus('idle');
     setBetError(null);
+    setSpectatorOutcome(null);
 
     if (!matchId) return;
 
@@ -195,6 +203,8 @@ export function useSocket({
           case 'ROULETTE_UPDATE':
           case 'BLACKJACK_START':
           case 'BLACKJACK_UPDATE':
+          case 'BLACKJACK_TIE':
+          case 'BLACKJACK_ROUND_START':
           case 'BRIDGE_UPDATE':
           case 'CHRONO_ROUND_START':
           case 'CHRONO_UPDATE':
@@ -300,6 +310,24 @@ export function useSocket({
             if (msg.resolution) setResolution(msg.resolution);
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
+            if (msg.spectatorSettlements && Array.isArray(msg.spectatorSettlements)) {
+              const mySettlement = msg.spectatorSettlements.find((s: any) => {
+                if (telegramId && s.telegramId && String(s.telegramId) === String(telegramId)) return true;
+                if (wallet && s.walletAddress) {
+                  const normW = wallet.toLowerCase().trim();
+                  const normS = s.walletAddress.toLowerCase().trim();
+                  if (normW === normS) return true;
+                }
+                return false;
+              });
+              if (mySettlement) {
+                setSpectatorOutcome({
+                  won: mySettlement.won,
+                  payoutGram: mySettlement.payoutGram,
+                  refunded: mySettlement.refunded,
+                });
+              }
+            }
             if (msg.winnerName && !msg.winnerName.includes('Nessun') && !msg.winnerName.includes('Pace')) {
               window.dispatchEvent(
                 new CustomEvent('sfida_global_win', {
@@ -316,7 +344,7 @@ export function useSocket({
             break;
 
           case 'ROOM_CANCELLED':
-            setRoomState('FORFEITED');
+            setRoomState('CANCELLED');
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
             break;
@@ -603,6 +631,8 @@ export function useSocket({
     betStatus,
     betError,
     clearPlacedBet,
+    spectatorOutcome,
+    setSpectatorOutcome,
     requestRematch,
     acceptRematch,
     declineRematch,

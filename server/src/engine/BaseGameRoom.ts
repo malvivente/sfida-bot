@@ -592,6 +592,15 @@ export abstract class BaseGameRoom {
     // Settle spectator bets
     const winningSide = winnerAddress === this.playerA.walletAddress ? 'A' : 'B';
     const totalPoolNano = this.totalBetsA + this.totalBetsB;
+    const spectatorSettlements: Array<{
+      walletAddress: string;
+      telegramId?: string;
+      target: string;
+      won: boolean;
+      payoutGram: string;
+      refunded?: boolean;
+    }> = [];
+
     if (totalPoolNano > 0n && this.spectatorBets.length > 0) {
       const winningBets = this.spectatorBets.filter((b) => b.target === winningSide);
       const totalWinningBetsNano = winningSide === 'A' ? this.totalBetsA : this.totalBetsB;
@@ -608,25 +617,53 @@ export abstract class BaseGameRoom {
 
       if (winningBets.length > 0 && totalWinningBetsNano > 0n) {
         const winningBetsGram = Number(totalWinningBetsNano) / 1e9;
-        for (const bet of winningBets) {
-          const share = bet.amountGram / winningBetsGram;
-          const payoutGram = (distributablePoolGram * share).toFixed(2);
-          dbService.creditUserBalance(
-            bet.walletAddress,
-            payoutGram,
-            'MATCH_WIN',
-            `Won spectator bet on match #${this.matchId}`
-          ).catch((err) => {
-            console.error(`[BaseGameRoom] Error crediting spectator winner ${bet.walletAddress}:`, err);
-          });
+        for (const bet of this.spectatorBets) {
+          if (bet.target === winningSide) {
+            const share = bet.amountGram / winningBetsGram;
+            const payoutGram = (distributablePoolGram * share).toFixed(2);
+            spectatorSettlements.push({
+              walletAddress: bet.walletAddress,
+              telegramId: bet.telegramId,
+              target: bet.target,
+              won: true,
+              payoutGram,
+            });
+            dbService.creditUserBalance(
+              bet.walletAddress,
+              payoutGram,
+              'MATCH_WIN',
+              `Won spectator bet on match #${this.matchId}`,
+              bet.telegramId
+            ).catch((err) => {
+              console.error(`[BaseGameRoom] Error crediting spectator winner ${bet.walletAddress}:`, err);
+            });
+          } else {
+            spectatorSettlements.push({
+              walletAddress: bet.walletAddress,
+              telegramId: bet.telegramId,
+              target: bet.target,
+              won: false,
+              payoutGram: '0.00',
+            });
+          }
         }
       } else {
         // No winners on winning side: refund stakes to all spectators
         for (const bet of this.spectatorBets) {
+          const refundAmount = bet.amountGram.toFixed(2);
+          spectatorSettlements.push({
+            walletAddress: bet.walletAddress,
+            telegramId: bet.telegramId,
+            target: bet.target,
+            won: false,
+            payoutGram: refundAmount,
+            refunded: true,
+          });
           dbService.refundUserBalance(
             bet.walletAddress,
-            bet.amountGram.toFixed(2),
-            `Refund for spectator bet on match #${this.matchId}`
+            refundAmount,
+            `Refund for spectator bet on match #${this.matchId}`,
+            bet.telegramId
           ).catch((err) => {
             console.error(`[BaseGameRoom] Error refunding spectator ${bet.walletAddress}:`, err);
           });
@@ -674,6 +711,7 @@ export abstract class BaseGameRoom {
       payoutTon: winnerPayoutGram,
       message: `🏆 ${winnerName} has won the duel!`,
       gameData: this.getGamePayload(),
+      spectatorSettlements,
     });
 
     this.broadcastRoomState();
@@ -761,7 +799,7 @@ export abstract class BaseGameRoom {
 
   public abortRoom(reason: string = 'Match was cancelled.') {
     this.cleanupTimers();
-    this.state = 'FORFEITED';
+    this.state = 'CANCELLED';
 
     // Refund any spectator bets + spectator fee
     for (const bet of this.spectatorBets) {
@@ -769,7 +807,8 @@ export abstract class BaseGameRoom {
       dbService.refundUserBalance(
         bet.walletAddress,
         refundTotal,
-        `Refund for spectator bet on cancelled match #${this.matchId}`
+        `Refund for spectator bet on cancelled match #${this.matchId}`,
+        bet.telegramId
       ).catch(console.error);
     }
 

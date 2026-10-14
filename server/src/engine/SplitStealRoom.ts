@@ -672,6 +672,14 @@ export class SplitStealRoom extends BaseGameRoom {
     // --- Settle Spectator Bets ---
     const totalSpecPoolNano = this.totalBetsA + this.totalBetsB + this.totalBetsX;
     const totalSpecPoolGram = Number(totalSpecPoolNano) / 1e9;
+    const spectatorSettlements: Array<{
+      walletAddress: string;
+      telegramId?: string;
+      target: string;
+      won: boolean;
+      payoutGram: string;
+      refunded?: boolean;
+    }> = [];
 
     if (totalSpecPoolGram > 0 && this.spectatorBets.length > 0) {
       if (winningSpectatorSide === 'NONE') {
@@ -683,6 +691,15 @@ export class SplitStealRoom extends BaseGameRoom {
         this.jackpotGram = await dbService.getTrustJackpot();
         this.jackpotStatus = this.jackpotGram >= 5.0 ? 'ACTIVE' : 'CHARGING';
         console.log(`[SplitSteal] Double Steal: Spectator pool of ${totalSpecPoolGram} GRAM divided: ${specHalf} to treasury, ${specHalf} to Jackpot.`);
+        for (const bet of this.spectatorBets) {
+          spectatorSettlements.push({
+            walletAddress: bet.walletAddress,
+            telegramId: bet.telegramId,
+            target: bet.target,
+            won: false,
+            payoutGram: '0.00',
+          });
+        }
       } else {
         // Winning side is 'A', 'B', or 'X'
         const { spectatorRakePercent } = feeConfig.getConfig();
@@ -704,23 +721,51 @@ export class SplitStealRoom extends BaseGameRoom {
         const winningBetsGram = Number(winningBetsTotalNano) / 1e9;
 
         if (winningBets.length > 0 && winningBetsGram > 0) {
-          for (const bet of winningBets) {
-            const share = bet.amountGram / winningBetsGram;
-            const payoutGram = (distributableSpecGram * share).toFixed(2);
-            await dbService.creditUserBalance(
-              bet.walletAddress,
-              payoutGram,
-              'MATCH_WIN',
-              `Won 1-X-2 spectator bet (${winningSpectatorSide}) on Split or Steal #${this.matchId}`
-            );
+          for (const bet of this.spectatorBets) {
+            if (bet.target === winningSpectatorSide) {
+              const share = bet.amountGram / winningBetsGram;
+              const payoutGram = (distributableSpecGram * share).toFixed(2);
+              spectatorSettlements.push({
+                walletAddress: bet.walletAddress,
+                telegramId: bet.telegramId,
+                target: bet.target,
+                won: true,
+                payoutGram,
+              });
+              await dbService.creditUserBalance(
+                bet.walletAddress,
+                payoutGram,
+                'MATCH_WIN',
+                `Won 1-X-2 spectator bet (${winningSpectatorSide}) on Split or Steal #${this.matchId}`,
+                bet.telegramId
+              );
+            } else {
+              spectatorSettlements.push({
+                walletAddress: bet.walletAddress,
+                telegramId: bet.telegramId,
+                target: bet.target,
+                won: false,
+                payoutGram: '0.00',
+              });
+            }
           }
         } else {
           // No winners on winning side: refund all spectators
           for (const bet of this.spectatorBets) {
+            const refundAmount = bet.amountGram.toFixed(2);
+            spectatorSettlements.push({
+              walletAddress: bet.walletAddress,
+              telegramId: bet.telegramId,
+              target: bet.target,
+              won: false,
+              payoutGram: refundAmount,
+              refunded: true,
+            });
             await dbService.refundUserBalance(
               bet.walletAddress,
-              bet.amountGram.toFixed(2),
-              `Refund for spectator bet on Split or Steal match #${this.matchId} (no winners on side ${winningSpectatorSide})`
+              refundAmount,
+              `Refund for spectator bet on Split or Steal match #${this.matchId} (no winners on side ${winningSpectatorSide})`,
+              bet.telegramId
             );
           }
         }
@@ -805,6 +850,7 @@ export class SplitStealRoom extends BaseGameRoom {
       payoutTon: finalPayoutGram,
       message: this.message,
       gameData: this.getGamePayload(),
+      spectatorSettlements,
     });
 
     this.broadcastRoomState();
