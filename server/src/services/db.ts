@@ -108,12 +108,34 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
   timestamp: number;
   details?: string;
+}
+
+export interface FriendshipRecord {
+  id: string;
+  user1Key: string;
+  user2Key: string;
+  createdAt: number;
+}
+
+export interface FriendRequestRecord {
+  id: string;
+  fromUserKey: string;
+  fromTelegramId?: string;
+  fromUsername?: string;
+  fromDisplayName?: string;
+  fromPhotoUrl?: string;
+  toUserKey: string;
+  toTelegramId?: string;
+  toUsername?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface TreasuryFeeEvent {
@@ -186,6 +208,8 @@ export class DatabaseService {
   private usersByWallet: Map<string, UserAccount> = new Map();
   private usersByUsername: Map<string, UserAccount> = new Map();
   private groupAffiliates: Map<string, GroupAffiliate> = new Map();
+  private friendships: Map<string, FriendshipRecord> = new Map();
+  private friendRequests: Map<string, FriendRequestRecord> = new Map();
   private transactions: BalanceTransaction[] = [];
   private treasury: TreasuryData;
   private jackpot: JackpotData;
@@ -196,6 +220,8 @@ export class DatabaseService {
   private treasuryFilePath: string;
   private jackpotFilePath: string;
   private groupsFilePath: string;
+  private friendsFilePath: string;
+  private friendRequestsFilePath: string;
   private initialized: boolean = false;
 
   private constructor() {
@@ -206,6 +232,8 @@ export class DatabaseService {
     this.treasuryFilePath = path.join(this.dataDir, 'treasury.json');
     this.jackpotFilePath = path.join(this.dataDir, 'jackpot.json');
     this.groupsFilePath = path.join(this.dataDir, 'groups.json');
+    this.friendsFilePath = path.join(this.dataDir, 'friends.json');
+    this.friendRequestsFilePath = path.join(this.dataDir, 'friend_requests.json');
 
     const defaultTreasuryWallet =
       process.env.TREASURY_ADDRESS ||
@@ -353,6 +381,30 @@ export class DatabaseService {
         this.persistData();
       }
 
+      if (fs.existsSync(this.friendsFilePath)) {
+        const rawFriends = fs.readFileSync(this.friendsFilePath, 'utf-8');
+        const list: FriendshipRecord[] = JSON.parse(rawFriends);
+        this.friendships.clear();
+        for (const f of list) {
+          this.friendships.set(f.id, f);
+        }
+        console.log(`[DatabaseService] Loaded ${this.friendships.size} friendships.`);
+      } else {
+        fs.writeFileSync(this.friendsFilePath, JSON.stringify([], null, 2), 'utf-8');
+      }
+
+      if (fs.existsSync(this.friendRequestsFilePath)) {
+        const rawReqs = fs.readFileSync(this.friendRequestsFilePath, 'utf-8');
+        const list: FriendRequestRecord[] = JSON.parse(rawReqs);
+        this.friendRequests.clear();
+        for (const r of list) {
+          this.friendRequests.set(r.id, r);
+        }
+        console.log(`[DatabaseService] Loaded ${this.friendRequests.size} friend requests.`);
+      } else {
+        fs.writeFileSync(this.friendRequestsFilePath, JSON.stringify([], null, 2), 'utf-8');
+      }
+
       this.initialized = true;
     } catch (err) {
       console.warn('[DatabaseService] Warning loading database file:', err);
@@ -378,6 +430,12 @@ export class DatabaseService {
 
       const groupList = Array.from(this.groupAffiliates.values());
       fs.writeFileSync(this.groupsFilePath, JSON.stringify(groupList, null, 2), 'utf-8');
+
+      const friendsList = Array.from(this.friendships.values());
+      fs.writeFileSync(this.friendsFilePath, JSON.stringify(friendsList, null, 2), 'utf-8');
+
+      const reqList = Array.from(this.friendRequests.values());
+      fs.writeFileSync(this.friendRequestsFilePath, JSON.stringify(reqList, null, 2), 'utf-8');
     } catch (err) {
       console.error('[DatabaseService] Failed to persist data to file:', err);
     }
@@ -1751,6 +1809,310 @@ export class DatabaseService {
     this.persistData();
     console.log(`[DatabaseService] Deducted ${deducted.toFixed(2)} GRAM from Trust Jackpot for bonus payout. New balance: ${newBal} GRAM`);
     return parseFloat(newBal);
+  }
+
+  // --- Friends & Social Infrastructure ---
+  public getUserCanonicalKey(walletAddress?: string, telegramId?: string | number): string {
+    const cleanTg = telegramId ? String(telegramId).trim() : '';
+    if (cleanTg) return `tg_${cleanTg}`;
+    if (walletAddress) {
+      const norm = this.normalizeAddress(walletAddress);
+      if (norm) return norm;
+      return walletAddress.toLowerCase();
+    }
+    return '';
+  }
+
+  public findUser(identifier: string): UserAccount | null {
+    if (!identifier) return null;
+    const clean = identifier.trim();
+    const cleanLower = clean.toLowerCase();
+    const cleanUname = cleanLower.replace(/^@/, '');
+
+    // 1. By Telegram ID
+    let account = this.usersByTg.get(clean) || this.usersByTg.get(cleanLower);
+    if (account) return account;
+
+    // 2. By Username
+    account = this.usersByUsername.get(cleanUname);
+    if (account) return account;
+
+    // 3. By Wallet Address
+    const norm = this.normalizeAddress(clean);
+    if (norm) {
+      account = this.usersByWallet.get(norm);
+      if (account) return account;
+    }
+    account = this.usersByWallet.get(cleanLower);
+    if (account) return account;
+
+    // 4. By Storage key or scan
+    for (const [key, u] of this.users.entries()) {
+      if (
+        key === clean ||
+        key === cleanLower ||
+        key === `tg_${clean}` ||
+        u.telegramId === clean ||
+        (u.username && u.username.toLowerCase() === cleanUname) ||
+        (u.walletAddress && u.walletAddress.toLowerCase() === cleanLower)
+      ) {
+        return u;
+      }
+    }
+    return null;
+  }
+
+  public async getFriends(identifier: string): Promise<UserAccount[]> {
+    const user = this.findUser(identifier);
+    if (!user) return [];
+    const userKey = this.getUserCanonicalKey(user.walletAddress, user.telegramId);
+
+    const friendAccounts: UserAccount[] = [];
+    const seen = new Set<string>();
+
+    for (const friendship of this.friendships.values()) {
+      let otherKey = '';
+      if (friendship.user1Key === userKey) {
+        otherKey = friendship.user2Key;
+      } else if (friendship.user2Key === userKey) {
+        otherKey = friendship.user1Key;
+      }
+
+      if (otherKey && !seen.has(otherKey)) {
+        seen.add(otherKey);
+        const friend = this.findUser(otherKey);
+        if (friend) {
+          friendAccounts.push(friend);
+        }
+      }
+    }
+
+    return friendAccounts;
+  }
+
+  public async getFriendRequests(identifier: string): Promise<{
+    incoming: FriendRequestRecord[];
+    outgoing: FriendRequestRecord[];
+  }> {
+    const user = this.findUser(identifier);
+    if (!user) return { incoming: [], outgoing: [] };
+    const userKey = this.getUserCanonicalKey(user.walletAddress, user.telegramId);
+
+    const incoming: FriendRequestRecord[] = [];
+    const outgoing: FriendRequestRecord[] = [];
+
+    for (const req of this.friendRequests.values()) {
+      if (req.status !== 'PENDING') continue;
+      if (req.toUserKey === userKey) {
+        incoming.push(req);
+      } else if (req.fromUserKey === userKey) {
+        outgoing.push(req);
+      }
+    }
+
+    return { incoming, outgoing };
+  }
+
+  public async sendFriendRequest(
+    senderIdentifier: string,
+    recipientIdentifier: string
+  ): Promise<{ success: boolean; request?: FriendRequestRecord; error?: string }> {
+    const sender = this.findUser(senderIdentifier);
+    if (!sender) return { success: false, error: 'Mittente non trovato' };
+
+    const recipient = this.findUser(recipientIdentifier);
+    if (!recipient) return { success: false, error: 'Utente non trovato su Sfida Arena' };
+
+    const senderKey = this.getUserCanonicalKey(sender.walletAddress, sender.telegramId);
+    const recipientKey = this.getUserCanonicalKey(recipient.walletAddress, recipient.telegramId);
+
+    if (senderKey === recipientKey) {
+      return { success: false, error: 'Non puoi inviare una richiesta di amicizia a te stesso' };
+    }
+
+    // Check if already friends
+    const friendshipId1 = `fs_${senderKey}_${recipientKey}`;
+    const friendshipId2 = `fs_${recipientKey}_${senderKey}`;
+    if (this.friendships.has(friendshipId1) || this.friendships.has(friendshipId2)) {
+      return { success: false, error: 'Siete già amici!' };
+    }
+
+    // Check existing pending request
+    for (const req of this.friendRequests.values()) {
+      if (req.status === 'PENDING') {
+        if (req.fromUserKey === senderKey && req.toUserKey === recipientKey) {
+          return { success: false, error: 'Hai già una richiesta di amicizia in attesa per questo utente' };
+        }
+        if (req.fromUserKey === recipientKey && req.toUserKey === senderKey) {
+          // Reciprocal request: auto-accept!
+          req.status = 'ACCEPTED';
+          req.updatedAt = Date.now();
+          this.friendships.set(friendshipId1, {
+            id: friendshipId1,
+            user1Key: senderKey,
+            user2Key: recipientKey,
+            createdAt: Date.now(),
+          });
+          this.persistData();
+          return { success: true, request: req };
+        }
+      }
+    }
+
+    const reqId = `freq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const requestRecord: FriendRequestRecord = {
+      id: reqId,
+      fromUserKey: senderKey,
+      fromTelegramId: sender.telegramId,
+      fromUsername: sender.username,
+      fromDisplayName: sender.displayName || sender.username || 'Un duellante',
+      fromPhotoUrl: sender.photoUrl,
+      toUserKey: recipientKey,
+      toTelegramId: recipient.telegramId,
+      toUsername: recipient.username,
+      status: 'PENDING',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    this.friendRequests.set(reqId, requestRecord);
+    this.persistData();
+    return { success: true, request: requestRecord };
+  }
+
+  public async respondFriendRequest(
+    requestId: string,
+    userIdentifier: string,
+    action: 'ACCEPT' | 'DECLINE'
+  ): Promise<{ success: boolean; error?: string }> {
+    const req = this.friendRequests.get(requestId);
+    if (!req) return { success: false, error: 'Richiesta non trovata' };
+    if (req.status !== 'PENDING') return { success: false, error: 'Questa richiesta è già stata gestita' };
+
+    const user = this.findUser(userIdentifier);
+    if (!user) return { success: false, error: 'Utente non trovato' };
+    const userKey = this.getUserCanonicalKey(user.walletAddress, user.telegramId);
+
+    if (req.toUserKey !== userKey) {
+      return { success: false, error: 'Non sei autorizzato a gestire questa richiesta' };
+    }
+
+    if (action === 'DECLINE') {
+      req.status = 'DECLINED';
+      req.updatedAt = Date.now();
+      this.persistData();
+      return { success: true };
+    }
+
+    req.status = 'ACCEPTED';
+    req.updatedAt = Date.now();
+    const friendshipId = `fs_${req.fromUserKey}_${req.toUserKey}`;
+    this.friendships.set(friendshipId, {
+      id: friendshipId,
+      user1Key: req.fromUserKey,
+      user2Key: req.toUserKey,
+      createdAt: Date.now(),
+    });
+
+    this.persistData();
+    return { success: true };
+  }
+
+  public async removeFriend(userIdentifier: string, friendIdentifier: string): Promise<boolean> {
+    const user = this.findUser(userIdentifier);
+    const friend = this.findUser(friendIdentifier);
+    if (!user || !friend) return false;
+
+    const userKey = this.getUserCanonicalKey(user.walletAddress, user.telegramId);
+    const friendKey = this.getUserCanonicalKey(friend.walletAddress, friend.telegramId);
+
+    const fs1 = `fs_${userKey}_${friendKey}`;
+    const fs2 = `fs_${friendKey}_${userKey}`;
+
+    let removed = false;
+    if (this.friendships.delete(fs1)) removed = true;
+    if (this.friendships.delete(fs2)) removed = true;
+
+    if (removed) {
+      this.persistData();
+    }
+    return removed;
+  }
+
+  public async transferBalance(
+    senderIdentifier: string,
+    recipientIdentifier: string,
+    amountGram: string,
+    note?: string
+  ): Promise<{ success: boolean; error?: string; senderAccount?: UserAccount; recipientAccount?: UserAccount }> {
+    const sender = this.findUser(senderIdentifier);
+    if (!sender) return { success: false, error: 'Mittente non trovato' };
+
+    const recipient = this.findUser(recipientIdentifier);
+    if (!recipient) return { success: false, error: 'Destinatario non trovato. Verifica lo username o ID.' };
+
+    const senderKey = this.getUserCanonicalKey(sender.walletAddress, sender.telegramId);
+    const recipientKey = this.getUserCanonicalKey(recipient.walletAddress, recipient.telegramId);
+
+    if (senderKey === recipientKey) {
+      return { success: false, error: 'Non puoi inviare un tip a te stesso!' };
+    }
+
+    const amtNum = parseFloat(amountGram);
+    if (isNaN(amtNum) || amtNum <= 0) {
+      return { success: false, error: 'Importo non valido' };
+    }
+    if (amtNum < 0.1) {
+      return { success: false, error: 'L\'importo minimo per un tip è di 0.10 GRAM' };
+    }
+
+    const curBal = parseFloat(sender.balanceGram || sender.balanceTon || '0');
+    if (curBal < amtNum) {
+      return { success: false, error: `Saldo insufficiente: hai ${curBal.toFixed(2)} GRAM, stai provando a inviare ${amtNum.toFixed(2)} GRAM` };
+    }
+
+    const amtStr = amtNum.toFixed(2);
+    const senderNewBal = (curBal - amtNum).toFixed(2);
+    sender.balanceGram = senderNewBal;
+    sender.balanceTon = senderNewBal;
+    sender.balanceNano = BigInt(Math.round(parseFloat(senderNewBal) * 1e9)).toString();
+    sender.updatedAt = Date.now();
+
+    const recipientCur = parseFloat(recipient.balanceGram || recipient.balanceTon || '0');
+    const recipientNewBal = (recipientCur + amtNum).toFixed(2);
+    recipient.balanceGram = recipientNewBal;
+    recipient.balanceTon = recipientNewBal;
+    recipient.balanceNano = BigInt(Math.round(parseFloat(recipientNewBal) * 1e9)).toString();
+    recipient.updatedAt = Date.now();
+
+    const senderDesc = `Tip a @${recipient.username || recipient.displayName}${note ? ': ' + note : ''}`;
+    const recipientDesc = `Tip da @${sender.username || sender.displayName}${note ? ': ' + note : ''}`;
+
+    this.transactions.push({
+      id: `tx_${Date.now()}_tip_out`,
+      walletAddress: sender.walletAddress,
+      type: 'TRANSFER_OUT',
+      amountNano: BigInt(Math.round(amtNum * 1e9)).toString(),
+      amountTon: amtStr,
+      amountGram: amtStr,
+      timestamp: Date.now(),
+      details: senderDesc,
+    });
+
+    this.transactions.push({
+      id: `tx_${Date.now()}_tip_in`,
+      walletAddress: recipient.walletAddress,
+      type: 'TRANSFER_IN',
+      amountNano: BigInt(Math.round(amtNum * 1e9)).toString(),
+      amountTon: amtStr,
+      amountGram: amtStr,
+      timestamp: Date.now(),
+      details: recipientDesc,
+    });
+
+    this.persistData();
+    console.log(`[DatabaseService] Transfer/Tip: ${amtStr} GRAM from ${sender.displayName} to ${recipient.displayName}`);
+    return { success: true, senderAccount: sender, recipientAccount: recipient };
   }
 }
 

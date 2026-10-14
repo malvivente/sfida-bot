@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare, ArrowLeft } from 'lucide-react';
-import { MatchData, GameType } from '../types/index.js';
+import React, { useState, useEffect } from 'react';
+import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare, ArrowLeft, Target, Users, Clock } from 'lucide-react';
+import { MatchData, GameType, FriendUser } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
@@ -17,9 +17,53 @@ import { LiveActivityTicker } from './LiveActivityTicker.js';
 import { PlayHubView } from './PlayHubView.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
 
+const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => {
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    if (!expiresAt) return 0;
+    return Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+  });
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const update = () => {
+      const rem = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setTimeLeft(rem);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  if (!expiresAt) return null;
+  if (timeLeft <= 0) {
+    return (
+      <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full border border-rose-500/40 bg-rose-500/15 text-rose-300">
+        ⏱️ Scaduta
+      </span>
+    );
+  }
+
+  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const secs = (timeLeft % 60).toString().padStart(2, '0');
+  const isUrgent = timeLeft < 120;
+
+  return (
+    <span
+      className={`text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1 ${
+        isUrgent
+          ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 animate-pulse'
+          : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+      }`}
+    >
+      <span>⏱️</span>
+      <span>{mins}:{secs}</span>
+    </span>
+  );
+};
+
 interface DuelLobbyProps {
   matches: MatchData[];
-  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean) => Promise<boolean | void> | void;
+  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean, targetOpponentUsername?: string) => Promise<boolean | void> | void;
   onJoinMatch: (match: MatchData, inviteCode?: string) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (match: MatchData) => void;
@@ -102,6 +146,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
+  const [lobbySubSection, setLobbySubSection] = useState<'ALL' | 'OPEN' | 'MY_DUELS' | 'LIVE' | 'DIRECT'>('ALL');
+  const [targetOpponentInput, setTargetOpponentInput] = useState<string>('');
+  const [showFriendPicker, setShowFriendPicker] = useState<boolean>(false);
+  const [friendsList, setFriendsList] = useState<FriendUser[]>([]);
   const [filterVisibility, setFilterVisibility] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
   const [filterBetTier, setFilterBetTier] = useState<'ALL' | 'MICRO' | 'MID' | 'HIGH'>('ALL');
   const [filterOpenOnly, setFilterOpenOnly] = useState<boolean>(false);
@@ -116,6 +164,15 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [sectionView]);
+
+  React.useEffect(() => {
+    const handleResetHome = () => {
+      setSectionView('hub');
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    };
+    window.addEventListener('sfida_reset_home', handleResetHome);
+    return () => window.removeEventListener('sfida_reset_home', handleResetHome);
+  }, []);
 
   React.useEffect(() => {
     const fetchJackpot = async () => {
@@ -157,7 +214,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
   };
 
-  const handleOpenModal = (defaultGame?: GameType, lockGame: boolean = false, defaultWager?: string) => {
+  const handleOpenModal = (
+    defaultGame?: GameType,
+    lockGame: boolean = false,
+    defaultWager?: string,
+    targetOpponent?: string
+  ) => {
     onClearError?.();
     if (!userAddress && !userId) {
       triggerImpact('medium');
@@ -165,6 +227,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       return;
     }
     setLockedGameType(lockGame && defaultGame ? defaultGame : null);
+    setTargetOpponentInput(targetOpponent || '');
+    setShowFriendPicker(false);
     if (defaultGame) {
       setSelectedGameType(defaultGame);
       if (defaultWager) {
@@ -177,6 +241,20 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
     triggerImpact('medium');
     setShowCreateModal(true);
+
+    // Fetch friends for the friend picker
+    const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+    const q = new URLSearchParams();
+    if (userId) q.set('telegramId', String(userId));
+    if (userAddress) q.set('wallet', userAddress);
+    fetch(`${serverUrl}/api/friends?${q.toString()}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.success && Array.isArray(d.friends)) {
+          setFriendsList(d.friends);
+        }
+      })
+      .catch(() => {});
   };
 
   // Handle programmatic create duel trigger (e.g. from Trust Jackpot modal or external button or startapp create)
@@ -192,12 +270,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     const handleCustomOpen = (e: any) => {
       const g = e?.detail?.game as GameType | undefined;
       const w = e?.detail?.wager as string | undefined;
+      const opp = e?.detail?.opponent as string | undefined;
       if (g) {
-        handleOpenModal(g, true, w);
+        handleOpenModal(g, true, w, opp);
       }
     };
     window.addEventListener('sfida_open_create_game', handleCustomOpen);
-    return () => window.removeEventListener('sfida_open_create_game', handleCustomOpen);
+    window.addEventListener('sfida_open_direct_duel', handleCustomOpen);
+    return () => {
+      window.removeEventListener('sfida_open_create_game', handleCustomOpen);
+      window.removeEventListener('sfida_open_direct_duel', handleCustomOpen);
+    };
   }, []);
 
   const handleCreate = async () => {
@@ -212,9 +295,15 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     triggerImpact('heavy');
     setIsSubmitting(true);
     try {
-      const result = await onCreateMatch(wagerChoice, selectedGameType, isPrivateRoom);
+      const result = await onCreateMatch(
+        wagerChoice,
+        selectedGameType,
+        isPrivateRoom,
+        targetOpponentInput.trim() || undefined
+      );
       if (result !== false) {
         setShowCreateModal(false);
+        setTargetOpponentInput('');
       }
     } finally {
       setIsSubmitting(false);
@@ -282,8 +371,31 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     setSortBy('newest');
   };
 
+  const myDuelsCount = matches.filter((m) => {
+    const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
+    const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
+    return isA || isB;
+  }).length;
+
+  const openRoomsCount = matches.filter((m) => m.state === 'LOBBY' && !m.playerB).length;
+  const liveMatchesCount = matches.filter((m) => m.state !== 'LOBBY' || m.playerB).length;
+  const directChallengesCount = matches.filter((m) => Boolean(m.targetOpponentUsername || m.targetOpponentId)).length;
+
   const filteredMatches = matches
     .filter((m: MatchData) => {
+      // 0. Subsection filter
+      if (lobbySubSection === 'OPEN') {
+        if (m.playerB !== null || m.state !== 'LOBBY') return false;
+      } else if (lobbySubSection === 'MY_DUELS') {
+        const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
+        const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
+        if (!isA && !isB) return false;
+      } else if (lobbySubSection === 'LIVE') {
+        if (m.state === 'LOBBY' && !m.playerB) return false;
+      } else if (lobbySubSection === 'DIRECT') {
+        if (!m.targetOpponentUsername && !m.targetOpponentId) return false;
+      }
+
       // 1. Game Type
       if (filterGameType !== 'ALL') {
         const g = m.gameType || 'roulette';
@@ -465,6 +577,42 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               </button>
             )}
           </div>
+        </div>
+
+        {/* Subsection Filter Tabs */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1">
+          {[
+            { id: 'ALL', label: 'Tutte', count: matches.length },
+            { id: 'OPEN', label: 'In Attesa', count: openRoomsCount },
+            { id: 'MY_DUELS', label: 'Mie Sfide', count: myDuelsCount },
+            { id: 'LIVE', label: 'In Corso', count: liveMatchesCount },
+            { id: 'DIRECT', label: 'Dirette', count: directChallengesCount },
+          ].map((tab) => {
+            const isActive = lobbySubSection === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  triggerImpact('light');
+                  setLobbySubSection(tab.id as any);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-heading font-bold whitespace-nowrap transition-all flex items-center space-x-1.5 active:scale-95 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                    : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Search & Advanced Filters Bar */}
@@ -856,6 +1004,21 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/15 text-cyan-300 flex items-center space-x-1">
                             <MessageSquare className="w-2.5 h-2.5" />
                             <span>COMMUNITY</span>
+                          </span>
+                        )}
+                        {m.createdAt && (
+                          <span className="text-[10px] text-slate-400 font-sans flex items-center space-x-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10" title="Ora di creazione">
+                            <Clock className="w-2.5 h-2.5 text-slate-400" />
+                            <span>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </span>
+                        )}
+                        {m.state === 'LOBBY' && !m.playerB && m.expiresAt && (
+                          <RoomCountdownBadge expiresAt={m.expiresAt} />
+                        )}
+                        {m.targetOpponentUsername && (
+                          <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-300 flex items-center space-x-1">
+                            <Target className="w-2.5 h-2.5" />
+                            <span>@{m.targetOpponentUsername.replace(/^@/, '')}</span>
                           </span>
                         )}
                       </div>
@@ -1265,6 +1428,84 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     <span>ℹ️</span>
                     <span>{t('lobby.splitPrivateJackpotNotice')}</span>
                   </div>
+                )}
+              </div>
+
+              {/* Direct Challenge Opponent (Optional) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
+                    Sfida Diretta (Opzionale)
+                  </label>
+                  {friendsList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowFriendPicker(!showFriendPicker)}
+                      className="text-[10px] text-purple-400 hover:text-purple-300 font-bold flex items-center space-x-1"
+                    >
+                      <Users className="w-3 h-3" />
+                      <span>{showFriendPicker ? 'Chiudi Amici' : 'Scegli da Amici'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {showFriendPicker && friendsList.length > 0 && (
+                  <div className="p-2 bg-black/40 border border-purple-500/30 rounded-2xl space-y-1 max-h-36 overflow-y-auto no-scrollbar">
+                    <span className="text-[10px] text-slate-400 block px-1">Tocca un amico per sfidarlo:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {friendsList.map((f, idx) => {
+                        const friendName = f.displayName || f.name || f.username || 'Amico';
+                        return (
+                          <button
+                            key={f.telegramId || f.id || idx}
+                            type="button"
+                            onClick={() => {
+                              triggerImpact('light');
+                              setTargetOpponentInput(f.username ? `@${f.username}` : friendName);
+                              setIsPrivateRoom(true);
+                              setShowFriendPicker(false);
+                            }}
+                            className="px-2 py-1 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-200 text-xs font-sans hover:bg-purple-500/30 transition-all flex items-center space-x-1"
+                          >
+                            <span>👤</span>
+                            <span>{friendName}</span>
+                            {f.username && <span className="text-[10px] text-slate-400">(@{f.username})</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="relative">
+                  <Target className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={targetOpponentInput}
+                    onChange={(e) => {
+                      setTargetOpponentInput(e.target.value);
+                      if (e.target.value.trim() && !isPrivateRoom) {
+                        setIsPrivateRoom(true);
+                      }
+                    }}
+                    placeholder="Username avversario es. @nomeutente"
+                    className="w-full bg-[#151823] border border-white/10 rounded-2xl pl-9 pr-8 py-2 text-xs font-sans text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all font-medium"
+                  />
+                  {targetOpponentInput && (
+                    <button
+                      type="button"
+                      onClick={() => setTargetOpponentInput('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {targetOpponentInput.trim() && (
+                  <p className="text-[10px] text-amber-300 font-sans flex items-center space-x-1">
+                    <span>🎯</span>
+                    <span>Solo {targetOpponentInput.startsWith('@') ? targetOpponentInput : `@${targetOpponentInput}`} potrà accettare questa sfida.</span>
+                  </p>
                 )}
               </div>
 

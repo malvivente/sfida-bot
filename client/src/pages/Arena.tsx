@@ -322,7 +322,12 @@ export const Arena: React.FC<ArenaProps> = ({
   };
 
   // Create match using in-bot balance
-  const handleCreateMatch = async (wagerGram: string, gameType: GameType = 'roulette', isPrivate?: boolean): Promise<boolean> => {
+  const handleCreateMatch = async (
+    wagerGram: string,
+    gameType: GameType = 'roulette',
+    isPrivate?: boolean,
+    targetOpponentUsername?: string
+  ): Promise<boolean> => {
     setCreateError(null);
 
     const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
@@ -351,8 +356,9 @@ export const Arena: React.FC<ArenaProps> = ({
           telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player A'),
           photoUrl: photoUrl || '',
           gameType,
-          isPrivate: Boolean(isPrivate),
+          isPrivate: Boolean(isPrivate) || Boolean(targetOpponentUsername),
           groupChatId,
+          targetOpponentUsername: targetOpponentUsername?.trim() || undefined,
         }),
       });
 
@@ -386,6 +392,9 @@ export const Arena: React.FC<ArenaProps> = ({
         isPrivate: data.isPrivate || false,
         inviteCode: data.inviteCode,
         escrowAddress: data.escrowAddress,
+        createdAt: data.createdAt || Date.now(),
+        expiresAt: data.expiresAt || (Date.now() + 10 * 60 * 1000),
+        targetOpponentUsername: data.targetOpponentUsername,
         state: 'LOBBY',
         currentRound: 1,
         playerA: {

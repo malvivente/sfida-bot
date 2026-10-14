@@ -21,8 +21,11 @@ export const EpicBottomNav: React.FC<EpicBottomNavProps> = ({
   const { t } = useI18n();
 
   const handleSelect = (tab: EpicTab) => {
-    if (tab === activeTab) return;
     triggerSelection();
+    if (tab === 'home') {
+      window.dispatchEvent(new CustomEvent('sfida_reset_home'));
+    }
+    if (tab === activeTab) return;
     onTabChange(tab);
   };
 

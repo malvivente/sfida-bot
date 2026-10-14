@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wallet, HelpCircle, Globe, Shield } from 'lucide-react';
+import { Wallet, HelpCircle, Globe, Shield, Users } from 'lucide-react';
 import { GramIcon } from './GramIcon.js';
 import { UserAvatar } from './UserAvatar.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -14,6 +14,8 @@ interface EpicHeaderProps {
   username?: string;
   onOpenRules: () => void;
   onOpenProfile?: () => void;
+  onOpenFriends?: () => void;
+  pendingFriendsCount?: number;
   hideBalanceRow?: boolean;
 }
 
@@ -25,6 +27,8 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
   username,
   onOpenRules,
   onOpenProfile,
+  onOpenFriends,
+  pendingFriendsCount = 0,
   hideBalanceRow = false,
 }) => {
   const { triggerImpact } = useHaptics();
@@ -36,7 +40,7 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
     <header className="w-full max-w-md mx-auto pt-1 pb-3 px-1">
       {/* Top Utility Row (Language & Rules on Left, TonConnect on Right) */}
       <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/5 text-[11px]">
-        {/* Left: Language Toggle & Rules / ToS Button */}
+        {/* Left: Language Toggle & Rules / ToS Button & Friends Button */}
         <div className="flex items-center space-x-1.5">
           {/* Language Toggle */}
           <button
@@ -62,6 +66,23 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
           </button>
+
+          {/* Friends Button */}
+          {onOpenFriends && (
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                onOpenFriends();
+              }}
+              title="Amici & Social"
+              className="relative p-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all active:scale-95 flex items-center space-x-1"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              {pendingFriendsCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Right: TonConnect UI */}

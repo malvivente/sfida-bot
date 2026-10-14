@@ -19,6 +19,9 @@ export interface RoomConfig {
   bettingWindowSeconds?: number;
   isPrivate?: boolean;
   inviteCode?: string;
+  targetOpponentUsername?: string;
+  targetOpponentId?: string;
+  createdAt?: number;
 }
 
 export interface SpectatorBet {
@@ -82,6 +85,12 @@ export abstract class BaseGameRoom {
   public inviteCode?: string;
   public spectatorBets: SpectatorBet[] = [];
 
+  public createdAt: number;
+  public expiresAt: number;
+  public targetOpponentUsername?: string;
+  public targetOpponentId?: string;
+  protected lobbyExpirationTimer?: NodeJS.Timeout;
+
   public rematchProposerWallet?: string;
   public rematchNewWagerNano?: bigint;
   public isRematch: boolean = false;
@@ -103,6 +112,12 @@ export abstract class BaseGameRoom {
     this.isPrivate = Boolean(config.isPrivate);
     this.inviteCode = config.inviteCode;
 
+    this.createdAt = config.createdAt || Date.now();
+    const expireMinutes = feeConfig.getConfig().lobbyRoomExpirationMinutes || 10;
+    this.expiresAt = this.createdAt + expireMinutes * 60 * 1000;
+    this.targetOpponentUsername = config.targetOpponentUsername;
+    this.targetOpponentId = config.targetOpponentId;
+
     this.playerA = {
       walletAddress: config.playerAAddress,
       telegramId: '',
@@ -121,6 +136,8 @@ export abstract class BaseGameRoom {
         ready: false,
         score: 0,
       };
+    } else {
+      this.startLobbyExpirationTimer();
     }
   }
 
@@ -202,6 +219,9 @@ export abstract class BaseGameRoom {
     if (telegramId) player.telegramId = telegramId;
     if (username) player.username = cleanPlayerName(username);
     player.connected = true;
+    if (side === 'B') {
+      this.cancelLobbyExpirationTimer();
+    }
 
     // Clear grace timer if reconnecting
     if (player.disconnectTimer) {
@@ -820,6 +840,7 @@ export abstract class BaseGameRoom {
   }
 
   public cleanupTimers() {
+    this.cancelLobbyExpirationTimer();
     if (this.bettingTimer) {
       clearInterval(this.bettingTimer);
       this.bettingTimer = undefined;
@@ -833,6 +854,64 @@ export abstract class BaseGameRoom {
       this.playerB.disconnectTimer = undefined;
     }
     this.cleanupGameTimers();
+  }
+
+  public startLobbyExpirationTimer() {
+    this.cancelLobbyExpirationTimer();
+    const remainingMs = Math.max(1000, this.expiresAt - Date.now());
+    this.lobbyExpirationTimer = setTimeout(async () => {
+      if (this.state === 'LOBBY' && !this.playerB) {
+        console.log(`[BaseGameRoom] Room #${this.matchId} expired after inactivity.`);
+        const wagerGram = Number(this.config.wagerAmountNano) / 1e9;
+        const { creationFeeGram } = feeConfig.getConfig();
+        const isRematch = (this as any).isRematch === true;
+        const refundTotal = (isRematch ? wagerGram : (wagerGram + creationFeeGram)).toFixed(2);
+
+        try {
+          await dbService.refundUserBalance(
+            this.playerA.walletAddress,
+            refundTotal,
+            `Refund for expired match #${this.matchId}`,
+            this.playerA.telegramId
+          );
+        } catch (err) {
+          console.error(`[BaseGameRoom] Failed to refund Player A on expiration:`, err);
+        }
+
+        if (this.playerA.telegramId) {
+          try {
+            const { getTelegramBot } = await import('../bot/index.js');
+            const { renderCustomEmojis } = await import('../bot/emojis.js');
+            const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+            const bot = getTelegramBot();
+            if (bot) {
+              const gameConfig = (GAMES_CONFIG as any)[this.gameType];
+              const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
+              const text =
+                `⏱️ <b>SFIDA ARENA • STANZA SCADUTA</b>\n\n` +
+                `Nessun avversario si è unito alla tua stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) entro il tempo limite di 10 minuti.\n\n` +
+                `💰 La tua puntata di <b>${refundTotal} GRAM</b> (inclusa fee) è stata rimborsata per intero sul tuo saldo.`;
+              await bot.api.sendMessage(Number(this.playerA.telegramId), renderCustomEmojis(text), { parse_mode: 'HTML' });
+            }
+          } catch (botErr) {
+            console.warn('[BaseGameRoom] Could not send expired room notification to tg:', botErr);
+          }
+        }
+
+        this.abortRoom(`Stanza #${this.matchId} scaduta per inattività.`);
+        try {
+          const { RoomManager } = await import('./RoomManager.js');
+          RoomManager.getInstance().removeRoom(this.matchId.toString());
+        } catch {}
+      }
+    }, remainingMs);
+  }
+
+  public cancelLobbyExpirationTimer() {
+    if (this.lobbyExpirationTimer) {
+      clearTimeout(this.lobbyExpirationTimer);
+      this.lobbyExpirationTimer = undefined;
+    }
   }
 
   public broadcast(data: any) {

@@ -56,6 +56,35 @@ export interface MatchData {
   isPrivate?: boolean;
   groupChatId?: string;
   inviteCode?: string;
+  createdAt?: number;
+  expiresAt?: number;
+  targetOpponentUsername?: string;
+  targetOpponentId?: string;
+}
+
+export interface FriendUser {
+  id?: string;
+  telegramId?: string;
+  walletAddress?: string;
+  username?: string;
+  displayName?: string;
+  name?: string;
+  photoUrl?: string;
+  lastPlayedGame?: string;
+}
+
+export interface FriendRequestItem {
+  id: string;
+  fromUserKey: string;
+  fromTelegramId?: string;
+  fromUsername?: string;
+  fromDisplayName?: string;
+  fromPhotoUrl?: string;
+  toUserKey: string;
+  toTelegramId?: string;
+  toUsername?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  createdAt: number;
 }
 
 // --- Russian Roulette Types ---

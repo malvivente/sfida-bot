@@ -746,63 +746,61 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           ) : isBettingClosed ? (
             <button
               disabled={true}
-              className="w-full py-3.5 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs bg-cyber-border/20 border border-cyber-border/40 text-slate-500 cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full py-3.5 px-4 rounded-2xl font-heading font-black uppercase tracking-wider text-xs bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <Lock className="w-4 h-4 text-slate-500" />
               <span>{t('spectator.btnBettingClosed')}</span>
             </button>
           ) : (
-            <button
-              onClick={handlePlaceBet}
-              disabled={disabled || !betAmount || isBelowMin || isOverMax || betStatus === 'placing'}
-              className={`w-full py-3.5 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
-                disabled || !betAmount || isBelowMin || isOverMax || betStatus === 'placing'
-                  ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
-                  : selectedSide === 'A'
-                  ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan animate-pulse'
-                  : selectedSide === 'X'
-                  ? 'bg-cyber-green text-cyber-bg hover:brightness-110 shadow-neon-green animate-pulse'
-                  : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink animate-pulse'
-              }`}
-            >
-              {betStatus === 'placing' ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>{t('spectator.placingBet')}</span>
-                </div>
-              ) : (
-                <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1 text-[11px] font-sans text-slate-400">
+                <span>Totale: <strong className="text-white font-medium">{totalBetRequired} GRAM</strong> <span className="text-[10px] text-slate-500">(fee {spectatorFee.toFixed(2)})</span></span>
+                <span className="font-heading font-black text-amber-400 flex items-center space-x-1">
+                  <span>⏱️ 00:{countdownFormatted}</span>
+                </span>
+              </div>
+
+              <button
+                onClick={handlePlaceBet}
+                disabled={disabled || !betAmount || isBelowMin || isOverMax || betStatus === 'placing'}
+                className={`w-full py-3 px-4 rounded-2xl font-heading font-black uppercase tracking-wider text-xs transition-all shadow-xl active:scale-[0.98] flex items-center justify-center space-x-2 border ${
+                  disabled || !betAmount || isBelowMin || isOverMax || betStatus === 'placing'
+                    ? 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed'
+                    : selectedSide === 'A'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-400/30 shadow-cyan-500/25 hover:brightness-110'
+                    : selectedSide === 'X'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-emerald-400/30 shadow-emerald-500/25 hover:brightness-110'
+                    : 'bg-gradient-to-r from-pink-500 to-rose-600 text-white border-pink-400/30 shadow-pink-500/25 hover:brightness-110'
+                }`}
+              >
+                {betStatus === 'placing' ? (
                   <div className="flex items-center justify-center space-x-2">
-                    <Coins className="w-4 h-4 shrink-0" />
-                    <span>{t('spectator.bet')}</span>
-                    <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
-                      <span>{betAmount || '0'}</span>
-                      <GramIcon className="w-3.5 h-3.5" />
-                    </span>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>{t('spectator.placingBet')}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center space-x-1.5 truncate">
+                    <Coins className="w-4 h-4 shrink-0 text-white" />
                     <span>
-                      {t('spectator.on')}{' '}
+                      PUNTA {betAmount || '0'} GRAM SU{' '}
                       {selectedSide === 'A'
                         ? isSplit
-                          ? `[1] ${playerAName} (Steal)`
+                          ? `${playerAName} (Steal)`
                           : playerAName
                         : selectedSide === 'X'
-                        ? '[X] PEACE (Both Split)'
+                        ? 'PEACE'
                         : isSplit
-                        ? `[2] ${playerBName} (Steal)`
+                        ? `${playerBName} (Steal)`
                         : playerBName}
                     </span>
                   </div>
-                  <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90 flex items-center justify-center space-x-1">
-                    <span>Totale: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)</span>
-                    <span>•</span>
-                    <span className="font-bold text-cyber-amber">00:{countdownFormatted}</span>
-                  </div>
-                  <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-                    <span>{t('spectator.pariMutuelNotice')}</span>
-                  </div>
-                </>
-              )}
-            </button>
+                )}
+              </button>
+
+              <div className="text-[10px] font-sans text-center text-slate-500">
+                {t('spectator.pariMutuelNotice')}
+              </div>
+            </div>
           )}
             </>
           )}

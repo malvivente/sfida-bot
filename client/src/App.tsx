@@ -6,6 +6,8 @@ import { Leaderboard } from './pages/Leaderboard.js';
 import { RulesModal } from './components/RulesModal.js';
 import { TrustJackpotModal } from './components/TrustJackpotModal.js';
 import { DepositModal } from './components/DepositModal.js';
+import { FriendsModal } from './components/FriendsModal.js';
+import { TipModal } from './components/TipModal.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { EpicHeader } from './components/EpicHeader.js';
 import { EpicBottomNav, EpicTab } from './components/EpicBottomNav.js';
@@ -26,6 +28,15 @@ export const App: React.FC = () => {
   const [showJackpotModal, setShowJackpotModal] = useState(false);
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [pendingFriendsCount, setPendingFriendsCount] = useState(0);
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [tipRecipient, setTipRecipient] = useState<{
+    username?: string;
+    telegramId?: string;
+    displayName?: string;
+    photoUrl?: string;
+  } | null>(null);
   const [isInsideMatch, setIsInsideMatch] = useState(false);
   const [lastTabBeforeLeaderboard, setLastTabBeforeLeaderboard] = useState<EpicTab>('profile');
   const [pendingCreateGame, setPendingCreateGame] = useState<GameType | null>(null);
@@ -33,6 +44,20 @@ export const App: React.FC = () => {
   const [originChatId, setOriginChatId] = useState<string | null>(null);
   const [duelFilterGame, setDuelFilterGame] = useState<string>('ALL');
   const { t } = useI18n();
+
+  useEffect(() => {
+    const handleOpenFriends = () => setShowFriendsModal(true);
+    const handleOpenTip = (e: any) => {
+      setTipRecipient(e?.detail?.recipient || null);
+      setShowTipModal(true);
+    };
+    window.addEventListener('sfida_open_friends', handleOpenFriends);
+    window.addEventListener('sfida_open_tip', handleOpenTip);
+    return () => {
+      window.removeEventListener('sfida_open_friends', handleOpenFriends);
+      window.removeEventListener('sfida_open_tip', handleOpenTip);
+    };
+  }, []);
 
   // Periodic Trust Jackpot fetch from server
   useEffect(() => {
@@ -326,6 +351,8 @@ export const App: React.FC = () => {
           username={username}
           onOpenRules={() => setShowRulesModal(true)}
           onOpenProfile={() => setActiveTab('profile')}
+          onOpenFriends={() => setShowFriendsModal(true)}
+          pendingFriendsCount={pendingFriendsCount}
           hideBalanceRow={activeTab === 'profile'}
         />
       )}
@@ -470,6 +497,51 @@ export const App: React.FC = () => {
           } else {
             fetchLiveBalance();
           }
+        }}
+      />
+
+      {/* Friends & Social Modal */}
+      <FriendsModal
+        isOpen={showFriendsModal}
+        onClose={() => setShowFriendsModal(false)}
+        onPendingRequestsChange={setPendingFriendsCount}
+        onChallengeFriend={(friend) => {
+          setShowFriendsModal(false);
+          setActiveTab('home');
+          setTimeout(() => {
+            try {
+              window.dispatchEvent(
+                new CustomEvent('sfida_open_direct_duel', {
+                  detail: {
+                    game: 'roulette',
+                    opponent: friend.username ? `@${friend.username}` : (friend.displayName || friend.name || ''),
+                  },
+                })
+              );
+            } catch {}
+          }, 60);
+        }}
+        onTipFriend={(friend) => {
+          setShowFriendsModal(false);
+          setTipRecipient({
+            username: friend.username,
+            telegramId: friend.telegramId || friend.id,
+            displayName: friend.displayName || friend.name,
+            photoUrl: friend.photoUrl,
+          });
+          setShowTipModal(true);
+        }}
+      />
+
+      {/* Tip / Transfer Balance Modal */}
+      <TipModal
+        isOpen={showTipModal}
+        onClose={() => setShowTipModal(false)}
+        userBalanceGram={userBalanceGram}
+        initialRecipient={tipRecipient}
+        onTipSuccess={(newBal) => {
+          setUserBalanceGram(newBal);
+          fetchLiveBalance();
         }}
       />
     </div>

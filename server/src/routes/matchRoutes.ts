@@ -78,6 +78,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
         wagerAmountNano: r.config.wagerAmountNano.toString(),
         wagerTon: wagerGram,
         wagerGram,
+        createdAt: r.createdAt,
+        expiresAt: r.expiresAt,
+        targetOpponentUsername: r.targetOpponentUsername,
+        targetOpponentId: r.targetOpponentId,
         totalBetsA: r.totalBetsA.toString(),
         totalBetsB: r.totalBetsB.toString(),
         totalBetsX: r.totalBetsX.toString(),
@@ -149,6 +153,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
       wagerAmountNano: room.config.wagerAmountNano.toString(),
       wagerTon: wagerGram,
       wagerGram,
+      createdAt: room.createdAt,
+      expiresAt: room.expiresAt,
+      targetOpponentUsername: room.targetOpponentUsername,
+      targetOpponentId: room.targetOpponentId,
       totalBetsA: room.totalBetsA.toString(),
       totalBetsB: room.totalBetsB.toString(),
       totalBetsX: room.totalBetsX.toString(),
@@ -192,6 +200,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       groupAdminAddress?: string;
       groupChatId?: string;
       isPrivate?: boolean;
+      targetOpponentUsername?: string;
+      targetOpponentId?: string;
     };
 
     const effectivePlayerAddress = body.playerAAddress || (body.telegramUserId ? `tg_${body.telegramUserId}` : '');
@@ -279,7 +289,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       );
     }
 
-    const isPrivate = Boolean(body.isPrivate);
+    const isPrivate = Boolean(body.isPrivate) || Boolean(body.targetOpponentUsername || body.targetOpponentId);
     const inviteCode = isPrivate ? Math.random().toString(36).substring(2, 8).toUpperCase() : undefined;
 
     const room = roomManager.createRoom(
@@ -294,6 +304,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
         escrowAddress,
         isPrivate,
         inviteCode,
+        targetOpponentUsername: body.targetOpponentUsername,
+        targetOpponentId: body.targetOpponentId,
       },
       async (settledRoom, winner) => {
         console.log(`[API] Match #${settledRoom.matchId} settled with winner: ${winner}`);
@@ -318,11 +330,48 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.playerA.telegramId = body.telegramUserId || '';
     room.playerA.username = body.telegramUsername || 'Player A';
     room.playerA.photoUrl = body.photoUrl || userAccount.photoUrl || '';
+    room.targetOpponentUsername = body.targetOpponentUsername;
+    room.targetOpponentId = body.targetOpponentId;
 
     if (body.telegramUserId) {
       dbService.setLastPlayedGame(body.telegramUserId, gameType).catch((err) =>
         console.error('[matchRoutes] Error setting lastPlayedGame on create:', err)
       );
+    }
+
+    // If direct challenge target is specified, notify target via Telegram bot
+    if (body.targetOpponentUsername || body.targetOpponentId) {
+      (async () => {
+        try {
+          const targetUser = dbService.findUser(body.targetOpponentId || body.targetOpponentUsername || '');
+          if (targetUser && targetUser.telegramId) {
+            const { getTelegramBot } = await import('../bot/index.js');
+            const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+            const { renderCustomEmojis } = await import('../bot/emojis.js');
+            const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+            const bot = getTelegramBot();
+            if (bot) {
+              const gameConfig = (GAMES_CONFIG as any)[gameType];
+              const gameTitle = gameConfig?.name || gameType.toUpperCase();
+              const creatorName = body.telegramUsername ? `@${body.telegramUsername.replace(/^@/, '')}` : 'Un duellante';
+              const text =
+                `⚔️ <b>SFIDA ARENA • SFIDA DIRETTA!</b>\n\n` +
+                `<b>${creatorName}</b> ti ha lanciato una sfida diretta a <b>${gameTitle}</b>!\n\n` +
+                `💰 <b>Posta in palio:</b> ${wagerGram.toFixed(2)} GRAM\n` +
+                `⏱️ <b>Scadenza:</b> 10 minuti\n\n` +
+                `⚡ <i>Accetta il guanto di sfida per scendere nell'Arena!</i>`;
+              const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+              const keyboard = new InlineKeyboard().webApp('⚔️ ACCETTA SFIDA', `${webAppUrl}?startapp=duel_${matchId}`);
+              await bot.api.sendMessage(Number(targetUser.telegramId), renderCustomEmojis(text), {
+                parse_mode: 'HTML',
+                reply_markup: keyboard,
+              });
+            }
+          }
+        } catch (targetNotifyErr) {
+          console.warn('[matchRoutes] Could not send direct challenge notification:', targetNotifyErr);
+        }
+      })();
     }
 
     return reply.send({
@@ -335,6 +384,10 @@ export async function matchRoutes(fastify: FastifyInstance) {
       creationFeeGram: creationFeeGram.toFixed(2),
       isPrivate: room.isPrivate,
       inviteCode: room.inviteCode,
+      targetOpponentUsername: room.targetOpponentUsername,
+      targetOpponentId: room.targetOpponentId,
+      createdAt: room.createdAt,
+      expiresAt: room.expiresAt,
     });
   });
 
@@ -362,6 +415,21 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
     if (room.playerA.walletAddress.toLowerCase() === body.playerBAddress.toLowerCase()) {
       return reply.status(400).send({ error: 'You cannot duel against yourself' });
+    }
+
+    // Direct challenge check: if room has targetOpponentUsername or targetOpponentId, enforce only target can join
+    if (room.targetOpponentUsername || room.targetOpponentId) {
+      const cleanTargetUser = room.targetOpponentUsername?.replace(/^@/, '').toLowerCase().trim();
+      const cleanJoinUser = body.telegramUsername?.replace(/^@/, '').toLowerCase().trim();
+      const isTargetId = room.targetOpponentId && body.telegramUserId && String(room.targetOpponentId) === String(body.telegramUserId);
+      const isTargetUsername = cleanTargetUser && cleanJoinUser && cleanTargetUser === cleanJoinUser;
+
+      if (!isTargetId && !isTargetUsername) {
+        return reply.status(403).send({
+          error: 'DIRECT_DUEL_RESTRICTED',
+          message: `Questa sfida è privata e riservata a @${room.targetOpponentUsername || 'un utente specifico'}.`,
+        });
+      }
     }
 
     // Group-exclusive check: if room was created in a Telegram group, player must be a member of that group
@@ -445,6 +513,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     };
     room.config.playerBAddress = body.playerBAddress;
     room.state = 'LOBBY';
+    room.cancelLobbyExpirationTimer();
 
     if (body.telegramUserId && room.gameType) {
       dbService.setLastPlayedGame(body.telegramUserId, room.gameType).catch((err) =>
@@ -929,5 +998,171 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'USER_NOT_FOUND', message: `User not found: ${body.identifier}` });
     }
     return reply.send({ success: true, account });
+  });
+
+  // --- Friends & Social Endpoints ---
+  fastify.get('/api/friends', async (req, reply) => {
+    const query = req.query as { wallet?: string; telegramId?: string };
+    const ident = query.telegramId || query.wallet;
+    if (!ident) {
+      return reply.status(400).send({ error: 'wallet or telegramId is required' });
+    }
+    const friends = await dbService.getFriends(ident);
+    const requests = await dbService.getFriendRequests(ident);
+    return reply.send({
+      success: true,
+      friends: friends.map((f) => ({
+        telegramId: f.telegramId,
+        walletAddress: f.walletAddress,
+        username: f.username,
+        displayName: f.displayName || f.username || 'Duelist',
+        photoUrl: f.photoUrl,
+        lastPlayedGame: f.lastPlayedGame,
+      })),
+      incoming: requests.incoming,
+      outgoing: requests.outgoing,
+    });
+  });
+
+  fastify.post('/api/friends/request', async (req, reply) => {
+    const body = req.body as {
+      senderWallet?: string;
+      senderTelegramId?: string;
+      targetIdentifier?: string;
+    };
+    const senderIdent = body.senderTelegramId || body.senderWallet;
+    if (!senderIdent || !body.targetIdentifier) {
+      return reply.status(400).send({ error: 'sender and targetIdentifier are required' });
+    }
+
+    const res = await dbService.sendFriendRequest(senderIdent, body.targetIdentifier);
+    if (!res.success) {
+      return reply.status(400).send({ error: res.error || 'Failed to send request' });
+    }
+
+    // Notify recipient via Telegram bot if offline/outside
+    if (res.request?.toTelegramId) {
+      (async () => {
+        try {
+          const { getTelegramBot } = await import('../bot/index.js');
+          const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+          const { renderCustomEmojis } = await import('../bot/emojis.js');
+          const bot = getTelegramBot();
+          if (bot) {
+            const senderName = res.request!.fromUsername
+              ? `@${res.request!.fromUsername.replace(/^@/, '')}`
+              : (res.request!.fromDisplayName || 'Un duellante');
+            const text =
+              `🤝 <b>SFIDA ARENA • RICHIESTA DI AMICIZIA!</b>\n\n` +
+              `<b>${senderName}</b> ti ha inviato una richiesta di amicizia su Sfida Arena!\n\n` +
+              `⚡ <i>Apri la sezione Amici nella Mini App per accettare o rifiutare.</i>`;
+            const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+            const keyboard = new InlineKeyboard().webApp('🤝 GESTISCI AMICI', `${webAppUrl}?startapp=friends`);
+            await bot.api.sendMessage(Number(res.request!.toTelegramId), renderCustomEmojis(text), {
+              parse_mode: 'HTML',
+              reply_markup: keyboard,
+            });
+          }
+        } catch (botErr) {
+          console.warn('[matchRoutes] Friend request bot notification error:', botErr);
+        }
+      })();
+    }
+
+    return reply.send({ success: true, request: res.request });
+  });
+
+  fastify.post('/api/friends/respond', async (req, reply) => {
+    const body = req.body as {
+      requestId: string;
+      userWallet?: string;
+      userTelegramId?: string;
+      action: 'ACCEPT' | 'DECLINE';
+    };
+    const userIdent = body.userTelegramId || body.userWallet;
+    if (!body.requestId || !userIdent || !body.action) {
+      return reply.status(400).send({ error: 'requestId, user and action are required' });
+    }
+
+    const res = await dbService.respondFriendRequest(body.requestId, userIdent, body.action);
+    if (!res.success) {
+      return reply.status(400).send({ error: res.error || 'Failed to respond to request' });
+    }
+    return reply.send({ success: true, action: body.action });
+  });
+
+  fastify.delete('/api/friends/:friendId', async (req, reply) => {
+    const { friendId } = req.params as { friendId: string };
+    const query = req.query as { userWallet?: string; userTelegramId?: string };
+    const userIdent = query.userTelegramId || query.userWallet;
+    if (!userIdent || !friendId) {
+      return reply.status(400).send({ error: 'user and friendId are required' });
+    }
+
+    const removed = await dbService.removeFriend(userIdent, friendId);
+    return reply.send({ success: true, removed });
+  });
+
+  // Transfer Balance / Tip endpoint
+  fastify.post('/api/users/transfer', async (req, reply) => {
+    const body = req.body as {
+      senderWallet?: string;
+      senderTelegramId?: string;
+      recipientIdentifier?: string;
+      amountGram?: string;
+      note?: string;
+    };
+    const senderIdent = body.senderTelegramId || body.senderWallet;
+    if (!senderIdent || !body.recipientIdentifier || !body.amountGram) {
+      return reply.status(400).send({ error: 'sender, recipientIdentifier, and amountGram are required' });
+    }
+
+    const res = await dbService.transferBalance(
+      senderIdent,
+      body.recipientIdentifier,
+      body.amountGram,
+      body.note
+    );
+
+    if (!res.success) {
+      return reply.status(400).send({ error: res.error || 'Transfer failed' });
+    }
+
+    // Notify recipient via Telegram bot
+    if (res.recipientAccount?.telegramId) {
+      (async () => {
+        try {
+          const { getTelegramBot } = await import('../bot/index.js');
+          const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+          const { renderCustomEmojis } = await import('../bot/emojis.js');
+          const bot = getTelegramBot();
+          if (bot) {
+            const senderName = res.senderAccount!.username
+              ? `@${res.senderAccount!.username.replace(/^@/, '')}`
+              : (res.senderAccount!.displayName || 'Un duellante');
+            const amtStr = parseFloat(body.amountGram!).toFixed(2);
+            const text =
+              `💸 <b>SFIDA ARENA • HAI RICEVUTO UN TIP!</b>\n\n` +
+              `<b>${senderName}</b> ti ha inviato <b>${amtStr} GRAM</b>!\n` +
+              (body.note ? `💬 <i>"${body.note}"</i>\n` : '') +
+              `\n💰 <b>Nuovo saldo:</b> ${res.recipientAccount!.balanceGram} GRAM`;
+            const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+            const keyboard = new InlineKeyboard().webApp('⚡ APRI SFIDA ARENA', webAppUrl);
+            await bot.api.sendMessage(Number(res.recipientAccount!.telegramId), renderCustomEmojis(text), {
+              parse_mode: 'HTML',
+              reply_markup: keyboard,
+            });
+          }
+        } catch (botErr) {
+          console.warn('[matchRoutes] Tip bot notification error:', botErr);
+        }
+      })();
+    }
+
+    return reply.send({
+      success: true,
+      senderAccount: res.senderAccount,
+      recipientAccount: res.recipientAccount,
+    });
   });
 }
