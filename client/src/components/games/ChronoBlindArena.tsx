@@ -489,7 +489,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
               )}
 
               {/* Rematch Offer Received */}
-              {rematchOffer && isRematchProposer && (
+              {rematchOffer && isRematchProposer && role === 'player' && (
                 <div className="w-full p-2.5 rounded-xl bg-cyber-pink/20 border border-cyber-pink/60 flex flex-col space-y-1.5 mb-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
@@ -511,7 +511,7 @@ export const ChronoBlindArena: React.FC<ChronoBlindArenaProps> = ({
                   )}
                 </div>
               )}
-              {rematchOffer && !isRematchProposer && (
+              {rematchOffer && !isRematchProposer && role === 'player' && (
                 <div className="w-full p-2.5 rounded-xl bg-cyber-pink/25 border border-cyber-pink flex flex-col space-y-2 mb-2 animate-pulse">
                   <span className="text-xs font-orbitron font-bold text-white">🔥 {t('arena.rematch2x')}</span>
                   <span className="text-[11px] text-slate-200 font-chakra">

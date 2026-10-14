@@ -7,6 +7,9 @@ import { Address } from '@ton/core';
 export function areAddressesEqual(a?: string | null, b?: string | null): boolean {
   if (!a || !b) return false;
   if (a.toLowerCase() === b.toLowerCase()) return true;
+  const cleanA = a.replace(/^tg_/, '').toLowerCase();
+  const cleanB = b.replace(/^tg_/, '').toLowerCase();
+  if (cleanA && cleanB && cleanA === cleanB) return true;
   try {
     return Address.parse(a).equals(Address.parse(b));
   } catch {

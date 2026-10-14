@@ -116,11 +116,28 @@ export class QuickdrawRoom {
   public isSameWallet(a?: string, b?: string): boolean {
     if (!a || !b) return false;
     if (a.toLowerCase() === b.toLowerCase()) return true;
+    const cleanA = a.replace(/^tg_/, '').toLowerCase();
+    const cleanB = b.replace(/^tg_/, '').toLowerCase();
+    if (cleanA && cleanB && cleanA === cleanB) return true;
     try {
       return Address.parse(a).equals(Address.parse(b));
     } catch {
       return false;
     }
+  }
+
+  public getPlayerSide(wallet?: string, ws?: WebSocket): 'A' | 'B' | null {
+    if (ws) {
+      if (this.playerA?.ws === ws) return 'A';
+      if (this.playerB?.ws === ws) return 'B';
+    }
+    if (wallet) {
+      if (this.isSameWallet(wallet, this.playerA.walletAddress)) return 'A';
+      if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) return 'B';
+      if (this.playerA.telegramId && (this.isSameWallet(wallet, `tg_${this.playerA.telegramId}`) || wallet === String(this.playerA.telegramId))) return 'A';
+      if (this.playerB?.telegramId && (this.isSameWallet(wallet, `tg_${this.playerB.telegramId}`) || wallet === String(this.playerB.telegramId))) return 'B';
+    }
+    return null;
   }
 
   // Bind WebSocket to Player A or B
@@ -343,7 +360,7 @@ export class QuickdrawRoom {
 
     this.state = 'BETTING_WINDOW';
     const dynamicConfig = feeConfig.getConfig();
-    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 20;
+    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 10;
     let countdown = duration;
 
     this.broadcast({

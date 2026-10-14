@@ -203,22 +203,32 @@ export const Arena: React.FC<ArenaProps> = ({
   }, [serverUrl, activeMatchId]);
 
   const currentActiveMatch = matches.find((m) => m.matchId === activeMatchId);
+  const effectivePlayerAddress = userAddress || (userId ? `tg_${userId}` : '');
   const isMatchPlayer = Boolean(
     currentActiveMatch &&
     (
-      (userAddress && (areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress) || (currentActiveMatch.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, userAddress)))) ||
-      (userId && (String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId) || (currentActiveMatch.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)))) ||
-      (username && (currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) || currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())))
+      (effectivePlayerAddress && (
+        areAddressesEqual(currentActiveMatch.playerA.wallet, effectivePlayerAddress) ||
+        (currentActiveMatch.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress))
+      )) ||
+      (userId && (
+        String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId) ||
+        (currentActiveMatch.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId))
+      )) ||
+      (username && (
+        currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) ||
+        currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())
+      ))
     )
   );
   const effectiveRole: 'player' | 'spectator' = isMatchPlayer ? 'player' : role;
 
   const socketData = useSocket({
     matchId: activeMatchId || '',
-    wallet: userAddress,
+    wallet: effectivePlayerAddress,
     role: effectiveRole,
     telegramId: userId,
-    username: cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : 'Warrior')),
+    username: cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (userId ? `Player_${String(userId).slice(-4)}` : 'Warrior'))),
     serverUrl,
   });
 
@@ -577,7 +587,8 @@ export const Arena: React.FC<ArenaProps> = ({
       return;
     }
 
-    if (!userAddress) {
+    const effectiveBettorAddress = userAddress || (userId ? `tg_${userId}` : '');
+    if (!effectiveBettorAddress) {
       openWalletModal();
       return;
     }
@@ -661,15 +672,15 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const isUserWinner = Boolean(
     socketData.roomState === 'MATCH_SETTLED' &&
-    userAddress &&
+    effectivePlayerAddress &&
     socketData.matchWinner &&
-    areAddressesEqual(socketData.matchWinner, userAddress)
+    areAddressesEqual(socketData.matchWinner, effectivePlayerAddress)
   );
 
   const isCurrentCreator = Boolean(
     currentActiveMatch &&
     (
-      (userAddress && areAddressesEqual(currentActiveMatch.playerA.wallet, userAddress)) ||
+      (effectivePlayerAddress && areAddressesEqual(currentActiveMatch.playerA.wallet, effectivePlayerAddress)) ||
       (userId && String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId)) ||
       (fullName && currentActiveMatch.playerA.name === fullName) ||
       (username && (currentActiveMatch.playerA.name === `@${username}` || currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase())))
@@ -691,7 +702,7 @@ export const Arena: React.FC<ArenaProps> = ({
   const effectiveGameType: GameType = socketData.gameType || currentActiveMatch?.gameType || 'roulette';
 
   const userSide: 'A' | 'B' = (
-    (userAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, userAddress)) ||
+    (effectivePlayerAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress)) ||
     (userId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)) ||
     (username && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.toLowerCase().includes(username.toLowerCase()))
   ) ? 'B' : 'A';
@@ -751,9 +762,10 @@ export const Arena: React.FC<ArenaProps> = ({
   );
 
   const isRematchProposer = Boolean(
+    isMatchPlayer &&
     socketData.rematchOffer?.proposerWallet &&
-    userAddress &&
-    areAddressesEqual(socketData.rematchOffer.proposerWallet, userAddress)
+    effectivePlayerAddress &&
+    areAddressesEqual(socketData.rematchOffer.proposerWallet, effectivePlayerAddress)
   );
 
   useEffect(() => {
@@ -954,14 +966,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -998,14 +1010,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1042,14 +1054,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1087,15 +1099,15 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              rematchDeclined={socketData.rematchDeclined}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              rematchDeclined={isMatchPlayer ? socketData.rematchDeclined : false}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1133,14 +1145,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1177,14 +1189,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1221,14 +1233,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1265,14 +1277,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              rematchOffer={socketData.rematchOffer}
-              onRequestRematch={socketData.requestRematch}
-              onAcceptRematch={socketData.acceptRematch}
-              onDeclineRematch={socketData.declineRematch}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
-              userAddress={userAddress}
+              userAddress={effectivePlayerAddress}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);
@@ -1285,23 +1297,29 @@ export const Arena: React.FC<ArenaProps> = ({
             />
           )}
 
-          {/* Spectator Totalizer Betting Bar */}
-          <SpectatorOddsBar
-            oddsA={socketData.oddsA}
-            oddsB={socketData.oddsB}
-            oddsX={socketData.oddsX}
-            totalBetsA={socketData.totalBetsA}
-            totalBetsB={socketData.totalBetsB}
-            totalBetsX={socketData.totalBetsX}
-            gameType={effectiveGameType}
-            playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
-            playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Player B')}
-            onBet={handleSpectatorBet}
-            disabled={socketData.roomState !== 'BETTING_WINDOW'}
-            isPlayer={isMatchPlayer}
-            roomState={socketData.roomState}
-            countdownSeconds={socketData.countdownSeconds}
-          />
+          {/* Spectator Totalizer Betting Bar - Hidden for Duelists */}
+          {!isMatchPlayer && (
+            <SpectatorOddsBar
+              oddsA={socketData.oddsA}
+              oddsB={socketData.oddsB}
+              oddsX={socketData.oddsX}
+              totalBetsA={socketData.totalBetsA}
+              totalBetsB={socketData.totalBetsB}
+              totalBetsX={socketData.totalBetsX}
+              gameType={effectiveGameType}
+              playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
+              playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Player B')}
+              onBet={handleSpectatorBet}
+              disabled={socketData.roomState !== 'BETTING_WINDOW'}
+              isPlayer={isMatchPlayer}
+              roomState={socketData.roomState}
+              countdownSeconds={socketData.countdownSeconds}
+              placedBet={socketData.placedBet}
+              betStatus={socketData.betStatus}
+              betError={socketData.betError}
+              onClearPlacedBet={socketData.clearPlacedBet}
+            />
+          )}
         </div>
       ) : (
         <DuelLobby

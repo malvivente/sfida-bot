@@ -736,7 +736,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
         ) : isSettled ? (
           <div className="w-full space-y-2">
             {/* Rematch Offer Received */}
-            {rematchOffer && !isRematchProposer && (
+            {rematchOffer && !isRematchProposer && role === 'player' && (
               <div className="bg-purple-950/40 border border-purple-500/50 p-2.5 rounded-xl flex items-center justify-between text-xs font-chakra">
                 <span className="text-white">
                   {t('split.rematchOffer', { name: rematchOffer.proposerName, amount: rematchOffer.newWagerTon })}
@@ -759,7 +759,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
             )}
 
             {/* Rematch Offer Sent - Waiting for Opponent */}
-            {rematchOffer && isRematchProposer && (
+            {rematchOffer && isRematchProposer && role === 'player' && (
               <div className="bg-purple-900/30 border border-purple-500/50 p-2.5 rounded-xl flex items-center space-x-3 text-xs font-chakra text-purple-200">
                 <Loader2 className="w-4 h-4 animate-spin text-purple-400 shrink-0" />
                 <div className="flex-1 text-left">
@@ -936,7 +936,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                   )}
 
                   {/* Rematch Section */}
-                  {rematchOffer && isRematchProposer && (
+                  {rematchOffer && isRematchProposer && role === 'player' && (
                     <div className="w-full p-2.5 rounded-xl bg-purple-900/30 border border-purple-500/50 flex flex-col space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
@@ -951,7 +951,7 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
                     </div>
                   )}
 
-                  {rematchOffer && !isRematchProposer && (
+                  {rematchOffer && !isRematchProposer && role === 'player' && (
                     <div className="w-full p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/60 flex flex-col space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-orbitron font-bold text-white">{t('rematch.offerTitle')}</span>

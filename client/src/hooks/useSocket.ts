@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { RoomState, WsMessage, MatchResolution, GameType, ShotgunItem } from '../types/index.js';
 
+export interface PlacedSpectatorBet {
+  target: 'A' | 'B' | 'X';
+  amountGram: string;
+  feePaidGram: string;
+  targetName?: string;
+  odds?: number;
+}
+
 interface UseSocketProps {
   matchId: string;
   wallet?: string;
@@ -78,6 +86,9 @@ export function useSocket({
   const [playerBConnected, setPlayerBConnected] = useState(true);
   const [socketError, setSocketError] = useState<string | null>(null);
   const [rematchDeclined, setRematchDeclined] = useState<boolean>(false);
+  const [placedBet, setPlacedBet] = useState<PlacedSpectatorBet | null>(null);
+  const [betStatus, setBetStatus] = useState<'idle' | 'placing' | 'confirmed' | 'error'>('idle');
+  const [betError, setBetError] = useState<string | null>(null);
 
   useEffect(() => {
     // Reset room state when entering a new match or switching rooms
@@ -100,6 +111,9 @@ export function useSocket({
     setResolution(null);
     setSocketError(null);
     setCountdownSeconds(null);
+    setPlacedBet(null);
+    setBetStatus('idle');
+    setBetError(null);
 
     if (!matchId) return;
 
@@ -365,6 +379,30 @@ export function useSocket({
             }, 6000);
             break;
 
+          case 'BET_CONFIRMED':
+            if (msg.target && msg.amountGram) {
+              const bTarget = msg.target as 'A' | 'B' | 'X';
+              setPlacedBet({
+                target: bTarget,
+                amountGram: msg.amountGram,
+                feePaidGram: msg.feePaidGram || '0.05',
+                targetName: bTarget === 'A' ? playerAName : (bTarget === 'B' ? (playerBName || 'Player B') : 'Peace (Both Split)'),
+                odds: bTarget === 'A' ? oddsA : (bTarget === 'B' ? oddsB : oddsX),
+              });
+              setBetStatus('confirmed');
+              setBetError(null);
+              window.dispatchEvent(new CustomEvent('sfida_balance_refresh'));
+            }
+            break;
+
+          case 'BET_ERROR':
+            if (msg.message) {
+              setBetError(msg.message);
+              setBetStatus('error');
+              setFeedMessage(msg.message);
+            }
+            break;
+
           case 'ERROR':
             if (msg.message) {
               setSocketError(msg.message);
@@ -387,9 +425,16 @@ export function useSocket({
       setFeedMessage('Impossibile connettersi al server WebSocket.');
     }
 
+    const pingTimer = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'PING' }));
+      }
+    }, 15000);
+
     return () => {
+      clearInterval(pingTimer);
       try {
-        ws?.close();
+        wsRef.current?.close();
       } catch {}
     };
   }, [matchId, role, wallet, telegramId, username, serverUrl]);
@@ -408,9 +453,20 @@ export function useSocket({
   }, []);
 
   const placeSpectatorBet = useCallback((target: 'A' | 'B' | 'X', amountNano: string) => {
+    setBetError(null);
+    setBetStatus('placing');
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'SPECTATOR_BET', target, amountNano }));
+    } else {
+      setBetError('Connessione WebSocket non attiva');
+      setBetStatus('error');
     }
+  }, []);
+
+  const clearPlacedBet = useCallback(() => {
+    setPlacedBet(null);
+    setBetStatus('idle');
+    setBetError(null);
   }, []);
 
   const requestRematch = useCallback(() => {
@@ -543,6 +599,10 @@ export function useSocket({
     sendConnect4Drop,
     sendCubeCountSubmit,
     placeSpectatorBet,
+    placedBet,
+    betStatus,
+    betError,
+    clearPlacedBet,
     requestRematch,
     acceptRematch,
     declineRematch,

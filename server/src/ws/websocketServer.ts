@@ -65,25 +65,34 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     ws.on('message', async (raw: Buffer | string) => {
       try {
         const data = JSON.parse(raw.toString());
+        // Determine whether sender is Player A, Player B, or spectator
+        const senderSide = room ? room.getPlayerSide(wallet, ws) : null;
+        const senderWallet = senderSide === 'A'
+          ? room!.playerA.walletAddress
+          : (senderSide === 'B' && room!.playerB ? room!.playerB.walletAddress : wallet);
+        const senderTelegramId = senderSide === 'A'
+          ? (room!.playerA.telegramId || telegramId)
+          : (senderSide === 'B' && room!.playerB ? (room!.playerB.telegramId || telegramId) : telegramId);
+
         switch (data.type) {
           case 'READY':
-            room?.setPlayerReady(wallet, telegramId);
+            room?.setPlayerReady(senderWallet, senderTelegramId);
             break;
 
           case 'TAP':
-            (room as any)?.handleTap?.(wallet);
+            (room as any)?.handleTap?.(senderWallet);
             break;
 
           case 'SPECTATOR_BET':
             if (data.target && data.amountNano) {
-              const isPlayerInRoom = role === 'player' ||
+              const isPlayerInRoom = Boolean(senderSide) || role === 'player' ||
                 (room && (wallet.toLowerCase() === room.playerA?.walletAddress.toLowerCase() ||
                   (room.playerB && wallet.toLowerCase() === room.playerB.walletAddress.toLowerCase())));
               if (isPlayerInRoom) {
                 console.warn(`[WS] Spectator bet rejected: ${wallet} is a duelist in match ${matchId}`);
                 ws.send(JSON.stringify({
                   type: 'BET_ERROR',
-                  message: 'Duelists cannot place spectator bets on their own match.',
+                  message: 'I duellanti non possono scommettere sulla propria partita.',
                 }));
                 break;
               }
@@ -92,9 +101,9 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                 ws.send(JSON.stringify({
                   type: 'BET_ERROR',
                   message: !room
-                    ? 'Match not found.'
+                    ? 'Partita non trovata.'
                     : room.state === 'LOBBY'
-                    ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 20s).'
+                    ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 10s).'
                     : 'Le scommesse per questa partita sono chiuse.',
                 }));
                 break;
@@ -107,7 +116,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
               if (betAmountGram < minWagerGram) {
                 ws.send(JSON.stringify({
                   type: 'BET_ERROR',
-                  message: `Minimum spectator bet is ${minWagerGram.toFixed(1)} GRAM.`,
+                  message: `La puntata minima per gli spettatori è di ${minWagerGram.toFixed(1)} GRAM.`,
                 }));
                 break;
               }
@@ -119,28 +128,30 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
               if (curBal < totalRequired) {
                 ws.send(JSON.stringify({
                   type: 'BET_ERROR',
-                  message: `Insufficient balance! You need ${totalRequired.toFixed(2)} GRAM (${betAmountGram.toFixed(2)} bet + ${spectatorFeeGram.toFixed(2)} fee), but your balance is ${curBal.toFixed(2)} GRAM.`,
+                  message: `Saldo insufficiente! Servono ${totalRequired.toFixed(2)} GRAM (${betAmountGram.toFixed(2)} puntata + ${spectatorFeeGram.toFixed(2)} commissione), ma il tuo saldo è di ${curBal.toFixed(2)} GRAM.`,
                   missingGram: (totalRequired - curBal).toFixed(2),
                 }));
                 break;
               }
 
+              const bettorWallet = userAccount.walletAddress || wallet || (telegramId ? `tg_${telegramId}` : '');
+
               // Debit bet and participation fee
               await dbService.debitUserBalance(
-                wallet,
+                bettorWallet,
                 betAmountGram.toFixed(2),
                 'MATCH_BET',
                 `Spectator bet on ${data.target === 'X' ? 'Peace (Both Split)' : 'Player ' + data.target} for match #${matchId}`
               );
               await dbService.debitUserBalance(
-                wallet,
+                bettorWallet,
                 spectatorFeeGram.toFixed(2),
                 'CREATION_FEE',
                 `Spectator participation fee for match #${matchId}`
               );
               await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
 
-              room.registerSpectatorBet(data.target, betAmountNano, wallet, telegramId, spectatorFeeGram);
+              room.registerSpectatorBet(data.target, betAmountNano, bettorWallet, telegramId, spectatorFeeGram);
 
               ws.send(JSON.stringify({
                 type: 'BET_CONFIRMED',
@@ -153,15 +164,30 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             break;
 
           case 'REMATCH_REQUEST':
-            room?.requestRematch(wallet, username);
+            // Only actual combatants in this room can request rematch
+            if (!senderSide) {
+              console.warn(`[WS] Rematch request ignored: sender is not a player in match #${matchId}`);
+              break;
+            }
+            room?.requestRematch(senderWallet, username);
             break;
 
           case 'REMATCH_ACCEPT':
-            room?.acceptRematch(wallet);
+            // Only actual combatants in this room can accept rematch
+            if (!senderSide) {
+              console.warn(`[WS] Rematch accept ignored: sender is not a player in match #${matchId}`);
+              break;
+            }
+            room?.acceptRematch(senderWallet);
             break;
 
           case 'REMATCH_DECLINE':
-            room?.declineRematch(wallet);
+            // Only actual combatants in this room can decline rematch
+            if (!senderSide) {
+              console.warn(`[WS] Rematch decline ignored: sender is not a player in match #${matchId}`);
+              break;
+            }
+            room?.declineRematch(senderWallet);
             break;
 
           case 'ROULETTE_SHOOT':
@@ -170,7 +196,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
           case 'BRIDGE_PASS':
           case 'CHRONO_STOP':
           case 'SPLIT_STEAL_CHOICE':
-            room?.handleGameAction(wallet, data);
+            room?.handleGameAction(senderWallet, data);
             break;
 
           case 'PING':
@@ -178,7 +204,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             break;
 
           default:
-            room?.handleGameAction(wallet, data);
+            room?.handleGameAction(senderWallet, data);
             break;
         }
       } catch (err: any) {

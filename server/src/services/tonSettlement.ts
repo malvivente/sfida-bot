@@ -1,6 +1,7 @@
 import { TonClient, WalletContractV4, internal, toNano, Address, beginCell } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { signerService } from './signer.js';
+import { isValidTonAddress } from '../utils/escrow.js';
 
 export interface SettlementResult {
   success: boolean;
@@ -36,6 +37,22 @@ export class TonSettlementService {
     winnerAddress: string
   ): Promise<SettlementResult> {
     const timestamp = Math.floor(Date.now() / 1000);
+
+    // If using off-chain/in-app balance (no valid on-chain escrow or winner is tg_...), skip on-chain settlement gracefully
+    if (!escrowAddress || !isValidTonAddress(escrowAddress) || !isValidTonAddress(winnerAddress)) {
+      return {
+        success: true,
+        resolutionPayload: {
+          matchId: matchId.toString(),
+          escrowAddress: escrowAddress || '',
+          winner: winnerAddress,
+          timestamp,
+          signatureHex: '',
+          signatureCellBoc: '',
+        },
+      };
+    }
+
     const { signatureHex, signatureCell, signatureCellBoc } = signerService.signResolution(
       matchId,
       winnerAddress,

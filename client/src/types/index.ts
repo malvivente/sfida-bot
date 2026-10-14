@@ -233,6 +233,8 @@ export interface WsMessage {
   lastOutcome?: any;
   lastAction?: any;
   jackpotGram?: number;
+  amountGram?: string;
+  feePaidGram?: string;
 }
 
 export interface FeeConfig {

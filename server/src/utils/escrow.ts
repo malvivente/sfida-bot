@@ -6,6 +6,18 @@ export const MATCH_ESCROW_CODE_HEX =
 
 const escrowCode = Cell.fromHex(MATCH_ESCROW_CODE_HEX);
 
+export function isValidTonAddress(address?: string): boolean {
+  if (!address || typeof address !== 'string') return false;
+  const trimmed = address.trim();
+  if (trimmed.startsWith('tg_') || trimmed.startsWith('temp_') || trimmed.startsWith('player_') || trimmed.startsWith('spec_') || trimmed.includes(' ')) return false;
+  try {
+    Address.parse(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Calculates the deterministic TON address of a MatchEscrow contract instance.
  */
@@ -17,11 +29,14 @@ export function computeEscrowAddress(
   serverPublicKey: string | bigint | number
 ): string {
   try {
+    if (!isValidTonAddress(clashMasterAddress) || !isValidTonAddress(playerAAddress)) {
+      return '';
+    }
     const b_0 = beginCell();
     b_0.storeUint(0, 1);
-    b_0.storeAddress(Address.parse(clashMasterAddress));
+    b_0.storeAddress(Address.parse(clashMasterAddress.trim()));
     b_0.storeUint(BigInt(matchId), 64);
-    b_0.storeAddress(Address.parse(playerAAddress));
+    b_0.storeAddress(Address.parse(playerAAddress.trim()));
     b_0.storeCoins(BigInt(wagerAmountNano));
     b_0.storeUint(BigInt(serverPublicKey), 256);
     const b_1 = beginCell();
@@ -31,8 +46,7 @@ export function computeEscrowAddress(
     const data = b_0.endCell();
 
     return contractAddress(0, { code: escrowCode, data }).toString();
-  } catch (err) {
-    console.warn('[computeEscrowAddress] Calculation failed:', err);
+  } catch {
     return '';
   }
 }

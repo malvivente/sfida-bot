@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, TrendingUp, Swords, Lock, Clock } from 'lucide-react';
+import { Coins, TrendingUp, Swords, Lock, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
@@ -21,6 +21,16 @@ interface SpectatorOddsBarProps {
   playerBName?: string;
   roomState?: string;
   countdownSeconds?: number | null;
+  placedBet?: {
+    target: 'A' | 'B' | 'X';
+    amountGram: string;
+    feePaidGram: string;
+    targetName?: string;
+    odds?: number;
+  } | null;
+  betStatus?: 'idle' | 'placing' | 'confirmed' | 'error';
+  betError?: string | null;
+  onClearPlacedBet?: () => void;
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -38,6 +48,10 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   playerBName = 'PLAYER B',
   roomState,
   countdownSeconds,
+  placedBet,
+  betStatus = 'idle',
+  betError,
+  onClearPlacedBet,
 }) => {
   const { t } = useLanguage();
   const { triggerImpact } = useHaptics();
@@ -545,15 +559,68 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       )}
 
       {/* Notice for Duelists or Bet Controls for Spectators */}
-      {isPlayer ? (
-        <div className="p-3.5 rounded-xl bg-cyber-bg/70 border border-cyber-cyan/30 text-center flex items-center justify-center space-x-2.5">
-          <Swords className="w-4 h-4 text-cyber-cyan shrink-0" />
-          <span className="text-xs font-chakra text-slate-300">
-            You are a duelist in this match: spectator betting is disabled for combatants.
-          </span>
-        </div>
-      ) : (
+      {isPlayer ? null : (
         <>
+          {/* Confirmed Placed Bet Card */}
+          {placedBet && (
+            <div className="mb-3.5 p-3.5 rounded-xl bg-cyber-green/10 border border-cyber-green/50 shadow-[0_0_15px_rgba(0,255,136,0.18)] flex flex-col space-y-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-cyber-green font-chakra font-black text-xs tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-cyber-green" />
+                  <span>{t('spectator.betConfirmedTitle')}</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyber-green/20 text-cyber-green border border-cyber-green/40">
+                  Pool Pari-Mutuel
+                </span>
+              </div>
+
+              <div className="bg-cyber-bg/80 rounded-xl p-2.5 border border-cyber-border/70 grid grid-cols-3 gap-2 text-center">
+                <div className="text-left">
+                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">Scelta</span>
+                  <span className="text-xs font-chakra font-extrabold text-white truncate block">
+                    {placedBet.target === 'A'
+                      ? (isSplit ? `1: ${playerAName}` : playerAName)
+                      : placedBet.target === 'X'
+                      ? 'X: PEACE'
+                      : (isSplit ? `2: ${playerBName}` : playerBName)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">Puntata</span>
+                  <span className="text-xs font-chakra font-black text-cyber-cyan flex items-center justify-center space-x-0.5">
+                    <span>{placedBet.amountGram}</span>
+                    <GramIcon className="w-3 h-3 text-cyber-cyan" />
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">Vincita Stimata</span>
+                  <span className="text-xs font-chakra font-black text-cyber-green flex items-center justify-end space-x-0.5">
+                    <span>~{(parseFloat(placedBet.amountGram) * (placedBet.odds || (placedBet.target === 'A' ? oddsA : placedBet.target === 'X' ? (oddsX || 2.0) : oddsB))).toFixed(2)}</span>
+                    <GramIcon className="w-3 h-3 text-cyber-green" />
+                  </span>
+                </div>
+              </div>
+
+              {isBettingWindow && onClearPlacedBet && (
+                <button
+                  type="button"
+                  onClick={onClearPlacedBet}
+                  className="w-full py-1.5 px-3 rounded-lg text-[11px] font-orbitron font-bold text-slate-300 hover:text-white bg-cyber-bg/90 hover:bg-cyber-bg border border-cyber-border/80 transition-all flex items-center justify-center space-x-1 active:scale-98"
+                >
+                  <span>{t('spectator.addAnotherBet')}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Bet Error Alert */}
+          {betError && (
+            <div className="mb-3 p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-chakra flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span className="flex-1 font-semibold">{betError}</span>
+            </div>
+          )}
+
           {/* Quick Stake Buttons Grid */}
           <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra">
@@ -630,9 +697,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
           ) : (
             <button
               onClick={handlePlaceBet}
-              disabled={disabled || !betAmount || isBelowMin || isOverMax}
+              disabled={disabled || !betAmount || isBelowMin || isOverMax || betStatus === 'placing'}
               className={`w-full py-3.5 px-4 rounded-xl font-orbitron font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-[0.98] ${
-                disabled || !betAmount || isBelowMin || isOverMax
+                disabled || !betAmount || isBelowMin || isOverMax || betStatus === 'placing'
                   ? 'bg-cyber-border text-cyber-muted cursor-not-allowed'
                   : selectedSide === 'A'
                   ? 'bg-cyber-cyan text-cyber-bg hover:brightness-110 shadow-neon-cyan animate-pulse'
@@ -641,34 +708,43 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   : 'bg-cyber-pink text-white hover:brightness-110 shadow-neon-pink animate-pulse'
               }`}
             >
-              <div className="flex items-center justify-center space-x-2">
-                <Coins className="w-4 h-4 shrink-0" />
-                <span>{t('spectator.bet')}</span>
-                <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
-                  <span>{betAmount || '0'}</span>
-                  <GramIcon className="w-3.5 h-3.5" />
-                </span>
-                <span>
-                  {t('spectator.on')}{' '}
-                  {selectedSide === 'A'
-                    ? isSplit
-                      ? `[1] ${playerAName} (Steal)`
-                      : playerAName
-                    : selectedSide === 'X'
-                    ? '[X] PEACE (Both Split)'
-                    : isSplit
-                    ? `[2] ${playerBName} (Steal)`
-                    : playerBName}
-                </span>
-              </div>
-              <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90 flex items-center justify-center space-x-1">
-                <span>Totale: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)</span>
-                <span>•</span>
-                <span className="font-bold text-cyber-amber">00:{countdownFormatted}</span>
-              </div>
-              <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-                <span>Pari-Mutuel Pool (100% payout, 0% rake)</span>
-              </div>
+              {betStatus === 'placing' ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <span>{t('spectator.placingBet')}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center space-x-2">
+                    <Coins className="w-4 h-4 shrink-0" />
+                    <span>{t('spectator.bet')}</span>
+                    <span className="inline-flex items-center font-chakra font-black text-sm space-x-0.5">
+                      <span>{betAmount || '0'}</span>
+                      <GramIcon className="w-3.5 h-3.5" />
+                    </span>
+                    <span>
+                      {t('spectator.on')}{' '}
+                      {selectedSide === 'A'
+                        ? isSplit
+                          ? `[1] ${playerAName} (Steal)`
+                          : playerAName
+                        : selectedSide === 'X'
+                        ? '[X] PEACE (Both Split)'
+                        : isSplit
+                        ? `[2] ${playerBName} (Steal)`
+                        : playerBName}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-chakra text-slate-200 mt-0.5 opacity-90 flex items-center justify-center space-x-1">
+                    <span>Totale: {totalBetRequired} GRAM (incl. {spectatorFee.toFixed(2)} fee)</span>
+                    <span>•</span>
+                    <span className="font-bold text-cyber-amber">00:{countdownFormatted}</span>
+                  </div>
+                  <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
+                    <span>Pari-Mutuel Pool (100% payout, 0% rake)</span>
+                  </div>
+                </>
+              )}
             </button>
           )}
         </>
