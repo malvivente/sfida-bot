@@ -1,5 +1,6 @@
 import { beginCell, Address, Cell } from '@ton/core';
 import { keyPairFromSeed, sign } from '@ton/crypto';
+import { isValidTonAddress } from '../utils/escrow.js';
 
 export class MatchSignerService {
   private secretKey?: Buffer;
@@ -56,7 +57,12 @@ export class MatchSignerService {
     signatureCellBoc: string;
   } {
     this.ensureInitialized();
-    const winner = Address.parse(winnerAddress);
+    let winner: Address;
+    if (isValidTonAddress(winnerAddress)) {
+      winner = Address.parse(winnerAddress.trim());
+    } else {
+      winner = new Address(0, Buffer.alloc(32, 0));
+    }
 
     const payloadCell = beginCell()
       .storeUint(matchId, 64)

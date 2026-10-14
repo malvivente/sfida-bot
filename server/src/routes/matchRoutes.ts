@@ -465,6 +465,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
       message: `${room.playerB.username} has joined the Arena! Ready up to duel!`,
     });
 
+    // If Player A is away from lobby/miniapp, send Telegram notification
+    if (room.playerA && room.playerB) {
+      room.notifyOpponentJoin?.(room.playerB, room.playerA);
+    }
+
     return reply.send({
       success: true,
       matchId: id,

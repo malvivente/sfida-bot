@@ -601,15 +601,12 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 </div>
               </div>
 
-              {isBettingWindow && onClearPlacedBet && (
-                <button
-                  type="button"
-                  onClick={onClearPlacedBet}
-                  className="w-full py-1.5 px-3 rounded-lg text-[11px] font-orbitron font-bold text-slate-300 hover:text-white bg-cyber-bg/90 hover:bg-cyber-bg border border-cyber-border/80 transition-all flex items-center justify-center space-x-1 active:scale-98"
-                >
-                  <span>{t('spectator.addAnotherBet')}</span>
-                </button>
-              )}
+              <div className="w-full py-2 px-3 rounded-lg bg-black/60 border border-cyber-green/40 text-center flex items-center justify-center space-x-2">
+                <Lock className="w-3.5 h-3.5 text-cyber-green" />
+                <span className="text-[11px] font-chakra font-bold text-cyber-green uppercase tracking-wider">
+                  {t('spectator.betLockedNotice')}
+                </span>
+              </div>
             </div>
           )}
 
@@ -621,8 +618,10 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             </div>
           )}
 
-          {/* Quick Stake Buttons Grid */}
-          <div className="space-y-2 mb-3">
+          {/* Quick Stake Buttons Grid & Place Bet - Only when bet is not placed yet */}
+          {!placedBet && (
+            <>
+              <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra">
               <span>Select or enter amount:</span>
               <span className="flex items-center space-x-1">
@@ -746,6 +745,8 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                 </>
               )}
             </button>
+          )}
+            </>
           )}
         </>
       )}

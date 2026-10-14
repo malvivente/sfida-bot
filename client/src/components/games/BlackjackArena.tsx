@@ -161,33 +161,93 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-radial-gradient from-cyber-cyan/10 via-transparent to-black/90 pointer-events-none" />
 
-      {/* Top Header: Table Info & Shoe Status */}
+      {/* Top Header: Players & Ready Status */}
       <div className="w-full z-10 flex items-center justify-between border-b border-cyber-border/60 pb-2.5 gap-1.5">
-        <div className="flex flex-col items-start min-w-0">
-          <span className="text-[10px] text-cyber-cyan uppercase font-chakra font-bold tracking-widest flex items-center space-x-1 truncate">
-            <Sparkles className="w-3 h-3 text-cyber-cyan inline shrink-0" />
-            <span>{t('blackjack.title')}</span>
+        {/* Player A */}
+        <div className={`flex flex-col items-start flex-1 min-w-0 p-2 rounded-xl border transition-all ${
+          currentTurn === 'A' && roomState === 'GAME_ACTIVE'
+            ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-neon-cyan'
+            : 'bg-black/40 border-cyber-border'
+        }`}>
+          <div className="flex items-center space-x-1 w-full min-w-0">
+            <span className="text-[11px] font-chakra font-bold text-cyber-cyan truncate">{playerAName}</span>
+          </div>
+          <span className="text-[9px] font-mono mt-0.5">
+            {roomState === 'GAME_ACTIVE' ? (
+              currentTurn === 'A' ? <span className="text-cyber-cyan font-bold">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
+            ) : (
+              playerAReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
+            )}
           </span>
-          <span className="text-[10px] font-chakra text-slate-400">{t('blackjack.shoe')}</span>
         </div>
 
-        <div className="flex items-center space-x-1.5 bg-black/60 border border-cyber-border px-2.5 py-1 rounded-xl shrink-0">
-          <Layers className="w-3 h-3 text-cyber-cyan" />
-          <span className="text-xs font-mono font-bold text-white">{deckRemaining} {t('blackjack.cards')}</span>
+        {/* Center Shoe & Game Status Badge */}
+        <div className="flex flex-col items-center shrink-0 px-1 text-center">
+          <span className="text-[8px] text-cyber-cyan uppercase font-chakra font-bold tracking-widest">BLACKJACK</span>
+          <span className="text-xs font-mono font-black text-white">{deckRemaining} CARDS</span>
+        </div>
+
+        {/* Player B */}
+        <div className={`flex flex-col items-end flex-1 min-w-0 p-2 rounded-xl border transition-all ${
+          currentTurn === 'B' && roomState === 'GAME_ACTIVE'
+            ? 'bg-cyber-pink/15 border-cyber-pink shadow-neon-pink'
+            : 'bg-black/40 border-cyber-border'
+        }`}>
+          <div className="flex items-center space-x-1 w-full min-w-0 justify-end">
+            <span className="text-[11px] font-chakra font-bold text-cyber-pink truncate">{playerBName}</span>
+          </div>
+          <span className="text-[9px] font-mono mt-0.5">
+            {roomState === 'GAME_ACTIVE' ? (
+              currentTurn === 'B' ? <span className="text-cyber-pink font-bold">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
+            ) : (
+              playerBReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
+            )}
+          </span>
         </div>
       </div>
 
       {/* Duel Cards Table */}
       <div className="my-auto w-full flex flex-col space-y-3 py-2 z-10">
         {roomState === 'LOBBY' ? (
-          <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-cyber-border text-center space-y-2">
-            <Layers className="w-12 h-12 text-cyber-cyan/60 animate-pulse" />
-            <h4 className="text-sm font-orbitron font-bold text-white uppercase tracking-wider">
-              CYBER TABLE ARMED • 100% FACE-UP
-            </h4>
-            <p className="text-xs text-slate-300 font-chakra max-w-xs">
-              All cards are dealt face-up from a shared common shoe. Click READY below to begin!
-            </p>
+          <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-black/50 border border-cyber-border text-center space-y-3">
+            <Layers className="w-10 h-10 text-cyber-cyan/70 animate-pulse" />
+            <div className="flex flex-col items-center space-y-0.5">
+              <h4 className="text-xs sm:text-sm font-orbitron font-bold text-white uppercase tracking-wider">
+                TAVOLO BLACKJACK PRONTO • 100% FACE-UP
+              </h4>
+              <p className="text-[11px] text-slate-300 font-chakra max-w-xs">
+                Mazzo condiviso e carte scoperte in tempo reale.
+              </p>
+            </div>
+
+            {/* Duelists status in lobby */}
+            <div className="w-full max-w-xs grid grid-cols-2 gap-2 pt-1">
+              <div className="p-2 rounded-xl bg-cyber-bg/80 border border-cyber-cyan/30 flex flex-col items-center">
+                <span className="text-[10px] text-slate-400 font-chakra">GIOCATORE 1</span>
+                <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[120px]">{playerAName}</span>
+                <span className={`text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded-full border ${
+                  playerAReady
+                    ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/40'
+                    : 'bg-black/40 text-slate-400 border-slate-700'
+                }`}>
+                  {playerAReady ? '✓ PRONTO' : '⏳ IN ATTESA'}
+                </span>
+              </div>
+
+              <div className="p-2 rounded-xl bg-cyber-bg/80 border border-cyber-pink/30 flex flex-col items-center">
+                <span className="text-[10px] text-slate-400 font-chakra">GIOCATORE 2</span>
+                <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[120px]">{playerBName}</span>
+                <span className={`text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded-full border ${
+                  !hasPlayerB
+                    ? 'bg-black/40 text-cyber-amber border-cyber-amber/40 animate-pulse'
+                    : playerBReady
+                    ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/40'
+                    : 'bg-black/40 text-slate-400 border-slate-700'
+                }`}>
+                  {!hasPlayerB ? '⚔️ IN ATTESA...' : playerBReady ? '✓ PRONTO' : '⏳ IN ATTESA'}
+                </span>
+              </div>
+            </div>
           </div>
         ) : roomState === 'BETTING_WINDOW' ? (
           <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-cyber-amber/50 text-center space-y-2">

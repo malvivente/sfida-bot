@@ -209,6 +209,7 @@ export const translations: Translations = {
   'spectator.betConfirmedTitle': { it: 'SCOMMESSA PIAZZATA CON SUCCESSO! ✓', en: 'BET SUCCESSFULLY PLACED! ✓' },
   'spectator.betConfirmedDesc': { it: 'Hai puntato {amount} GRAM su {target}. Vincita stimata: ~{payout} GRAM.', en: 'You placed {amount} GRAM on {target}. Estimated payout: ~{payout} GRAM.' },
   'spectator.addAnotherBet': { it: '+ AGGIUNGI UN\'ALTRA PUNTATA', en: '+ PLACE ANOTHER BET' },
+  'spectator.betLockedNotice': { it: 'PUNTATA BLOCCATA • IN ATTESA DEL RISULTATO', en: 'BET LOCKED • AWAITING MATCH RESULT' },
   'spectator.placingBet': { it: 'PIAZZAMENTO SCOMMESSA...', en: 'PLACING BET...' },
 
   // Match Detail

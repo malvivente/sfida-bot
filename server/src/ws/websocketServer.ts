@@ -136,6 +136,19 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
 
               const bettorWallet = userAccount.walletAddress || wallet || (telegramId ? `tg_${telegramId}` : '');
 
+              // Prevent duplicate or changing spectator bets: bet is locked once placed
+              const alreadyBet = room.spectatorBets.some((b) =>
+                (bettorWallet && b.walletAddress && b.walletAddress.toLowerCase() === bettorWallet.toLowerCase()) ||
+                (telegramId && b.telegramId && String(b.telegramId) === String(telegramId))
+              );
+              if (alreadyBet) {
+                ws.send(JSON.stringify({
+                  type: 'BET_ERROR',
+                  message: 'Hai già piazzato la tua puntata per questo duello. La scommessa è bloccata.',
+                }));
+                break;
+              }
+
               // Debit bet and participation fee
               await dbService.debitUserBalance(
                 bettorWallet,

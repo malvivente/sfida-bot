@@ -542,7 +542,13 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (
-          role === 'player' ? (
+          lastOutcome?.result === 'BANG' ? (
+            <div className="w-full py-3.5 px-4 rounded-2xl bg-rose-950/70 border border-rose-500 text-center flex items-center justify-center space-x-2 animate-pulse">
+              <span className="text-xs font-orbitron font-black text-rose-400">
+                💥 COLPO FATALE ESPLOSO • CONFERMA RISULTATO IN CORSO...
+              </span>
+            </div>
+          ) : role === 'player' ? (
             isPlayerTurn ? (
               <div className="w-full flex flex-col space-y-2">
                 <span className="text-[11px] font-orbitron font-bold text-cyber-cyan uppercase tracking-wider text-center animate-pulse">

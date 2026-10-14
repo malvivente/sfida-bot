@@ -86,6 +86,7 @@ export abstract class BaseGameRoom {
   public rematchNewWagerNano?: bigint;
   public isRematch: boolean = false;
   protected settleCleanupTimer?: NodeJS.Timeout;
+  private notifiedTelegramActions: Set<string> = new Set();
 
   protected onMatchSettledCallback?: (room: BaseGameRoom, winnerAddress: string) => Promise<void>;
 
@@ -347,23 +348,90 @@ export abstract class BaseGameRoom {
 
   // Ready toggle
   public setPlayerReady(wallet: string, telegramId?: string) {
+    let readySide: 'A' | 'B' | null = null;
     if (
       this.isSameWallet(wallet, this.playerA.walletAddress) ||
       (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
     ) {
       this.playerA.ready = true;
+      readySide = 'A';
     } else if (
       this.playerB &&
       (this.isSameWallet(wallet, this.playerB.walletAddress) ||
         (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
     ) {
       this.playerB.ready = true;
+      readySide = 'B';
     }
 
     this.broadcastRoomState();
 
     if (this.playerA.ready && this.playerB?.ready && this.state === 'LOBBY') {
       this.startBettingWindow();
+      return;
+    }
+
+    // If one player is ready and opponent is not ready and offline/outside miniapp, notify them via Telegram
+    if (readySide && this.state === 'LOBBY') {
+      const readyPlayer = readySide === 'A' ? this.playerA : this.playerB;
+      const otherPlayer = readySide === 'A' ? this.playerB : this.playerA;
+
+      if (readyPlayer && otherPlayer && otherPlayer.telegramId && (!otherPlayer.ws || otherPlayer.ws.readyState !== 1)) {
+        this.notifyOpponent(readyPlayer, otherPlayer, 'ready');
+      }
+    }
+  }
+
+  public notifyOpponentJoin(joinedPlayer: PlayerSession, creatorPlayer: PlayerSession) {
+    if (creatorPlayer && creatorPlayer.telegramId && (!creatorPlayer.ws || creatorPlayer.ws.readyState !== 1)) {
+      this.notifyOpponent(joinedPlayer, creatorPlayer, 'join');
+    }
+  }
+
+  private async notifyOpponent(senderPlayer: PlayerSession, targetPlayer: PlayerSession, action: 'ready' | 'join') {
+    if (!targetPlayer.telegramId) return;
+    const key = `${targetPlayer.telegramId}_${action}_${this.matchId}`;
+    if (this.notifiedTelegramActions.has(key)) return;
+    this.notifiedTelegramActions.add(key);
+
+    try {
+      const { getTelegramBot } = await import('../bot/index.js');
+      const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+      const { renderCustomEmojis } = await import('../bot/emojis.js');
+      const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+
+      const bot = getTelegramBot();
+      if (!bot) return;
+
+      const gameConfig = (GAMES_CONFIG as any)[this.gameType];
+      const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
+      const wagerGram = (Number(this.config.wagerAmountNano) / 1e9).toFixed(2);
+      const senderName = senderPlayer.username ? `@${senderPlayer.username.replace(/^@/, '')}` : 'Un giocatore';
+
+      const title = action === 'ready'
+        ? `⚔️ <b>SFIDA ARENA • AVVERSARIO PRONTO!</b>`
+        : `⚔️ <b>SFIDA ARENA • AVVERSARIO ENTRATO!</b>`;
+
+      const desc = action === 'ready'
+        ? `<b>${senderName}</b> ha premuto <b>PRONTO</b> per sfidarti a <b>${gameTitle}</b> (Stanza #${this.matchId})!\n\n`
+        : `<b>${senderName}</b> è entrato nella tua stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) ed è in attesa!\n\n`;
+
+      const text =
+        `${title}\n\n` +
+        desc +
+        `💰 <b>Posta in palio:</b> ${wagerGram} GRAM\n\n` +
+        `⚡ <i>Entra subito nell'Arena per iniziare a giocare!</i>`;
+
+      const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+      const keyboard = new InlineKeyboard().webApp('⚔️ ENTRA NEL DUELLO', `${webAppUrl}?startapp=duel_${this.matchId}`);
+
+      await bot.api.sendMessage(Number(targetPlayer.telegramId), renderCustomEmojis(text), {
+        parse_mode: 'HTML',
+        reply_markup: keyboard,
+      });
+      console.log(`[BaseGameRoom] Sent '${action}' notification to tg:${targetPlayer.telegramId} for match #${this.matchId}`);
+    } catch (err: any) {
+      console.warn(`[BaseGameRoom] Could not send '${action}' notification to tg:${targetPlayer.telegramId}:`, err?.message || err);
     }
   }
 
@@ -420,11 +488,19 @@ export abstract class BaseGameRoom {
     this.winnerName = winnerName;
 
     const timestamp = Math.floor(Date.now() / 1000);
-    const { signatureHex, signatureCellBoc } = signerService.signResolution(
-      this.matchId,
-      winnerAddress,
-      timestamp
-    );
+    let signatureHex = '';
+    let signatureCellBoc = '';
+    try {
+      const res = signerService.signResolution(
+        this.matchId,
+        winnerAddress,
+        timestamp
+      );
+      signatureHex = res.signatureHex;
+      signatureCellBoc = res.signatureCellBoc;
+    } catch (err) {
+      console.warn(`[BaseGameRoom] Resolution signing skipped/failed:`, err);
+    }
 
     this.resolution = {
       matchId: this.matchId.toString(),
