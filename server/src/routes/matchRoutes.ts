@@ -319,6 +319,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.playerA.username = body.telegramUsername || 'Player A';
     room.playerA.photoUrl = body.photoUrl || userAccount.photoUrl || '';
 
+    if (body.telegramUserId) {
+      dbService.setLastPlayedGame(body.telegramUserId, gameType).catch((err) =>
+        console.error('[matchRoutes] Error setting lastPlayedGame on create:', err)
+      );
+    }
+
     return reply.send({
       success: true,
       matchId: matchId.toString(),
@@ -439,6 +445,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
     };
     room.config.playerBAddress = body.playerBAddress;
     room.state = 'LOBBY';
+
+    if (body.telegramUserId && room.gameType) {
+      dbService.setLastPlayedGame(body.telegramUserId, room.gameType).catch((err) =>
+        console.error('[matchRoutes] Error setting lastPlayedGame on join:', err)
+      );
+    }
 
     room.broadcast({
       type: 'ROOM_UPDATE',

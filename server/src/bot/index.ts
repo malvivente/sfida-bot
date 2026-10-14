@@ -535,7 +535,8 @@ export function createTelegramBot(token?: string): Bot {
     const creationFee = 0.05;
     const totalDeduct = wager + creationFee;
 
-    const { type: gameType, title: gameTitle } = parseGameType(rawGame);
+    const parsedGame = parseGameType(rawGame) || { type: 'roulette' as GameType, title: 'Russian Roulette' };
+    const { type: gameType, title: gameTitle } = parsedGame;
 
     const creator = chosen.from;
     const customLang = await dbService.getUserLanguage(creator.id);
@@ -643,6 +644,9 @@ export function createTelegramBot(token?: string): Bot {
     room.playerA.telegramId = creator.id.toString();
     room.playerA.username = creator.username || creator.first_name;
     room.playerA.photoUrl = userAccount.photoUrl || '';
+
+    // Record last played game
+    await dbService.setLastPlayedGame(creator.id, gameType);
 
     // Update sent message with active match link
     if (chosen.inline_message_id) {

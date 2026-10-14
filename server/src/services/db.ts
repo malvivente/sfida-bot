@@ -84,6 +84,7 @@ export interface UserAccount {
   hasExplicitLanguage?: boolean;
   referredBy?: string; // Telegram ID or wallet of recruiter
   referralEarningsGram?: string; // Total lifetime referral earnings in GRAM
+  lastPlayedGame?: string; // Last played GameType for quick rematches & duels
   isBotBlocked?: boolean; // Whether user has blocked the bot
   botStartedAt?: number; // Timestamp when user first launched the bot
   balanceNano: string;
@@ -1284,6 +1285,40 @@ export class DatabaseService {
     }
 
     return result;
+  }
+
+  public async setLastPlayedGame(telegramId: string | number, gameType: string): Promise<void> {
+    const user = await this.getUserAccount(undefined, telegramId.toString());
+    if (user) {
+      user.lastPlayedGame = gameType;
+      this.persistData();
+    }
+  }
+
+  public async getLastPlayedGame(telegramId: string | number): Promise<string | null> {
+    const user = await this.getUserAccount(undefined, telegramId.toString());
+    if (user?.lastPlayedGame) {
+      return user.lastPlayedGame;
+    }
+    const tgIdStr = telegramId.toString();
+    const resolvedTgId = this.resolveTelegramId(undefined, tgIdStr) || tgIdStr;
+    const matches = this.matchesByTg.get(resolvedTgId) || [];
+    if (matches.length > 0) {
+      const sorted = [...matches].sort((a, b) => (b.settledAt || b.createdAt || 0) - (a.settledAt || a.createdAt || 0));
+      for (const m of sorted) {
+        if (m.gameType) return m.gameType;
+      }
+    }
+    const allMatches = Array.from(this.matches.values()).filter(
+      (m) => String(m.playerATelegramId) === tgIdStr || String(m.playerBTelegramId) === tgIdStr
+    );
+    if (allMatches.length > 0) {
+      allMatches.sort((a, b) => (b.settledAt || b.createdAt || 0) - (a.settledAt || a.createdAt || 0));
+      for (const m of allMatches) {
+        if (m.gameType) return m.gameType;
+      }
+    }
+    return null;
   }
 
   public async getRecentWins(limit: number = 15): Promise<{

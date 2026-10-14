@@ -56,20 +56,21 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     help_text:
       `{{emoji.bot}} <b>SFIDA ARENA GUIDE</b> {{emoji.bot}}\n\n` +
       `<b>Available Commands:</b>\n` +
-      `• /start - Open Arena and launch bot\n` +
-      `• /lang - Change language\n` +
-      `• /help - Show this guide\n\n` +
-      `<b>Group Duels:</b>\n` +
-      `Use <code>/duel &lt;wager&gt; [game]</code> in any group, or type <code>@{botUsername} duel &lt;wager&gt;</code> in any chat to launch an instant challenge card!\n\n` +
-      `<b>Available Games:</b>\n` +
-      `• Russian Roulette (8 shots, 1 live round)\n` +
-      `• Blackjack Face-Up (Shared deck, face-up cards)\n` +
-      `• Glass Bridge (Stepping glass panels & memory)\n` +
-      `• Chrono Blind (Blind timer, millisecond reflexes)\n` +
-      `• Split or Steal (Prisoner's dilemma with Trust Jackpot)\n` +
-      `• Cyber Shotgun (Pump shotgun with shells & tactical items)\n` +
-      `• Connect 4 (Turn-based 7x6 strategy grid)\n` +
-      `• Cube Count (Rapid 3D isometric counting)`,
+      `• /start — Open Arena\n` +
+      `• /lang — Change language\n` +
+      `• /help — Show this guide\n\n` +
+      `<b>How to create a group duel:</b>\n` +
+      `Type <code>/duel &lt;wager&gt; &lt;game&gt;</code> in any group (e.g. <code>/duel 2 roulette</code>).\n` +
+      `If you only specify the wager (e.g. <code>/duel 2</code>), you can quickly confirm your last played game!\n\n` +
+      `<b>Available games & commands:</b>\n` +
+      `• <code>/duel &lt;wager&gt; roulette</code> — Russian Roulette (8 shots, 1 live)\n` +
+      `• <code>/duel &lt;wager&gt; blackjack</code> — Face-Up Blackjack (shared open deck)\n` +
+      `• <code>/duel &lt;wager&gt; bridge</code> — Glass Bridge (stepping glass panels)\n` +
+      `• <code>/duel &lt;wager&gt; chrono</code> — Chrono Blind (blind millisecond timer)\n` +
+      `• <code>/duel &lt;wager&gt; split</code> — Split or Steal (min. 5 GRAM, Trust Jackpot)\n` +
+      `• <code>/duel &lt;wager&gt; shotgun</code> — Cyber Shotgun (3 HP & tactical items)\n` +
+      `• <code>/duel &lt;wager&gt; connect4</code> — Connect 4 (turn-based 7x6 grid)\n` +
+      `• <code>/duel &lt;wager&gt; cubecount</code> — Cube Count (rapid 3D cube flash)`,
 
     lang_select_title: `{{emoji.gear}} <b>Select your language:</b>`,
     lang_changed: `{{emoji.check}} Language updated to <b>{language}</b>!`,
@@ -106,6 +107,31 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     // Group In-Chat Duel Messages
     group_duel_private_hint: `{{emoji.swords}} <b>CREATE A DUEL</b>\n\nUse <code>/duel &lt;wager&gt; [game]</code> directly in groups to challenge members, or tap below to open the Arena:`,
     group_duel_invalid_wager: `{{emoji.warning}} <b>Invalid Wager</b>: stake must be between 0.1 and 100 GRAM (e.g. <code>/duel 2</code>).`,
+    group_duel_no_wager: `{{emoji.warning}} <b>Wager not specified!</b>\n\nPlease specify your wager in GRAM.\n<b>Example:</b> <code>/duel {game} 1</code> or <code>/duel 1 {game}</code>`,
+    group_duel_no_game_no_last:
+      `{{emoji.warning}} <b>GAME NOT SPECIFIED</b>\n\n` +
+      `You haven't specified which game to play and you don't have any recently played games.\n\n` +
+      `Choose a game to start the duel!\n` +
+      `<b>Example:</b> <code>/duel roulette {wager}</code> or <code>/duel blackjack {wager}</code>\n\n` +
+      `<b>Available games:</b>\n` +
+      `• <code>roulette</code> — Russian Roulette\n` +
+      `• <code>blackjack</code> — Face-Up Blackjack\n` +
+      `• <code>bridge</code> — Glass Bridge\n` +
+      `• <code>chrono</code> — Chrono Blind\n` +
+      `• <code>split</code> — Split or Steal (min. 5 GRAM)\n` +
+      `• <code>shotgun</code> — Cyber Shotgun\n` +
+      `• <code>connect4</code> — Connect 4\n` +
+      `• <code>cubecount</code> — Cube Count`,
+    group_duel_suggest_last_title: `{{emoji.warning}} <b>GAME NOT SPECIFIED</b>`,
+    group_duel_suggest_last_desc:
+      `You haven't specified which game you want to play.\n` +
+      `Would you like to duel in your last played game, <b>{gameTitle}</b>?\n\n` +
+      `{{emoji.controller}} <b>Suggested game</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.moneyBag}} <b>Wager</b>: <b>{wager} GRAM</b>\n` +
+      `{{emoji.coin}} <b>Creation fee</b>: <b>0.05 GRAM</b>\n` +
+      `{{emoji.gem}} <b>Total required</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Tap the button below to confirm, or type <code>/duel &lt;game&gt; {wager}</code></i>`,
+    group_duel_play_last_btn: `{{emoji.swords}} Play {gameTitle} ({wager} GRAM)`,
     group_duel_insufficient: `{{emoji.warning}} <b>INSUFFICIENT BALANCE</b>\n\n@{username}, you need <b>{total} GRAM</b> to create this <b>{wager} GRAM</b> duel (includes 0.05 GRAM creation fee).\n\n{{emoji.gem}} Current balance: <b>{balance} GRAM</b> (missing {missing} GRAM).`,
     group_duel_deposit_btn: `{{emoji.gem}} Deposit GRAM`,
     group_duel_confirm_title: `{{emoji.swords}} <b>CONFIRM DUEL CREATION</b>`,
@@ -163,20 +189,21 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     help_text:
       `{{emoji.bot}} <b>GUIDA SFIDA ARENA</b> {{emoji.bot}}\n\n` +
       `<b>Comandi disponibili:</b>\n` +
-      `• /start - Apri l'Arena e avvia il bot\n` +
-      `• /lang - Cambia la lingua\n` +
-      `• /help - Mostra questa guida\n\n` +
-      `<b>Sfide nei gruppi:</b>\n` +
-      `Nei gruppi usa <code>/duel &lt;puntata&gt; [gioco]</code>, oppure in qualsiasi chat digita <code>@{botUsername} duel &lt;importo&gt;</code> per lanciare una sfida al volo!\n\n` +
-      `<b>Giochi disponibili:</b>\n` +
-      `• Russian Roulette (8 colpi, 1 proiettile)\n` +
-      `• Blackjack Face-Up (Mazzo comune a carte scoperte)\n` +
-      `• Glass Bridge (Pannelli di vetro e memoria)\n` +
-      `• Chrono Blind (Timer al buio, riflessi al millisecondo)\n` +
-      `• Split or Steal (Dilemma del prigioniero con Trust Jackpot)\n` +
-      `• Cyber Shotgun (Fucile con cartucce e oggetti tattici)\n` +
-      `• Forza 4 (Griglia 7x6 strategica a turni)\n` +
-      `• Cube Count (Conteggio rapido in 3D isometrico)`,
+      `• /start — Apri l'Arena\n` +
+      `• /lang — Cambia lingua\n` +
+      `• /help — Mostra questa guida\n\n` +
+      `<b>Come lanciare una sfida nei gruppi:</b>\n` +
+      `Scrivi <code>/duel &lt;importo&gt; &lt;gioco&gt;</code> (es. <code>/duel 2 roulette</code>).\n` +
+      `Se specifichi solo l'importo (es. <code>/duel 2</code>), potrai confermare rapidamente il tuo ultimo gioco giocato!\n\n` +
+      `<b>Giochi disponibili e comandi:</b>\n` +
+      `• <code>/duel &lt;importo&gt; roulette</code> — Russian Roulette (8 colpi, 1 vero)\n` +
+      `• <code>/duel &lt;importo&gt; blackjack</code> — Blackjack Face-Up (mazzo comune a carte scoperte)\n` +
+      `• <code>/duel &lt;importo&gt; bridge</code> — Glass Bridge (passi su lastre di vetro)\n` +
+      `• <code>/duel &lt;importo&gt; chrono</code> — Chrono Blind (timer al buio)\n` +
+      `• <code>/duel &lt;importo&gt; split</code> — Split or Steal (min. 5 GRAM, con Trust Jackpot)\n` +
+      `• <code>/duel &lt;importo&gt; shotgun</code> — Cyber Shotgun (3 HP e oggetti tattici)\n` +
+      `• <code>/duel &lt;importo&gt; forza4</code> — Forza 4 (griglia 7x6 a turni)\n` +
+      `• <code>/duel &lt;importo&gt; cubecount</code> — Cube Count (conteggio rapido 3D)`,
 
     lang_select_title: `{{emoji.gear}} <b>Seleziona la tua lingua:</b>`,
     lang_changed: `{{emoji.check}} Lingua impostata su <b>{language}</b>!`,
@@ -213,6 +240,31 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
     // Group In-Chat Duel Messages
     group_duel_private_hint: `{{emoji.swords}} <b>CREA UNA SFIDA</b>\n\nPuoi usare il comando <code>/duel &lt;importo&gt; [gioco]</code> direttamente nei gruppi per sfidare gli altri utenti, oppure premi il pulsante qui sotto per aprire l'Arena:`,
     group_duel_invalid_wager: `{{emoji.warning}} <b>Puntata non valida</b>: la puntata deve essere compresa tra 0.1 e 100 GRAM (es. <code>/duel 2</code>).`,
+    group_duel_no_wager: `{{emoji.warning}} <b>Importo non specificato!</b>\n\nSpecifica l'importo della puntata in GRAM.\n<b>Esempio:</b> <code>/duel {game} 1</code> oppure <code>/duel 1 {game}</code>`,
+    group_duel_no_game_no_last:
+      `{{emoji.warning}} <b>GIOCO NON SPECIFICATO</b>\n\n` +
+      `Non hai specificato a quale gioco vuoi sfidare il gruppo e non hai ancora partite recenti.\n\n` +
+      `Indica il gioco desiderato per avviare la sfida!\n` +
+      `<b>Esempio:</b> <code>/duel roulette {wager}</code> oppure <code>/duel blackjack {wager}</code>\n\n` +
+      `<b>Giochi disponibili:</b>\n` +
+      `• <code>roulette</code> — Russian Roulette\n` +
+      `• <code>blackjack</code> — Face-Up Blackjack\n` +
+      `• <code>bridge</code> — Glass Bridge\n` +
+      `• <code>chrono</code> — Chrono Blind\n` +
+      `• <code>split</code> — Split or Steal (min. 5 GRAM)\n` +
+      `• <code>shotgun</code> — Cyber Shotgun\n` +
+      `• <code>connect4</code> — Forza 4\n` +
+      `• <code>cubecount</code> — Cube Count`,
+    group_duel_suggest_last_title: `{{emoji.warning}} <b>GIOCO NON SPECIFICATO</b>`,
+    group_duel_suggest_last_desc:
+      `Non hai indicato a quale gioco vuoi sfidare il gruppo.\n` +
+      `Vuoi avviare la sfida al tuo ultimo gioco giocato, <b>{gameTitle}</b>?\n\n` +
+      `{{emoji.controller}} <b>Gioco proposto</b>: <b>{gameTitle}</b>\n` +
+      `{{emoji.moneyBag}} <b>Puntata</b>: <b>{wager} GRAM</b>\n` +
+      `{{emoji.coin}} <b>Commissione creazione</b>: <b>0.05 GRAM</b>\n` +
+      `{{emoji.gem}} <b>Totale richiesto</b>: <b>{total} GRAM</b>\n\n` +
+      `<i>Premi il pulsante qui sotto per confermare, oppure usa <code>/duel &lt;gioco&gt; {wager}</code></i>`,
+    group_duel_play_last_btn: `{{emoji.swords}} Gioca a {gameTitle} ({wager} GRAM)`,
     group_duel_insufficient: `{{emoji.warning}} <b>SALDO INSUFFICIENTE</b>\n\n@{username}, per creare questa sfida da <b>{wager} GRAM</b> servono <b>{total} GRAM</b> (inclusi 0.05 GRAM di commissione di creazione).\n\n{{emoji.gem}} Saldo attuale: <b>{balance} GRAM</b> (ti mancano {missing} GRAM).`,
     group_duel_deposit_btn: `{{emoji.gem}} Deposita GRAM`,
     group_duel_confirm_title: `{{emoji.swords}} <b>CONFERMA CREAZIONE SFIDA</b>`,
