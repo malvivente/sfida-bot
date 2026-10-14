@@ -545,7 +545,7 @@ export const RussianRouletteArena: React.FC<RussianRouletteArenaProps> = ({
           lastOutcome?.result === 'BANG' ? (
             <div className="w-full py-3.5 px-4 rounded-2xl bg-rose-950/70 border border-rose-500 text-center flex items-center justify-center space-x-2 animate-pulse">
               <span className="text-xs font-orbitron font-black text-rose-400">
-                💥 COLPO FATALE ESPLOSO • CONFERMA RISULTATO IN CORSO...
+                {t('roulette.fatalShotResolving')}
               </span>
             </div>
           ) : role === 'player' ? (

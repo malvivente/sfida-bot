@@ -209,45 +209,14 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
       {/* Duel Cards Table */}
       <div className="my-auto w-full flex flex-col space-y-3 py-2 z-10">
         {roomState === 'LOBBY' ? (
-          <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-black/50 border border-cyber-border text-center space-y-3">
-            <Layers className="w-10 h-10 text-cyber-cyan/70 animate-pulse" />
-            <div className="flex flex-col items-center space-y-0.5">
-              <h4 className="text-xs sm:text-sm font-orbitron font-bold text-white uppercase tracking-wider">
-                TAVOLO BLACKJACK PRONTO • 100% FACE-UP
-              </h4>
-              <p className="text-[11px] text-slate-300 font-chakra max-w-xs">
-                Mazzo condiviso e carte scoperte in tempo reale.
-              </p>
-            </div>
-
-            {/* Duelists status in lobby */}
-            <div className="w-full max-w-xs grid grid-cols-2 gap-2 pt-1">
-              <div className="p-2 rounded-xl bg-cyber-bg/80 border border-cyber-cyan/30 flex flex-col items-center">
-                <span className="text-[10px] text-slate-400 font-chakra">GIOCATORE 1</span>
-                <span className="text-xs font-chakra font-bold text-cyber-cyan truncate max-w-[120px]">{playerAName}</span>
-                <span className={`text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded-full border ${
-                  playerAReady
-                    ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/40'
-                    : 'bg-black/40 text-slate-400 border-slate-700'
-                }`}>
-                  {playerAReady ? '✓ PRONTO' : '⏳ IN ATTESA'}
-                </span>
-              </div>
-
-              <div className="p-2 rounded-xl bg-cyber-bg/80 border border-cyber-pink/30 flex flex-col items-center">
-                <span className="text-[10px] text-slate-400 font-chakra">GIOCATORE 2</span>
-                <span className="text-xs font-chakra font-bold text-cyber-pink truncate max-w-[120px]">{playerBName}</span>
-                <span className={`text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded-full border ${
-                  !hasPlayerB
-                    ? 'bg-black/40 text-cyber-amber border-cyber-amber/40 animate-pulse'
-                    : playerBReady
-                    ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/40'
-                    : 'bg-black/40 text-slate-400 border-slate-700'
-                }`}>
-                  {!hasPlayerB ? '⚔️ IN ATTESA...' : playerBReady ? '✓ PRONTO' : '⏳ IN ATTESA'}
-                </span>
-              </div>
-            </div>
+          <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-cyber-border text-center space-y-2">
+            <Layers className="w-12 h-12 text-cyber-cyan/60 animate-pulse" />
+            <h4 className="text-sm font-orbitron font-bold text-white uppercase tracking-wider">
+              {t('blackjack.lobbyTitle')}
+            </h4>
+            <p className="text-xs text-slate-300 font-chakra max-w-xs">
+              {t('blackjack.lobbyDesc')}
+            </p>
           </div>
         ) : roomState === 'BETTING_WINDOW' ? (
           <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-cyber-amber/50 text-center space-y-2">

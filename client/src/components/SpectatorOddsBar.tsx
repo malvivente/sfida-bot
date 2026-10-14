@@ -576,7 +576,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
 
               <div className="bg-cyber-bg/80 rounded-xl p-2.5 border border-cyber-border/70 grid grid-cols-3 gap-2 text-center">
                 <div className="text-left">
-                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">Scelta</span>
+                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">{t('spectator.targetChoice')}</span>
                   <span className="text-xs font-chakra font-extrabold text-white truncate block">
                     {placedBet.target === 'A'
                       ? (isSplit ? `1: ${playerAName}` : playerAName)
@@ -586,14 +586,14 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">Puntata</span>
+                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">{t('spectator.stakeAmount')}</span>
                   <span className="text-xs font-chakra font-black text-cyber-cyan flex items-center justify-center space-x-0.5">
                     <span>{placedBet.amountGram}</span>
                     <GramIcon className="w-3 h-3 text-cyber-cyan" />
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">Vincita Stimata</span>
+                  <span className="text-[10px] text-slate-400 block font-chakra uppercase">{t('spectator.estPayoutLabel')}</span>
                   <span className="text-xs font-chakra font-black text-cyber-green flex items-center justify-end space-x-0.5">
                     <span>~{(parseFloat(placedBet.amountGram) * (placedBet.odds || (placedBet.target === 'A' ? oddsA : placedBet.target === 'X' ? (oddsX || 2.0) : oddsB))).toFixed(2)}</span>
                     <GramIcon className="w-3 h-3 text-cyber-green" />
@@ -623,9 +623,9 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             <>
               <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-[11px] text-slate-400 font-chakra">
-              <span>Select or enter amount:</span>
+              <span>{t('spectator.selectAmount')}</span>
               <span className="flex items-center space-x-1">
-                <span>Max limit: {GAME_CONFIG.MAX_WAGER}</span>
+                <span>{t('spectator.maxLimit', { amount: GAME_CONFIG.MAX_WAGER })}</span>
                 <GramIcon className="w-3 h-3 text-slate-400" />
               </span>
             </div>
@@ -649,7 +649,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
 
             {/* Custom Input Field */}
             <div className="flex items-center space-x-2 bg-cyber-bg/70 border border-cyber-border rounded-xl px-3 py-1.5">
-              <span className="text-xs text-slate-400 font-chakra">Custom amount:</span>
+              <span className="text-xs text-slate-400 font-chakra">{t('spectator.customAmount')}</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -662,17 +662,17 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
             </div>
             {isBelowMin && parsedBet > 0 && (
               <p className="text-[11px] text-cyber-amber font-chakra">
-                Min bet: {GAME_CONFIG.MIN_WAGER} GRAM.
+                {t('spectator.minBetError', { amount: GAME_CONFIG.MIN_WAGER })}
               </p>
             )}
             {isOverMax && (
               <p className="text-[11px] text-cyber-pink font-chakra">
-                Warning: Maximum allowed bet is {GAME_CONFIG.MAX_WAGER} GRAM.
+                {t('spectator.maxBetWarning', { amount: GAME_CONFIG.MAX_WAGER })}
               </p>
             )}
             <div className="flex justify-between items-center text-[10px] text-slate-400 font-chakra px-1 pt-1">
-              <span>Bet fee: <strong className="text-cyber-amber">+{spectatorFee.toFixed(2)} GRAM</strong></span>
-              <span>Total needed: <strong className="text-cyber-cyan">{totalBetRequired} GRAM</strong></span>
+              <span>{t('spectator.betFee')} <strong className="text-cyber-amber">+{spectatorFee.toFixed(2)} GRAM</strong></span>
+              <span>{t('spectator.totalNeeded')} <strong className="text-cyber-cyan">{totalBetRequired} GRAM</strong></span>
             </div>
           </div>
 
@@ -740,7 +740,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                     <span className="font-bold text-cyber-amber">00:{countdownFormatted}</span>
                   </div>
                   <div className="text-[11px] font-chakra font-bold opacity-90 mt-0.5 flex items-center justify-center space-x-1">
-                    <span>Pari-Mutuel Pool (100% payout, 0% rake)</span>
+                    <span>{t('spectator.pariMutuelNotice')}</span>
                   </div>
                 </>
               )}
