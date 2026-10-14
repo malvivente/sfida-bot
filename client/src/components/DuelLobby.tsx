@@ -372,10 +372,23 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     setSortBy('newest');
   };
 
+  const isTargetForDuel = (m: MatchData) => {
+    const cleanOpp = m.targetOpponentUsername?.replace(/^@/, '').toLowerCase().trim();
+    const cleanUser = username?.replace(/^@/, '').toLowerCase().trim();
+    const isUsernameMatch = Boolean(cleanOpp && cleanUser && cleanOpp === cleanUser);
+    const isIdMatch = Boolean(userId && m.targetOpponentId && String(m.targetOpponentId) === String(userId));
+    return isUsernameMatch || isIdMatch;
+  };
+
+  const incomingDirectMatches = matches.filter(
+    (m) => m.state === 'LOBBY' && !m.playerB && isTargetForDuel(m)
+  );
+
   const myDuelsCount = matches.filter((m) => {
     const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
     const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
-    return isA || isB;
+    const isTarget = isTargetForDuel(m);
+    return isA || isB || isTarget;
   }).length;
 
   const openRoomsCount = matches.filter((m) => m.state === 'LOBBY' && !m.playerB).length;
@@ -390,7 +403,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       } else if (lobbySubSection === 'MY_DUELS') {
         const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
         const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
-        if (!isA && !isB) return false;
+        const isTarget = isTargetForDuel(m);
+        if (!isA && !isB && !isTarget) return false;
       } else if (lobbySubSection === 'LIVE') {
         if (m.state === 'LOBBY' && !m.playerB) return false;
       } else if (lobbySubSection === 'DIRECT') {
@@ -430,6 +444,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       return true;
     })
     .sort((a, b) => {
+      // Prioritize incoming direct duels targeting the current user
+      const isTargetA = isTargetForDuel(a) && a.state === 'LOBBY' && !a.playerB ? 1 : 0;
+      const isTargetB = isTargetForDuel(b) && b.state === 'LOBBY' && !b.playerB ? 1 : 0;
+      if (isTargetA !== isTargetB) {
+        return isTargetB - isTargetA;
+      }
+
       if (sortBy === 'bet_desc') {
         return (parseFloat(b.wagerAmountNano) || 0) - (parseFloat(a.wagerAmountNano) || 0);
       }
@@ -476,6 +497,62 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           </button>
         </div>
       )}
+
+      {/* Pinned Incoming Direct Duel Invites Banner */}
+      {incomingDirectMatches.length > 0 && incomingDirectMatches.map((incMatch) => {
+        const incMeta = GAMES_METADATA[incMatch.gameType || 'roulette'] || GAMES_METADATA.roulette;
+        const incWager = (parseFloat(incMatch.wagerAmountNano) / 1e9).toFixed(2);
+        const incCreatorName = cleanPlayerName(incMatch.playerA.name);
+
+        return (
+          <div
+            key={`incoming_${incMatch.matchId}`}
+            className="p-3.5 rounded-3xl bg-gradient-to-r from-purple-950/70 via-indigo-950/80 to-amber-950/60 border-2 border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.25)] flex flex-col space-y-2.5 animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                <span className="text-xs font-heading font-black text-amber-300 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Target className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{t('lobby.incomingDirectChallengeTitle')}</span>
+                </span>
+              </div>
+              {incMatch.expiresAt && (
+                <RoomCountdownBadge expiresAt={incMatch.expiresAt} />
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 bg-black/40 border border-white/10 rounded-2xl p-2.5">
+              <div className="flex items-center space-x-2 min-w-0">
+                <UserAvatar
+                  name={incCreatorName}
+                  photoUrl={incMatch.playerA.photoUrl}
+                  sizeClass="w-9 h-9"
+                  textClass="text-xs"
+                />
+                <div className="min-w-0">
+                  <span className="text-xs font-heading font-bold text-white block truncate">
+                    {t('lobby.incomingDirectChallengeDesc', { name: incCreatorName, game: incMeta.title })}
+                  </span>
+                  <span className="text-[11px] text-slate-300 flex items-center space-x-1 mt-0.5">
+                    <span>{t('lobby.wagerLabel')}:</span>
+                    <span className="font-extrabold text-amber-300 font-heading">{incWager}</span>
+                    <GramIcon className="w-3 h-3 text-amber-400" />
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleAttemptJoin(incMatch, getMatchInviteCode(incMatch))}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black font-heading font-black text-xs uppercase tracking-wider shrink-0 shadow-lg active:scale-95 transition-all flex items-center space-x-1"
+              >
+                <Swords className="w-3.5 h-3.5" />
+                <span>{t('lobby.acceptDuelBtn')}</span>
+              </button>
+            </div>
+          </div>
+        );
+      })}
 
       {sectionView === 'play_hub' ? (
         <PlayHubView
@@ -583,11 +660,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         {/* Subsection Filter Tabs */}
         <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1">
           {[
-            { id: 'ALL', label: t('lobby.subsections.all'), count: matches.length },
-            { id: 'OPEN', label: t('lobby.subsections.waiting'), count: openRoomsCount },
-            { id: 'MY_DUELS', label: t('lobby.subsections.myDuels'), count: myDuelsCount },
-            { id: 'LIVE', label: t('lobby.subsections.live'), count: liveMatchesCount },
-            { id: 'DIRECT', label: t('lobby.subsections.direct'), count: directChallengesCount },
+            { id: 'ALL', label: t('lobby.subsections.all'), count: matches.length, hasIncoming: false },
+            { id: 'OPEN', label: t('lobby.subsections.waiting'), count: openRoomsCount, hasIncoming: false },
+            { id: 'MY_DUELS', label: t('lobby.subsections.myDuels'), count: myDuelsCount, hasIncoming: incomingDirectMatches.length > 0 },
+            { id: 'LIVE', label: t('lobby.subsections.live'), count: liveMatchesCount, hasIncoming: false },
+            { id: 'DIRECT', label: t('lobby.subsections.direct'), count: directChallengesCount, hasIncoming: incomingDirectMatches.length > 0 },
           ].map((tab) => {
             const isActive = lobbySubSection === tab.id;
             return (
@@ -600,13 +677,22 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 className={`px-3 py-1.5 rounded-xl text-xs font-heading font-bold whitespace-nowrap transition-all flex items-center space-x-1.5 active:scale-95 ${
                   isActive
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                    : tab.hasIncoming
+                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25'
                     : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 <span>{tab.label}</span>
+                {tab.hasIncoming && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                )}
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400'
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : tab.hasIncoming
+                      ? 'bg-amber-400/25 text-amber-300 font-bold'
+                      : 'bg-white/5 text-slate-400'
                   }`}
                 >
                   {tab.count}
@@ -967,13 +1053,18 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               const isAlreadyPlayer = isPlayerA || isPlayerB;
               const isCreator = isPlayerA;
+              const isTargetForThisDuel = isTargetForDuel(m);
 
               const effectiveInviteCode = getMatchInviteCode(m);
 
               return (
                 <div
                   key={m.matchId}
-                  className="bg-gradient-to-b from-[#181b29] to-[#121420] border border-white/10 hover:border-purple-500/40 rounded-3xl p-4 transition-all shadow-xl hover:shadow-purple-900/10"
+                  className={`bg-gradient-to-b from-[#181b29] to-[#121420] border ${
+                    isTargetForThisDuel && m.state === 'LOBBY' && !m.playerB
+                      ? 'border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50'
+                      : 'border-white/10 hover:border-purple-500/40 shadow-xl hover:shadow-purple-900/10'
+                  } rounded-3xl p-4 transition-all`}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div>
@@ -1020,6 +1111,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-300 flex items-center space-x-1">
                             <Target className="w-2.5 h-2.5" />
                             <span>@{m.targetOpponentUsername.replace(/^@/, '')}</span>
+                          </span>
+                        )}
+                        {isTargetForThisDuel && m.state === 'LOBBY' && !m.playerB && (
+                          <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full border border-amber-400 bg-amber-400/20 text-amber-300 flex items-center space-x-1 animate-pulse">
+                            <Target className="w-2.5 h-2.5 text-amber-400" />
+                            <span>{t('lobby.challengeForYouBadge')}</span>
                           </span>
                         )}
                       </div>
@@ -1087,7 +1184,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <span>{t('profile.resume')}</span>
                       </button>
                     ) : !m.playerB ? (
-                      m.isPrivate && !effectiveInviteCode ? (
+                      m.isPrivate && !effectiveInviteCode && !isTargetForThisDuel ? (
                         <button
                           onClick={() => onSpectateMatch(m.matchId)}
                           className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
@@ -1098,13 +1195,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       ) : (
                         <>
                           <button
-                            onClick={() => handleAttemptJoin(m, effectiveInviteCode)}
-                            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            onClick={() => handleAttemptJoin(m, effectiveInviteCode || getMatchInviteCode(m))}
+                            className={`flex-1 py-2.5 ${
+                              isTargetForThisDuel
+                                ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black shadow-lg shadow-amber-500/25'
+                                : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white shadow-sm'
+                            } font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1`}
                           >
                             <Swords className="w-3.5 h-3.5" />
                             <span className="flex items-center space-x-1">
-                              <span>{t('lobby.joinBtn')} ({wagerGram}</span>
-                              <GramIcon className="w-3 h-3 text-white inline-block" />
+                              <span>{isTargetForThisDuel ? t('lobby.acceptDuelBtn') : t('lobby.joinBtn')} ({wagerGram}</span>
+                              <GramIcon className={`w-3 h-3 ${isTargetForThisDuel ? 'text-black' : 'text-white'} inline-block`} />
                               <span>)</span>
                             </span>
                           </button>

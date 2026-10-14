@@ -9,6 +9,7 @@ export class BlackjackRoom extends BaseGameRoom {
   public scoreA: number = 0;
   public scoreB: number = 0;
   public currentTurn: 'A' | 'B' | 'FINISHED' = 'A';
+  public firstTurnPlayer: 'A' | 'B' = 'A';
   public standA: boolean = false;
   public standB: boolean = false;
   public bustA: boolean = false;
@@ -123,8 +124,10 @@ export class BlackjackRoom extends BaseGameRoom {
     this.standA = false;
     this.standB = false;
     this.bustA = false;
+    this.bustB = false;
     // Coin toss determines who gets the first turn
-    this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
+    this.firstTurnPlayer = Math.random() < 0.5 ? 'A' : 'B';
+    this.currentTurn = this.firstTurnPlayer;
     this.lastAction = undefined;
 
     // Deal 2 face-up cards to each player
@@ -138,9 +141,24 @@ export class BlackjackRoom extends BaseGameRoom {
 
     const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
+    // Check if the first player was dealt 21 immediately!
+    const firstScore = this.firstTurnPlayer === 'A' ? this.scoreA : this.scoreB;
+    if (firstScore === 21) {
+      if (this.firstTurnPlayer === 'A') this.standA = true;
+      else this.standB = true;
+      const secondTurn = this.firstTurnPlayer === 'A' ? 'B' : 'A';
+      this.currentTurn = secondTurn;
+      const secondPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+      this.lastAction = {
+        player: this.firstTurnPlayer,
+        action: 'STAND',
+        message: `🔥 ${firstPlayerName} ha servito 21! Turno passa a ${secondPlayerName} per provare a pareggiare!`,
+      };
+    }
+
     this.broadcast({
       type: 'BLACKJACK_START',
-      message: `🪙 Coin Toss: ${firstPlayerName} plays first! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}.`,
+      message: `🪙 Coin Toss: ${firstPlayerName} gioca per primo! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}.`,
       gameData: this.getGamePayload(),
     });
 
@@ -180,70 +198,70 @@ export class BlackjackRoom extends BaseGameRoom {
       this.turnTimeout = undefined;
     }
 
+    const isFirstPlayer = side === this.firstTurnPlayer;
+    const nextTurn = isFirstPlayer ? (this.firstTurnPlayer === 'A' ? 'B' : 'A') : 'FINISHED';
     const playerName = side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+    const opponentName = side === 'A' ? (this.playerB?.username || 'Player B') : this.playerA.username;
 
     if (action === 'HIT') {
       const drawn = this.deck.pop() || { suit: '♠', value: '10', numericValue: 10 };
       if (side === 'A') {
         this.handA.push(drawn);
         this.scoreA = this.calculateHandScore(this.handA);
-        if (this.scoreA > 21) {
-          this.bustA = true;
-          this.currentTurn = 'B';
-          this.lastAction = {
-            player: 'A',
-            action: 'HIT',
-            cardDrawn: drawn,
-            message: `💥 ${playerName} drew ${drawn.value}${drawn.suit} and BUSTED with ${this.scoreA}! Turn switches to Player B.`,
-          };
-        } else {
-          this.lastAction = {
-            player: 'A',
-            action: 'HIT',
-            cardDrawn: drawn,
-            message: `🃏 ${playerName} drew ${drawn.value}${drawn.suit} (Total: ${this.scoreA}). Hit again or Stand?`,
-          };
-        }
       } else {
         this.handB.push(drawn);
         this.scoreB = this.calculateHandScore(this.handB);
-        if (this.scoreB > 21) {
-          this.bustB = true;
-          this.currentTurn = 'FINISHED';
-          this.lastAction = {
-            player: 'B',
-            action: 'HIT',
-            cardDrawn: drawn,
-            message: `💥 ${playerName} drew ${drawn.value}${drawn.suit} and BUSTED with ${this.scoreB}!`,
-          };
-        } else {
-          this.lastAction = {
-            player: 'B',
-            action: 'HIT',
-            cardDrawn: drawn,
-            message: `🃏 ${playerName} drew ${drawn.value}${drawn.suit} (Total: ${this.scoreB}). Hit again or Stand?`,
-          };
-        }
+      }
+      const myScore = side === 'A' ? this.scoreA : this.scoreB;
+
+      if (myScore > 21) {
+        if (side === 'A') this.bustA = true;
+        else this.bustB = true;
+        this.currentTurn = nextTurn;
+
+        this.lastAction = {
+          player: side,
+          action: 'HIT',
+          cardDrawn: drawn,
+          message: isFirstPlayer
+            ? `💥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${myScore}! Turno passa a ${opponentName}.`
+            : `💥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${myScore}! Showdown!`,
+        };
+      } else if (myScore === 21) {
+        if (side === 'A') this.standA = true;
+        else this.standB = true;
+        this.currentTurn = nextTurn;
+
+        this.lastAction = {
+          player: side,
+          action: 'STAND',
+          cardDrawn: drawn,
+          message: isFirstPlayer
+            ? `🔥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Turno a ${opponentName} per pareggiare!`
+            : `🔥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Showdown!`,
+        };
+      } else {
+        this.lastAction = {
+          player: side,
+          action: 'HIT',
+          cardDrawn: drawn,
+          message: `🃏 ${playerName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${myScore}). Carta o Stai?`,
+        };
       }
     } else {
       // STAND
-      if (side === 'A') {
-        this.standA = true;
-        this.currentTurn = 'B';
-        this.lastAction = {
-          player: 'A',
-          action: 'STAND',
-          message: `🛑 ${playerName} stands on ${this.scoreA}. Turn passes to Player B!`,
-        };
-      } else {
-        this.standB = true;
-        this.currentTurn = 'FINISHED';
-        this.lastAction = {
-          player: 'B',
-          action: 'STAND',
-          message: `🛑 ${playerName} stands on ${this.scoreB}. Showdown!`,
-        };
-      }
+      if (side === 'A') this.standA = true;
+      else this.standB = true;
+      this.currentTurn = nextTurn;
+      const myScore = side === 'A' ? this.scoreA : this.scoreB;
+
+      this.lastAction = {
+        player: side,
+        action: 'STAND',
+        message: isFirstPlayer
+          ? `🛑 ${playerName} sta su ${myScore}. Turno passa a ${opponentName}!`
+          : `🛑 ${playerName} sta su ${myScore}. Showdown!`,
+      };
     }
 
     this.broadcast({
@@ -254,14 +272,10 @@ export class BlackjackRoom extends BaseGameRoom {
     this.broadcastRoomState();
 
     // Check if game has concluded
-    if (this.currentTurn === 'FINISHED' || (this.bustA && this.bustB)) {
+    if (this.currentTurn === 'FINISHED') {
       setTimeout(() => {
         this.evaluateShowdown();
       }, 1200);
-    } else if (this.currentTurn === 'B' && this.bustA) {
-      // If Player A busted, Player B automatically wins if they stand or already have <= 21!
-      // Player B gets their turn to play or can win immediately
-      this.startTurnTimer();
     } else {
       this.startTurnTimer();
     }
@@ -344,7 +358,8 @@ export class BlackjackRoom extends BaseGameRoom {
     this.bustB = false;
 
     // Coin toss for who plays first in this death match round
-    this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
+    this.firstTurnPlayer = Math.random() < 0.5 ? 'A' : 'B';
+    this.currentTurn = this.firstTurnPlayer;
     const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
     // Deal 2 face-up cards to each player
@@ -355,6 +370,15 @@ export class BlackjackRoom extends BaseGameRoom {
 
     this.scoreA = this.calculateHandScore(this.handA);
     this.scoreB = this.calculateHandScore(this.handB);
+
+    // Check if first player was dealt 21 immediately in Death Match
+    const firstScore = this.firstTurnPlayer === 'A' ? this.scoreA : this.scoreB;
+    if (firstScore === 21) {
+      if (this.firstTurnPlayer === 'A') this.standA = true;
+      else this.standB = true;
+      const secondTurn = this.firstTurnPlayer === 'A' ? 'B' : 'A';
+      this.currentTurn = secondTurn;
+    }
 
     const roundMsg = `⚔️ DEATH MATCH R${this.deathMatchRound}: Turno a ${firstPlayerName}! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}`;
 

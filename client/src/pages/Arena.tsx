@@ -480,6 +480,7 @@ export const Arena: React.FC<ArenaProps> = ({
           playerBAddress: playerAddress,
           telegramUserId: userId,
           telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player B'),
+          rawUsername: username || '',
           photoUrl: photoUrl || '',
           inviteCode: resolvedCode,
         }),

@@ -331,6 +331,10 @@ export const translations: Translations = {
   'lobby.filtersLabel': { it: 'Filtri:', en: 'Filters:' },
   'lobby.sharePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM! Entra con questo link unico:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM! Join using this unique link:' },
   'lobby.sharePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM! {tagline}', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM! {tagline}' },
+  'lobby.incomingDirectChallengeTitle': { it: '⚔️ SFIDA DIRETTA RICEVUTA!', en: '⚔️ DIRECT CHALLENGE RECEIVED!' },
+  'lobby.incomingDirectChallengeDesc': { it: '{name} ti ha sfidato a {game}!', en: '{name} challenged you to {game}!' },
+  'lobby.acceptDuelBtn': { it: 'ACCETTA SFIDA', en: 'ACCEPT DUEL' },
+  'lobby.challengeForYouBadge': { it: '🎯 SFIDA PER TE', en: '🎯 FOR YOU' },
 
   // Arena & Rematch
   'arena.cancelModalTitle': { it: 'ANNULLA DUELLO E RIMBORSA', en: 'CANCEL DUEL & REFUND' },

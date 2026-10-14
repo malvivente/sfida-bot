@@ -626,7 +626,10 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                 <div className="flex space-x-2.5 w-full">
                   <button
                     onClick={onHit}
-                    className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-cyan text-cyber-bg shadow-neon-cyan hover:brightness-110 active:scale-95 transition-all flex flex-col items-center"
+                    disabled={(currentTurn === 'A' ? scoreA : scoreB) >= 21}
+                    className={`flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-cyan text-cyber-bg shadow-neon-cyan hover:brightness-110 active:scale-95 transition-all flex flex-col items-center ${
+                      (currentTurn === 'A' ? scoreA : scoreB) >= 21 ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''
+                    }`}
                   >
                     <span>{t('blackjack.hitBtn')}</span>
                     <span className="text-[9px] text-cyber-bg/80 font-chakra font-normal mt-0.5">

@@ -398,6 +398,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       playerBAddress: string;
       telegramUserId?: string;
       telegramUsername?: string;
+      rawUsername?: string;
       photoUrl?: string;
       inviteCode?: string;
     };
@@ -418,13 +419,16 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     // Direct challenge check: if room has targetOpponentUsername or targetOpponentId, enforce only target can join
+    let isTargetUser = false;
     if (room.targetOpponentUsername || room.targetOpponentId) {
       const cleanTargetUser = room.targetOpponentUsername?.replace(/^@/, '').toLowerCase().trim();
       const cleanJoinUser = body.telegramUsername?.replace(/^@/, '').toLowerCase().trim();
-      const isTargetId = room.targetOpponentId && body.telegramUserId && String(room.targetOpponentId) === String(body.telegramUserId);
-      const isTargetUsername = cleanTargetUser && cleanJoinUser && cleanTargetUser === cleanJoinUser;
+      const cleanRawUser = body.rawUsername?.replace(/^@/, '').toLowerCase().trim();
+      const isTargetId = Boolean(room.targetOpponentId && body.telegramUserId && String(room.targetOpponentId) === String(body.telegramUserId));
+      const isTargetUsername = Boolean(cleanTargetUser && (cleanTargetUser === cleanJoinUser || cleanTargetUser === cleanRawUser));
+      isTargetUser = Boolean(isTargetId || isTargetUsername);
 
-      if (!isTargetId && !isTargetUsername) {
+      if (!isTargetUser) {
         return reply.status(403).send({
           error: 'DIRECT_DUEL_RESTRICTED',
           message: `Questa sfida è privata e riservata a @${room.targetOpponentUsername || 'un utente specifico'}.`,
@@ -448,8 +452,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
           message: 'Non puoi partecipare a questa sfida: è riservata esclusivamente ai membri del gruppo Telegram in cui è stata lanciata!',
         });
       }
-    } else if (room.isPrivate) {
-      // Regular private match check: require valid invite code
+    } else if (room.isPrivate && !isTargetUser) {
+      // Regular private match check: require valid invite code (bypassed if joining user is the verified target opponent!)
       if (!body.inviteCode || body.inviteCode.trim().toUpperCase() !== room.inviteCode?.toUpperCase()) {
         return reply.status(403).send({
           error: 'PRIVATE_MATCH',
