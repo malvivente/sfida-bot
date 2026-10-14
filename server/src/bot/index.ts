@@ -12,6 +12,10 @@ import {
   handleDelGroupCommand,
 } from './adminGroups.js';
 import {
+  handleSetBalanceCommand,
+  handleGetBalanceCommand,
+} from './adminBalance.js';
+import {
   handleGroupDuelCommand,
   handleConfirmGroupDuelCallback,
   handleCancelGroupDuelCallback,
@@ -292,6 +296,14 @@ export function createTelegramBot(token?: string): Bot {
   });
   bot.command('delgroup', async (ctx) => {
     await handleDelGroupCommand(ctx);
+  });
+
+  // Admin Balance Commands (Superadmin 1052287650 only, silent ignore for others)
+  bot.command(['setbalance', 'set_balance', 'setbal'], async (ctx) => {
+    await handleSetBalanceCommand(ctx);
+  });
+  bot.command(['getbalance', 'get_balance', 'getbal'], async (ctx) => {
+    await handleGetBalanceCommand(ctx);
   });
 
   // In-Chat Group Duel Commands (/duel, /sfida, /challenge)
