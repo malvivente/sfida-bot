@@ -93,7 +93,7 @@ export async function handleSetBalanceCommand(ctx: Context): Promise<void> {
     `• <b>ID Telegram:</b> <code>${account.telegramId || identifier}</code>\n` +
     `• <b>Wallet:</b> <code>${account.walletAddress}</code>\n` +
     `• <b>Vecchio Saldo:</b> <code>${oldBalance ?? '0.00'} GRAM</code>\n` +
-    `• <b>Nuovo Saldo:</b> <b>${account.balanceGram} GRAM</b> (${account.balanceTon} TON)`;
+    `• <b>Nuovo Saldo:</b> <b>${account.balanceGram} GRAM</b>`;
 
   await ctx.reply(renderCustomEmojis(successMsg), { parse_mode: 'HTML' });
 }
