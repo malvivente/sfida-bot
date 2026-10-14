@@ -5,6 +5,7 @@ import { UserAvatar } from './UserAvatar.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useHaptics } from '../hooks/useHaptics.js';
+import { useI18n } from '../i18n/index.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
 
 interface TipModalProps {
@@ -30,6 +31,7 @@ export const TipModal: React.FC<TipModalProps> = ({
   const { userId } = useTelegram();
   const { userAddress } = useTonClashContract();
   const { triggerImpact } = useHaptics();
+  const { t } = useI18n();
 
   const [recipientInput, setRecipientInput] = useState<string>('');
   const [amountInput, setAmountInput] = useState<string>('1.00');
@@ -67,12 +69,12 @@ export const TipModal: React.FC<TipModalProps> = ({
     if (!recipientInput.trim() || isNaN(parsedAmt) || parsedAmt <= 0) return;
 
     if (parsedAmt < 0.1) {
-      setErrorMsg('Importo minimo per il tip: 0.10 GRAM');
+      setErrorMsg(t('tip.errorMin'));
       return;
     }
 
     if (parsedAmt > currentBal) {
-      setErrorMsg('Saldo insufficiente per completare il trasferimento');
+      setErrorMsg(t('tip.errorInsufficient'));
       return;
     }
 
@@ -98,7 +100,7 @@ export const TipModal: React.FC<TipModalProps> = ({
       const data = await res.json();
       if (res.ok && data?.success) {
         triggerImpact('heavy');
-        setSuccessMsg(`Tip di ${parsedAmt.toFixed(2)} GRAM inviato con successo!`);
+        setSuccessMsg(t('tip.successMsg', { amount: parsedAmt.toFixed(2) }));
         if (data.senderAccount?.balanceGram) {
           onTipSuccess?.(data.senderAccount.balanceGram);
           window.dispatchEvent(new CustomEvent('sfida_balance_updated', {
@@ -110,11 +112,11 @@ export const TipModal: React.FC<TipModalProps> = ({
         }, 1500);
       } else {
         triggerImpact('heavy');
-        setErrorMsg(data?.error || 'Errore durante il trasferimento');
+        setErrorMsg(data?.error || t('tip.errorGeneric'));
       }
     } catch {
       triggerImpact('heavy');
-      setErrorMsg('Errore di connessione al server');
+      setErrorMsg(t('tip.errorGeneric'));
     } finally {
       setIsSubmitting(false);
     }
@@ -134,10 +136,10 @@ export const TipModal: React.FC<TipModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                Invia un Tip
+                {t('tip.title')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                Saldo: <strong className="text-white font-medium">{currentBal.toFixed(2)} GRAM</strong>
+                {t('tip.availableLabel', { amount: currentBal.toFixed(2) })}
               </p>
             </div>
           </div>
@@ -177,7 +179,7 @@ export const TipModal: React.FC<TipModalProps> = ({
                 textClass="text-xs"
               />
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] text-slate-400 uppercase font-heading font-bold block">Destinatario</span>
+                <span className="text-[10px] text-slate-400 uppercase font-heading font-bold block">{t('tip.recipientLabel')}</span>
                 <p className="text-xs font-heading font-black text-white truncate">
                   {cleanPlayerName(initialRecipient.displayName || initialRecipient.username || 'Friend')}
                 </p>
@@ -189,13 +191,13 @@ export const TipModal: React.FC<TipModalProps> = ({
           ) : (
             <div>
               <label className="text-[11px] font-heading font-black text-slate-300 uppercase tracking-wider block mb-1">
-                Destinatario (@username o ID)
+                {t('tip.recipientLabel')}
               </label>
               <input
                 type="text"
                 value={recipientInput}
                 onChange={(e) => setRecipientInput(e.target.value)}
-                placeholder="es. @duelist o 123456789"
+                placeholder={t('tip.recipientPlaceholder')}
                 className="w-full bg-[#181a29] border border-white/15 rounded-2xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all font-mono"
                 required
               />
@@ -206,7 +208,7 @@ export const TipModal: React.FC<TipModalProps> = ({
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="text-[11px] font-heading font-black text-slate-300 uppercase tracking-wider">
-                Importo GRAM
+                {t('tip.amountLabel')}
               </label>
               <span className="text-[10px] text-slate-400">Min 0.10 GRAM</span>
             </div>
@@ -254,14 +256,14 @@ export const TipModal: React.FC<TipModalProps> = ({
           {/* Optional Note */}
           <div>
             <label className="text-[11px] font-heading font-black text-slate-300 uppercase tracking-wider block mb-1">
-              Messaggio (Opzionale)
+              {t('tip.noteLabel')}
             </label>
             <input
               type="text"
               maxLength={60}
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
-              placeholder="es. Grande partita! 🏆"
+              placeholder={t('tip.notePlaceholder')}
               className="w-full bg-[#181a29] border border-white/15 rounded-2xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
             />
           </div>
@@ -275,12 +277,12 @@ export const TipModal: React.FC<TipModalProps> = ({
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Invio in corso...</span>
+                <span>{t('tip.sending')}</span>
               </>
             ) : (
               <>
                 <Send className="w-4 h-4" />
-                <span>Invia {parsedAmt > 0 ? `${parsedAmt.toFixed(2)} GRAM` : 'Tip'}</span>
+                <span>{t('tip.sendBtn', { amount: parsedAmt > 0 ? `${parsedAmt.toFixed(2)} GRAM` : '' })}</span>
               </>
             )}
           </button>

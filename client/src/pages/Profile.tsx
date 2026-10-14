@@ -293,16 +293,16 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
               <span className="text-xs text-slate-400 font-medium ml-1">{t('profile.availableGram')}</span>
             </div>
 
-            <div className="flex items-center space-x-2 shrink-0">
+            <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
               <button
                 onClick={() => {
                   triggerImpact('medium');
                   if (!userAddress) { openWalletModal(); return; }
                   setShowDepositModal(true);
                 }}
-                className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1"
+                className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1"
               >
-                <ArrowDownLeft className="w-3.5 h-3.5" />
+                <ArrowDownLeft className="w-3.5 h-3.5 shrink-0" />
                 <span>{t('profile.deposit')}</span>
               </button>
               <button
@@ -311,9 +311,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                   if (!userAddress) { openWalletModal(); return; }
                   setShowWithdrawModal(true);
                 }}
-                className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
+                className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
               >
-                <ArrowUpRight className="w-3.5 h-3.5" />
+                <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
                 <span>{t('profile.withdraw')}</span>
               </button>
               <button
@@ -321,11 +321,11 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                   triggerImpact('medium');
                   window.dispatchEvent(new CustomEvent('sfida_open_tip'));
                 }}
-                className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
-                title="Invia Tip"
+                className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-cyan-600/25 to-blue-600/25 hover:from-cyan-600/40 hover:to-blue-600/40 border border-cyan-400/40 text-cyan-200 font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1 shadow-sm"
+                title={t('profile.tip')}
               >
-                <Coins className="w-3.5 h-3.5 text-purple-300" />
-                <span>Tip</span>
+                <Coins className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                <span>{t('profile.tip')}</span>
               </button>
             </div>
           </div>
@@ -339,10 +339,10 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             </div>
             <div>
               <span className="text-xs font-heading font-black text-white block">
-                Amici & Social
+                {t('profile.friendsBannerTitle')}
               </span>
               <span className="text-[11px] text-slate-400 font-sans block">
-                Sfida direttamente o invia mance
+                {t('profile.friendsBannerDesc')}
               </span>
             </div>
           </div>
@@ -353,7 +353,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             }}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-extrabold text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all shrink-0"
           >
-            Gestisci
+            {t('profile.manageFriends')}
           </button>
         </div>
 

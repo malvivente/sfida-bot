@@ -18,6 +18,7 @@ import { PlayHubView } from './PlayHubView.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
 
 const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => {
+  const { t } = useI18n();
   const [timeLeft, setTimeLeft] = useState<number>(() => {
     if (!expiresAt) return 0;
     return Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
@@ -38,7 +39,7 @@ const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => 
   if (timeLeft <= 0) {
     return (
       <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full border border-rose-500/40 bg-rose-500/15 text-rose-300">
-        ⏱️ Scaduta
+        ⏱️ {t('lobby.roomExpired')}
       </span>
     );
   }
@@ -582,11 +583,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         {/* Subsection Filter Tabs */}
         <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1">
           {[
-            { id: 'ALL', label: 'Tutte', count: matches.length },
-            { id: 'OPEN', label: 'In Attesa', count: openRoomsCount },
-            { id: 'MY_DUELS', label: 'Mie Sfide', count: myDuelsCount },
-            { id: 'LIVE', label: 'In Corso', count: liveMatchesCount },
-            { id: 'DIRECT', label: 'Dirette', count: directChallengesCount },
+            { id: 'ALL', label: t('lobby.subsections.all'), count: matches.length },
+            { id: 'OPEN', label: t('lobby.subsections.waiting'), count: openRoomsCount },
+            { id: 'MY_DUELS', label: t('lobby.subsections.myDuels'), count: myDuelsCount },
+            { id: 'LIVE', label: t('lobby.subsections.live'), count: liveMatchesCount },
+            { id: 'DIRECT', label: t('lobby.subsections.direct'), count: directChallengesCount },
           ].map((tab) => {
             const isActive = lobbySubSection === tab.id;
             return (
@@ -1007,7 +1008,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           </span>
                         )}
                         {m.createdAt && (
-                          <span className="text-[10px] text-slate-400 font-sans flex items-center space-x-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10" title="Ora di creazione">
+                          <span className="text-[10px] text-slate-400 font-sans flex items-center space-x-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10" title={t('lobby.createdAtTooltip')}>
                             <Clock className="w-2.5 h-2.5 text-slate-400" />
                             <span>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </span>
@@ -1435,7 +1436,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
-                    Sfida Diretta (Opzionale)
+                    {t('lobby.directChallengeLabel')}
                   </label>
                   {friendsList.length > 0 && (
                     <button
@@ -1444,17 +1445,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       className="text-[10px] text-purple-400 hover:text-purple-300 font-bold flex items-center space-x-1"
                     >
                       <Users className="w-3 h-3" />
-                      <span>{showFriendPicker ? 'Chiudi Amici' : 'Scegli da Amici'}</span>
+                      <span>{showFriendPicker ? t('lobby.closeFriends') : t('lobby.chooseFromFriends')}</span>
                     </button>
                   )}
                 </div>
 
                 {showFriendPicker && friendsList.length > 0 && (
                   <div className="p-2 bg-black/40 border border-purple-500/30 rounded-2xl space-y-1 max-h-36 overflow-y-auto no-scrollbar">
-                    <span className="text-[10px] text-slate-400 block px-1">Tocca un amico per sfidarlo:</span>
+                    <span className="text-[10px] text-slate-400 block px-1">{t('lobby.tapFriendToChallenge')}</span>
                     <div className="flex flex-wrap gap-1">
                       {friendsList.map((f, idx) => {
-                        const friendName = f.displayName || f.name || f.username || 'Amico';
+                        const friendName = f.displayName || f.name || f.username || t('lobby.friendFallback');
                         return (
                           <button
                             key={f.telegramId || f.id || idx}
@@ -1488,7 +1489,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         setIsPrivateRoom(true);
                       }
                     }}
-                    placeholder="Username avversario es. @nomeutente"
+                    placeholder={t('lobby.opponentPlaceholder')}
                     className="w-full bg-[#151823] border border-white/10 rounded-2xl pl-9 pr-8 py-2 text-xs font-sans text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all font-medium"
                   />
                   {targetOpponentInput && (
@@ -1504,7 +1505,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 {targetOpponentInput.trim() && (
                   <p className="text-[10px] text-amber-300 font-sans flex items-center space-x-1">
                     <span>🎯</span>
-                    <span>Solo {targetOpponentInput.startsWith('@') ? targetOpponentInput : `@${targetOpponentInput}`} potrà accettare questa sfida.</span>
+                    <span>{t('lobby.directDuelNotice', { target: targetOpponentInput.startsWith('@') ? targetOpponentInput : `@${targetOpponentInput}` })}</span>
                   </p>
                 )}
               </div>

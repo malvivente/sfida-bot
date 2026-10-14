@@ -93,16 +93,16 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
       const data = await res.json();
       if (res.ok && data?.success) {
         triggerImpact('medium');
-        setFeedbackMsg({ type: 'success', text: 'Richiesta di amicizia inviata con successo!' });
+        setFeedbackMsg({ type: 'success', text: t('friends.requestSent') });
         setAddInput('');
         fetchFriendsData();
       } else {
         triggerImpact('heavy');
-        setFeedbackMsg({ type: 'error', text: data?.error || 'Errore durante l\'invio della richiesta' });
+        setFeedbackMsg({ type: 'error', text: data?.error || t('friends.errorGeneric') });
       }
     } catch {
       triggerImpact('heavy');
-      setFeedbackMsg({ type: 'error', text: 'Errore di connessione al server' });
+      setFeedbackMsg({ type: 'error', text: t('friends.errorGeneric') });
     } finally {
       setAddLoading(false);
     }
@@ -122,6 +122,10 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
         }),
       });
       if (res.ok) {
+        setFeedbackMsg({
+          type: 'success',
+          text: action === 'ACCEPT' ? t('friends.requestAccepted') : t('friends.requestDeclined'),
+        });
         fetchFriendsData();
       }
     } catch (err) {
@@ -142,6 +146,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
         method: 'DELETE',
       });
       if (res.ok) {
+        setFeedbackMsg({ type: 'success', text: t('friends.removedSuccess') });
         fetchFriendsData();
       }
     } catch (err) {
@@ -173,10 +178,10 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                Amici & Social
+                {t('friends.title')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                {friends.length} {friends.length === 1 ? 'amico' : 'amici'} • Sfida o invia tip
+                {t('friends.subtitle')}
               </p>
             </div>
           </div>
@@ -206,7 +211,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Amici ({friends.length})
+            {t('friends.tabFriends', { count: friends.length })}
           </button>
           <button
             type="button"
@@ -221,7 +226,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <span>Richieste</span>
+            <span>{t('friends.tabRequests')}</span>
             {incoming.length > 0 && (
               <span className="ml-1 px-1.5 py-0.2 bg-rose-500 text-white text-[9px] font-bold rounded-full">
                 {incoming.length}
@@ -241,7 +246,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            + Aggiungi
+            {t('friends.tabAdd')}
           </button>
         </div>
 
@@ -270,7 +275,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                     type="text"
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
-                    placeholder="Cerca amico per nome o @username..."
+                    placeholder={t('friends.searchPlaceholder')}
                     className="w-full bg-[#181a29] border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
                   />
                 </div>
@@ -279,22 +284,22 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
               {isLoading && friends.length === 0 ? (
                 <div className="py-10 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2">
                   <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-                  <span>Caricamento amici...</span>
+                  <span>{t('friends.loading')}</span>
                 </div>
               ) : filteredFriends.length === 0 ? (
                 <div className="py-10 text-center space-y-2.5">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-500">
                     <Users className="w-6 h-6" />
                   </div>
-                  <p className="text-xs font-heading font-bold text-slate-300">Nessun amico trovato</p>
+                  <p className="text-xs font-heading font-bold text-slate-300">{t('friends.noFriendsTitle')}</p>
                   <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                    Aggiungi amici inserendo il loro @username o aggiungili direttamente dopo una sfida!
+                    {t('friends.noFriendsDesc')}
                   </p>
                   <button
                     onClick={() => setActiveTab('add')}
                     className="mt-2 px-3 py-1.5 rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-bold active:scale-95"
                   >
-                    + Aggiungi un amico
+                    {t('friends.addFriendBtn')}
                   </button>
                 </div>
               ) : (
@@ -307,14 +312,14 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                     >
                       <div className="flex items-center space-x-2.5 min-w-0">
                         <UserAvatar
-                          name={cleanPlayerName(f.displayName || f.name || 'Amico')}
+                          name={cleanPlayerName(f.displayName || f.name || t('lobby.friendFallback'))}
                           photoUrl={f.photoUrl}
                           sizeClass="w-9 h-9"
                           textClass="text-xs"
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-heading font-black text-white truncate">
-                            {cleanPlayerName(f.displayName || f.name || 'Amico')}
+                            {cleanPlayerName(f.displayName || f.name || t('lobby.friendFallback'))}
                           </p>
                           {uname && (
                             <p className="text-[11px] text-purple-300 font-mono truncate">{uname}</p>
@@ -333,10 +338,10 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                               onChallengeFriend(f);
                             }}
                             className="px-2 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white text-[11px] font-heading font-black uppercase tracking-wider active:scale-95 flex items-center space-x-1 shadow-sm"
-                            title="Sfida a duello"
+                            title={t('friends.duelBtn')}
                           >
                             <Swords className="w-3 h-3" />
-                            <span>Sfida</span>
+                            <span>{t('friends.duelBtn')}</span>
                           </button>
                         )}
                         {onTipFriend && (
@@ -348,17 +353,17 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                               onTipFriend(f);
                             }}
                             className="px-2 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-[11px] font-heading font-black uppercase tracking-wider active:scale-95 flex items-center space-x-1"
-                            title="Invia Tip"
+                            title={t('friends.tipBtn')}
                           >
                             <Coins className="w-3 h-3" />
-                            <span>Tip</span>
+                            <span>{t('friends.tipBtn')}</span>
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => handleRemoveFriend(f)}
                           className="p-1.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all"
-                          title="Rimuovi amico"
+                          title={t('friends.removeBtn')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -375,11 +380,11 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
             <div className="space-y-3">
               <div>
                 <span className="text-[10px] font-heading font-black text-slate-400 uppercase tracking-wider block mb-2">
-                  Richieste Ricevute ({incoming.length})
+                  {t('friends.incomingTitle', { count: incoming.length })}
                 </span>
                 {incoming.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-4 bg-white/5 rounded-2xl">
-                    Nessuna richiesta in attesa
+                    {t('friends.noRequestsDesc')}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -411,14 +416,14 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                           <button
                             onClick={() => handleRespond(req.id, 'ACCEPT')}
                             className="p-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 active:scale-95"
-                            title="Accetta"
+                            title={t('friends.acceptBtn')}
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleRespond(req.id, 'DECLINE')}
                             className="p-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 active:scale-95"
-                            title="Rifiuta"
+                            title={t('friends.declineBtn')}
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -432,7 +437,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
               {outgoing.length > 0 && (
                 <div>
                   <span className="text-[10px] font-heading font-black text-slate-400 uppercase tracking-wider block mb-2">
-                    Richieste Inviate ({outgoing.length})
+                    {t('friends.outgoingTitle', { count: outgoing.length })}
                   </span>
                   <div className="space-y-1.5">
                     {outgoing.map((req) => (
@@ -440,8 +445,8 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                         key={req.id}
                         className="bg-white/5 border border-white/10 rounded-2xl px-3 py-2 flex items-center justify-between text-xs text-slate-400"
                       >
-                        <span>Inviata a @{req.toUsername || req.toUserKey}</span>
-                        <span className="text-[10px] text-amber-400/80 font-mono">In attesa...</span>
+                        <span>@{req.toUsername || req.toUserKey}</span>
+                        <span className="text-[10px] text-amber-400/80 font-mono">{t('friends.waitingStatus')}</span>
                       </div>
                     ))}
                   </div>
@@ -455,7 +460,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
             <form onSubmit={handleSendRequest} className="space-y-3 py-1">
               <div>
                 <label className="text-[11px] font-heading font-black text-slate-300 uppercase tracking-wider block mb-1.5">
-                  Inserisci Username o Telegram ID
+                  {t('friends.addTitle')}
                 </label>
                 <div className="relative">
                   <UserPlus className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" />
@@ -463,13 +468,13 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                     type="text"
                     value={addInput}
                     onChange={(e) => setAddInput(e.target.value)}
-                    placeholder="es. @duelist o 123456789"
+                    placeholder={t('friends.inputPlaceholder')}
                     className="w-full bg-[#181a29] border border-white/15 rounded-2xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-all font-mono"
                     autoFocus
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1.5">
-                  L'utente riceverà una notifica in chat da @SfidaRobot e potrà accettare la tua richiesta.
+                  {t('friends.offlineNotice')}
                 </p>
               </div>
 
@@ -481,12 +486,12 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                 {addLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Invio in corso...</span>
+                    <span>{t('friends.sending')}</span>
                   </>
                 ) : (
                   <>
                     <UserPlus className="w-4 h-4" />
-                    <span>Invia Richiesta di Amicizia</span>
+                    <span>{t('friends.sendRequestBtn')}</span>
                   </>
                 )}
               </button>

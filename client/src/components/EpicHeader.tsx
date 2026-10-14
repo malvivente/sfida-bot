@@ -74,7 +74,7 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
                 triggerImpact('light');
                 onOpenFriends();
               }}
-              title="Amici & Social"
+              title={t('header.friendsTooltip')}
               className="relative p-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all active:scale-95 flex items-center space-x-1"
             >
               <Users className="w-3.5 h-3.5 text-purple-400" />
