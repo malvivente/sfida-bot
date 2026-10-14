@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   Crosshair,
@@ -782,8 +783,8 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
         ) : null}
       </div>
 
-      {/* Tactical Boost Guide Modal - Fullscreen Overlay at Root level with fixed z-[100] */}
-      {showGuideModal && (
+      {/* Tactical Boost Guide Modal - Fullscreen Overlay rendered at document.body via Portal */}
+      {showGuideModal && typeof document !== 'undefined' && createPortal(
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -898,7 +899,8 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

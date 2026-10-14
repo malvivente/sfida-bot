@@ -571,6 +571,23 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       {/* Notice for Duelists or Bet Controls for Spectators */}
       {isPlayer ? null : (
         <>
+          {/* Spectator Refund Banner (e.g. single-sided pool auto-refund) */}
+          {spectatorOutcome?.refunded && !placedBet && (
+            <div className="mb-3.5 p-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500 text-center flex flex-col items-center justify-center space-y-1 shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-in fade-in">
+              <div className="flex items-center space-x-1.5 text-amber-400 font-chakra font-black text-xs uppercase tracking-wider">
+                <span>↩️</span>
+                <span>{t('spectator.outcomeRefundTitle') || 'SCOMMESSA RIMBORSATA'}</span>
+              </div>
+              <div className="text-base font-orbitron font-black text-white flex items-center space-x-1">
+                <span className="text-amber-400">+{spectatorOutcome.payoutGram}</span>
+                <GramIcon className="w-4 h-4 text-amber-400" />
+              </div>
+              <span className="text-[10px] text-slate-300 font-chakra">
+                {t('spectator.refundNotice') || 'Puntata restituita al tuo saldo in-app'}
+              </span>
+            </div>
+          )}
+
           {/* Confirmed Placed Bet Card */}
           {placedBet && (
             <div className="mb-3.5 p-3.5 rounded-xl bg-cyber-green/10 border border-cyber-green/50 shadow-[0_0_15px_rgba(0,255,136,0.18)] flex flex-col space-y-2.5 animate-fadeIn">

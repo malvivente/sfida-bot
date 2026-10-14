@@ -326,7 +326,11 @@ export function useSocket({
                   payoutGram: mySettlement.payoutGram,
                   refunded: mySettlement.refunded,
                 });
+                window.dispatchEvent(new CustomEvent('sfida_balance_updated'));
               }
+            }
+            if (msg.winnerAddress && wallet && msg.winnerAddress.toLowerCase() === wallet.toLowerCase()) {
+              window.dispatchEvent(new CustomEvent('sfida_balance_updated'));
             }
             if (msg.winnerName && !msg.winnerName.includes('Nessun') && !msg.winnerName.includes('Pace')) {
               window.dispatchEvent(
@@ -341,6 +345,31 @@ export function useSocket({
                 })
               );
             }
+            break;
+
+          case 'SPECTATOR_BETS_REFUNDED':
+            if (msg.message) setFeedMessage(msg.message);
+            if (msg.spectatorSettlements && Array.isArray(msg.spectatorSettlements)) {
+              const mySettlement = msg.spectatorSettlements.find((s: any) => {
+                if (telegramId && s.telegramId && String(s.telegramId) === String(telegramId)) return true;
+                if (wallet && s.walletAddress) {
+                  const normW = wallet.toLowerCase().trim();
+                  const normS = s.walletAddress.toLowerCase().trim();
+                  if (normW === normS) return true;
+                }
+                return false;
+              });
+              if (mySettlement) {
+                setSpectatorOutcome({
+                  won: false,
+                  payoutGram: mySettlement.payoutGram,
+                  refunded: true,
+                });
+                window.dispatchEvent(new CustomEvent('sfida_balance_updated'));
+              }
+            }
+            setPlacedBet(null);
+            setBetStatus('idle');
             break;
 
           case 'ROOM_CANCELLED':
@@ -393,8 +422,25 @@ export function useSocket({
             setCurrentRound(1);
             setScoreA(0);
             setScoreB(0);
+            setPlayerAReady(false);
+            setPlayerBReady(false);
+            setPlacedBet(null);
+            setSpectatorOutcome(null);
+            setBetStatus('idle');
+            setCountdownSeconds(null);
+            setGameData(null);
+            setLastSignal(null);
+            setRoundWinner(null);
+            setForfeitCountdown(null);
+            setOddsA(msg.oddsA !== undefined ? msg.oddsA : 2.0);
+            setOddsB(msg.oddsB !== undefined ? msg.oddsB : 2.0);
+            setOddsX(msg.oddsX !== undefined ? msg.oddsX : 2.8);
+            setTotalBetsA('0');
+            setTotalBetsB('0');
+            setTotalBetsX('0');
             if (msg.newWagerTon) setActiveWagerTon(msg.newWagerTon);
             if (msg.message) setFeedMessage(msg.message);
+            window.dispatchEvent(new CustomEvent('sfida_rematch_accepted'));
             break;
 
           case 'REMATCH_DECLINED':

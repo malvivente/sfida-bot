@@ -71,6 +71,7 @@ export abstract class BaseGameRoom {
   public spectators: Map<string, SpectatorSession> = new Map();
 
   protected bettingTimer?: NodeJS.Timeout;
+  public bettingCountdownSeconds?: number;
 
   public totalBetsA: bigint = 0n;
   public totalBetsB: bigint = 0n;
@@ -244,6 +245,24 @@ export abstract class BaseGameRoom {
       scoreB: this.playerB ? this.playerB.score : 0,
       playerAName: this.playerA.username,
       playerBName: this.playerB ? this.playerB.username : undefined,
+      playerA: {
+        wallet: this.playerA.walletAddress,
+        name: this.playerA.username,
+        ready: this.playerA.ready,
+        score: this.playerA.score,
+        connected: this.playerA.connected,
+        telegramUserId: this.playerA.telegramId,
+      },
+      playerB: this.playerB
+        ? {
+            wallet: this.playerB.walletAddress,
+            name: this.playerB.username,
+            ready: this.playerB.ready,
+            score: this.playerB.score,
+            connected: this.playerB.connected,
+            telegramUserId: this.playerB.telegramId,
+          }
+        : null,
       wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
@@ -255,6 +274,7 @@ export abstract class BaseGameRoom {
       winnerName: this.winnerName,
       resolution: this.resolution,
       gameData: this.getGamePayload(),
+      secondsLeft: this.bettingCountdownSeconds,
     });
 
     this.broadcastRoomState();
@@ -274,6 +294,24 @@ export abstract class BaseGameRoom {
       scoreB: this.playerB ? this.playerB.score : 0,
       playerAName: this.playerA.username,
       playerBName: this.playerB ? this.playerB.username : undefined,
+      playerA: {
+        wallet: this.playerA.walletAddress,
+        name: this.playerA.username,
+        ready: this.playerA.ready,
+        score: this.playerA.score,
+        connected: this.playerA.connected,
+        telegramUserId: this.playerA.telegramId,
+      },
+      playerB: this.playerB
+        ? {
+            wallet: this.playerB.walletAddress,
+            name: this.playerB.username,
+            ready: this.playerB.ready,
+            score: this.playerB.score,
+            connected: this.playerB.connected,
+            telegramUserId: this.playerB.telegramId,
+          }
+        : null,
       wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
@@ -285,6 +323,7 @@ export abstract class BaseGameRoom {
       winnerName: this.winnerName,
       resolution: this.resolution,
       gameData: this.getGamePayload(),
+      secondsLeft: this.bettingCountdownSeconds,
     });
   }
 
@@ -368,6 +407,11 @@ export abstract class BaseGameRoom {
 
   // Ready toggle
   public setPlayerReady(wallet: string, telegramId?: string) {
+    if (this.state !== 'LOBBY') {
+      console.warn(`[BaseGameRoom] Match #${this.matchId}: setPlayerReady ignored in state '${this.state}'.`);
+      return;
+    }
+
     let readySide: 'A' | 'B' | null = null;
     if (
       this.isSameWallet(wallet, this.playerA.walletAddress) ||
@@ -467,6 +511,8 @@ export abstract class BaseGameRoom {
     const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 10;
     let countdown = duration;
 
+    this.bettingCountdownSeconds = duration;
+
     this.broadcast({
       type: 'BETTING_WINDOW_OPEN',
       durationSeconds: duration,
@@ -475,6 +521,7 @@ export abstract class BaseGameRoom {
 
     this.bettingTimer = setInterval(() => {
       countdown -= 1;
+      this.bettingCountdownSeconds = countdown;
       this.broadcast({
         type: 'BETTING_COUNTDOWN',
         secondsLeft: countdown,
@@ -488,9 +535,78 @@ export abstract class BaseGameRoom {
           clearInterval(this.bettingTimer);
           this.bettingTimer = undefined;
         }
+        this.bettingCountdownSeconds = undefined;
+        this.checkAndRefundOneSidedSpectatorBets();
         this.onGameStart();
       }
     }, 1000);
+  }
+
+  public checkAndRefundOneSidedSpectatorBets() {
+    if (this.spectatorBets.length === 0) return;
+
+    const hasBetsA = this.totalBetsA > 0n;
+    const hasBetsB = this.totalBetsB > 0n;
+    const hasBetsX = this.totalBetsX > 0n;
+    const distinctSides = (hasBetsA ? 1 : 0) + (hasBetsB ? 1 : 0) + (hasBetsX ? 1 : 0);
+
+    // If all bets are placed on only 1 side (or only 1 bettor), there is no opposing pool to win against!
+    // Immediately refund stakes and fees so users aren't locked in or losing fees.
+    if (distinctSides <= 1) {
+      console.log(`[BaseGameRoom] Match #${this.matchId}: Only ${distinctSides} side backed by spectators. Refunding ${this.spectatorBets.length} bet(s).`);
+
+      const refundedSettlements: Array<{
+        walletAddress: string;
+        telegramId?: string;
+        target: string;
+        won: boolean;
+        payoutGram: string;
+        refunded: boolean;
+      }> = [];
+
+      for (const bet of this.spectatorBets) {
+        const refundTotal = (bet.amountGram + (bet.feePaidGram || 0)).toFixed(2);
+        refundedSettlements.push({
+          walletAddress: bet.walletAddress,
+          telegramId: bet.telegramId,
+          target: bet.target,
+          won: false,
+          payoutGram: refundTotal,
+          refunded: true,
+        });
+
+        dbService.refundUserBalance(
+          bet.walletAddress,
+          refundTotal,
+          `Refund for spectator bet (one-sided pool) on match #${this.matchId}`,
+          bet.telegramId
+        ).catch((err) => {
+          console.error(`[BaseGameRoom] Error refunding spectator ${bet.walletAddress}:`, err);
+        });
+      }
+
+      this.broadcast({
+        type: 'SPECTATOR_BETS_REFUNDED',
+        reason: 'one_sided',
+        message: 'Tutte le scommesse erano sullo stesso esito. Le puntate sono state rimborsate per intero.',
+        spectatorSettlements: refundedSettlements,
+      });
+
+      this.spectatorBets = [];
+      this.totalBetsA = 0n;
+      this.totalBetsB = 0n;
+      this.totalBetsX = 0n;
+
+      this.broadcast({
+        type: 'ODDS_UPDATE',
+        totalBetsA: '0',
+        totalBetsB: '0',
+        totalBetsX: '0',
+        oddsA: this.calculateOdds('A'),
+        oddsB: this.calculateOdds('B'),
+        oddsX: this.calculateOdds('X'),
+      });
+    }
   }
 
   // Settle Match
@@ -845,6 +961,7 @@ export abstract class BaseGameRoom {
       clearInterval(this.bettingTimer);
       this.bettingTimer = undefined;
     }
+    this.bettingCountdownSeconds = undefined;
     if (this.playerA.disconnectTimer) {
       clearTimeout(this.playerA.disconnectTimer);
       this.playerA.disconnectTimer = undefined;
@@ -1130,6 +1247,10 @@ export abstract class BaseGameRoom {
     this.winnerName = undefined;
     this.resolution = undefined;
     this.forfeitWinner = undefined;
+    this.spectatorBets = [];
+    this.totalBetsA = 0n;
+    this.totalBetsB = 0n;
+    this.totalBetsX = 0n;
     this.cleanupTimers();
     this.resetForRematch();
 
@@ -1137,6 +1258,12 @@ export abstract class BaseGameRoom {
       type: 'REMATCH_ACCEPTED',
       newWagerTon,
       message: `Rematch accepted! Wager doubled to ${newWagerTon} GRAM. Both players ready up!`,
+      oddsA: 2.0,
+      oddsB: 2.0,
+      oddsX: this.gameType === 'split' ? 2.8 : 2.0,
+      totalBetsA: '0',
+      totalBetsB: '0',
+      totalBetsX: '0',
     });
     this.broadcastRoomState();
   }

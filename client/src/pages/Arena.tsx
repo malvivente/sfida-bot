@@ -783,10 +783,25 @@ export const Arena: React.FC<ArenaProps> = ({
   );
 
   useEffect(() => {
-    if (socketData.roomState === 'LOBBY' && !socketData.playerAReady && !socketData.playerBReady) {
+    if (socketData.roomState === 'LOBBY') {
+      const serverReady = userSide === 'A' ? socketData.playerAReady : socketData.playerBReady;
+      if (!serverReady) {
+        setIsReady(false);
+      }
+    } else {
       setIsReady(false);
     }
-  }, [socketData.roomState, socketData.playerAReady, socketData.playerBReady]);
+  }, [socketData.roomState, socketData.playerAReady, socketData.playerBReady, userSide]);
+
+  useEffect(() => {
+    const handleRematchAccepted = () => {
+      setIsReady(false);
+    };
+    window.addEventListener('sfida_rematch_accepted', handleRematchAccepted);
+    return () => {
+      window.removeEventListener('sfida_rematch_accepted', handleRematchAccepted);
+    };
+  }, []);
 
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 
