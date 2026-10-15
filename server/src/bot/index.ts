@@ -21,6 +21,10 @@ import {
   handleCancelGroupDuelCallback,
   parseGameType,
 } from './groupDuels.js';
+import {
+  handleBalanceCommand,
+  handleTipCommand,
+} from './userCommands.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
@@ -304,6 +308,16 @@ export function createTelegramBot(token?: string): Bot {
   });
   bot.command(['getbalance', 'get_balance', 'getbal'], async (ctx) => {
     await handleGetBalanceCommand(ctx);
+  });
+
+  // User Balance Commands (/bal, /balance, /saldo)
+  bot.command(['bal', 'balance', 'saldo'], async (ctx) => {
+    await handleBalanceCommand(ctx);
+  });
+
+  // User Tip / Transfer Command (/tip, /mancia)
+  bot.command(['tip', 'mancia'], async (ctx) => {
+    await handleTipCommand(ctx);
   });
 
   // In-Chat Group Duel Commands (/duel, /sfida, /challenge)

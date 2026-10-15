@@ -18,7 +18,7 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { MatchData, UserBalance, FeeConfig, GameType } from '../types/index.js';
 import { Address } from '@ton/ton';
 import { areAddressesEqual } from '../utils/ton.js';
-import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2, Swords, X } from 'lucide-react';
+import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2, Swords, X, Target } from 'lucide-react';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -566,6 +566,21 @@ export const Arena: React.FC<ArenaProps> = ({
         setActiveMatchId(initialMatchId);
         setRole('player');
       } else if (!m.playerB && initialRole === 'player') {
+        const hasOpponentSet = Boolean(m.targetOpponentUsername || m.targetOpponentId);
+        const cleanTargetUser = m.targetOpponentUsername?.replace(/^@/, '').toLowerCase().trim();
+        const cleanUser = username?.replace(/^@/, '').toLowerCase().trim();
+        const isTargetUser = Boolean(
+          (cleanTargetUser && cleanUser && cleanTargetUser === cleanUser) ||
+          (m.targetOpponentId && userId && String(m.targetOpponentId) === String(userId))
+        );
+
+        if (hasOpponentSet && !isTargetUser) {
+          // If a direct opponent was specified and visitor is not the target, they can only spectate
+          setActiveMatchId(initialMatchId);
+          setRole('spectator');
+          return;
+        }
+
         if (initialInviteCode) {
           try {
             const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
@@ -773,7 +788,22 @@ export const Arena: React.FC<ArenaProps> = ({
       return stored[activeMatchId];
     } catch { return undefined; }
   })() : undefined);
-  const canJoinAsPlayer = !hasPlayerB && !isCurrentCreator && (!isPrivateMatch || Boolean(effectiveInviteCode));
+
+  const hasDesignatedOpponent = Boolean(currentActiveMatch?.targetOpponentUsername || currentActiveMatch?.targetOpponentId);
+  const cleanTargetOpponent = currentActiveMatch?.targetOpponentUsername?.replace(/^@/, '').toLowerCase().trim();
+  const cleanCurrentUsername = username?.replace(/^@/, '').toLowerCase().trim();
+  const isTargetOpponent = Boolean(
+    (cleanTargetOpponent && cleanCurrentUsername && cleanTargetOpponent === cleanCurrentUsername) ||
+    (currentActiveMatch?.targetOpponentId && userId && String(currentActiveMatch.targetOpponentId) === String(userId))
+  );
+
+  const canJoinAsPlayer = !hasPlayerB && !isCurrentCreator && (
+    hasDesignatedOpponent
+      ? isTargetOpponent
+      : (!isPrivateMatch || Boolean(effectiveInviteCode))
+  );
+
+  const canInviteChallenger = isCurrentCreator && !hasPlayerB && !hasDesignatedOpponent;
 
   const isMatchInProgress = Boolean(
     isMatchPlayer &&
@@ -1035,6 +1065,23 @@ export const Arena: React.FC<ArenaProps> = ({
             </div>
           </div>
 
+          {/* Direct Duel Waiting Banner */}
+          {isCurrentCreator && !hasPlayerB && hasDesignatedOpponent && (
+            <div className="bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-2xl p-2.5 px-3 flex items-center justify-between text-xs font-sans shadow-md animate-in fade-in duration-200">
+              <div className="flex items-center space-x-2 min-w-0">
+                <Target className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="truncate">
+                  {t('arena.waitingForDirectOpponent', {
+                    target: currentActiveMatch?.targetOpponentUsername ? `@${currentActiveMatch.targetOpponentUsername.replace(/^@/, '')}` : t('arena.designatedOpponentFallback')
+                  })}
+                </span>
+              </div>
+              <span className="text-[10px] font-heading font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/40 shrink-0 ml-2">
+                {t('arena.privateDuelBadge')}
+              </span>
+            </div>
+          )}
+
           {/* Dynamic Game Arenas */}
           {effectiveGameType === 'blackjack' ? (
             <BlackjackArena
@@ -1082,7 +1129,7 @@ export const Arena: React.FC<ArenaProps> = ({
               }}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'bridge' ? (
             <GlassBridgeArena
@@ -1127,7 +1174,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'chrono' ? (
             <ChronoBlindArena
@@ -1171,7 +1218,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'split' ? (
             <SplitStealArena
@@ -1217,7 +1264,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'shotgun' ? (
             <CyberShotgunArena
@@ -1265,7 +1312,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'connect4' ? (
             <Connect4Arena
@@ -1309,7 +1356,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : effectiveGameType === 'cubecount' ? (
             <CubeCountArena
@@ -1353,7 +1400,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           ) : (
             <RussianRouletteArena
@@ -1400,7 +1447,7 @@ export const Arena: React.FC<ArenaProps> = ({
               socketError={socketData.socketError}
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
-              onInviteChallenger={isCurrentCreator && !hasPlayerB ? handleInviteChallenger : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
             />
           )}
 

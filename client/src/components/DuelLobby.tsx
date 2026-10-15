@@ -1184,13 +1184,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <span>{t('profile.resume')}</span>
                       </button>
                     ) : !m.playerB ? (
-                      m.isPrivate && !effectiveInviteCode && !isTargetForThisDuel ? (
+                      ((Boolean(m.targetOpponentUsername || m.targetOpponentId) && !isTargetForThisDuel) ||
+                       (m.isPrivate && !effectiveInviteCode && !isTargetForThisDuel)) ? (
                         <button
                           onClick={() => onSpectateMatch(m.matchId)}
                           className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
                         >
                           <Eye className="w-3.5 h-3.5 text-purple-400" />
-                          <span>{t('lobby.spectatePrivate')}</span>
+                          <span>{Boolean(m.targetOpponentUsername || m.targetOpponentId) ? t('lobby.spectateOnlyReserved') : t('lobby.spectatePrivate')}</span>
                         </button>
                       ) : (
                         <>
@@ -1485,22 +1486,28 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
+                    disabled={Boolean(targetOpponentInput.trim())}
                     onClick={() => {
+                      if (targetOpponentInput.trim()) return;
                       triggerImpact('light');
                       setIsPrivateRoom(false);
                     }}
                     className={`p-2.5 rounded-2xl border text-left transition-all ${
-                      !isPrivateRoom
+                      targetOpponentInput.trim()
+                        ? 'opacity-40 cursor-not-allowed bg-white/[0.01] border-white/5'
+                        : !isPrivateRoom
                         ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-sm'
                         : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center space-x-1.5 mb-0.5">
-                      <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                      <span className="text-xs font-heading font-bold text-white">{t('lobby.public')}</span>
+                      <Globe className={`w-3.5 h-3.5 ${targetOpponentInput.trim() ? 'text-slate-500' : 'text-cyan-400'}`} />
+                      <span className={`text-xs font-heading font-bold ${targetOpponentInput.trim() ? 'text-slate-500' : 'text-white'}`}>
+                        {t('lobby.public')}
+                      </span>
                     </div>
                     <p className="text-[9px] font-sans text-slate-400 leading-tight">
-                      {t('lobby.publicDesc')}
+                      {targetOpponentInput.trim() ? t('lobby.publicDisabledDirect') : t('lobby.publicDesc')}
                     </p>
                   </button>
 

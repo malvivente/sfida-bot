@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ExternalLink,
   Sparkles,
+  QrCode,
 } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
@@ -23,6 +24,7 @@ import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { useI18n } from '../i18n/index.js';
 import { APP_CONFIG } from '../config/appConfig.js';
+import { ReferralQrModal } from '../components/ReferralQrModal.js';
 
 interface ManagedGroup {
   chatId: string;
@@ -74,6 +76,7 @@ export const ReferralDashboard: React.FC = () => {
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const cacheKey = userId ? `tg_${userId}` : (userAddress || 'guest');
   const initialCached = getCachedAffiliate(cacheKey);
@@ -219,6 +222,16 @@ export const ReferralDashboard: React.FC = () => {
               }`}
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                triggerImpact('light');
+                setShowQrModal(true);
+              }}
+              title={t('affiliates.qrCodeBtn')}
+              className="p-2.5 rounded-2xl border border-white/25 bg-white/15 hover:bg-white/25 text-white transition-all flex items-center justify-center active:scale-95"
+            >
+              <QrCode className="w-4 h-4 text-pink-200" />
             </button>
             <button
               onClick={handleShare}
@@ -373,6 +386,15 @@ export const ReferralDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Referral QR Code Modal */}
+      <ReferralQrModal
+        isOpen={showQrModal}
+        onClose={() => setShowQrModal(false)}
+        refLink={refLink}
+        refCode={refCode}
+        username={username}
+      />
     </div>
   );
 };

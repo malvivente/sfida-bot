@@ -4,7 +4,7 @@ import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { GramIcon } from './GramIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
-import { Swords, Eye, Flame, Trophy, Users, ArrowRight, Zap } from 'lucide-react';
+import { Swords, Eye, Flame, Trophy, Users, ArrowRight, Zap, Bot, Dices, Lock } from 'lucide-react';
 
 interface EpicBannersProps {
   matches?: MatchData[];
@@ -271,7 +271,97 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 4. TWO-COLUMN GRID: TRUST JACKPOT & COMMUNITY REWARDS         */}
+      {/* 4. GIOCHI VS BOT (Player vs AI • Coming Soon)                 */}
+      {/* ------------------------------------------------------------- */}
+      <div
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 p-4 sm:p-5 shadow-xl border border-teal-500/35 cursor-not-allowed select-none min-h-[145px] opacity-90 group"
+      >
+        <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-teal-400/15 blur-2xl pointer-events-none" />
+
+        {/* Future Card Image Slot (To be provided by user) */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-30 pointer-events-none flex items-center justify-center">
+          <Bot className="w-24 h-24 text-teal-400/50 stroke-1" />
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="max-w-[70%] space-y-1.5">
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/40 text-[10px] font-heading font-black tracking-wide shadow-sm">
+              <Bot className="w-3 h-3 text-teal-400" />
+              <span>{t('epic.vsBotTag')}</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
+              {t('epic.vsBotTitle')}
+            </h3>
+
+            <p className="text-xs text-teal-100/80 font-medium leading-tight">
+              {t('epic.vsBotDesc')}
+            </p>
+
+            <div className="pt-1 flex items-center space-x-2">
+              <div className="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-slate-300 font-heading font-extrabold text-[11px] uppercase tracking-wider flex items-center space-x-1.5">
+                <Lock className="w-3 h-3 text-teal-400" />
+                <span>{t('epic.soonBtn')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Clean Badge */}
+          <div className="hidden sm:flex flex-col items-end space-y-1.5 shrink-0">
+            <div className="px-2.5 py-1 rounded-xl bg-black/40 backdrop-blur-md text-teal-300 font-heading font-black text-xs shadow-md border border-teal-400/40">
+              🤖 {t('epic.soonBtn')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 5. GIOCHI VS CASINÒ (Player vs House / Casino • Coming Soon)  */}
+      {/* ------------------------------------------------------------- */}
+      <div
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#290b0b] via-[#3a1010] to-[#170505] p-4 sm:p-5 shadow-xl border border-amber-500/35 cursor-not-allowed select-none min-h-[145px] opacity-90 group"
+      >
+        <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-amber-500/15 blur-2xl pointer-events-none" />
+
+        {/* Future Card Image Slot (To be provided by user) */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-30 pointer-events-none flex items-center justify-center">
+          <Dices className="w-24 h-24 text-amber-400/50 stroke-1" />
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="max-w-[70%] space-y-1.5">
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-heading font-black tracking-wide shadow-sm">
+              <Dices className="w-3 h-3 text-amber-400" />
+              <span>{t('epic.vsCasinoTag')}</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
+              {t('epic.vsCasinoTitle')}
+            </h3>
+
+            <p className="text-xs text-amber-100/80 font-medium leading-tight">
+              {t('epic.vsCasinoDesc')}
+            </p>
+
+            <div className="pt-1 flex items-center space-x-2">
+              <div className="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-slate-300 font-heading font-extrabold text-[11px] uppercase tracking-wider flex items-center space-x-1.5">
+                <Lock className="w-3 h-3 text-amber-400" />
+                <span>{t('epic.soonBtn')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Clean Badge */}
+          <div className="hidden sm:flex flex-col items-end space-y-1.5 shrink-0">
+            <div className="px-2.5 py-1 rounded-xl bg-black/40 backdrop-blur-md text-amber-300 font-heading font-black text-xs shadow-md border border-amber-400/40">
+              🎰 {t('epic.soonBtn')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 6. TWO-COLUMN GRID: TRUST JACKPOT & COMMUNITY REWARDS         */}
       {/* ------------------------------------------------------------- */}
       <div className="grid grid-cols-2 gap-3">
         

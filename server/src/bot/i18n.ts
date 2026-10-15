@@ -57,6 +57,8 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.bot}} <b>SFIDA ARENA GUIDE</b> {{emoji.bot}}\n\n` +
       `<b>Available Commands:</b>\n` +
       `• /start — Open Arena\n` +
+      `• /bal — Check your GRAM balance\n` +
+      `• /tip &lt;@user|reply&gt; &lt;amount&gt; — Send instant tip to a player\n` +
       `• /lang — Change language\n` +
       `• /help — Show this guide\n\n` +
       `<b>How to create a group duel:</b>\n` +
@@ -190,6 +192,8 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.bot}} <b>GUIDA SFIDA ARENA</b> {{emoji.bot}}\n\n` +
       `<b>Comandi disponibili:</b>\n` +
       `• /start — Apri l'Arena\n` +
+      `• /bal — Controlla il tuo saldo GRAM\n` +
+      `• /tip &lt;@utente|rispondi&gt; &lt;importo&gt; — Invia una mancia a un giocatore\n` +
       `• /lang — Cambia lingua\n` +
       `• /help — Mostra questa guida\n\n` +
       `<b>Come lanciare una sfida nei gruppi:</b>\n` +
