@@ -25,6 +25,12 @@ import {
   handleBalanceCommand,
   handleTipCommand,
 } from './userCommands.js';
+import {
+  handleMaintenanceCommand,
+  handleAddAdminCommand,
+  handleDelAdminCommand,
+  handleListAdminsCommand,
+} from './adminMaintenance.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
@@ -308,6 +314,20 @@ export function createTelegramBot(token?: string): Bot {
   });
   bot.command(['getbalance', 'get_balance', 'getbal'], async (ctx) => {
     await handleGetBalanceCommand(ctx);
+  });
+
+  // Admin Maintenance & Dynamic Admins Commands
+  bot.command(['maintenance', 'manteinance', 'manutenzione'], async (ctx) => {
+    await handleMaintenanceCommand(ctx);
+  });
+  bot.command(['addadmin', 'setadmin'], async (ctx) => {
+    await handleAddAdminCommand(ctx);
+  });
+  bot.command(['deladmin', 'removeadmin', 'rmadmin'], async (ctx) => {
+    await handleDelAdminCommand(ctx);
+  });
+  bot.command(['listadmins', 'admins'], async (ctx) => {
+    await handleListAdminsCommand(ctx);
   });
 
   // User Balance Commands (/bal, /balance, /saldo)

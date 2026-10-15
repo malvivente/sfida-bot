@@ -21,6 +21,21 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send(info);
   });
 
+  // Platform System & Maintenance Status
+  fastify.get('/api/system/status', async (req, reply) => {
+    const query = req.query as { telegramId?: string };
+    const telegramId = query?.telegramId;
+    const maintenance = dbService.isMaintenanceMode();
+    const isAdmin = dbService.isBotAdmin(telegramId);
+    const message = dbService.getMaintenanceMessage();
+
+    return reply.send({
+      maintenance,
+      isAdmin,
+      message,
+    });
+  });
+
   // Global Recent Wins (Real Platform Settled Duels)
   fastify.get('/api/recent-wins', async (_req, reply) => {
     const wins = await dbService.getRecentWins(15);

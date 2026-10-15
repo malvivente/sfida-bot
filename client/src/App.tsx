@@ -8,6 +8,7 @@ import { TrustJackpotModal } from './components/TrustJackpotModal.js';
 import { DepositModal } from './components/DepositModal.js';
 import { FriendsModal } from './components/FriendsModal.js';
 import { TipModal } from './components/TipModal.js';
+import { MaintenanceScreen } from './components/MaintenanceScreen.js';
 import { TelegramTopSlot } from './components/TelegramTopSlot.js';
 import { EpicHeader } from './components/EpicHeader.js';
 import { EpicBottomNav, EpicTab } from './components/EpicBottomNav.js';
@@ -89,6 +90,34 @@ export const App: React.FC = () => {
 
   const { userId, username, firstName, lastName, fullName, displayName, photoUrl } = useTelegram();
   const { userAddress } = useTonClashContract();
+
+  // Maintenance and Admin status state
+  const [isMaintenance, setIsMaintenance] = useState<boolean>(false);
+  const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string>('');
+
+  const checkSystemStatus = React.useCallback(async () => {
+    try {
+      const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+      const q = new URLSearchParams();
+      if (userId) q.set('telegramId', String(userId));
+      const res = await fetch(`${serverUrl}/api/system/status?${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setIsMaintenance(!!data.maintenance);
+        setIsUserAdmin(!!data.isAdmin);
+        setMaintenanceMessage(data.message || '');
+      }
+    } catch (err) {
+      console.warn('[App] System status check error:', err);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    checkSystemStatus();
+    const interval = setInterval(checkSystemStatus, 12000);
+    return () => clearInterval(interval);
+  }, [checkSystemStatus]);
 
   // In-bot balance state synced from localStorage / server
   const [userBalanceGram, setUserBalanceGram] = useState<string>(() => {
@@ -347,6 +376,10 @@ export const App: React.FC = () => {
     document.body.scrollTop = 0;
   }, [activeTab]);
 
+  if (isMaintenance && !isUserAdmin) {
+    return <MaintenanceScreen customMessage={maintenanceMessage} onRetry={checkSystemStatus} />;
+  }
+
   return (
     <div
       className={`min-h-screen bg-[#0e1015] text-slate-100 flex flex-col items-center justify-start px-3 sm:px-4 select-none font-sans relative ${
@@ -355,6 +388,14 @@ export const App: React.FC = () => {
     >
       {/* Top clearance for Telegram Fullscreen mode */}
       <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset} isIos={isIos} />
+
+      {/* Administrator Maintenance Active Warning Banner */}
+      {isMaintenance && isUserAdmin && (
+        <div className="w-full max-w-md mx-auto mb-2.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-amber-500/20 z-40 text-[11px] font-heading font-black tracking-wider uppercase">
+          <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
+          <span>{t('maintenance.adminBanner')}</span>
+        </div>
+      )}
 
       {/* Modern Epic Header (Hidden during active duel arena to give 100% screen focus) */}
       {!isInsideMatch && (

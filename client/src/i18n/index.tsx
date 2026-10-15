@@ -659,6 +659,7 @@ export const translations: Translations = {
   'affiliates.yourRefCode': { it: 'Codice & Link Referral', en: 'Referral Code & Link' },
   'affiliates.downloadQrBtn': { it: 'Scarica QR', en: 'Download QR' },
   'affiliates.copyBtn': { it: 'Copia Link', en: 'Copy Link' },
+  'affiliates.tapQrToCopy': { it: 'Tocca il QR Code per copiare il link', en: 'Tap the QR Code to copy invite link' },
   'affiliates.shareTelegramBtn': { it: 'Condividi su Telegram', en: 'Share to Telegram' },
   'affiliates.telegramParam': { it: 'Parametro Telegram:', en: 'Telegram Parameter:' },
   'affiliates.walletConnected': { it: 'Il tuo wallet è connesso e riceverà le quote affiliate automaticamente.', en: 'Your wallet is connected and will receive affiliate shares automatically.' },
@@ -945,6 +946,15 @@ export const translations: Translations = {
   'tip.errorSelf': { it: 'Non puoi inviare mance a te stesso.', en: 'You cannot send a tip to yourself.' },
   'tip.errorUserNotFound': { it: 'Destinatario non trovato nel sistema del bot.', en: 'Recipient not found in bot database.' },
   'tip.errorGeneric': { it: 'Errore durante l\'invio del tip. Riprova.', en: 'Error sending tip. Please try again.' },
+
+  // System Maintenance Translations
+  'maintenance.title': { it: 'PIATTAFORMA IN MANUTENZIONE', en: 'SYSTEM UNDER MAINTENANCE' },
+  'maintenance.badge': { it: 'AGGIORNAMENTO IN CORSO', en: 'UPDATE IN PROGRESS' },
+  'maintenance.desc': { it: 'Stiamo effettuando aggiornamenti programmati per migliorare la tua esperienza di gioco. Sfida tornerà operativa a brevissimo!', en: 'We are performing scheduled updates to improve your gameplay experience. Sfida will be back online shortly!' },
+  'maintenance.retry': { it: 'VERIFICA STATO', en: 'CHECK STATUS' },
+  'maintenance.checking': { it: 'VERIFICA IN CORSO...', en: 'CHECKING STATUS...' },
+  'maintenance.adminBanner': { it: 'MODALITÀ MANUTENZIONE ATTIVA • ACCESSO ADMIN RISERVATO', en: 'MAINTENANCE MODE ACTIVE • ADMIN ACCESS ONLY' },
+  'maintenance.officialChannel': { it: 'Canale Aggiornamenti', en: 'Official Updates' },
 };
 
 interface LanguageContextType {

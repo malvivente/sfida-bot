@@ -205,23 +205,24 @@ export const ReferralDashboard: React.FC = () => {
             )}
           </div>
 
+          {/* Link row: Input + Copy + QR Code */}
           <div className="flex items-center space-x-2">
             <input
               type="text"
               readOnly
               value={refLink}
-              className="flex-1 bg-black/40 border border-white/20 rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none select-all font-medium"
+              className="flex-1 min-w-0 bg-black/40 border border-white/20 rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none select-all font-medium truncate"
             />
             <button
               onClick={copyRefLink}
-              title="Copy link"
-              className={`p-2.5 rounded-2xl border transition-all flex items-center space-x-1 text-xs font-heading font-extrabold active:scale-95 ${
+              title={copied ? t('affiliates.copied') : t('affiliates.copyBtn')}
+              className={`p-2.5 shrink-0 rounded-2xl border transition-all flex items-center justify-center active:scale-95 ${
                 copied
-                  ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200'
+                  ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200 shadow-[0_0_12px_rgba(52,211,153,0.3)]'
                   : 'bg-white/15 border-white/25 hover:bg-white/25 text-white'
               }`}
             >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
             </button>
             <button
               onClick={() => {
@@ -229,19 +230,21 @@ export const ReferralDashboard: React.FC = () => {
                 setShowQrModal(true);
               }}
               title={t('affiliates.qrCodeBtn')}
-              className="p-2.5 rounded-2xl border border-white/25 bg-white/15 hover:bg-white/25 text-white transition-all flex items-center justify-center active:scale-95"
+              className="p-2.5 shrink-0 rounded-2xl border border-white/25 bg-white/15 hover:bg-white/25 text-white transition-all flex items-center justify-center active:scale-95"
             >
               <QrCode className="w-4 h-4 text-pink-200" />
             </button>
-            <button
-              onClick={handleShare}
-              title="Share to Telegram"
-              className="px-3.5 py-2.5 bg-white text-purple-900 font-heading font-black rounded-2xl shadow-lg active:scale-95 hover:bg-slate-100 transition-all flex items-center space-x-1.5 text-xs uppercase tracking-wider"
-            >
-              <Share2 className="w-4 h-4 text-purple-900" />
-              <span className="hidden sm:inline">{t('affiliates.inviteBtn')}</span>
-            </button>
           </div>
+
+          {/* Full-width Telegram Share Button */}
+          <button
+            onClick={handleShare}
+            title={t('affiliates.shareTelegramBtn')}
+            className="w-full py-3 px-4 bg-gradient-to-r from-white via-pink-50 to-white text-purple-950 font-heading font-black rounded-2xl shadow-xl shadow-purple-950/30 active:scale-[0.98] hover:brightness-105 transition-all flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
+          >
+            <Share2 className="w-4 h-4 text-purple-900 shrink-0" />
+            <span>{t('affiliates.shareTelegramBtn')}</span>
+          </button>
 
           <div className="flex items-center justify-between text-[11px] text-pink-200/90 pt-1 font-medium">
             <span className="flex items-center space-x-1">

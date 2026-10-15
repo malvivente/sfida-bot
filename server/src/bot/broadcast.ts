@@ -12,7 +12,7 @@ function sleep(ms: number): Promise<void> {
 
 export function isBotAdmin(userId?: number | string): boolean {
   if (!userId) return false;
-  return String(userId) === String(ADMIN_TELEGRAM_ID);
+  return dbService.isBotAdmin(userId);
 }
 
 /**

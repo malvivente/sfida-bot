@@ -32,4 +32,5 @@ Thumbs.db
 *.sln
 *.sw?
 backoff.md
+head_soccer_spec.md
 server/data/

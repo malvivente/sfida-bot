@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCodeStyling from 'qr-code-styling';
-import { X, Download, Copy, Check, Share2, Sparkles, QrCode } from 'lucide-react';
+import { X, Copy, Check, Share2, Sparkles, QrCode } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { useI18n } from '../i18n/index.js';
@@ -59,8 +59,8 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
 
     // Initialize stylized, soft QR code
     const qr = new QRCodeStyling({
-      width: 230,
-      height: 230,
+      width: 220,
+      height: 220,
       type: 'svg',
       data: refLink,
       image: SWORDS_LOGO_DATA_URI,
@@ -113,17 +113,7 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
     triggerImpact('light');
     navigator.clipboard.writeText(refLink);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-    triggerImpact('medium');
-    if (qrCodeInstance.current) {
-      qrCodeInstance.current.download({
-        name: `sfida-ref-${refCode}`,
-        extension: 'png',
-      });
-    }
+    setTimeout(() => setCopied(false), 2200);
   };
 
   const handleShare = () => {
@@ -162,9 +152,42 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
           </p>
         </div>
 
-        {/* QR Code Container */}
-        <div className="p-3.5 rounded-3xl bg-[#0a0d14] border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] flex items-center justify-center transition-all">
-          <div ref={qrRef} className="rounded-2xl overflow-hidden flex items-center justify-center" />
+        {/* QR Code Container - Interactive Tap to Copy */}
+        <div
+          onClick={handleCopy}
+          role="button"
+          tabIndex={0}
+          title={t('affiliates.tapQrToCopy')}
+          className="relative group p-3.5 rounded-3xl bg-[#0a0d14] border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] flex flex-col items-center justify-center transition-all cursor-pointer hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] active:scale-95"
+        >
+          <div ref={qrRef} className="rounded-2xl overflow-hidden flex items-center justify-center transition-transform group-hover:scale-[1.02]" />
+
+          {/* Tap-to-copy helper pill on QR */}
+          <div className="mt-2.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 group-hover:bg-cyan-500/20 group-hover:border-cyan-400/40 transition-all flex items-center space-x-1.5 text-[11px] font-sans text-slate-300 group-hover:text-cyan-200">
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="font-heading font-black text-emerald-300">{t('affiliates.copied')}</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3 text-cyan-400" />
+                <span>{t('affiliates.tapQrToCopy')}</span>
+              </>
+            )}
+          </div>
+
+          {/* Floating animated success badge on copy */}
+          {copied && (
+            <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center animate-in fade-in zoom-in-90 duration-150 z-20">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.5)] mb-2 animate-bounce">
+                <Check className="w-6 h-6 text-emerald-300" />
+              </div>
+              <span className="font-heading font-black text-white text-sm tracking-wider uppercase drop-shadow">
+                {t('affiliates.copied')}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Referral info label */}
@@ -177,34 +200,12 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
           </span>
         </div>
 
-        {/* Actions buttons */}
-        <div className="w-full grid grid-cols-2 gap-2 pt-1">
-          <button
-            onClick={handleDownload}
-            className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center space-x-1.5"
-          >
-            <Download className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{t('affiliates.downloadQrBtn')}</span>
-          </button>
-
-          <button
-            onClick={handleCopy}
-            className={`py-2.5 px-3 rounded-2xl border font-heading font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center space-x-1.5 ${
-              copied
-                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
-            }`}
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-cyan-400" />}
-            <span>{copied ? t('affiliates.copied') : t('affiliates.copyBtn')}</span>
-          </button>
-        </div>
-
+        {/* Full-width Share to Telegram Button */}
         <button
           onClick={handleShare}
-          className="w-full py-2.5 bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-heading font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+          className="w-full py-3 bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-heading font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 active:scale-95 transition-all flex items-center justify-center space-x-2"
         >
-          <Share2 className="w-3.5 h-3.5 text-white" />
+          <Share2 className="w-4 h-4 text-white" />
           <span>{t('affiliates.shareTelegramBtn')}</span>
         </button>
       </div>

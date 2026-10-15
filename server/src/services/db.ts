@@ -197,6 +197,13 @@ export interface GroupAffiliate {
   updatedAt: number;
 }
 
+export interface SystemSettings {
+  maintenanceEnabled: boolean;
+  maintenanceMessage?: string;
+  adminTelegramIds: string[];
+  updatedAt: number;
+}
+
 export class DatabaseService {
   private static instance: DatabaseService;
   private matches: Map<string, StoredMatch> = new Map();
@@ -222,6 +229,8 @@ export class DatabaseService {
   private groupsFilePath: string;
   private friendsFilePath: string;
   private friendRequestsFilePath: string;
+  private systemFilePath: string;
+  private systemSettings: SystemSettings;
   private initialized: boolean = false;
 
   private constructor() {
@@ -234,6 +243,15 @@ export class DatabaseService {
     this.groupsFilePath = path.join(this.dataDir, 'groups.json');
     this.friendsFilePath = path.join(this.dataDir, 'friends.json');
     this.friendRequestsFilePath = path.join(this.dataDir, 'friend_requests.json');
+    this.systemFilePath = path.join(this.dataDir, 'system.json');
+
+    const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
+    this.systemSettings = {
+      maintenanceEnabled: false,
+      maintenanceMessage: '',
+      adminTelegramIds: [defaultAdmin],
+      updatedAt: Date.now(),
+    };
 
     const defaultTreasuryWallet =
       process.env.TREASURY_ADDRESS ||
@@ -405,9 +423,45 @@ export class DatabaseService {
         fs.writeFileSync(this.friendRequestsFilePath, JSON.stringify([], null, 2), 'utf-8');
       }
 
+      if (fs.existsSync(this.systemFilePath)) {
+        try {
+          const rawSystem = fs.readFileSync(this.systemFilePath, 'utf-8');
+          const loaded = JSON.parse(rawSystem);
+          const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
+          const adminList: string[] = Array.isArray(loaded.adminTelegramIds)
+            ? loaded.adminTelegramIds.map((id: any) => String(id).trim()).filter(Boolean)
+            : [];
+          if (!adminList.includes(defaultAdmin)) {
+            adminList.push(defaultAdmin);
+          }
+          this.systemSettings = {
+            maintenanceEnabled: !!loaded.maintenanceEnabled,
+            maintenanceMessage: loaded.maintenanceMessage || '',
+            adminTelegramIds: adminList,
+            updatedAt: loaded.updatedAt || Date.now(),
+          };
+          console.log(`[DatabaseService] Loaded system settings. Maintenance: ${this.systemSettings.maintenanceEnabled}, Admins: ${this.systemSettings.adminTelegramIds.length}`);
+        } catch (e) {
+          console.warn('[DatabaseService] Error reading system.json, using defaults:', e);
+        }
+      } else {
+        this.persistSystemSettings();
+      }
+
       this.initialized = true;
     } catch (err) {
       console.warn('[DatabaseService] Warning loading database file:', err);
+    }
+  }
+
+  private persistSystemSettings() {
+    try {
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+      fs.writeFileSync(this.systemFilePath, JSON.stringify(this.systemSettings, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[DatabaseService] Failed to persist system settings to file:', err);
     }
   }
 
@@ -436,6 +490,8 @@ export class DatabaseService {
 
       const reqList = Array.from(this.friendRequests.values());
       fs.writeFileSync(this.friendRequestsFilePath, JSON.stringify(reqList, null, 2), 'utf-8');
+
+      this.persistSystemSettings();
     } catch (err) {
       console.error('[DatabaseService] Failed to persist data to file:', err);
     }
@@ -2115,6 +2171,88 @@ export class DatabaseService {
     this.persistData();
     console.log(`[DatabaseService] Transfer/Tip: ${amtStr} GRAM from ${sender.displayName} to ${recipient.displayName}`);
     return { success: true, senderAccount: sender, recipientAccount: recipient };
+  }
+
+  /**
+   * Returns whether maintenance mode is currently active.
+   */
+  public isMaintenanceMode(): boolean {
+    return !!this.systemSettings.maintenanceEnabled;
+  }
+
+  /**
+   * Sets the maintenance mode on or off.
+   */
+  public setMaintenanceMode(enabled: boolean, message?: string): boolean {
+    this.systemSettings.maintenanceEnabled = enabled;
+    if (message !== undefined) {
+      this.systemSettings.maintenanceMessage = message;
+    }
+    this.systemSettings.updatedAt = Date.now();
+    this.persistSystemSettings();
+    console.log(`[DatabaseService] Maintenance mode set to: ${enabled}`);
+    return this.systemSettings.maintenanceEnabled;
+  }
+
+  /**
+   * Returns the optional maintenance notice message.
+   */
+  public getMaintenanceMessage(): string {
+    return this.systemSettings.maintenanceMessage || '';
+  }
+
+  /**
+   * Checks whether a given Telegram user ID is an authorized administrator.
+   */
+  public isBotAdmin(telegramId?: string | number): boolean {
+    if (!telegramId) return false;
+    const idStr = String(telegramId).trim();
+    const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
+    if (idStr === defaultAdmin) return true;
+    return this.systemSettings.adminTelegramIds.includes(idStr);
+  }
+
+  /**
+   * Adds a new administrator by Telegram ID.
+   */
+  public addAdmin(telegramId: string | number): boolean {
+    const idStr = String(telegramId).trim();
+    if (!idStr) return false;
+    if (!this.systemSettings.adminTelegramIds.includes(idStr)) {
+      this.systemSettings.adminTelegramIds.push(idStr);
+      this.systemSettings.updatedAt = Date.now();
+      this.persistSystemSettings();
+      console.log(`[DatabaseService] Added new admin: ${idStr}`);
+    }
+    return true;
+  }
+
+  /**
+   * Removes an administrator by Telegram ID.
+   * Root superadmin (1052287650 or process.env.ADMIN_TELEGRAM_ID) can never be removed.
+   */
+  public removeAdmin(telegramId: string | number): boolean {
+    const idStr = String(telegramId).trim();
+    const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
+    if (idStr === defaultAdmin) return false;
+    const idx = this.systemSettings.adminTelegramIds.indexOf(idStr);
+    if (idx !== -1) {
+      this.systemSettings.adminTelegramIds.splice(idx, 1);
+      this.systemSettings.updatedAt = Date.now();
+      this.persistSystemSettings();
+      console.log(`[DatabaseService] Removed admin: ${idStr}`);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Returns the list of all registered administrator Telegram IDs.
+   */
+  public getAdmins(): string[] {
+    const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
+    const set = new Set([defaultAdmin, ...this.systemSettings.adminTelegramIds]);
+    return Array.from(set);
   }
 }
 
