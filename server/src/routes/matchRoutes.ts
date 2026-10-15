@@ -33,9 +33,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const rooms = roomManager.getAllRooms().filter((r) =>
       r.state !== 'WAITING_FOR_DEPLOY' &&
       r.state !== 'CANCELLED' &&
-      r.state !== 'MATCH_SETTLED' &&
       r.state !== 'FORFEITED' &&
-      r.expiresAt > now
+      (r.state === 'MATCH_SETTLED' || r.state === 'GAME_ACTIVE' || r.state === 'BETTING_WINDOW' || (r.state === 'LOBBY' && r.expiresAt > now))
     );
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
 

@@ -10,6 +10,9 @@ export interface Translations {
 }
 
 export const translations: Translations = {
+  // Common
+  'common.cancel': { it: 'ANNULLA', en: 'CANCEL' },
+
   // Navigation
   'nav.home': { it: 'Home', en: 'Home' },
   'nav.duels': { it: 'Duelli', en: 'Duels' },
@@ -329,8 +332,8 @@ export const translations: Translations = {
   'lobby.createdByName': { it: 'Creato da', en: 'Created by' },
   'lobby.eachLabel': { it: 'ciascuno', en: 'each' },
   'lobby.filtersLabel': { it: 'Filtri:', en: 'Filters:' },
-  'lobby.sharePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM! Entra nella stanza per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM! Enter the room to play:' },
-  'lobby.sharePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM! Accetta la sfida e gioca ora:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM! Accept the challenge and play now:' },
+  'lobby.sharePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM!\n🔑 Entra nella stanza per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM!\n🔑 Enter the room to play:' },
+  'lobby.sharePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM!\n🎮 Accetta la sfida e gioca ora:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM!\n🎮 Accept the challenge and play now:' },
   'lobby.incomingDirectChallengeTitle': { it: '⚔️ SFIDA DIRETTA RICEVUTA!', en: '⚔️ DIRECT CHALLENGE RECEIVED!' },
   'lobby.incomingDirectChallengeDesc': { it: '{name} ti ha sfidato a {game}!', en: '{name} challenged you to {game}!' },
   'lobby.acceptDuelBtn': { it: 'ACCETTA SFIDA', en: 'ACCEPT DUEL' },
@@ -342,7 +345,7 @@ export const translations: Translations = {
   'arena.amountToRefund': { it: 'Importo da Rimborsare:', en: 'Amount to Refund:' },
   'arena.cancelRefundNotice': { it: 'La puntata e la commissione di creazione verranno rimborsate immediatamente sul tuo saldo in-bot (0 gas).', en: 'The wager and creation fee will be refunded immediately back to your in-bot balance (0 gas).' },
   'arena.cancelOpponentRefundNotice': { it: ' Poiché un avversario si è già unito, verrà rimborsata anche la sua puntata.', en: ' Since an opponent joined, their wager will also be refunded.' },
-  'arena.confirmCancelBtn': { it: 'CONFERMA ANNULLAMENTO', en: 'CONFIRM CANCEL' },
+  'arena.confirmCancelBtn': { it: 'CONFERMA ANNULLO', en: 'CONFIRM CANCEL' },
   'arena.refundingBtn': { it: 'RIMBORSO IN CORSO...', en: 'REFUNDING...' },
   'arena.depositModalTitle': { it: 'DEPOSITA GRAM SUL SALDO BOT', en: 'DEPOSIT GRAM TO IN-BOT BALANCE' },
   'arena.depositModalDesc': { it: 'Deposita GRAM via TON Wallet sul tuo saldo per sfide istantanee e rivincite 2X.', en: 'Deposit GRAM via TON Wallet into your balance for instant duels and 2X rematches.' },
@@ -385,9 +388,9 @@ export const translations: Translations = {
   'arena.rematch2x': { it: 'REMATCH (2X)', en: 'REMATCH (2X)' },
   'arena.prizeAutoCredited': { it: '✅ PREMIO ACCREDITATO (+{amount} GRAM)', en: '✅ PRIZE AUTO-CREDITED (+{amount} GRAM)' },
   'arena.inviteChallengerBtn': { it: 'INVITA SFIDANTE', en: 'INVITE CHALLENGER' },
-  'arena.invitePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM! Entra nella stanza per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM! Enter the room to play:' },
-  'arena.invitePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM! Accetta la sfida e gioca ora:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM! Accept the challenge and play now:' },
-  'arena.shareSpectatorText': { it: '👀 Guarda il duello su {title} per {wager} GRAM in corso su Sfida! Fai il tuo pronostico e scommetti sullo sfidante vincente:', en: '👀 Watch the live {title} duel for {wager} GRAM on Sfida! Predict the winner and place your bets:' },
+  'arena.invitePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM!\n🔑 Entra nella stanza per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM!\n🔑 Enter the room to play:' },
+  'arena.invitePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM!\n🎮 Accetta la sfida e gioca ora:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM!\n🎮 Accept the challenge and play now:' },
+  'arena.shareSpectatorText': { it: '👀 Guarda il duello su {title} per {wager} GRAM in corso su Sfida!\n🎯 Scommetti e vinci live:', en: '👀 Watch the live {title} duel for {wager} GRAM on Sfida!\n🎯 Bet and win live:' },
   'arena.bettingWindowTitle': { it: 'FINESTRA SCOMMESSE PARI-MUTUEL', en: 'PARI-MUTUEL BETTING WINDOW' },
   'arena.bettingWindowActiveDesc': { it: 'Entrambi i duellanti sono pronti. La partita inizierà a 00:00!', en: 'Both duelists confirmed. Round 1 starts at 00:00!' },
   'arena.duelConcluded': { it: 'DUELLO CONCLUSO', en: 'DUEL CONCLUDED' },

@@ -180,11 +180,6 @@ export const Arena: React.FC<ArenaProps> = ({
           try {
             localStorage.setItem('sfidabot_saved_matches', JSON.stringify(data.matches.slice(0, 30)));
           } catch {}
-
-          if (activeMatchId && !data.matches.some((m: MatchData) => m.matchId === activeMatchId)) {
-            setActiveMatchId(null);
-            onClearDeepMatch?.();
-          }
         }
       }
     } catch (err) {
@@ -924,24 +919,24 @@ export const Arena: React.FC<ArenaProps> = ({
               <button
                 disabled={isCancelling}
                 onClick={() => setMatchToCancel(null)}
-                className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-heading font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                className="flex-1 min-h-[44px] py-2.5 px-3 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-heading font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center text-center"
               >
                 {t('lobby.cancelBtn')}
               </button>
               <button
                 disabled={isCancelling}
                 onClick={confirmCancelMatch}
-                className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-2xl font-heading font-extrabold text-xs uppercase shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                className="flex-1 min-h-[44px] py-2.5 px-3 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-2xl font-heading font-extrabold text-xs uppercase shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isCancelling ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>{t('arena.refundingBtn')}</span>
+                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                    <span className="leading-tight text-center">{t('arena.refundingBtn')}</span>
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>{t('arena.confirmCancelBtn')}</span>
+                    <Trash2 className="w-4 h-4 shrink-0" />
+                    <span className="leading-tight text-center">{t('arena.confirmCancelBtn')}</span>
                   </>
                 )}
               </button>

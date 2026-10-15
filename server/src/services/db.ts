@@ -1579,8 +1579,10 @@ export class DatabaseService {
 
       for (const group of groups.values()) {
         const stats = await this.getUserStats(group.primaryWallet, group.telegramId);
-        // Only skip completely anonymous ghost placeholders with no identity and 0 duels
-        if (!group.telegramId && !group.primaryWallet && stats.duelsPlayed === 0) continue;
+        // Skip players with 0 duels played and 0 profits
+        if (stats.duelsPlayed === 0 && parseFloat(stats.totalProfitsGram) <= 0) continue;
+        // Skip placeholder 'Duelist #' accounts that have no recorded wins
+        if (group.username.startsWith('Duelist') && stats.duelsWon === 0) continue;
 
         entries.push({
           walletAddress: group.primaryWallet,
