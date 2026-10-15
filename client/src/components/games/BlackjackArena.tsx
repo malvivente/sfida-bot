@@ -23,6 +23,7 @@ interface BlackjackArenaProps {
   isCreator: boolean;
   onCancelMatch?: () => void;
   isWinner?: boolean;
+  winnerSide?: 'A' | 'B' | null;
   winnerName?: string;
   spectatorOutcome?: { won: boolean; payoutGram: string; refunded?: boolean } | null;
   placedBet?: { target: 'A' | 'B' | 'X'; amountGram: string; targetName?: string; odds?: number } | null;
@@ -103,6 +104,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   roomState,
   wagerTon,
   isWinner,
+  winnerSide,
   winnerName,
   spectatorOutcome,
   placedBet,
@@ -152,13 +154,23 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
   const isAWinner = Boolean(
-    winnerName ? winnerName === playerAName :
-    (isWinner && userSide === 'A') || (!isWinner && userSide === 'B' && role === 'player')
+    winnerSide ? winnerSide === 'A' : (
+      winnerName ? winnerName === playerAName : (
+        !bustA && (bustB || scoreA > scoreB)
+      )
+    )
   );
   const isBWinner = Boolean(
-    winnerName ? winnerName === playerBName :
-    (isWinner && userSide === 'B') || (!isWinner && userSide === 'A' && role === 'player')
+    winnerSide ? winnerSide === 'B' : (
+      winnerName ? winnerName === playerBName : (
+        !bustB && (bustA || scoreB > scoreA)
+      )
+    )
   );
+
+  const didUserWin = role === 'player'
+    ? (userSide === 'A' ? isAWinner : isBWinner)
+    : false;
 
   const [outcomePhase, setOutcomePhase] = useState<'table_reveal' | 'splash' | 'settled' | 'none'>('none');
 
@@ -412,7 +424,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             <div className="text-sm font-chakra font-black text-white mt-1">
               {role === 'spectator'
                 ? (winnerName ? `👑 ${winnerName} VINCE IL PIATTO!` : 'PARITÀ!')
-                : (isWinner ? '🎉 HAI VINTO IL PIATTO!' : '💀 MANO VINTA DALL\'AVVERSARIO')}
+                : (didUserWin ? '🎉 HAI VINTO IL PIATTO!' : '💀 MANO VINTA DALL\'AVVERSARIO')}
             </div>
             <div className="flex items-center justify-center space-x-3 mt-1.5 text-xs font-mono font-bold">
               <span className={bustA ? 'text-rose-400 line-through' : 'text-cyber-cyan'}>
@@ -436,13 +448,13 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
         {outcomePhase === 'splash' && (
           <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
             <div className={`flex flex-col items-center p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center border-2 ${
-              isWinner
+              didUserWin
                 ? 'bg-gradient-to-b from-cyber-green/20 via-black/95 to-black border-cyber-green shadow-[0_0_50px_rgba(0,255,102,0.4)]'
                 : role === 'player'
                 ? 'bg-gradient-to-b from-rose-950/40 via-black/95 to-black border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.4)]'
                 : 'bg-gradient-to-b from-cyan-950/40 via-black/95 to-black border-cyber-cyan shadow-[0_0_50px_rgba(0,240,255,0.3)]'
             }`}>
-              {isWinner ? (
+              {didUserWin ? (
                 <>
                   <Trophy className="w-16 h-16 text-cyber-amber animate-bounce mb-3 filter drop-shadow-[0_0_15px_#ffb800]" />
                   <h2 className="text-2xl font-orbitron font-black text-cyber-green tracking-wider uppercase animate-pulse">
@@ -499,10 +511,10 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className={`flex flex-col items-center p-5 bg-[#121520] border rounded-3xl shadow-2xl max-w-xs w-full text-center mx-auto ${
-                isWinner ? 'border-cyber-cyan' : 'border-cyber-border'
+                didUserWin ? 'border-cyber-cyan' : 'border-cyber-border'
               }`}
             >
-              {isWinner ? (
+              {didUserWin ? (
                 <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
               ) : role === 'player' ? (
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
@@ -512,11 +524,11 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                 <Trophy className="w-12 h-12 text-cyber-cyan mb-2" />
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
-                {isWinner ? t('blackjack.victoryTitle') : role === 'player' ? t('blackjack.defeatTitle') : t('arena.duelConcluded')}
+                {didUserWin ? t('blackjack.victoryTitle') : role === 'player' ? t('blackjack.defeatTitle') : t('arena.duelConcluded')}
               </h2>
 
               {/* Winner Prize row shown ONLY to the winner! */}
-              {isWinner && (
+              {didUserWin && (
                 <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-cyber-border w-full flex justify-between items-center text-xs font-chakra">
                   <span className="text-slate-400">{t('arena.winnerPrize')}</span>
                   <span className="font-bold text-cyber-cyan flex items-center space-x-1">
@@ -632,7 +644,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                 )
               )}
 
-              {isWinner && (
+              {didUserWin && (
                 <div className="w-full py-2.5 px-3 rounded-xl bg-cyber-green/20 border border-cyber-green/60 flex items-center justify-center space-x-1.5 mb-2 shadow-[0_0_15px_rgba(0,255,102,0.2)]">
                   <span className="text-xs font-orbitron font-bold text-cyber-green">
                     {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}

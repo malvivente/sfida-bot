@@ -434,7 +434,8 @@ export const Arena: React.FC<ArenaProps> = ({
       (userAddress && areAddressesEqual(match.playerA?.wallet, userAddress)) ||
       (userId && ((match.playerA as any)?.telegramUserId === userId || match.playerA?.wallet === `tg_${userId}`)) ||
       (fullName && match.playerA?.name === fullName) ||
-      (username && (match.playerA?.name === `@${username}` || match.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
+      (username && (match.playerA?.name === `@${username}` || match.playerA?.name?.toLowerCase().includes(username.toLowerCase()))) ||
+      (displayName && match.playerA?.name?.toLowerCase().includes(displayName.toLowerCase()))
     );
 
     const isPlayerB = Boolean(
@@ -546,7 +547,8 @@ export const Arena: React.FC<ArenaProps> = ({
         (userAddress && areAddressesEqual(m.playerA?.wallet, userAddress)) ||
         (userId && (String((m.playerA as any)?.telegramUserId) === String(userId) || m.playerA?.wallet === `tg_${userId}`)) ||
         (fullName && m.playerA?.name === fullName) ||
-        (username && (m.playerA?.name === `@${username}` || m.playerA?.name?.toLowerCase().includes(username.toLowerCase())))
+        (username && (m.playerA?.name === `@${username}` || m.playerA?.name?.toLowerCase().includes(username.toLowerCase()))) ||
+        (displayName && m.playerA?.name?.toLowerCase().includes(displayName.toLowerCase()))
       );
 
       const isPlayerB = Boolean(
@@ -564,8 +566,6 @@ export const Arena: React.FC<ArenaProps> = ({
         setActiveMatchId(initialMatchId);
         setRole('player');
       } else if (!m.playerB && initialRole === 'player') {
-        // Do NOT automatically deduct user's balance upon link opening!
-        // Save invite code and enter match in spectator view so user can review and approve joining.
         if (initialInviteCode) {
           try {
             const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
@@ -573,8 +573,14 @@ export const Arena: React.FC<ArenaProps> = ({
             localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
           } catch {}
         }
-        setActiveMatchId(initialMatchId);
-        setRole('spectator');
+        // User opened invite link: auto-join as Player B
+        const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
+        if (playerAddress) {
+          await handleJoinMatch(m, initialInviteCode, false);
+        } else {
+          setActiveMatchId(initialMatchId);
+          setRole('player');
+        }
       } else {
         // Duel is full or spectator requested
         setActiveMatchId(initialMatchId);
@@ -583,7 +589,7 @@ export const Arena: React.FC<ArenaProps> = ({
     };
 
     resolveDeepMatch();
-  }, [initialMatchId, initialInviteCode, initialRole, userAddress, userId, serverUrl]);
+  }, [initialMatchId, initialInviteCode, initialRole, userAddress, userId, displayName, fullName, username, serverUrl]);
 
   const handleSpectateMatch = (matchId: string) => {
     setActiveMatchId(matchId);
@@ -679,13 +685,6 @@ export const Arena: React.FC<ArenaProps> = ({
     ? (parseFloat(currentActiveMatch.wagerAmountNano) / 1e9).toString()
     : '1';
 
-  const isUserWinner = Boolean(
-    socketData.roomState === 'MATCH_SETTLED' &&
-    effectivePlayerAddress &&
-    socketData.matchWinner &&
-    areAddressesEqual(socketData.matchWinner, effectivePlayerAddress)
-  );
-
   const isMatchPlayerResolved = Boolean(
     socketData.socketRole === 'PLAYER_A' ||
     socketData.socketRole === 'PLAYER_B' ||
@@ -701,6 +700,24 @@ export const Arena: React.FC<ArenaProps> = ({
     socketData.socketRole === 'PLAYER_B' ||
     isMatchPlayerResolved
   ) ? 'player' : (socketData.socketRole === 'SPECTATOR' ? 'spectator' : initialEffectiveRole);
+
+  const userSide: 'A' | 'B' = (
+    socketData.socketRole === 'PLAYER_B' ||
+    (effectivePlayerAddress && socketData.socketPlayerB?.wallet && areAddressesEqual(socketData.socketPlayerB.wallet, effectivePlayerAddress)) ||
+    (userId && socketData.socketPlayerB?.telegramUserId && String(socketData.socketPlayerB.telegramUserId) === String(userId)) ||
+    (effectivePlayerAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress)) ||
+    (userId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)) ||
+    (username && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.toLowerCase().includes(username.toLowerCase()))
+  ) ? 'B' : 'A';
+
+  const isUserWinner = Boolean(
+    socketData.roomState === 'MATCH_SETTLED' &&
+    (
+      socketData.winnerSide
+        ? (socketData.winnerSide === userSide && effectiveRole === 'player')
+        : (effectivePlayerAddress && socketData.matchWinner && areAddressesEqual(socketData.matchWinner, effectivePlayerAddress))
+    )
+  );
 
   const isCurrentCreator = Boolean(
     socketData.socketRole === 'PLAYER_A' ||
@@ -728,15 +745,6 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const effectiveGameType: GameType = socketData.gameType || currentActiveMatch?.gameType || 'roulette';
 
-  const userSide: 'A' | 'B' = (
-    socketData.socketRole === 'PLAYER_B' ||
-    (effectivePlayerAddress && socketData.socketPlayerB?.wallet && areAddressesEqual(socketData.socketPlayerB.wallet, effectivePlayerAddress)) ||
-    (userId && socketData.socketPlayerB?.telegramUserId && String(socketData.socketPlayerB.telegramUserId) === String(userId)) ||
-    (effectivePlayerAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress)) ||
-    (userId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)) ||
-    (username && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.toLowerCase().includes(username.toLowerCase()))
-  ) ? 'B' : 'A';
-
   const isPlayerTurn = Boolean(
     effectiveGameType === 'chrono'
       ? true
@@ -747,13 +755,15 @@ export const Arena: React.FC<ArenaProps> = ({
   const playerA_Name = cleanPlayerName(socketData.socketPlayerA?.name || socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A');
   const playerB_Name = cleanPlayerName(socketData.socketPlayerB?.name || socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent')));
 
-  const effectiveWinnerName = socketData.matchWinnerName || (
-    socketData.matchWinner ? (
-      (socketData.socketPlayerA?.wallet && areAddressesEqual(socketData.matchWinner, socketData.socketPlayerA.wallet)) ||
-      (currentActiveMatch?.playerA?.wallet && areAddressesEqual(socketData.matchWinner, currentActiveMatch.playerA.wallet))
-        ? playerA_Name
-        : playerB_Name
-    ) : (isUserWinner ? (userSide === 'A' ? playerA_Name : playerB_Name) : undefined)
+  const effectiveWinnerName = socketData.matchWinnerName ? cleanPlayerName(socketData.matchWinnerName) : (
+    socketData.winnerSide ? (socketData.winnerSide === 'A' ? playerA_Name : playerB_Name) : (
+      socketData.matchWinner ? (
+        (socketData.socketPlayerA?.wallet && areAddressesEqual(socketData.matchWinner, socketData.socketPlayerA.wallet)) ||
+        (currentActiveMatch?.playerA?.wallet && areAddressesEqual(socketData.matchWinner, currentActiveMatch.playerA.wallet))
+          ? playerA_Name
+          : playerB_Name
+      ) : (isUserWinner ? (userSide === 'A' ? playerA_Name : playerB_Name) : undefined)
+    )
   );
 
   const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
@@ -1045,6 +1055,7 @@ export const Arena: React.FC<ArenaProps> = ({
               isCreator={isCurrentCreator}
               onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
               isWinner={isUserWinner}
+              winnerSide={socketData.winnerSide}
               winnerName={effectiveWinnerName}
               spectatorOutcome={socketData.spectatorOutcome}
               placedBet={socketData.placedBet}

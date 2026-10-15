@@ -95,10 +95,10 @@ export function exitTelegramFullscreen(): void {
  * Never uses window.open with _blank inside Telegram webviews.
  */
 export const shareToTelegram = (url: string, text: string) => {
-  // If text is provided, format text first followed by the URL so the invitation
-  // reads naturally (Challenge Title -> Call to action -> Clickable link)
-  const fullMessage = text ? `${text}\n${url}` : url;
-  const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(fullMessage)}`;
+  const params = new URLSearchParams();
+  if (url) params.set('url', url);
+  if (text) params.set('text', text);
+  const shareUrl = `https://t.me/share/url?${params.toString()}`;
   
   try {
     const tg = getTelegramWebApp();

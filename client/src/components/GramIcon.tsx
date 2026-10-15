@@ -20,6 +20,7 @@ export const GramIcon: React.FC<GramIconProps> = ({
 }) => {
   // If variant is not explicitly set, auto-detect: if className provides custom text-color, use mono; otherwise use branded
   const isMono = variant ? variant === 'mono' : /\btext-/.test(className);
+  const alignClass = /(\balign-|\bself-)/.test(className) ? '' : 'align-middle';
 
   if (isMono) {
     return (
@@ -28,7 +29,7 @@ export const GramIcon: React.FC<GramIconProps> = ({
         fill="currentColor"
         width={size}
         height={size}
-        className={`inline-block shrink-0 align-middle ${className}`}
+        className={`inline-block shrink-0 ${alignClass} ${className}`.trim()}
         xmlns="http://www.w3.org/2000/svg"
         aria-label="GRAM"
       >
@@ -47,7 +48,7 @@ export const GramIcon: React.FC<GramIconProps> = ({
       fill="none"
       width={size}
       height={size}
-      className={`inline-block shrink-0 align-middle ${className}`}
+      className={`inline-block shrink-0 ${alignClass} ${className}`.trim()}
       xmlns="http://www.w3.org/2000/svg"
       aria-label="GRAM"
     >

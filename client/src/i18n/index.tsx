@@ -332,8 +332,8 @@ export const translations: Translations = {
   'lobby.createdByName': { it: 'Creato da', en: 'Created by' },
   'lobby.eachLabel': { it: 'ciascuno', en: 'each' },
   'lobby.filtersLabel': { it: 'Filtri:', en: 'Filters:' },
-  'lobby.sharePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM!\n🔑 Entra nella stanza per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM!\n🔑 Enter the room to play:' },
-  'lobby.sharePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM!\n🎮 Accetta la sfida e gioca ora:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM!\n🎮 Accept the challenge and play now:' },
+  'lobby.sharePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM!\n🔑 Entra nella stanza e gioca subito!', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM!\n🔑 Enter the room and play now!' },
+  'lobby.sharePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM!\n🎮 Accetta la sfida e gioca subito!', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM!\n🎮 Accept the challenge and play now!' },
   'lobby.incomingDirectChallengeTitle': { it: '⚔️ SFIDA DIRETTA RICEVUTA!', en: '⚔️ DIRECT CHALLENGE RECEIVED!' },
   'lobby.incomingDirectChallengeDesc': { it: '{name} ti ha sfidato a {game}!', en: '{name} challenged you to {game}!' },
   'lobby.acceptDuelBtn': { it: 'ACCETTA SFIDA', en: 'ACCEPT DUEL' },
@@ -388,9 +388,9 @@ export const translations: Translations = {
   'arena.rematch2x': { it: 'REMATCH (2X)', en: 'REMATCH (2X)' },
   'arena.prizeAutoCredited': { it: '✅ PREMIO ACCREDITATO (+{amount} GRAM)', en: '✅ PRIZE AUTO-CREDITED (+{amount} GRAM)' },
   'arena.inviteChallengerBtn': { it: 'INVITA SFIDANTE', en: 'INVITE CHALLENGER' },
-  'arena.invitePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM!\n🔑 Entra nella stanza per giocare:', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM!\n🔑 Enter the room to play:' },
-  'arena.invitePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM!\n🎮 Accetta la sfida e gioca ora:', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM!\n🎮 Accept the challenge and play now:' },
-  'arena.shareSpectatorText': { it: '👀 Guarda il duello su {title} per {wager} GRAM in corso su Sfida!\n🎯 Scommetti e vinci live:', en: '👀 Watch the live {title} duel for {wager} GRAM on Sfida!\n🎯 Bet and win live:' },
+  'arena.invitePrivateText': { it: '⚔️ Ti ho invitato a un duello PRIVATO su {title} per {wager} GRAM!\n🔑 Entra nella stanza e gioca subito!', en: '⚔️ I invited you to a PRIVATE {title} duel for {wager} GRAM!\n🔑 Enter the room and play now!' },
+  'arena.invitePublicText': { it: '⚔️ Ti sfido a un duello su {title} per {wager} GRAM!\n🎮 Accetta la sfida e gioca subito!', en: '⚔️ I challenge you to a {title} duel for {wager} GRAM!\n🎮 Accept the challenge and play now!' },
+  'arena.shareSpectatorText': { it: '👀 Guarda il duello su {title} per {wager} GRAM in corso su Sfida!\n🎯 Scommetti e vinci live!', en: '👀 Watch the live {title} duel for {wager} GRAM on Sfida!\n🎯 Bet and win live!' },
   'arena.bettingWindowTitle': { it: 'FINESTRA SCOMMESSE PARI-MUTUEL', en: 'PARI-MUTUEL BETTING WINDOW' },
   'arena.bettingWindowActiveDesc': { it: 'Entrambi i duellanti sono pronti. La partita inizierà a 00:00!', en: 'Both duelists confirmed. Round 1 starts at 00:00!' },
   'arena.duelConcluded': { it: 'DUELLO CONCLUSO', en: 'DUEL CONCLUDED' },
@@ -946,7 +946,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const saved = localStorage.getItem('sfidabot_language');
       if (saved === 'it' || saved === 'en') return saved;
-      // Default to English as explicitly requested by user
+      const tg = (typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null);
+      const tgLang = tg?.initDataUnsafe?.user?.language_code;
+      if (tgLang && typeof tgLang === 'string' && tgLang.toLowerCase().startsWith('it')) {
+        return 'it';
+      }
+      const navLang = typeof navigator !== 'undefined' ? navigator.language : '';
+      if (navLang && navLang.toLowerCase().startsWith('it')) {
+        return 'it';
+      }
       return 'en';
     } catch {
       return 'en';

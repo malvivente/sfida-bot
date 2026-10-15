@@ -741,7 +741,7 @@ export abstract class BaseGameRoom {
     })();
 
     // Settle spectator bets
-    const winningSide = winnerAddress === this.playerA.walletAddress ? 'A' : 'B';
+    const winningSide = this.isSameWallet(winnerAddress, this.playerA.walletAddress) ? 'A' : 'B';
     const totalPoolNano = this.totalBetsA + this.totalBetsB;
     const spectatorSettlements: Array<{
       walletAddress: string;
@@ -856,6 +856,7 @@ export abstract class BaseGameRoom {
       type: 'MATCH_SETTLED',
       winnerAddress,
       winnerName,
+      winnerSide: winningSide,
       resolution: this.resolution,
       scoreA: this.playerA.score,
       scoreB: this.playerB?.score || 0,

@@ -1656,17 +1656,19 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 </div>
 
                 {/* Custom Input */}
-                <div className="flex items-center space-x-2 bg-black/40 border border-white/15 rounded-2xl px-3.5 py-2.5">
-                  <span className="text-xs text-slate-300 font-sans font-medium">{t('lobby.customStake')}</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={wagerChoice}
-                    onChange={handleCustomInput}
-                    placeholder={`${effectiveMinWager} - ${GAME_CONFIG.MAX_WAGER}`}
-                    className="flex-1 bg-transparent text-sm sm:text-base font-heading font-black text-white text-right focus:outline-none"
-                  />
-                  <GramIcon className="w-4 h-4 text-purple-400 shrink-0" />
+                <div className="flex items-center justify-between space-x-2 bg-black/40 border border-white/15 rounded-2xl px-3.5 py-2.5">
+                  <span className="text-xs text-slate-300 font-sans font-medium whitespace-nowrap shrink-0">{t('lobby.customStake')}</span>
+                  <div className="flex-1 flex items-center justify-end space-x-1.5 min-w-0">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={wagerChoice}
+                      onChange={handleCustomInput}
+                      placeholder={`${effectiveMinWager} - ${GAME_CONFIG.MAX_WAGER}`}
+                      className="w-full bg-transparent text-sm sm:text-base font-heading font-black text-white text-right focus:outline-none h-6 leading-none p-0"
+                    />
+                    <GramIcon className="w-4 h-4 text-purple-400 shrink-0 self-center" />
+                  </div>
                 </div>
 
                 {isBelowMin && (
@@ -1687,30 +1689,30 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 text-xs font-sans text-slate-300 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">{t('lobby.yourWager')}</span>
-                  <span className="text-white font-heading font-bold text-sm flex items-center space-x-1">
+                  <span className="text-white font-heading font-bold text-sm inline-flex items-center gap-1 leading-none">
                     <span>{wagerChoice || '0'}</span>
-                    <GramIcon className="w-3.5 h-3.5 text-white" />
+                    <GramIcon className="w-3.5 h-3.5 text-white self-center" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">{t('lobby.creationFee')}</span>
-                  <span className="text-amber-400 font-heading font-bold flex items-center space-x-1">
+                  <span className="text-amber-400 font-heading font-bold inline-flex items-center gap-1 leading-none">
                     <span>+{creationFeeGram.toFixed(2)}</span>
-                    <GramIcon className="w-3.5 h-3.5 text-amber-400" />
+                    <GramIcon className="w-3.5 h-3.5 text-amber-400 self-center" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">{t('lobby.winnerTakes')}</span>
-                  <span className="text-emerald-400 font-heading font-bold text-sm flex items-center space-x-1">
+                  <span className="text-emerald-400 font-heading font-bold text-sm inline-flex items-center gap-1 leading-none">
                     <span>+{netWinnerPayout}</span>
-                    <GramIcon className="w-3.5 h-3.5 text-emerald-400" />
+                    <GramIcon className="w-3.5 h-3.5 text-emerald-400 self-center" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center border-t border-white/10 pt-2 font-bold text-white">
                   <span className="text-xs uppercase font-heading">{t('lobby.totalNeeded')}</span>
-                  <span className="text-purple-300 font-heading font-black text-base flex items-center space-x-1">
+                  <span className="text-purple-300 font-heading font-black text-base inline-flex items-center gap-1 leading-none">
                     <span>{totalRequired}</span>
-                    <GramIcon className="w-4 h-4 text-purple-400" />
+                    <GramIcon className="w-4 h-4 text-purple-400 self-center" />
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-slate-400">

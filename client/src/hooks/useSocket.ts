@@ -89,6 +89,7 @@ export function useSocket({
   const [roundWinner, setRoundWinner] = useState<string | null>(null);
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
   const [matchWinnerName, setMatchWinnerName] = useState<string | null>(null);
+  const [winnerSide, setWinnerSide] = useState<'A' | 'B' | null>(null);
   const [resolution, setResolution] = useState<MatchResolution | null>(null);
   const [playerAName, setPlayerAName] = useState<string>('Player A');
   const [playerBName, setPlayerBName] = useState<string | null>(null);
@@ -353,6 +354,7 @@ export function useSocket({
             setRoomState('MATCH_SETTLED');
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
+            if (msg.winnerSide) setWinnerSide(msg.winnerSide);
             if (msg.resolution) setResolution(msg.resolution);
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
@@ -709,6 +711,7 @@ export function useSocket({
     roundWinner,
     matchWinner,
     matchWinnerName,
+    winnerSide,
     resolution,
     playerAName,
     playerBName,

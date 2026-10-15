@@ -242,6 +242,7 @@ export interface WsMessage {
   totalBetsX?: string;
   winnerAddress?: string;
   winnerName?: string;
+  winnerSide?: 'A' | 'B';
   resolution?: MatchResolution;
   playerAName?: string;
   playerBName?: string;

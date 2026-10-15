@@ -340,6 +340,14 @@ export class BlackjackRoom extends BaseGameRoom {
   private evaluateShowdown() {
     this.cleanupGameTimers();
 
+    // Ensure scores are strictly recalculated from cards on table
+    this.scoreA = this.calculateHandScore(this.handA);
+    this.scoreB = this.calculateHandScore(this.handB);
+    this.bustA = this.scoreA > 21;
+    this.bustB = this.scoreB > 21;
+    this.playerA.score = this.scoreA;
+    if (this.playerB) this.playerB.score = this.scoreB;
+
     const walletA = this.playerA.walletAddress;
     const walletB = this.playerB?.walletAddress || '';
 
