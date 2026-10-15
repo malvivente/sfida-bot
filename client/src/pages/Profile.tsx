@@ -295,39 +295,41 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 w-full mt-3.5 pt-3 border-t border-purple-500/20">
-            <button
-              onClick={() => {
-                triggerImpact('medium');
-                if (!userAddress) { openWalletModal(); return; }
-                setShowDepositModal(true);
-              }}
-              className="py-2.5 px-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-black text-[10.5px] uppercase tracking-normal shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1"
-            >
-              <ArrowDownLeft className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{t('profile.deposit')}</span>
-            </button>
-            <button
-              onClick={() => {
-                triggerImpact('medium');
-                if (!userAddress) { openWalletModal(); return; }
-                setShowWithdrawModal(true);
-              }}
-              className="py-2.5 px-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-black text-[10.5px] uppercase tracking-normal active:scale-95 transition-all flex items-center justify-center space-x-1"
-            >
-              <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{t('profile.withdraw')}</span>
-            </button>
+          <div className="w-full mt-3.5 pt-3 border-t border-purple-500/20 space-y-2">
+            <div className="grid grid-cols-2 gap-2.5 w-full">
+              <button
+                onClick={() => {
+                  triggerImpact('medium');
+                  if (!userAddress) { openWalletModal(); return; }
+                  setShowDepositModal(true);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+              >
+                <ArrowDownLeft className="w-4 h-4 shrink-0" />
+                <span>{t('profile.deposit')}</span>
+              </button>
+              <button
+                onClick={() => {
+                  triggerImpact('medium');
+                  if (!userAddress) { openWalletModal(); return; }
+                  setShowWithdrawModal(true);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-heading font-black text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1.5 shadow-sm"
+              >
+                <ArrowUpRight className="w-4 h-4 shrink-0" />
+                <span>{t('profile.withdraw')}</span>
+              </button>
+            </div>
             <button
               onClick={() => {
                 triggerImpact('medium');
                 window.dispatchEvent(new CustomEvent('sfida_open_tip'));
               }}
-              className="py-2.5 px-1.5 rounded-xl bg-gradient-to-r from-cyan-600/25 to-blue-600/25 hover:from-cyan-600/40 hover:to-blue-600/40 border border-cyan-400/40 text-cyan-200 font-heading font-black text-[10.5px] uppercase tracking-normal active:scale-95 transition-all flex items-center justify-center space-x-1 shadow-sm"
-              title={t('profile.tip')}
+              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 hover:from-cyan-600/30 hover:to-purple-600/30 border border-cyan-400/35 text-cyan-200 font-heading font-extrabold text-[11px] uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center space-x-2 shadow-sm"
+              title={t('profile.tipFriend')}
             >
-              <Coins className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
-              <span className="truncate">{t('profile.tip')}</span>
+              <Coins className="w-4 h-4 shrink-0 text-cyan-400" />
+              <span>{t('profile.tipFriend')}</span>
             </button>
           </div>
         </div>

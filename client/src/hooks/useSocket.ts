@@ -15,6 +15,16 @@ export interface SpectatorOutcome {
   refunded?: boolean;
 }
 
+export interface SocketPlayerInfo {
+  wallet?: string;
+  name?: string;
+  ready?: boolean;
+  score?: number;
+  connected?: boolean;
+  telegramUserId?: string;
+  photoUrl?: string;
+}
+
 interface UseSocketProps {
   matchId: string;
   wallet?: string;
@@ -96,6 +106,12 @@ export function useSocket({
   const [betStatus, setBetStatus] = useState<'idle' | 'placing' | 'confirmed' | 'error'>('idle');
   const [betError, setBetError] = useState<string | null>(null);
   const [spectatorOutcome, setSpectatorOutcome] = useState<SpectatorOutcome | null>(null);
+  const [socketRole, setSocketRole] = useState<'PLAYER_A' | 'PLAYER_B' | 'SPECTATOR' | null>(null);
+  const [socketPlayerA, setSocketPlayerA] = useState<SocketPlayerInfo | null>(null);
+  const [socketPlayerB, setSocketPlayerB] = useState<SocketPlayerInfo | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [playerBExpiresAt, setPlayerBExpiresAt] = useState<number | null>(null);
+  const [kickedInactivity, setKickedInactivity] = useState<string | null>(null);
 
   useEffect(() => {
     // Reset room state when entering a new match or switching rooms
@@ -122,6 +138,12 @@ export function useSocket({
     setBetStatus('idle');
     setBetError(null);
     setSpectatorOutcome(null);
+    setSocketRole(null);
+    setSocketPlayerA(null);
+    setSocketPlayerB(null);
+    setExpiresAt(null);
+    setPlayerBExpiresAt(null);
+    setKickedInactivity(null);
 
     if (!matchId) return;
 
@@ -155,6 +177,7 @@ export function useSocket({
 
         switch (msg.type) {
           case 'INIT_STATE':
+            if (msg.role) setSocketRole(msg.role as any);
             if (msg.state) setRoomState(msg.state);
             if (msg.currentRound) setCurrentRound(msg.currentRound);
             if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
@@ -173,10 +196,20 @@ export function useSocket({
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             if (msg.gameType) setGameType(msg.gameType);
             if (msg.gameData) setGameData(msg.gameData);
-            if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
-            if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
-            if (msg.playerA?.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
-            if (msg.playerB?.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
+            if (msg.playerA) {
+              setSocketPlayerA(msg.playerA);
+              if (msg.playerA.name) setPlayerAName(msg.playerA.name);
+              if (msg.playerA.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
+              if (msg.playerA.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
+            }
+            if (msg.playerB) {
+              setSocketPlayerB(msg.playerB);
+              if (msg.playerB.name) setPlayerBName(msg.playerB.name);
+              if (msg.playerB.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
+              if (msg.playerB.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
+            }
+            if ((msg as any).expiresAt) setExpiresAt((msg as any).expiresAt);
+            if ((msg as any).playerBExpiresAt) setPlayerBExpiresAt((msg as any).playerBExpiresAt);
             break;
 
           case 'ROOM_UPDATE':
@@ -192,12 +225,25 @@ export function useSocket({
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             if (msg.gameType) setGameType(msg.gameType);
             if (msg.gameData) setGameData(msg.gameData);
-            if (msg.playerA?.name) setPlayerAName(msg.playerA.name);
-            if (msg.playerB?.name) setPlayerBName(msg.playerB.name);
-            if (msg.playerA?.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
-            if (msg.playerB?.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
-            if (msg.playerA?.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
-            if (msg.playerB?.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
+            if (msg.playerA) {
+              setSocketPlayerA((prev) => ({ ...prev, ...msg.playerA }));
+              if (msg.playerA.name) setPlayerAName(msg.playerA.name);
+              if (msg.playerA.ready !== undefined) setPlayerAReady(Boolean(msg.playerA.ready));
+              if (msg.playerA.connected !== undefined) setPlayerAConnected(Boolean(msg.playerA.connected));
+            }
+            if (msg.playerB) {
+              setSocketPlayerB((prev) => ({ ...prev, ...msg.playerB }));
+              if (msg.playerB.name) setPlayerBName(msg.playerB.name);
+              if (msg.playerB.ready !== undefined) setPlayerBReady(Boolean(msg.playerB.ready));
+              if (msg.playerB.connected !== undefined) setPlayerBConnected(Boolean(msg.playerB.connected));
+            } else if (msg.playerB === null) {
+              setSocketPlayerB(null);
+              setPlayerBName(null);
+              setPlayerBReady(false);
+              setPlayerBConnected(false);
+            }
+            if ((msg as any).expiresAt) setExpiresAt((msg as any).expiresAt);
+            if ((msg as any).playerBExpiresAt) setPlayerBExpiresAt((msg as any).playerBExpiresAt);
             break;
 
           case 'ROULETTE_UPDATE':
@@ -376,6 +422,21 @@ export function useSocket({
             setRoomState('CANCELLED');
             if (msg.message) setFeedMessage(msg.message);
             setForfeitCountdown(null);
+            break;
+
+          case 'KICKED_INACTIVITY':
+            setKickedInactivity(msg.message || 'Sei stato rimosso dalla stanza per inattività del creatore.');
+            setSocketError(msg.message || 'Sei stato rimosso dalla stanza per inattività del creatore.');
+            setFeedMessage(msg.message || 'Sei stato rimosso per inattività del creatore.');
+            window.dispatchEvent(new CustomEvent('sfida_balance_updated'));
+            break;
+
+          case 'PLAYER_B_TIMED_OUT':
+            setFeedMessage(msg.message || 'Avversario rimosso per timeout inattività.');
+            setSocketPlayerB(null);
+            setPlayerBName(null);
+            setPlayerBReady(false);
+            setPlayerBConnected(false);
             break;
 
           case 'PLAYER_DISCONNECTED':
@@ -684,6 +745,13 @@ export function useSocket({
     declineRematch,
     socketError,
     setSocketError,
+    socketRole,
+    socketPlayerA,
+    socketPlayerB,
+    expiresAt,
+    playerBExpiresAt,
+    kickedInactivity,
+    setKickedInactivity,
   };
 }
 

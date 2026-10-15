@@ -79,7 +79,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
         wagerTon: wagerGram,
         wagerGram,
         createdAt: r.createdAt,
-        expiresAt: r.expiresAt,
+        expiresAt: r.playerB ? (r.playerBExpiresAt || r.expiresAt) : r.expiresAt,
+        playerBExpiresAt: r.playerBExpiresAt,
         targetOpponentUsername: r.targetOpponentUsername,
         targetOpponentId: r.targetOpponentId,
         totalBetsA: r.totalBetsA.toString(),
@@ -154,7 +155,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       wagerTon: wagerGram,
       wagerGram,
       createdAt: room.createdAt,
-      expiresAt: room.expiresAt,
+      expiresAt: room.playerB ? (room.playerBExpiresAt || room.expiresAt) : room.expiresAt,
+      playerBExpiresAt: room.playerBExpiresAt,
       targetOpponentUsername: room.targetOpponentUsername,
       targetOpponentId: room.targetOpponentId,
       totalBetsA: room.totalBetsA.toString(),
@@ -518,6 +520,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.config.playerBAddress = body.playerBAddress;
     room.state = 'LOBBY';
     room.cancelLobbyExpirationTimer();
+    room.startPlayerBExpirationTimer();
 
     if (body.telegramUserId && room.gameType) {
       dbService.setLastPlayedGame(body.telegramUserId, room.gameType).catch((err) =>

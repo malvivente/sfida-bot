@@ -91,6 +91,8 @@ export abstract class BaseGameRoom {
   public targetOpponentUsername?: string;
   public targetOpponentId?: string;
   protected lobbyExpirationTimer?: NodeJS.Timeout;
+  public playerBExpiresAt?: number;
+  protected playerBExpirationTimer?: NodeJS.Timeout;
 
   public rematchProposerWallet?: string;
   public rematchNewWagerNano?: bigint;
@@ -222,6 +224,9 @@ export abstract class BaseGameRoom {
     player.connected = true;
     if (side === 'B') {
       this.cancelLobbyExpirationTimer();
+      if (!this.playerBExpirationTimer && this.state === 'LOBBY') {
+        this.startPlayerBExpirationTimer();
+      }
     }
 
     // Clear grace timer if reconnecting
@@ -275,6 +280,9 @@ export abstract class BaseGameRoom {
       resolution: this.resolution,
       gameData: this.getGamePayload(),
       secondsLeft: this.bettingCountdownSeconds,
+      createdAt: this.createdAt,
+      expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
+      playerBExpiresAt: this.playerBExpiresAt,
     });
 
     this.broadcastRoomState();
@@ -324,6 +332,9 @@ export abstract class BaseGameRoom {
       resolution: this.resolution,
       gameData: this.getGamePayload(),
       secondsLeft: this.bettingCountdownSeconds,
+      createdAt: this.createdAt,
+      expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
+      playerBExpiresAt: this.playerBExpiresAt,
     });
   }
 
@@ -431,6 +442,8 @@ export abstract class BaseGameRoom {
     this.broadcastRoomState();
 
     if (this.playerA.ready && this.playerB?.ready && this.state === 'LOBBY') {
+      this.cancelLobbyExpirationTimer();
+      this.cancelPlayerBExpirationTimer();
       this.startBettingWindow();
       return;
     }
@@ -501,6 +514,8 @@ export abstract class BaseGameRoom {
 
   // Spectator Pari-Mutuel Window (configurable, default 20s when both players are ready)
   public startBettingWindow() {
+    this.cancelLobbyExpirationTimer();
+    this.cancelPlayerBExpirationTimer();
     if (this.bettingTimer) {
       clearInterval(this.bettingTimer);
       this.bettingTimer = undefined;
@@ -957,6 +972,7 @@ export abstract class BaseGameRoom {
 
   public cleanupTimers() {
     this.cancelLobbyExpirationTimer();
+    this.cancelPlayerBExpirationTimer();
     if (this.bettingTimer) {
       clearInterval(this.bettingTimer);
       this.bettingTimer = undefined;
@@ -1031,6 +1047,90 @@ export abstract class BaseGameRoom {
     }
   }
 
+  public startPlayerBExpirationTimer() {
+    this.cancelPlayerBExpirationTimer();
+    const expireMinutes = feeConfig.getConfig().lobbyRoomExpirationMinutes || 10;
+    this.playerBExpiresAt = Date.now() + expireMinutes * 60 * 1000;
+
+    this.playerBExpirationTimer = setTimeout(async () => {
+      await this.handlePlayerBTimeout();
+    }, expireMinutes * 60 * 1000);
+  }
+
+  public cancelPlayerBExpirationTimer() {
+    if (this.playerBExpirationTimer) {
+      clearTimeout(this.playerBExpirationTimer);
+      this.playerBExpirationTimer = undefined;
+    }
+    this.playerBExpiresAt = undefined;
+  }
+
+  public async handlePlayerBTimeout() {
+    if (this.state !== 'LOBBY' || !this.playerB) return;
+    if (this.playerA.ready && this.playerB.ready) return;
+
+    console.log(`[BaseGameRoom] Room #${this.matchId} Player B expired waiting for Creator Player A.`);
+    const bWallet = this.playerB.walletAddress;
+    const bTgId = this.playerB.telegramId;
+    const bName = this.playerB.username;
+    const bWs = this.playerB.ws;
+    const wagerGram = (Number(this.config.wagerAmountNano) / 1e9).toFixed(2);
+
+    try {
+      await dbService.refundUserBalance(
+        bWallet,
+        wagerGram,
+        `Refund wager for match #${this.matchId} (opponent inactive timeout)`,
+        bTgId
+      );
+    } catch (err) {
+      console.error(`[BaseGameRoom] Error refunding Player B on timeout:`, err);
+    }
+
+    if (bTgId) {
+      try {
+        const { getTelegramBot } = await import('../bot/index.js');
+        const { renderCustomEmojis } = await import('../bot/emojis.js');
+        const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+        const bot = getTelegramBot();
+        if (bot) {
+          const gameConfig = (GAMES_CONFIG as any)[this.gameType];
+          const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
+          const text =
+            `⏱️ <b>SFIDA ARENA • TEMPO SCADUTO</b>\n\n` +
+            `Il creatore della stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) non ha avviato la partita entro il tempo limite.\n\n` +
+            `💰 Sei stato rimosso dalla stanza e la tua puntata di <b>${wagerGram} GRAM</b> è stata riaccreditata sul tuo saldo.`;
+          await bot.api.sendMessage(Number(bTgId), renderCustomEmojis(text), { parse_mode: 'HTML' });
+        }
+      } catch (botErr) {
+        console.warn('[BaseGameRoom] Error sending player B timeout notification:', botErr);
+      }
+    }
+
+    if (bWs && bWs.readyState === WebSocket.OPEN) {
+      this.sendTo(bWs, {
+        type: 'KICKED_INACTIVITY',
+        message: 'Il creatore della stanza non ha avviato la partita entro 10 minuti. La tua puntata è stata rimborsata.',
+        matchId: this.matchId.toString(),
+      });
+    }
+
+    this.playerB = undefined;
+    this.config.playerBAddress = undefined;
+    this.cancelPlayerBExpirationTimer();
+
+    // The room remains active in LOBBY for Player A; restart lobby expiration timer for Player A
+    const expireMinutes = feeConfig.getConfig().lobbyRoomExpirationMinutes || 10;
+    this.expiresAt = Date.now() + expireMinutes * 60 * 1000;
+    this.startLobbyExpirationTimer();
+
+    this.broadcast({
+      type: 'PLAYER_B_TIMED_OUT',
+      message: `${bName} è uscito dalla stanza per timeout inattività del creatore.`,
+    });
+    this.broadcastRoomState();
+  }
+
   public broadcast(data: any) {
     const payload = JSON.stringify(data);
 
@@ -1080,6 +1180,9 @@ export abstract class BaseGameRoom {
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
       gameData: this.getGamePayload(),
+      createdAt: this.createdAt,
+      expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
+      playerBExpiresAt: this.playerBExpiresAt,
     });
   }
 

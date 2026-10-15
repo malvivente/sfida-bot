@@ -19,7 +19,7 @@ import { useTonClashContract } from './hooks/useTonClashContract.js';
 import { GameType } from './types/index.js';
 
 export const App: React.FC = () => {
-  const { isFullscreen, topInset } = useTelegramViewport();
+  const { isFullscreen, topInset, isIos } = useTelegramViewport();
   const [activeTab, setActiveTab] = useState<EpicTab>('home');
   const [deepMatchId, setDeepMatchId] = useState<string | undefined>(undefined);
   const [deepInviteCode, setDeepInviteCode] = useState<string | undefined>(undefined);
@@ -339,7 +339,7 @@ export const App: React.FC = () => {
       }`}
     >
       {/* Top clearance for Telegram Fullscreen mode */}
-      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset} />
+      <TelegramTopSlot isFullscreen={isFullscreen} topInset={topInset} isIos={isIos} />
 
       {/* Modern Epic Header (Hidden during active duel arena to give 100% screen focus) */}
       {!isInsideMatch && (

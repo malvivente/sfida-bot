@@ -831,6 +831,7 @@ export const translations: Translations = {
   // Header & Profile Friends & Tips
   'header.friendsTooltip': { it: 'Amici & Social', en: 'Friends & Social' },
   'profile.tip': { it: 'Tip', en: 'Tip' },
+  'profile.tipFriend': { it: 'Invia Tip a un amico', en: 'Send Tip to a Friend' },
   'profile.friendsBannerTitle': { it: 'Amici & Social', en: 'Friends & Social' },
   'profile.friendsBannerDesc': { it: 'Sfida direttamente o invia mance', en: 'Direct duels & peer transfers' },
   'profile.manageFriends': { it: 'GESTISCI', en: 'MANAGE' },

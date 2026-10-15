@@ -221,12 +221,12 @@ export const Arena: React.FC<ArenaProps> = ({
       ))
     )
   );
-  const effectiveRole: 'player' | 'spectator' = isMatchPlayer ? 'player' : role;
+  const initialEffectiveRole: 'player' | 'spectator' = isMatchPlayer ? 'player' : role;
 
   const socketData = useSocket({
     matchId: activeMatchId || '',
     wallet: effectivePlayerAddress,
-    role: effectiveRole,
+    role: initialEffectiveRole,
     telegramId: userId,
     username: cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (userId ? `Player_${String(userId).slice(-4)}` : 'Warrior'))),
     serverUrl,
@@ -691,14 +691,32 @@ export const Arena: React.FC<ArenaProps> = ({
     areAddressesEqual(socketData.matchWinner, effectivePlayerAddress)
   );
 
+  const isMatchPlayerResolved = Boolean(
+    socketData.socketRole === 'PLAYER_A' ||
+    socketData.socketRole === 'PLAYER_B' ||
+    (effectivePlayerAddress && socketData.socketPlayerA?.wallet && areAddressesEqual(socketData.socketPlayerA.wallet, effectivePlayerAddress)) ||
+    (effectivePlayerAddress && socketData.socketPlayerB?.wallet && areAddressesEqual(socketData.socketPlayerB.wallet, effectivePlayerAddress)) ||
+    (userId && socketData.socketPlayerA?.telegramUserId && String(socketData.socketPlayerA.telegramUserId) === String(userId)) ||
+    (userId && socketData.socketPlayerB?.telegramUserId && String(socketData.socketPlayerB.telegramUserId) === String(userId)) ||
+    isMatchPlayer
+  );
+
+  const effectiveRole: 'player' | 'spectator' = (
+    socketData.socketRole === 'PLAYER_A' ||
+    socketData.socketRole === 'PLAYER_B' ||
+    isMatchPlayerResolved
+  ) ? 'player' : (socketData.socketRole === 'SPECTATOR' ? 'spectator' : initialEffectiveRole);
+
   const isCurrentCreator = Boolean(
-    currentActiveMatch &&
-    (
+    socketData.socketRole === 'PLAYER_A' ||
+    (effectivePlayerAddress && socketData.socketPlayerA?.wallet && areAddressesEqual(socketData.socketPlayerA.wallet, effectivePlayerAddress)) ||
+    (userId && socketData.socketPlayerA?.telegramUserId && String(socketData.socketPlayerA.telegramUserId) === String(userId)) ||
+    (currentActiveMatch && (
       (effectivePlayerAddress && areAddressesEqual(currentActiveMatch.playerA.wallet, effectivePlayerAddress)) ||
       (userId && String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId)) ||
       (fullName && currentActiveMatch.playerA.name === fullName) ||
       (username && (currentActiveMatch.playerA.name === `@${username}` || currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase())))
-    )
+    ))
   );
 
   const canCancelCurrentMatch = Boolean(
@@ -716,6 +734,9 @@ export const Arena: React.FC<ArenaProps> = ({
   const effectiveGameType: GameType = socketData.gameType || currentActiveMatch?.gameType || 'roulette';
 
   const userSide: 'A' | 'B' = (
+    socketData.socketRole === 'PLAYER_B' ||
+    (effectivePlayerAddress && socketData.socketPlayerB?.wallet && areAddressesEqual(socketData.socketPlayerB.wallet, effectivePlayerAddress)) ||
+    (userId && socketData.socketPlayerB?.telegramUserId && String(socketData.socketPlayerB.telegramUserId) === String(userId)) ||
     (effectivePlayerAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress)) ||
     (userId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)) ||
     (username && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.toLowerCase().includes(username.toLowerCase()))
@@ -727,9 +748,9 @@ export const Arena: React.FC<ArenaProps> = ({
       : socketData.gameData?.currentTurn === userSide
   );
 
-  const hasPlayerB = Boolean(socketData.playerBName || currentActiveMatch?.playerB);
-  const playerA_Name = cleanPlayerName(socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A');
-  const playerB_Name = cleanPlayerName(socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent')));
+  const hasPlayerB = Boolean(socketData.socketPlayerB || socketData.playerBName || currentActiveMatch?.playerB);
+  const playerA_Name = cleanPlayerName(socketData.socketPlayerA?.name || socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A');
+  const playerB_Name = cleanPlayerName(socketData.socketPlayerB?.name || socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent')));
 
   const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
   const effectiveInviteCode = initialInviteCode || currentActiveMatch?.inviteCode || (activeMatchId ? (() => {
@@ -932,18 +953,18 @@ export const Arena: React.FC<ArenaProps> = ({
       />
 
       {/* Match Cancelled / Wager Refunded Friendly Notice Modal */}
-      {activeMatchId && socketData.roomState === 'CANCELLED' && (
+      {activeMatchId && (socketData.roomState === 'CANCELLED' || Boolean(socketData.kickedInactivity)) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="w-full max-w-sm rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-amber-500/40 p-6 shadow-[0_0_30px_rgba(245,158,11,0.2)] text-center space-y-4">
             <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-2xl">
-              ⚠️
+              ⏱️
             </div>
             <div className="space-y-1.5">
               <h3 className="text-lg font-heading font-black text-white uppercase tracking-wider">
-                {t('arena.matchCancelledTitle')}
+                {socketData.kickedInactivity ? 'TEMPO SCADUTO' : t('arena.matchCancelledTitle')}
               </h3>
               <p className="text-xs text-slate-300 font-sans leading-relaxed">
-                {socketData.feedMessage || t('arena.matchCancelledDesc')}
+                {socketData.kickedInactivity || socketData.feedMessage || t('arena.matchCancelledDesc')}
               </p>
             </div>
             <div className="py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-mono font-bold text-amber-300 flex items-center justify-center space-x-1.5">
@@ -953,6 +974,7 @@ export const Arena: React.FC<ArenaProps> = ({
               onClick={() => {
                 setActiveMatchId(null);
                 setPayoutClaimed(false);
+                socketData.setKickedInactivity?.(null);
                 fetchUserBalance();
               }}
               className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-heading font-black text-xs uppercase tracking-wider shadow-lg transition-all active:scale-95"

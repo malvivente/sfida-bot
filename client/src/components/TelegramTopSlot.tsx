@@ -4,6 +4,7 @@ import { Swords } from 'lucide-react';
 interface TelegramTopSlotProps {
   isFullscreen: boolean;
   topInset: number;
+  isIos?: boolean;
   children?: React.ReactNode;
 }
 
@@ -20,11 +21,15 @@ interface TelegramTopSlotProps {
 export const TelegramTopSlot: React.FC<TelegramTopSlotProps> = ({
   isFullscreen,
   topInset,
+  isIos,
   children,
 }) => {
-  const totalHeight = isFullscreen ? Math.max(topInset, 56) : 42;
-  const barHeight = 44;
-  const paddingTop = isFullscreen ? Math.max(0, totalHeight - barHeight) : 0;
+  const effectiveIsIos = isIos ?? (typeof window !== 'undefined' && (/iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) || (window as any).Telegram?.WebApp?.platform === 'ios'));
+  const minHeight = isFullscreen ? (effectiveIsIos ? 106 : 80) : 42;
+  const totalHeight = isFullscreen ? Math.max(topInset, minHeight) : 42;
+  const barHeight = 40;
+  // On iOS with notch / Dynamic Island, status bar is ~54px. Centering around Y=52px aligns horizontally with '✕ Chiudi' and leaves plenty of clearance below.
+  const paddingTop = isFullscreen ? (effectiveIsIos ? 52 : Math.max(0, totalHeight - barHeight - 4)) : 0;
 
   return (
     <div

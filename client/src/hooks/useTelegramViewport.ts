@@ -3,7 +3,18 @@ import { useState, useEffect } from 'react';
 export interface TelegramViewportState {
   isFullscreen: boolean;
   isDesktop: boolean;
+  isIos: boolean;
   topInset: number;
+}
+
+export function isIosPlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  const tg = (window as any).Telegram?.WebApp;
+  const platform = (tg?.platform || '').toLowerCase();
+  if (platform === 'ios') return true;
+  const ua = window.navigator.userAgent.toLowerCase();
+  if (/iphone|ipad|ipod/.test(ua)) return true;
+  return false;
 }
 
 export function isDesktopPlatform(): boolean {
@@ -25,15 +36,16 @@ export function isHorizontalScreen(): boolean {
 export function useTelegramViewport(): TelegramViewportState {
   const getViewportState = (): TelegramViewportState => {
     if (typeof window === 'undefined') {
-      return { isFullscreen: false, isDesktop: false, topInset: 0 };
+      return { isFullscreen: false, isDesktop: false, isIos: false, topInset: 0 };
     }
 
     const isDesktop = isDesktopPlatform();
     const isHorizontal = isHorizontalScreen();
+    const isIos = isIosPlatform();
 
     // Never enable fullscreen mode on desktop or horizontal / landscape screens
     if (isDesktop || isHorizontal) {
-      return { isFullscreen: false, isDesktop, topInset: 0 };
+      return { isFullscreen: false, isDesktop, isIos, topInset: 0 };
     }
 
     const tg = (window as any).Telegram?.WebApp;
@@ -43,7 +55,7 @@ export function useTelegramViewport(): TelegramViewportState {
     const isFullscreen = Boolean(tg?.isFullscreen);
 
     if (!isFullscreen) {
-      return { isFullscreen: false, isDesktop: false, topInset: 0 };
+      return { isFullscreen: false, isDesktop: false, isIos, topInset: 0 };
     }
 
     let cssContentTop = 0;
@@ -59,15 +71,19 @@ export function useTelegramViewport(): TelegramViewportState {
     const contentTop = Number(tg?.contentSafeAreaInset?.top) || 0;
     const safeTop = Number(tg?.safeAreaInset?.top) || 0;
 
-    // In fullscreen on mobile devices, Telegram renders floating buttons (Close on left, chevron + menu on right)
-    // with a height of ~36px plus device status bar (~24px), totaling ~60-64px.
-    // 80px provides comfortable vertical breathing room, matching the default Telegram titlebar height.
+    // In fullscreen on mobile devices, Telegram renders floating buttons (Close on left, chevron + menu on right).
+    // On iOS (especially devices with notch / Dynamic Island), status bar is ~50-54px and Telegram pills
+    // extend down to ~92px. A minimum clearance of 106px provides ~14px of comfortable space
+    // between the system pills and miniapp buttons.
+    // On Android, 80px matches the titlebar comfortably.
     const rawTop = Math.max(contentTop, safeTop, cssContentTop, cssSafeTop);
-    const topInset = Math.max(rawTop, 80);
+    const minTop = isIos ? 106 : 80;
+    const topInset = Math.max(rawTop, minTop);
 
     return {
       isFullscreen: true,
       isDesktop: false,
+      isIos,
       topInset,
     };
   };
