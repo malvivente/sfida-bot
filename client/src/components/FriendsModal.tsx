@@ -10,6 +10,7 @@ import { cleanPlayerName } from '../utils/cleanName.js';
 
 interface FriendsModalProps {
   isOpen: boolean;
+  initialTab?: 'friends' | 'requests' | 'add';
   onClose: () => void;
   onChallengeFriend?: (friend: FriendUser) => void;
   onTipFriend?: (friend: FriendUser) => void;
@@ -18,6 +19,7 @@ interface FriendsModalProps {
 
 export const FriendsModal: React.FC<FriendsModalProps> = ({
   isOpen,
+  initialTab,
   onClose,
   onChallengeFriend,
   onTipFriend,
@@ -37,6 +39,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
   const [addInput, setAddInput] = useState<string>('');
   const [addLoading, setAddLoading] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [friendToDelete, setFriendToDelete] = useState<FriendUser | null>(null);
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
 
@@ -67,10 +70,14 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
       fetchFriendsData();
       setFeedbackMsg(null);
+      setFriendToDelete(null);
     }
-  }, [isOpen, userId, userAddress]);
+  }, [isOpen, initialTab, userId, userAddress]);
 
   if (!isOpen) return null;
 
@@ -361,7 +368,10 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                         )}
                         <button
                           type="button"
-                          onClick={() => handleRemoveFriend(f)}
+                          onClick={() => {
+                            triggerImpact('light');
+                            setFriendToDelete(f);
+                          }}
                           className="p-1.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all"
                           title={t('friends.removeBtn')}
                         >
@@ -499,6 +509,44 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Friend Delete Confirmation Modal */}
+      {friendToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#151926] border border-rose-500/40 rounded-3xl p-5 max-w-xs w-full text-center shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-400">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-heading font-black text-white uppercase tracking-wider">
+                {t('friends.confirmDeleteTitle')}
+              </h4>
+              <p className="text-xs text-slate-300 font-sans mt-1 leading-relaxed">
+                {t('friends.confirmDeleteDesc', { name: cleanPlayerName(friendToDelete.displayName || friendToDelete.name || friendToDelete.username) })}
+              </p>
+            </div>
+            <div className="flex space-x-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setFriendToDelete(null)}
+                className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-heading font-bold text-xs uppercase tracking-wider active:scale-95 transition-all"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleRemoveFriend(friendToDelete);
+                  setFriendToDelete(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg shadow-rose-900/40 active:scale-95 transition-all"
+              >
+                {t('friends.confirmDeleteBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

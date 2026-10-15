@@ -138,23 +138,35 @@ export class BlackjackRoom extends BaseGameRoom {
 
     this.scoreA = this.calculateHandScore(this.handA);
     this.scoreB = this.calculateHandScore(this.handB);
-
-    const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
-
-    // Check if the first player was dealt 21 immediately!
-    const firstScore = this.firstTurnPlayer === 'A' ? this.scoreA : this.scoreB;
-    if (firstScore === 21) {
-      if (this.firstTurnPlayer === 'A') this.standA = true;
-      else this.standB = true;
-      const secondTurn = this.firstTurnPlayer === 'A' ? 'B' : 'A';
-      this.currentTurn = secondTurn;
-      const secondPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+    // Check if any player was dealt 21 immediately
+    if (this.scoreA === 21 && this.scoreB === 21) {
+      this.standA = true;
+      this.standB = true;
+      this.currentTurn = 'FINISHED';
       this.lastAction = {
-        player: this.firstTurnPlayer,
+        player: 'A',
         action: 'STAND',
-        message: `🔥 ${firstPlayerName} ha servito 21! Turno passa a ${secondPlayerName} per provare a pareggiare!`,
+        message: `🔥 Entrambi hanno servito 21 alla distribuzione! Parità assoluta!`,
+      };
+    } else if (this.scoreA === 21) {
+      this.standA = true;
+      this.currentTurn = 'B';
+      this.lastAction = {
+        player: 'A',
+        action: 'STAND',
+        message: `🔥 ${this.playerA.username} ha servito 21! Turno a ${this.playerB?.username || 'Player B'} per tentare di pareggiare!`,
+      };
+    } else if (this.scoreB === 21) {
+      this.standB = true;
+      this.currentTurn = 'A';
+      this.lastAction = {
+        player: 'B',
+        action: 'STAND',
+        message: `🔥 ${this.playerB?.username || 'Player B'} ha servito 21! Turno a ${this.playerA.username} per tentare di pareggiare!`,
       };
     }
+
+    const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
     this.broadcast({
       type: 'BLACKJACK_START',
@@ -162,7 +174,13 @@ export class BlackjackRoom extends BaseGameRoom {
       gameData: this.getGamePayload(),
     });
 
-    this.startTurnTimer();
+    if (this.currentTurn === 'FINISHED') {
+      setTimeout(() => {
+        this.evaluateShowdown();
+      }, 1200);
+    } else {
+      this.startTurnTimer();
+    }
     this.broadcastRoomState();
   }
 
@@ -198,8 +216,9 @@ export class BlackjackRoom extends BaseGameRoom {
       this.turnTimeout = undefined;
     }
 
-    const isFirstPlayer = side === this.firstTurnPlayer;
-    const nextTurn = isFirstPlayer ? (this.firstTurnPlayer === 'A' ? 'B' : 'A') : 'FINISHED';
+    const opponentSide: 'A' | 'B' = side === 'A' ? 'B' : 'A';
+    const opponentStand = side === 'A' ? this.standB : this.standA;
+    const opponentBust = side === 'A' ? this.bustB : this.bustA;
     const playerName = side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
     const opponentName = side === 'A' ? (this.playerB?.username || 'Player B') : this.playerA.username;
 
@@ -217,51 +236,88 @@ export class BlackjackRoom extends BaseGameRoom {
       if (myScore > 21) {
         if (side === 'A') this.bustA = true;
         else this.bustB = true;
-        this.currentTurn = nextTurn;
 
-        this.lastAction = {
-          player: side,
-          action: 'HIT',
-          cardDrawn: drawn,
-          message: isFirstPlayer
-            ? `💥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${myScore}! Turno passa a ${opponentName}.`
-            : `💥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${myScore}! Showdown!`,
-        };
+        if (opponentStand || opponentBust) {
+          this.currentTurn = 'FINISHED';
+          this.lastAction = {
+            player: side,
+            action: 'HIT',
+            cardDrawn: drawn,
+            message: `💥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${myScore}! Showdown!`,
+          };
+        } else {
+          this.currentTurn = opponentSide;
+          this.lastAction = {
+            player: side,
+            action: 'HIT',
+            cardDrawn: drawn,
+            message: `💥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${myScore}! Turno passa a ${opponentName}.`,
+          };
+        }
       } else if (myScore === 21) {
         if (side === 'A') this.standA = true;
         else this.standB = true;
-        this.currentTurn = nextTurn;
 
-        this.lastAction = {
-          player: side,
-          action: 'STAND',
-          cardDrawn: drawn,
-          message: isFirstPlayer
-            ? `🔥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Turno a ${opponentName} per pareggiare!`
-            : `🔥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Showdown!`,
-        };
+        if (opponentStand || opponentBust) {
+          this.currentTurn = 'FINISHED';
+          this.lastAction = {
+            player: side,
+            action: 'STAND',
+            cardDrawn: drawn,
+            message: `🔥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Entrambi conclusi, Showdown!`,
+          };
+        } else {
+          this.currentTurn = opponentSide;
+          this.lastAction = {
+            player: side,
+            action: 'STAND',
+            cardDrawn: drawn,
+            message: `🔥 ${playerName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Turno passa a ${opponentName}!`,
+          };
+        }
       } else {
-        this.lastAction = {
-          player: side,
-          action: 'HIT',
-          cardDrawn: drawn,
-          message: `🃏 ${playerName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${myScore}). Carta o Stai?`,
-        };
+        // Score < 21
+        if (opponentStand) {
+          // Opponent has already stood: turn stays with current player
+          this.currentTurn = side;
+          this.lastAction = {
+            player: side,
+            action: 'HIT',
+            cardDrawn: drawn,
+            message: `🃏 ${playerName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${myScore}). ${opponentName} è fermo: Carta o Stai?`,
+          };
+        } else {
+          // Opponent has not stood: alternate turn to opponent!
+          this.currentTurn = opponentSide;
+          this.lastAction = {
+            player: side,
+            action: 'HIT',
+            cardDrawn: drawn,
+            message: `🃏 ${playerName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${myScore}). Turno passa a ${opponentName}!`,
+          };
+        }
       }
     } else {
       // STAND
       if (side === 'A') this.standA = true;
       else this.standB = true;
-      this.currentTurn = nextTurn;
       const myScore = side === 'A' ? this.scoreA : this.scoreB;
 
-      this.lastAction = {
-        player: side,
-        action: 'STAND',
-        message: isFirstPlayer
-          ? `🛑 ${playerName} sta su ${myScore}. Turno passa a ${opponentName}!`
-          : `🛑 ${playerName} sta su ${myScore}. Showdown!`,
-      };
+      if (opponentStand || opponentBust) {
+        this.currentTurn = 'FINISHED';
+        this.lastAction = {
+          player: side,
+          action: 'STAND',
+          message: `🛑 ${playerName} sta su ${myScore}. Entrambi hanno concluso, resa dei conti!`,
+        };
+      } else {
+        this.currentTurn = opponentSide;
+        this.lastAction = {
+          player: side,
+          action: 'STAND',
+          message: `🛑 ${playerName} sta su ${myScore}. Turno passa a ${opponentName}!`,
+        };
+      }
     }
 
     this.broadcast({

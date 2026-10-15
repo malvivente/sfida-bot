@@ -29,6 +29,7 @@ export const App: React.FC = () => {
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [friendsInitialTab, setFriendsInitialTab] = useState<'friends' | 'requests' | 'add'>('friends');
   const [pendingFriendsCount, setPendingFriendsCount] = useState(0);
   const [showTipModal, setShowTipModal] = useState(false);
   const [tipRecipient, setTipRecipient] = useState<{
@@ -46,7 +47,14 @@ export const App: React.FC = () => {
   const { t } = useI18n();
 
   useEffect(() => {
-    const handleOpenFriends = () => setShowFriendsModal(true);
+    const handleOpenFriends = (e?: any) => {
+      if (e?.detail?.tab) {
+        setFriendsInitialTab(e.detail.tab);
+      } else {
+        setFriendsInitialTab('friends');
+      }
+      setShowFriendsModal(true);
+    };
     const handleOpenTip = (e: any) => {
       setTipRecipient(e?.detail?.recipient || null);
       setShowTipModal(true);
@@ -305,6 +313,13 @@ export const App: React.FC = () => {
       setActiveTab('duels');
     } else if (startParam.startsWith('deposit')) {
       setShowDepositModal(true);
+    } else if (startParam.startsWith('friends')) {
+      if (startParam.includes('request')) {
+        setFriendsInitialTab('requests');
+      } else {
+        setFriendsInitialTab('friends');
+      }
+      setShowFriendsModal(true);
     } else if (startParam.startsWith('ref_')) {
       setActiveTab('referrals');
     } else if (startParam.startsWith('lead_') || params.get('tab') === 'leaderboard') {
@@ -503,6 +518,7 @@ export const App: React.FC = () => {
       {/* Friends & Social Modal */}
       <FriendsModal
         isOpen={showFriendsModal}
+        initialTab={friendsInitialTab}
         onClose={() => setShowFriendsModal(false)}
         onPendingRequestsChange={setPendingFriendsCount}
         onChallengeFriend={(friend) => {

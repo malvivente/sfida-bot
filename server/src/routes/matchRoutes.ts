@@ -29,7 +29,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
   // List all active matches (exclude WAITING_FOR_DEPLOY)
   fastify.get('/api/matches', async (_req, reply) => {
-    const rooms = roomManager.getAllRooms().filter((r) => r.state !== 'WAITING_FOR_DEPLOY');
+    const now = Date.now();
+    const rooms = roomManager.getAllRooms().filter((r) =>
+      r.state !== 'WAITING_FOR_DEPLOY' &&
+      r.state !== 'CANCELLED' &&
+      r.state !== 'MATCH_SETTLED' &&
+      r.state !== 'FORFEITED' &&
+      r.expiresAt > now
+    );
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
 
     const matches = rooms.map((r) => {
@@ -1064,7 +1071,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
               `<b>${senderName}</b> ti ha inviato una richiesta di amicizia su Sfida Arena!\n\n` +
               `⚡ <i>Apri la sezione Amici nella Mini App per accettare o rifiutare.</i>`;
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('🤝 GESTISCI AMICI', `${webAppUrl}?startapp=friends`);
+            const keyboard = new InlineKeyboard().webApp('🤝 GESTISCI AMICI', `${webAppUrl}?startapp=friends_requests`);
             await bot.api.sendMessage(Number(res.request!.toTelegramId), renderCustomEmojis(text), {
               parse_mode: 'HTML',
               reply_markup: keyboard,
@@ -1095,6 +1102,36 @@ export async function matchRoutes(fastify: FastifyInstance) {
     if (!res.success) {
       return reply.status(400).send({ error: res.error || 'Failed to respond to request' });
     }
+
+    // If accepted, send Telegram notification to the sender
+    if (body.action === 'ACCEPT' && res.request) {
+      (async () => {
+        try {
+          const { getTelegramBot } = await import('../bot/index.js');
+          const { renderCustomEmojis } = await import('../bot/emojis.js');
+          const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+          const bot = getTelegramBot();
+          const targetTg = res.request!.fromTelegramId;
+          if (bot && targetTg) {
+            const acceptor = dbService.findUser(userIdent);
+            const acceptorName = acceptor?.displayName || (acceptor?.username ? `@${acceptor.username.replace(/^@/, '')}` : 'Un amico');
+            const text =
+              `🤝 <b>SFIDA ARENA • RICHIESTA ACCETTATA!</b>\n\n` +
+              `<b>${acceptorName}</b> ha accettato la tua richiesta di amicizia!\n\n` +
+              `⚔️ <i>Ora siete amici su Sfida Arena e potete sfidarvi direttamente o inviarvi mance!</i>`;
+            const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+            const keyboard = new InlineKeyboard().webApp('⚔️ APRI SFIDA ARENA', `${webAppUrl}?startapp=friends`);
+            await bot.api.sendMessage(Number(targetTg), renderCustomEmojis(text), {
+              parse_mode: 'HTML',
+              reply_markup: keyboard,
+            });
+          }
+        } catch (botErr) {
+          console.warn('[matchRoutes] Friend accept bot notification error:', botErr);
+        }
+      })();
+    }
+
     return reply.send({ success: true, action: body.action });
   });
 

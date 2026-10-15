@@ -37,6 +37,9 @@ interface CyberShotgunArenaProps {
   isCreator: boolean;
   onCancelMatch?: () => void;
   isWinner?: boolean;
+  winnerName?: string;
+  spectatorOutcome?: { won: boolean; payoutGram: string; refunded?: boolean } | null;
+  placedBet?: { target: 'A' | 'B' | 'X'; amountGram: string; targetName?: string; odds?: number } | null;
   onClaimPayout?: () => void;
   isClaimingPayout?: boolean;
   payoutClaimed?: boolean;
@@ -158,6 +161,9 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   wagerTon,
   isCreator = false,
   isWinner,
+  winnerName,
+  spectatorOutcome,
+  placedBet,
   onReturnToLobby,
   rematchOffer,
   onRequestRematch,
@@ -202,16 +208,32 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   const hasEnoughForRematch = currentBal >= rematchWager;
   const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
-  const [outcomePhase, setOutcomePhase] = useState<'splash' | 'settled' | 'none'>('none');
+  const isAWinner = Boolean(
+    winnerName ? winnerName === playerAName :
+    (isWinner && userSide === 'A') || (!isWinner && userSide === 'B' && role === 'player')
+  );
+  const isBWinner = Boolean(
+    winnerName ? winnerName === playerBName :
+    (isWinner && userSide === 'B') || (!isWinner && userSide === 'A' && role === 'player')
+  );
+
+  const [outcomePhase, setOutcomePhase] = useState<'table_reveal' | 'splash' | 'settled' | 'none'>('none');
   const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
     if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
-      setOutcomePhase('splash');
-      const timer = setTimeout(() => {
+      // Step 1: Reveal K.O. outcome and HP directly on the combat board for 2.6s
+      setOutcomePhase('table_reveal');
+      const splashTimer = setTimeout(() => {
+        setOutcomePhase('splash');
+      }, 2600);
+      const settledTimer = setTimeout(() => {
         setOutcomePhase('settled');
-      }, 3000);
-      return () => clearTimeout(timer);
+      }, 5200);
+      return () => {
+        clearTimeout(splashTimer);
+        clearTimeout(settledTimer);
+      };
     } else {
       setOutcomePhase('none');
     }
@@ -298,7 +320,19 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
             </span>
           )}
           <span className="text-[9px] font-mono mt-1">
-            {roomState === 'GAME_ACTIVE' ? (
+            {roomState === 'MATCH_SETTLED' ? (
+              isAWinner ? (
+                <span className="text-emerald-400 font-bold flex items-center space-x-1 animate-pulse">
+                  <span>👑</span>
+                  <span>{t('arena.winner')}</span>
+                </span>
+              ) : (
+                <span className="text-rose-500 font-bold flex items-center space-x-1">
+                  <span>💀</span>
+                  <span>{hpA <= 0 ? 'K.O.' : t('arena.eliminated')}</span>
+                </span>
+              )
+            ) : roomState === 'GAME_ACTIVE' ? (
               currentTurn === 'A' ? (
                 <span className="text-cyan-300 font-black animate-pulse">{t('arena.activeTurn')}</span>
               ) : (
@@ -338,7 +372,19 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
             </span>
           )}
           <span className="text-[9px] font-mono mt-1 text-right">
-            {roomState === 'GAME_ACTIVE' ? (
+            {roomState === 'MATCH_SETTLED' ? (
+              isBWinner ? (
+                <span className="text-emerald-400 font-bold flex items-center space-x-1 animate-pulse justify-end">
+                  <span>👑</span>
+                  <span>{t('arena.winner')}</span>
+                </span>
+              ) : (
+                <span className="text-rose-500 font-bold flex items-center space-x-1 justify-end">
+                  <span>💀</span>
+                  <span>{hpB <= 0 ? 'K.O.' : t('arena.eliminated')}</span>
+                </span>
+              )
+            ) : roomState === 'GAME_ACTIVE' ? (
               currentTurn === 'B' ? (
                 <span className="text-pink-300 font-black animate-pulse">{t('arena.activeTurn')}</span>
               ) : (
@@ -498,6 +544,46 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
           </div>
         )}
 
+        {/* Match Settled Combat Reveal on Table */}
+        {roomState === 'MATCH_SETTLED' && (
+          <div className="flex flex-col items-center space-y-3 w-full py-2">
+            <CyberShotgunWeapon
+              isSawActive={false}
+              lastAction={lastAction}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="p-3.5 rounded-2xl bg-black/90 border-2 border-red-500 shadow-[0_0_35px_rgba(239,68,68,0.4)] text-center max-w-sm w-full mx-auto animate-pulse"
+            >
+              <div className="text-sm font-orbitron font-black text-red-400 flex items-center justify-center space-x-1.5">
+                <span>💥</span>
+                <span>K.O.! DUELLO CONCLUSO</span>
+              </div>
+              <div className="text-sm font-chakra font-bold text-white mt-1">
+                {role === 'spectator'
+                  ? (winnerName ? `👑 ${winnerName} VINCE IL COMBATTIMENTO!` : 'DUELLO CONCLUSO')
+                  : (isWinner ? '🎉 HAI VINTO IL COMBATTIMENTO!' : '💀 SEI STATO ELIMINATO')}
+              </div>
+              <div className="flex items-center justify-center space-x-3 mt-1.5 text-xs font-mono font-bold text-slate-300">
+                <span className={hpA <= 0 ? 'text-rose-400 line-through' : 'text-cyan-300'}>
+                  {playerAName} ({hpA}/{maxHp} HP)
+                </span>
+                <span className="text-slate-500">vs</span>
+                <span className={hpB <= 0 ? 'text-rose-400 line-through' : 'text-pink-300'}>
+                  {playerBName} ({hpB}/{maxHp} HP)
+                </span>
+              </div>
+              {winnerName && (
+                <div className="mt-2 py-1 px-3 rounded-xl bg-black/70 border border-cyan-500/40 inline-flex items-center space-x-1.5 text-xs font-mono">
+                  <span className="text-cyan-400 font-bold">👑 {t('arena.winnerLabel')}</span>
+                  <span className="text-white font-extrabold">{winnerName}</span>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+
         {/* Betting Window State */}
         {roomState === 'BETTING_WINDOW' && (
           <div className="flex flex-col items-center space-y-1 py-4">
@@ -550,10 +636,26 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                 </>
               ) : (
                 <>
-                  <Swords className="w-16 h-16 text-cyan-400 mb-3 animate-pulse" />
+                  <Trophy className="w-16 h-16 text-amber-400 mb-3 filter drop-shadow-[0_0_15px_#f59e0b] animate-bounce" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
                     {t('arena.duelConcluded')}
                   </h2>
+                  {winnerName && (
+                    <div className="mt-2.5 py-1.5 px-3 rounded-xl bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 font-chakra font-bold text-xs sm:text-sm">
+                      👑 {t('arena.winnerLabel')} <span className="text-white">{winnerName}</span>
+                    </div>
+                  )}
+                  {(spectatorOutcome || placedBet) && (
+                    <div className={`mt-2 py-1 px-3 rounded-xl text-xs font-mono font-bold ${
+                      spectatorOutcome?.won ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' :
+                      spectatorOutcome?.refunded ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' :
+                      'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                    }`}>
+                      {spectatorOutcome?.won ? `${t('arena.spectatorWinBanner')} (+${spectatorOutcome.payoutGram} GRAM)` :
+                       spectatorOutcome?.refunded ? `${t('arena.spectatorRefundBanner')} (+${spectatorOutcome.payoutGram} GRAM)` :
+                       `${t('arena.spectatorLoseBanner')} (-${placedBet?.amountGram || '0'} GRAM)`}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -572,10 +674,12 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
             >
               {isWinner ? (
                 <Trophy className="w-12 h-12 text-amber-400 mb-2 animate-bounce" />
-              ) : (
+              ) : role === 'player' ? (
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
                   <Crosshair className="w-6 h-6" />
                 </div>
+              ) : (
+                <Trophy className="w-12 h-12 text-cyan-400 mb-2" />
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
                 {isWinner ? t('shotgun.victoryTitle') : role === 'player' ? t('shotgun.defeatTitle') : t('arena.duelConcluded')}
@@ -592,6 +696,35 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                 </div>
               )}
 
+              {/* Spectator Match Winner Badge */}
+              {role === 'spectator' && winnerName && (
+                <div className="my-2 p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 w-full flex justify-between items-center text-xs font-chakra">
+                  <span className="text-slate-400">👑 {t('arena.winnerLabel')}</span>
+                  <span className="font-bold text-cyan-300 text-sm">{winnerName}</span>
+                </div>
+              )}
+
+              {/* Spectator Bet Outcome Card */}
+              {role === 'spectator' && (spectatorOutcome || placedBet) && (
+                <div className={`my-1.5 p-2 rounded-xl border w-full flex items-center justify-between text-xs font-chakra ${
+                  spectatorOutcome?.won ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-400' :
+                  spectatorOutcome?.refunded ? 'bg-amber-950/60 border-amber-500/50 text-amber-400' :
+                  'bg-rose-950/60 border-rose-500/50 text-rose-400'
+                }`}>
+                  <span className="font-medium">
+                    {spectatorOutcome?.won ? t('arena.spectatorBetWon') :
+                     spectatorOutcome?.refunded ? t('arena.spectatorBetRefunded') :
+                     t('arena.spectatorBetLost')}
+                  </span>
+                  <span className="font-mono font-bold flex items-center space-x-1">
+                    <span>{spectatorOutcome?.won ? `+${spectatorOutcome.payoutGram}` :
+                           spectatorOutcome?.refunded ? `+${spectatorOutcome.payoutGram}` :
+                           `-${placedBet?.amountGram || '0'}`}</span>
+                    <GramIcon className="w-3.5 h-3.5 inline" />
+                  </span>
+                </div>
+              )}
+
               {/* Rematch Offer Received */}
               {rematchOffer && isRematchProposer && role === 'player' && (
                 <div className="w-full p-2.5 rounded-xl bg-red-500/20 border border-red-500/60 flex flex-col space-y-1.5 mb-2">
@@ -600,7 +733,7 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
                       <span>{t('arena.rematchOfferSent')}</span>
                     </span>
-                    <span className="text-xs font-mono font-bold text-red-400">{rematchOffer.newWagerTon} TON</span>
+                    <span className="text-xs font-mono font-bold text-red-400">{rematchOffer.newWagerTon} GRAM</span>
                   </div>
                   <span className="text-[10px] font-chakra text-slate-300">{t('arena.waitingForOpponentRematch')}</span>
                 </div>
@@ -610,7 +743,7 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
                 <div className="w-full p-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/60 flex flex-col space-y-2 mb-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-orbitron font-bold text-white">{t('arena.rematchChallengeReceived')}</span>
-                    <span className="text-xs font-mono font-bold text-cyan-300">{rematchOffer.newWagerTon} TON</span>
+                    <span className="text-xs font-mono font-bold text-cyan-300">{rematchOffer.newWagerTon} GRAM</span>
                   </div>
                   {!hasEnoughForRematch ? (
                     <button

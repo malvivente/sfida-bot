@@ -1115,20 +1115,51 @@ export abstract class BaseGameRoom {
       });
     }
 
+    // Refund Player A as well and clean up the room completely
+    const wagerNum = Number(this.config.wagerAmountNano) / 1e9;
+    const { creationFeeGram } = feeConfig.getConfig();
+    const isRematch = (this as any).isRematch === true;
+    const refundPlayerATotal = (isRematch ? wagerNum : (wagerNum + creationFeeGram)).toFixed(2);
+    try {
+      await dbService.refundUserBalance(
+        this.playerA.walletAddress,
+        refundPlayerATotal,
+        `Refund for expired match #${this.matchId} (creator inactivity timeout)`,
+        this.playerA.telegramId
+      );
+    } catch (err) {
+      console.error(`[BaseGameRoom] Error refunding Player A on timeout:`, err);
+    }
+
+    if (this.playerA.telegramId) {
+      try {
+        const { getTelegramBot } = await import('../bot/index.js');
+        const { renderCustomEmojis } = await import('../bot/emojis.js');
+        const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+        const bot = getTelegramBot();
+        if (bot) {
+          const gameConfig = (GAMES_CONFIG as any)[this.gameType];
+          const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
+          const text =
+            `⏱️ <b>SFIDA ARENA • STANZA ANNULLATA</b>\n\n` +
+            `La stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) è stata chiusa per inattività.\n\n` +
+            `💰 La tua puntata di <b>${refundPlayerATotal} GRAM</b> è stata riaccreditata sul tuo saldo.`;
+          await bot.api.sendMessage(Number(this.playerA.telegramId), renderCustomEmojis(text), { parse_mode: 'HTML' });
+        }
+      } catch (botErr) {
+        console.warn('[BaseGameRoom] Error sending player A timeout notification:', botErr);
+      }
+    }
+
     this.playerB = undefined;
     this.config.playerBAddress = undefined;
-    this.cancelPlayerBExpirationTimer();
+    this.cleanupTimers();
 
-    // The room remains active in LOBBY for Player A; restart lobby expiration timer for Player A
-    const expireMinutes = feeConfig.getConfig().lobbyRoomExpirationMinutes || 10;
-    this.expiresAt = Date.now() + expireMinutes * 60 * 1000;
-    this.startLobbyExpirationTimer();
-
-    this.broadcast({
-      type: 'PLAYER_B_TIMED_OUT',
-      message: `${bName} è uscito dalla stanza per timeout inattività del creatore.`,
-    });
-    this.broadcastRoomState();
+    this.abortRoom(`Stanza #${this.matchId} scaduta per inattività.`);
+    try {
+      const { RoomManager } = await import('./RoomManager.js');
+      RoomManager.getInstance().removeRoom(this.matchId.toString());
+    } catch {}
   }
 
   public broadcast(data: any) {

@@ -23,6 +23,9 @@ interface BlackjackArenaProps {
   isCreator: boolean;
   onCancelMatch?: () => void;
   isWinner?: boolean;
+  winnerName?: string;
+  spectatorOutcome?: { won: boolean; payoutGram: string; refunded?: boolean } | null;
+  placedBet?: { target: 'A' | 'B' | 'X'; amountGram: string; targetName?: string; odds?: number } | null;
   onClaimPayout?: () => void;
   isClaimingPayout?: boolean;
   payoutClaimed?: boolean;
@@ -100,6 +103,9 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   roomState,
   wagerTon,
   isWinner,
+  winnerName,
+  spectatorOutcome,
+  placedBet,
   onClaimPayout,
   isClaimingPayout,
   payoutClaimed,
@@ -110,6 +116,7 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   onDeclineRematch,
   isRematchProposer = false,
   opponentConnected = true,
+  userSide = 'A',
   userBalanceGram,
   onOpenDeposit,
   socketError,
@@ -144,15 +151,31 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
   const hasEnoughForRematch = currentBal >= rematchWager;
   const missingForRematch = (rematchWager - currentBal).toFixed(2);
 
-  const [outcomePhase, setOutcomePhase] = useState<'splash' | 'settled' | 'none'>('none');
+  const isAWinner = Boolean(
+    winnerName ? winnerName === playerAName :
+    (isWinner && userSide === 'A') || (!isWinner && userSide === 'B' && role === 'player')
+  );
+  const isBWinner = Boolean(
+    winnerName ? winnerName === playerBName :
+    (isWinner && userSide === 'B') || (!isWinner && userSide === 'A' && role === 'player')
+  );
+
+  const [outcomePhase, setOutcomePhase] = useState<'table_reveal' | 'splash' | 'settled' | 'none'>('none');
 
   useEffect(() => {
     if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
-      setOutcomePhase('splash');
-      const timer = setTimeout(() => {
+      // Step 1: Let the cards showdown on table for 2.6s
+      setOutcomePhase('table_reveal');
+      const splashTimer = setTimeout(() => {
+        setOutcomePhase('splash');
+      }, 2600);
+      const settledTimer = setTimeout(() => {
         setOutcomePhase('settled');
-      }, 3000);
-      return () => clearTimeout(timer);
+      }, 5200);
+      return () => {
+        clearTimeout(splashTimer);
+        clearTimeout(settledTimer);
+      };
     } else {
       setOutcomePhase('none');
     }
@@ -175,7 +198,19 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             <span className="text-[11px] font-chakra font-bold text-cyber-cyan truncate">{playerAName}</span>
           </div>
           <span className="text-[9px] font-mono mt-0.5">
-            {roomState === 'GAME_ACTIVE' ? (
+            {roomState === 'MATCH_SETTLED' ? (
+              isAWinner ? (
+                <span className="text-cyber-green font-bold flex items-center space-x-1 animate-pulse">
+                  <span>👑</span>
+                  <span>{t('arena.winner')}</span>
+                </span>
+              ) : (
+                <span className="text-rose-500 font-bold flex items-center space-x-1">
+                  <span>💀</span>
+                  <span>{bustA ? t('arena.busted') : t('arena.eliminated')}</span>
+                </span>
+              )
+            ) : roomState === 'GAME_ACTIVE' ? (
               currentTurn === 'A' ? <span className="text-cyber-cyan font-bold">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
             ) : (
               playerAReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
@@ -199,7 +234,19 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             <span className="text-[11px] font-chakra font-bold text-cyber-pink truncate">{playerBName}</span>
           </div>
           <span className="text-[9px] font-mono mt-0.5">
-            {roomState === 'GAME_ACTIVE' ? (
+            {roomState === 'MATCH_SETTLED' ? (
+              isBWinner ? (
+                <span className="text-cyber-green font-bold flex items-center space-x-1 animate-pulse">
+                  <span>👑</span>
+                  <span>{t('arena.winner')}</span>
+                </span>
+              ) : (
+                <span className="text-rose-500 font-bold flex items-center space-x-1">
+                  <span>💀</span>
+                  <span>{bustB ? t('arena.busted') : t('arena.eliminated')}</span>
+                </span>
+              )
+            ) : roomState === 'GAME_ACTIVE' ? (
               currentTurn === 'B' ? <span className="text-cyber-pink font-bold">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
             ) : (
               playerBReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
@@ -352,25 +399,40 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
         )}
 
         {/* Duel Result Comparison Banner while awaiting settled modal */}
-        {roomState === 'MATCH_SETTLED' && outcomePhase !== 'settled' && (
+        {roomState === 'MATCH_SETTLED' && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/85 border border-cyber-cyan text-center shadow-xl max-w-xs mx-auto w-full animate-pulse"
+            className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-black/90 border-2 border-cyber-cyan text-center shadow-[0_0_35px_rgba(0,240,255,0.35)] max-w-sm mx-auto w-full my-2 animate-pulse"
           >
-            <div className="text-xs font-orbitron font-black text-cyber-cyan">
-              🃏 MANO CONCLUSA
+            <div className="text-xs font-orbitron font-black text-cyber-cyan flex items-center space-x-1.5">
+              <span>🃏</span>
+              <span>ESITO MANO</span>
             </div>
-            <div className="text-sm font-chakra font-bold text-white mt-0.5">
-              {isWinner ? '🎉 HAI VINTO IL PIATTO!' : '💀 MANO VINTA DALL\'AVVERSARIO'}
+            <div className="text-sm font-chakra font-black text-white mt-1">
+              {role === 'spectator'
+                ? (winnerName ? `👑 ${winnerName} VINCE IL PIATTO!` : 'PARITÀ!')
+                : (isWinner ? '🎉 HAI VINTO IL PIATTO!' : '💀 MANO VINTA DALL\'AVVERSARIO')}
             </div>
-            <div className="text-[11px] font-mono text-slate-300 mt-0.5">
-              {playerAName} ({scoreA}) vs {playerBName} ({scoreB})
+            <div className="flex items-center justify-center space-x-3 mt-1.5 text-xs font-mono font-bold">
+              <span className={bustA ? 'text-rose-400 line-through' : 'text-cyber-cyan'}>
+                {playerAName}: {scoreA} {bustA ? `(${t('arena.busted')})` : ''}
+              </span>
+              <span className="text-slate-500">vs</span>
+              <span className={bustB ? 'text-rose-400 line-through' : 'text-cyber-pink'}>
+                {playerBName}: {scoreB} {bustB ? `(${t('arena.busted')})` : ''}
+              </span>
             </div>
+            {winnerName && (
+              <div className="mt-2 py-1 px-3 rounded-xl bg-black/70 border border-cyber-cyan/40 inline-flex items-center space-x-1.5 text-xs font-mono">
+                <span className="text-cyber-cyan font-bold">👑 {t('arena.winnerLabel')}</span>
+                <span className="text-white font-extrabold">{winnerName}</span>
+              </div>
+            )}
           </motion.div>
         )}
 
-        {/* Phase 1: 3-Second Victory or Defeat Overlay */}
+        {/* Phase 1: High-Impact Victory, Defeat or Spectator Overlay (After Table Showdown) */}
         {outcomePhase === 'splash' && (
           <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
             <div className={`flex flex-col items-center p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center border-2 ${
@@ -404,17 +466,33 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                 </>
               ) : (
                 <>
-                  <Swords className="w-16 h-16 text-cyber-cyan mb-3 animate-pulse" />
+                  <Trophy className="w-16 h-16 text-cyber-amber mb-3 filter drop-shadow-[0_0_15px_#ffb800] animate-bounce" />
                   <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
                     {t('arena.duelConcluded')}
                   </h2>
+                  {winnerName && (
+                    <div className="mt-2.5 py-1.5 px-3 rounded-xl bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan font-chakra font-bold text-xs sm:text-sm">
+                      👑 {t('arena.winnerLabel')} <span className="text-white">{winnerName}</span>
+                    </div>
+                  )}
+                  {(spectatorOutcome || placedBet) && (
+                    <div className={`mt-2 py-1 px-3 rounded-xl text-xs font-mono font-bold ${
+                      spectatorOutcome?.won ? 'bg-emerald-500/20 text-cyber-green border border-emerald-500/40' :
+                      spectatorOutcome?.refunded ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' :
+                      'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                    }`}>
+                      {spectatorOutcome?.won ? `${t('arena.spectatorWinBanner')} (+${spectatorOutcome.payoutGram} GRAM)` :
+                       spectatorOutcome?.refunded ? `${t('arena.spectatorRefundBanner')} (+${spectatorOutcome.payoutGram} GRAM)` :
+                       `${t('arena.spectatorLoseBanner')} (-${placedBet?.amountGram || '0'} GRAM)`}
+                    </div>
+                  )}
                 </>
               )}
             </div>
           </div>
         )}
 
-        {/* Phase 2: Match Settled Modal (After 3 Seconds) */}
+        {/* Phase 2: Match Settled Modal */}
         {outcomePhase === 'settled' && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
             <motion.div
@@ -426,10 +504,12 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             >
               {isWinner ? (
                 <Trophy className="w-12 h-12 text-cyber-amber mb-2 animate-bounce" />
-              ) : (
+              ) : role === 'player' ? (
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
                   <Swords className="w-6 h-6" />
                 </div>
+              ) : (
+                <Trophy className="w-12 h-12 text-cyber-cyan mb-2" />
               )}
               <h2 className="text-lg font-orbitron font-black text-white">
                 {isWinner ? t('blackjack.victoryTitle') : role === 'player' ? t('blackjack.defeatTitle') : t('arena.duelConcluded')}
@@ -442,6 +522,35 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
                   <span className="font-bold text-cyber-cyan flex items-center space-x-1">
                     <span>+{winnerPayoutTon}</span>
                     <GramIcon className="w-3.5 h-3.5 text-cyber-cyan inline" />
+                  </span>
+                </div>
+              )}
+
+              {/* Spectator Match Winner Badge */}
+              {role === 'spectator' && winnerName && (
+                <div className="my-2 p-2.5 rounded-xl bg-cyber-cyan/15 border border-cyber-cyan/40 w-full flex justify-between items-center text-xs font-chakra">
+                  <span className="text-slate-400">👑 {t('arena.winnerLabel')}</span>
+                  <span className="font-bold text-cyber-cyan text-sm">{winnerName}</span>
+                </div>
+              )}
+
+              {/* Spectator Bet Outcome Card */}
+              {role === 'spectator' && (spectatorOutcome || placedBet) && (
+                <div className={`my-1.5 p-2 rounded-xl border w-full flex items-center justify-between text-xs font-chakra ${
+                  spectatorOutcome?.won ? 'bg-emerald-950/60 border-emerald-500/50 text-cyber-green' :
+                  spectatorOutcome?.refunded ? 'bg-amber-950/60 border-amber-500/50 text-amber-400' :
+                  'bg-rose-950/60 border-rose-500/50 text-rose-400'
+                }`}>
+                  <span className="font-medium">
+                    {spectatorOutcome?.won ? t('arena.spectatorBetWon') :
+                     spectatorOutcome?.refunded ? t('arena.spectatorBetRefunded') :
+                     t('arena.spectatorBetLost')}
+                  </span>
+                  <span className="font-mono font-bold flex items-center space-x-1">
+                    <span>{spectatorOutcome?.won ? `+${spectatorOutcome.payoutGram}` :
+                           spectatorOutcome?.refunded ? `+${spectatorOutcome.payoutGram}` :
+                           `-${placedBet?.amountGram || '0'}`}</span>
+                    <GramIcon className="w-3.5 h-3.5 inline" />
                   </span>
                 </div>
               )}

@@ -1421,8 +1421,8 @@ export class DatabaseService {
 
     const history = await this.getUserHistory(walletAddress, telegramId);
 
-    // If mockStats present on seeded user and history is empty, return mockStats directly
-    if (history.length === 0 && userAcc?.mockStats) {
+    // If mockStats present on seeded user and match history is minimal sample, return mockStats directly
+    if (userAcc?.mockStats && history.length <= 2) {
       return {
         duelsPlayed: userAcc.mockStats.duelsPlayed,
         duelsWon: userAcc.mockStats.duelsWon,
@@ -1579,8 +1579,8 @@ export class DatabaseService {
 
       for (const group of groups.values()) {
         const stats = await this.getUserStats(group.primaryWallet, group.telegramId);
-        // Skip players with 0 duels played and 0 profits
-        if (stats.duelsPlayed === 0 && parseFloat(stats.totalProfitsGram) <= 0) continue;
+        // Only skip completely anonymous ghost placeholders with no identity and 0 duels
+        if (!group.telegramId && !group.primaryWallet && stats.duelsPlayed === 0) continue;
 
         entries.push({
           walletAddress: group.primaryWallet,
@@ -1984,7 +1984,7 @@ export class DatabaseService {
     requestId: string,
     userIdentifier: string,
     action: 'ACCEPT' | 'DECLINE'
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; request?: FriendRequestRecord }> {
     const req = this.friendRequests.get(requestId);
     if (!req) return { success: false, error: 'Richiesta non trovata' };
     if (req.status !== 'PENDING') return { success: false, error: 'Questa richiesta è già stata gestita' };
@@ -2001,7 +2001,7 @@ export class DatabaseService {
       req.status = 'DECLINED';
       req.updatedAt = Date.now();
       this.persistData();
-      return { success: true };
+      return { success: true, request: req };
     }
 
     req.status = 'ACCEPTED';
@@ -2015,7 +2015,7 @@ export class DatabaseService {
     });
 
     this.persistData();
-    return { success: true };
+    return { success: true, request: req };
   }
 
   public async removeFriend(userIdentifier: string, friendIdentifier: string): Promise<boolean> {

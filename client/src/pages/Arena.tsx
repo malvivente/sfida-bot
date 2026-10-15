@@ -752,6 +752,15 @@ export const Arena: React.FC<ArenaProps> = ({
   const playerA_Name = cleanPlayerName(socketData.socketPlayerA?.name || socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A');
   const playerB_Name = cleanPlayerName(socketData.socketPlayerB?.name || socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent')));
 
+  const effectiveWinnerName = socketData.matchWinnerName || (
+    socketData.matchWinner ? (
+      (socketData.socketPlayerA?.wallet && areAddressesEqual(socketData.matchWinner, socketData.socketPlayerA.wallet)) ||
+      (currentActiveMatch?.playerA?.wallet && areAddressesEqual(socketData.matchWinner, currentActiveMatch.playerA.wallet))
+        ? playerA_Name
+        : playerB_Name
+    ) : (isUserWinner ? (userSide === 'A' ? playerA_Name : playerB_Name) : undefined)
+  );
+
   const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
   const effectiveInviteCode = initialInviteCode || currentActiveMatch?.inviteCode || (activeMatchId ? (() => {
     try {
@@ -1041,6 +1050,9 @@ export const Arena: React.FC<ArenaProps> = ({
               isCreator={isCurrentCreator}
               onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
               isWinner={isUserWinner}
+              winnerName={effectiveWinnerName}
+              spectatorOutcome={socketData.spectatorOutcome}
+              placedBet={socketData.placedBet}
               onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
               isClaimingPayout={isClaimingPayout}
               payoutClaimed={payoutClaimed}
@@ -1220,6 +1232,9 @@ export const Arena: React.FC<ArenaProps> = ({
               isCreator={isCurrentCreator}
               onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
               isWinner={isUserWinner}
+              winnerName={effectiveWinnerName}
+              spectatorOutcome={socketData.spectatorOutcome}
+              placedBet={socketData.placedBet}
               onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
               isClaimingPayout={isClaimingPayout}
               payoutClaimed={payoutClaimed}
@@ -1352,6 +1367,9 @@ export const Arena: React.FC<ArenaProps> = ({
               isCreator={isCurrentCreator}
               onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
               isWinner={isUserWinner}
+              winnerName={effectiveWinnerName}
+              spectatorOutcome={socketData.spectatorOutcome}
+              placedBet={socketData.placedBet}
               onClaimPayout={isUserWinner ? handleClaimPayout : undefined}
               isClaimingPayout={isClaimingPayout}
               payoutClaimed={payoutClaimed}
