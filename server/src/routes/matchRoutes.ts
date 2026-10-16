@@ -76,6 +76,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         escrowAddress,
         state: r.state,
         isPrivate: r.isPrivate || false,
+        isRematch: (r as any).isRematch || false,
         groupChatId: r.config.groupChatId,
         winnerAddress: r.winnerAddress,
         winnerName: r.winnerName,
@@ -964,11 +965,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.send({ success: true, message: 'Match removed from memory.' });
     }
 
-    const canCancel = room.state === 'LOBBY' || room.state === 'WAITING_FOR_DEPLOY' || room.state === 'BETTING_WINDOW';
+    const isRematch = (room as any).isRematch === true;
+    const canCancel = (room.state === 'LOBBY' || room.state === 'WAITING_FOR_DEPLOY') && !(room as any).bettingTimer && !isRematch;
     if (!canCancel) {
       return reply.status(400).send({
         error: 'CANNOT_CANCEL',
-        message: 'Match cannot be cancelled once active combat rounds have begun.',
+        message: 'Match cannot be cancelled once started, during the betting window, or on a rematch.',
       });
     }
 
@@ -977,7 +979,6 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const { creationFeeGram } = feeConfig.getConfig();
 
     // 1. Refund Player A: wager (+ creation fee if not a rematch)
-    const isRematch = (room as any).isRematch === true;
     const refundPlayerATotal = (isRematch ? wagerGram : (wagerGram + creationFeeGram)).toFixed(2);
     await dbService.refundUserBalance(
       room.playerA.walletAddress,
@@ -987,11 +988,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
     );
     console.log(`[matchRoutes] Refunded ${refundPlayerATotal} GRAM to Player A (${room.playerA.walletAddress}) for cancelled match #${id}`);
 
-    // 2. If Player B has joined, refund Player B: wager + join fee
+    // 2. If Player B has joined, refund Player B: wager (+ join fee if not a rematch)
     let refundPlayerBTotal = '0.00';
     if (room.playerB?.walletAddress) {
       const { joinFeeGram } = feeConfig.getConfig();
-      refundPlayerBTotal = (wagerGram + joinFeeGram).toFixed(2);
+      refundPlayerBTotal = (isRematch ? wagerGram : (wagerGram + joinFeeGram)).toFixed(2);
       await dbService.refundUserBalance(
         room.playerB.walletAddress,
         refundPlayerBTotal,

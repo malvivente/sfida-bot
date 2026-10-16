@@ -1239,7 +1239,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </button>
 
                     {/* Cancellation button shown exclusively to creator before Player B joins */}
-                    {onCancelMatch && isCreator && !m.playerB && (
+                    {onCancelMatch && isCreator && !m.playerB && m.state === 'LOBBY' && !(m as any).isRematch && (
                       <button
                         onClick={() => {
                           triggerImpact('medium');

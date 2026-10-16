@@ -746,16 +746,16 @@ export const Arena: React.FC<ArenaProps> = ({
     ))
   );
 
+  const liveRoomState = socketData.isConnected ? socketData.roomState : currentActiveMatch?.state;
+  const isRematchRoom = Boolean(socketData.isRematch || (currentActiveMatch as any)?.isRematch);
+
   const canCancelCurrentMatch = Boolean(
     effectiveRole === 'player' &&
     isCurrentCreator &&
     currentActiveMatch &&
-    (
-      socketData.roomState === 'LOBBY' ||
-      socketData.roomState === 'BETTING_WINDOW' ||
-      currentActiveMatch.state === 'LOBBY' ||
-      currentActiveMatch.state === 'BETTING_WINDOW'
-    )
+    liveRoomState === 'LOBBY' &&
+    socketData.countdownSeconds === null &&
+    !isRematchRoom
   );
 
   const effectiveGameType: GameType = socketData.gameType || currentActiveMatch?.gameType || 'roulette';
@@ -867,6 +867,12 @@ export const Arena: React.FC<ArenaProps> = ({
       window.removeEventListener('sfida_rematch_accepted', handleRematchAccepted);
     };
   }, []);
+
+  useEffect(() => {
+    if (activeMatchId && !canCancelCurrentMatch && matchToCancel?.matchId === activeMatchId) {
+      setMatchToCancel(null);
+    }
+  }, [activeMatchId, canCancelCurrentMatch, matchToCancel]);
 
   const availableBalanceGram = userBalance?.balanceGram || userBalance?.balanceTon || '0.00';
 

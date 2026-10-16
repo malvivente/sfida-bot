@@ -283,6 +283,7 @@ export abstract class BaseGameRoom {
       createdAt: this.createdAt,
       expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
       playerBExpiresAt: this.playerBExpiresAt,
+      isRematch: (this as any).isRematch || false,
     });
 
     this.broadcastRoomState();
@@ -335,6 +336,7 @@ export abstract class BaseGameRoom {
       createdAt: this.createdAt,
       expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
       playerBExpiresAt: this.playerBExpiresAt,
+      isRematch: (this as any).isRematch || false,
     });
   }
 
@@ -533,6 +535,7 @@ export abstract class BaseGameRoom {
       durationSeconds: duration,
       message: `Entrambi i duellanti sono pronti! Finestra scommesse aperta per ${duration} secondi.`,
     });
+    this.broadcastRoomState();
 
     this.bettingTimer = setInterval(() => {
       countdown -= 1;
@@ -1215,6 +1218,7 @@ export abstract class BaseGameRoom {
       createdAt: this.createdAt,
       expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
       playerBExpiresAt: this.playerBExpiresAt,
+      isRematch: (this as any).isRematch || false,
     });
   }
 
@@ -1388,10 +1392,12 @@ export abstract class BaseGameRoom {
     this.totalBetsX = 0n;
     this.cleanupTimers();
     this.resetForRematch();
+    this.startPlayerBExpirationTimer();
 
     this.broadcast({
       type: 'REMATCH_ACCEPTED',
       newWagerTon,
+      isRematch: true,
       message: `Rematch accepted! Wager doubled to ${newWagerTon} GRAM. Both players ready up!`,
       oddsA: 2.0,
       oddsB: 2.0,

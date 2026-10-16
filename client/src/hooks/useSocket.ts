@@ -113,6 +113,7 @@ export function useSocket({
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [playerBExpiresAt, setPlayerBExpiresAt] = useState<number | null>(null);
   const [kickedInactivity, setKickedInactivity] = useState<string | null>(null);
+  const [isRematch, setIsRematch] = useState<boolean>(false);
 
   useEffect(() => {
     // Reset room state when entering a new match or switching rooms
@@ -145,6 +146,7 @@ export function useSocket({
     setExpiresAt(null);
     setPlayerBExpiresAt(null);
     setKickedInactivity(null);
+    setIsRematch(false);
 
     if (!matchId) return;
 
@@ -211,6 +213,7 @@ export function useSocket({
             }
             if ((msg as any).expiresAt) setExpiresAt((msg as any).expiresAt);
             if ((msg as any).playerBExpiresAt) setPlayerBExpiresAt((msg as any).playerBExpiresAt);
+            if ((msg as any).isRematch !== undefined) setIsRematch(Boolean((msg as any).isRematch));
             break;
 
           case 'ROOM_UPDATE':
@@ -245,6 +248,7 @@ export function useSocket({
             }
             if ((msg as any).expiresAt) setExpiresAt((msg as any).expiresAt);
             if ((msg as any).playerBExpiresAt) setPlayerBExpiresAt((msg as any).playerBExpiresAt);
+            if ((msg as any).isRematch !== undefined) setIsRematch(Boolean((msg as any).isRematch));
             break;
 
           case 'ROULETTE_UPDATE':
@@ -476,6 +480,7 @@ export function useSocket({
             break;
 
           case 'REMATCH_ACCEPTED':
+            setIsRematch(true);
             setRematchOffer(null);
             setSocketError(null);
             setMatchWinner(null);
@@ -755,6 +760,7 @@ export function useSocket({
     playerBExpiresAt,
     kickedInactivity,
     setKickedInactivity,
+    isRematch,
   };
 }
 

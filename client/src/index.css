@@ -21,6 +21,12 @@ button:focus-visible {
   outline: none;
 }
 
+/* Prevent linear gradients from wrapping opposite-side colors into 1px semi-transparent borders */
+[class*="bg-gradient-"] {
+  background-origin: border-box;
+  background-repeat: no-repeat;
+}
+
 /* Subtle modern mesh pattern */
 .cyber-grid {
   background-image: radial-gradient(rgba(112, 89, 226, 0.08) 1px, transparent 1px);

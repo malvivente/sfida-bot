@@ -128,7 +128,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             triggerImpact('medium');
             onCreateMatchForGame('shotgun');
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-amber-800 p-4 sm:p-5 shadow-xl border border-red-400/40 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-amber-800 bg-origin-border p-4 sm:p-5 shadow-xl border border-white/15 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
         >
           {/* Rules info button */}
           <button
@@ -196,7 +196,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('connect4');
             }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-900 p-4 border border-blue-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
             {/* Rules info button */}
             <button
@@ -249,7 +249,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('split');
             }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-700 to-slate-900 p-4 border border-purple-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-700 to-slate-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
             {/* Rules info button */}
             <button
@@ -302,7 +302,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('cubecount');
             }}
-            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-700 to-amber-900 p-4 border border-amber-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[110px]"
+            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-700 to-amber-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[110px]"
           >
             <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
 
@@ -379,7 +379,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('roulette');
             }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 p-4 border border-emerald-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
             {/* Rules info button */}
             <button
@@ -432,7 +432,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('blackjack');
             }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#e11d48] to-[#881337] p-4 border border-rose-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#e11d48] to-[#881337] bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
             {/* Rules info button */}
             <button
@@ -485,7 +485,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('bridge');
             }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0284c7] to-[#0c4a6e] p-4 border border-cyan-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0284c7] to-[#0c4a6e] bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
             {/* Rules info button */}
             <button
@@ -538,7 +538,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
               triggerImpact('medium');
               onCreateMatchForGame('chrono');
             }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#d97706] to-[#78350f] p-4 border border-amber-400/40 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#d97706] to-[#78350f] bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
           >
             {/* Rules info button */}
             <button

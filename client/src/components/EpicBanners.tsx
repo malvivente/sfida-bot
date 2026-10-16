@@ -41,7 +41,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           triggerImpact('medium');
           onOpenCreateModal('split');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 p-4 sm:p-5 shadow-xl border border-sky-400/30 cursor-pointer group active:scale-[0.99] transition-all min-h-[145px]"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 bg-origin-border p-4 sm:p-5 shadow-xl border border-white/15 cursor-pointer group active:scale-[0.99] transition-all min-h-[145px]"
       >
         {/* Ambient glow */}
         <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-cyan-400/25 blur-3xl pointer-events-none" />
@@ -104,7 +104,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           triggerImpact('medium');
           onOpenPlayHub?.('quick');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 p-4 sm:p-5 shadow-xl border border-amber-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 bg-origin-border p-4 sm:p-5 shadow-xl border border-white/15 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-orange-300/25 blur-2xl pointer-events-none" />
 
@@ -162,7 +162,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           triggerImpact('medium');
           onOpenPlayHub?.('strategy');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-indigo-800 p-4 sm:p-5 shadow-xl border border-red-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-indigo-800 bg-origin-border p-4 sm:p-5 shadow-xl border border-white/15 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-red-400/20 blur-2xl pointer-events-none" />
 
@@ -220,7 +220,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           triggerImpact('medium');
           onOpenSpectate?.();
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-700 via-indigo-700 to-cyan-800 p-4 sm:p-5 shadow-xl border border-cyan-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-700 via-indigo-700 to-cyan-800 bg-origin-border p-4 sm:p-5 shadow-xl border border-white/15 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-cyan-400/20 blur-2xl pointer-events-none" />
 
@@ -274,7 +274,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       {/* 4. GIOCHI VS BOT (Player vs AI • Coming Soon)                 */}
       {/* ------------------------------------------------------------- */}
       <div
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 p-4 sm:p-5 shadow-xl border border-teal-500/35 cursor-not-allowed select-none min-h-[145px] opacity-90 group"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 bg-origin-border p-4 sm:p-5 shadow-xl border border-teal-500/25 cursor-not-allowed select-none min-h-[145px] opacity-90 group"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-teal-400/15 blur-2xl pointer-events-none" />
 
@@ -319,7 +319,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       {/* 5. GIOCHI VS CASINÒ (Player vs House / Casino • Coming Soon)  */}
       {/* ------------------------------------------------------------- */}
       <div
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#290b0b] via-[#3a1010] to-[#170505] p-4 sm:p-5 shadow-xl border border-amber-500/35 cursor-not-allowed select-none min-h-[145px] opacity-90 group"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#290b0b] via-[#3a1010] to-[#170505] bg-origin-border p-4 sm:p-5 shadow-xl border border-amber-500/25 cursor-not-allowed select-none min-h-[145px] opacity-90 group"
       >
         <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-amber-500/15 blur-2xl pointer-events-none" />
 
@@ -371,7 +371,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             triggerImpact('medium');
             onOpenJackpotModal?.();
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1917] via-[#292524] to-[#171412] p-3.5 sm:p-4 border border-amber-500/40 shadow-xl cursor-pointer group active:scale-95 transition-all"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1917] via-[#292524] to-[#171412] bg-origin-border p-3.5 sm:p-4 border border-amber-500/35 shadow-xl cursor-pointer group active:scale-95 transition-all"
         >
           <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-amber-500/15 blur-2xl pointer-events-none" />
           
@@ -407,7 +407,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             triggerImpact('medium');
             onOpenAffiliates?.();
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#500724] via-[#701a75] to-[#3b0764] p-3.5 sm:p-4 border border-pink-500/40 shadow-xl cursor-pointer group active:scale-95 transition-all"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#500724] via-[#701a75] to-[#3b0764] bg-origin-border p-3.5 sm:p-4 border border-pink-500/35 shadow-xl cursor-pointer group active:scale-95 transition-all"
         >
           <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-pink-500/20 blur-2xl pointer-events-none" />
           
