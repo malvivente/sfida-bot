@@ -49,6 +49,8 @@ export interface PlayerSession {
 export interface SpectatorSession {
   id: string;
   ws: WebSocket;
+  wallet?: string;
+  telegramId?: string;
 }
 
 export interface MatchResolutionPayload {
@@ -290,8 +292,8 @@ export abstract class BaseGameRoom {
   }
 
   // Spectator connection
-  public attachSpectator(id: string, ws: WebSocket) {
-    this.spectators.set(id, { id, ws });
+  public attachSpectator(id: string, ws: WebSocket, wallet?: string, telegramId?: string) {
+    this.spectators.set(id, { id, ws, wallet, telegramId });
 
     this.sendTo(ws, {
       type: 'INIT_STATE',
@@ -342,6 +344,23 @@ export abstract class BaseGameRoom {
 
   public removeSpectator(id: string) {
     this.spectators.delete(id);
+  }
+
+  /**
+   * Promotes an existing spectator WebSocket to Player B upon joining.
+   */
+  public upgradeSpectatorToPlayer(wallet: string, telegramId: string, username: string): boolean {
+    if (!this.playerB) return false;
+    for (const [id, spec] of this.spectators.entries()) {
+      const matchWallet = Boolean(wallet && spec.wallet && this.isSameWallet(wallet, spec.wallet));
+      const matchTg = Boolean(telegramId && spec.telegramId && String(telegramId) === String(spec.telegramId));
+      if (matchWallet || matchTg) {
+        this.spectators.delete(id);
+        this.handlePlayerConnect(this.playerB, telegramId, username, spec.ws, 'B');
+        return true;
+      }
+    }
+    return false;
   }
 
   // Player Disconnect Handler

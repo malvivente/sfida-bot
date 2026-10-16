@@ -200,6 +200,9 @@ export const Arena: React.FC<ArenaProps> = ({
 
   const currentActiveMatch = matches.find((m) => m.matchId === activeMatchId);
   const effectivePlayerAddress = userAddress || (userId ? `tg_${userId}` : '');
+  const cleanMyUsername = username ? username.replace(/^@/, '').toLowerCase().trim() : '';
+  const myTgId = userId ? String(userId).trim() : '';
+
   const isMatchPlayer = Boolean(
     currentActiveMatch &&
     (
@@ -207,13 +210,13 @@ export const Arena: React.FC<ArenaProps> = ({
         areAddressesEqual(currentActiveMatch.playerA.wallet, effectivePlayerAddress) ||
         (currentActiveMatch.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress))
       )) ||
-      (userId && (
-        String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId) ||
-        (currentActiveMatch.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId))
+      (myTgId && (
+        String((currentActiveMatch.playerA as any)?.telegramUserId) === myTgId ||
+        (currentActiveMatch.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === myTgId)
       )) ||
-      (username && (
-        currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase()) ||
-        currentActiveMatch.playerB?.name?.toLowerCase().includes(username.toLowerCase())
+      (!effectivePlayerAddress && !myTgId && cleanMyUsername && (
+        currentActiveMatch.playerA.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername ||
+        (currentActiveMatch.playerB && currentActiveMatch.playerB.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
       ))
     )
   );
@@ -433,19 +436,25 @@ export const Arena: React.FC<ArenaProps> = ({
 
     const isPlayerA = Boolean(
       (userAddress && areAddressesEqual(match.playerA?.wallet, userAddress)) ||
-      (userId && ((match.playerA as any)?.telegramUserId === userId || match.playerA?.wallet === `tg_${userId}`)) ||
-      (fullName && match.playerA?.name === fullName) ||
-      (username && (match.playerA?.name === `@${username}` || match.playerA?.name?.toLowerCase().includes(username.toLowerCase()))) ||
-      (displayName && match.playerA?.name?.toLowerCase().includes(displayName.toLowerCase()))
+      (myTgId && (
+        String((match.playerA as any)?.telegramUserId) === myTgId ||
+        match.playerA?.wallet === `tg_${myTgId}`
+      )) ||
+      (!userAddress && !myTgId && cleanMyUsername && (
+        match.playerA?.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername
+      ))
     );
 
     const isPlayerB = Boolean(
       match.playerB && (
         (userAddress && areAddressesEqual(match.playerB?.wallet, userAddress)) ||
-        (userId && ((match.playerB as any)?.telegramUserId === userId || match.playerB?.wallet === `tg_${userId}`)) ||
-        (fullName && match.playerB?.name === fullName) ||
-        (username && (match.playerB?.name === `@${username}` || match.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
-        (displayName && match.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
+        (myTgId && (
+          String((match.playerB as any)?.telegramUserId) === myTgId ||
+          match.playerB?.wallet === `tg_${myTgId}`
+        )) ||
+        (!userAddress && !myTgId && cleanMyUsername && (
+          match.playerB?.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername
+        ))
       )
     );
 
@@ -498,7 +507,27 @@ export const Arena: React.FC<ArenaProps> = ({
       }
 
       setCreateStatus(null);
+      setCreateError(null);
       fetchUserBalance();
+      fetchMatches();
+      // Optimistically record Player B on match in state so arena immediately sees Player B
+      setMatches((prev) =>
+        prev.map((item) =>
+          item.matchId === match.matchId
+            ? {
+                ...item,
+                playerB: {
+                  wallet: playerAddress,
+                  name: cleanPlayerName(displayName || fullName || username || 'Player B'),
+                  ready: false,
+                  score: 0,
+                  telegramUserId: userId,
+                  photoUrl: photoUrl || '',
+                },
+              }
+            : item
+        )
+      );
       setActiveMatchId(match.matchId);
       setRole('player');
       setIsReady(false);
@@ -546,19 +575,25 @@ export const Arena: React.FC<ArenaProps> = ({
 
       const isPlayerA = Boolean(
         (userAddress && areAddressesEqual(m.playerA?.wallet, userAddress)) ||
-        (userId && (String((m.playerA as any)?.telegramUserId) === String(userId) || m.playerA?.wallet === `tg_${userId}`)) ||
-        (fullName && m.playerA?.name === fullName) ||
-        (username && (m.playerA?.name === `@${username}` || m.playerA?.name?.toLowerCase().includes(username.toLowerCase()))) ||
-        (displayName && m.playerA?.name?.toLowerCase().includes(displayName.toLowerCase()))
+        (myTgId && (
+          String((m.playerA as any)?.telegramUserId) === myTgId ||
+          m.playerA?.wallet === `tg_${myTgId}`
+        )) ||
+        (!userAddress && !myTgId && cleanMyUsername && (
+          m.playerA?.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername
+        ))
       );
 
       const isPlayerB = Boolean(
         m.playerB && (
           (userAddress && areAddressesEqual(m.playerB?.wallet, userAddress)) ||
-          (userId && (String((m.playerB as any)?.telegramUserId) === String(userId) || m.playerB?.wallet === `tg_${userId}`)) ||
-          (fullName && m.playerB?.name === fullName) ||
-          (username && (m.playerB?.name === `@${username}` || m.playerB?.name?.toLowerCase().includes(username.toLowerCase()))) ||
-          (displayName && m.playerB?.name?.toLowerCase().includes(displayName.toLowerCase()))
+          (myTgId && (
+            String((m.playerB as any)?.telegramUserId) === myTgId ||
+            m.playerB?.wallet === `tg_${myTgId}`
+          )) ||
+          (!userAddress && !myTgId && cleanMyUsername && (
+            m.playerB?.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername
+          ))
         )
       );
 
@@ -720,10 +755,10 @@ export const Arena: React.FC<ArenaProps> = ({
   const userSide: 'A' | 'B' = (
     socketData.socketRole === 'PLAYER_B' ||
     (effectivePlayerAddress && socketData.socketPlayerB?.wallet && areAddressesEqual(socketData.socketPlayerB.wallet, effectivePlayerAddress)) ||
-    (userId && socketData.socketPlayerB?.telegramUserId && String(socketData.socketPlayerB.telegramUserId) === String(userId)) ||
+    (myTgId && socketData.socketPlayerB?.telegramUserId && String(socketData.socketPlayerB.telegramUserId) === myTgId) ||
     (effectivePlayerAddress && currentActiveMatch?.playerB?.wallet && areAddressesEqual(currentActiveMatch.playerB.wallet, effectivePlayerAddress)) ||
-    (userId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === String(userId)) ||
-    (username && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.toLowerCase().includes(username.toLowerCase()))
+    (myTgId && currentActiveMatch?.playerB && String((currentActiveMatch.playerB as any)?.telegramUserId) === myTgId) ||
+    (!effectivePlayerAddress && !myTgId && cleanMyUsername && currentActiveMatch?.playerB && currentActiveMatch.playerB.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
   ) ? 'B' : 'A';
 
   const isUserWinner = Boolean(
@@ -738,12 +773,11 @@ export const Arena: React.FC<ArenaProps> = ({
   const isCurrentCreator = Boolean(
     socketData.socketRole === 'PLAYER_A' ||
     (effectivePlayerAddress && socketData.socketPlayerA?.wallet && areAddressesEqual(socketData.socketPlayerA.wallet, effectivePlayerAddress)) ||
-    (userId && socketData.socketPlayerA?.telegramUserId && String(socketData.socketPlayerA.telegramUserId) === String(userId)) ||
+    (myTgId && socketData.socketPlayerA?.telegramUserId && String(socketData.socketPlayerA.telegramUserId) === myTgId) ||
     (currentActiveMatch && (
       (effectivePlayerAddress && areAddressesEqual(currentActiveMatch.playerA.wallet, effectivePlayerAddress)) ||
-      (userId && String((currentActiveMatch.playerA as any)?.telegramUserId) === String(userId)) ||
-      (fullName && currentActiveMatch.playerA.name === fullName) ||
-      (username && (currentActiveMatch.playerA.name === `@${username}` || currentActiveMatch.playerA.name?.toLowerCase().includes(username.toLowerCase())))
+      (myTgId && String((currentActiveMatch.playerA as any)?.telegramUserId) === myTgId) ||
+      (!effectivePlayerAddress && !myTgId && cleanMyUsername && currentActiveMatch.playerA.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
     ))
   );
 
@@ -1038,6 +1072,22 @@ export const Arena: React.FC<ArenaProps> = ({
 
       {activeMatchId ? (
         <div className="space-y-4">
+          {/* In-Arena Error Toast / Alert */}
+          {createError && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-sans shadow-lg mb-2">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{createError}</span>
+              </div>
+              <button
+                onClick={() => setCreateError(null)}
+                className="text-slate-400 hover:text-white text-xs font-bold px-2 py-0.5 rounded-lg hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Top Header Controls: Back to Lobby + Share + Cancel Duel if Creator */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button

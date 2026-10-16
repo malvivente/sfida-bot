@@ -200,6 +200,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [playHubSection, setPlayHubSection] = useState<'all' | 'quick' | 'strategy'>('all');
   const [previousView, setPreviousView] = useState<'hub' | 'play_hub'>('hub');
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
+  const [joiningMatchId, setJoiningMatchId] = useState<string | null>(null);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -350,7 +351,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     }
   };
 
-  const handleAttemptJoin = (m: MatchData, inviteCode?: string) => {
+  const handleAttemptJoin = async (m: MatchData, inviteCode?: string) => {
+    if (joiningMatchId) return;
     if (!userAddress && !userId) {
       triggerImpact('medium');
       onOpenWallet?.();
@@ -365,7 +367,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       setInsufficientJoinMatch({ match: m, required: requiredTotal.toFixed(2), missing: diff });
       return;
     }
-    onJoinMatch(m, inviteCode);
+    setJoiningMatchId(m.matchId);
+    try {
+      await onJoinMatch(m, inviteCode);
+    } finally {
+      setJoiningMatchId(null);
+    }
   };
 
   const handleShare = (matchId: string, wager: string, gType: GameType = 'roulette', isPrivate?: boolean, inviteCode?: string) => {
@@ -1058,11 +1065,18 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               const gameMeta = GAMES_METADATA[m.gameType || 'roulette'] || GAMES_METADATA.roulette;
 
               // Check if current user is Player A (creator)
+              const cleanMyUsername = username ? username.replace(/^@/, '').toLowerCase().trim() : '';
+              const myTgId = userId ? String(userId).trim() : '';
+
               const isPlayerA = Boolean(
                 (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) ||
-                (userId && (m.playerA as any).telegramUserId === userId) ||
-                (fullName && m.playerA.name === fullName) ||
-                (username && (m.playerA.name === `@${username}` || m.playerA.name?.toLowerCase().includes(username.toLowerCase()))) ||
+                (myTgId && (
+                  String((m.playerA as any)?.telegramUserId) === myTgId ||
+                  m.playerA.wallet === `tg_${myTgId}`
+                )) ||
+                (!userAddress && !myTgId && cleanMyUsername && (
+                  m.playerA.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername
+                )) ||
                 m.playerA.name === 'Tu' ||
                 m.playerA.wallet === 'EQ_you' ||
                 m.playerA.wallet === 'EQ_pending_wallet'
@@ -1072,10 +1086,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               const isPlayerB = Boolean(
                 m.playerB && (
                   (userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) ||
-                  (userId && (m.playerB as any).telegramUserId === userId) ||
-                  (fullName && m.playerB.name === fullName) ||
-                  (username && (m.playerB.name === `@${username}` || m.playerB.name?.toLowerCase().includes(username.toLowerCase()))) ||
-                  (displayName && m.playerB.name?.toLowerCase().includes(displayName.toLowerCase()))
+                  (myTgId && (
+                    String((m.playerB as any)?.telegramUserId) === myTgId ||
+                    m.playerB.wallet === `tg_${myTgId}`
+                  )) ||
+                  (!userAddress && !myTgId && cleanMyUsername && (
+                    m.playerB.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername
+                  ))
                 )
               );
 
@@ -1222,13 +1239,18 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <>
                           <button
                             onClick={() => handleAttemptJoin(m, effectiveInviteCode || getMatchInviteCode(m))}
+                            disabled={joiningMatchId === m.matchId}
                             className={`flex-1 py-2.5 ${
                               isTargetForThisDuel
                                 ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black shadow-lg shadow-amber-500/25'
                                 : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white shadow-sm'
-                            } font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1`}
+                            } font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1 ${joiningMatchId === m.matchId ? 'opacity-75 cursor-wait' : ''}`}
                           >
-                            <Swords className="w-3.5 h-3.5" />
+                            {joiningMatchId === m.matchId ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Swords className="w-3.5 h-3.5" />
+                            )}
                             <span className="flex items-center space-x-1">
                               <span>{isTargetForThisDuel ? t('lobby.acceptDuelBtn') : t('lobby.joinBtn')} ({wagerGram}</span>
                               <GramIcon className={`w-3 h-3 ${isTargetForThisDuel ? 'text-black' : 'text-white'} inline-block`} />

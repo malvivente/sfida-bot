@@ -539,9 +539,9 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
                   {phase === 'COUNTDOWN'
                     ? t('cubecount.phaseCountdown')
                     : phase === 'FLASH'
-                    ? `${t('cubecount.phaseFlash')} (${(timeRemainingMs / 1000).toFixed(1)}s)`
+                    ? t('cubecount.phaseFlash')
                     : phase === 'INPUT'
-                    ? `${t('cubecount.phaseInput')} (${Math.max(0, Math.ceil(timeRemainingMs / 1000))}s)`
+                    ? t('cubecount.phaseInput')
                     : t('cubecount.phaseReveal')}
                 </span>
               </div>

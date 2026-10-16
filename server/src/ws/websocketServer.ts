@@ -47,14 +47,14 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       } else {
         console.log(`[WS] User ${username} (${wallet}) requested player role but is not an authorized participant in Match #${matchId}. Attaching as spectator.`);
         const spectatorId = `spec_${wallet || Date.now()}`;
-        room.attachSpectator(spectatorId, ws);
+        room.attachSpectator(spectatorId, ws, wallet, telegramId);
         ws.on('close', () => {
           room?.removeSpectator(spectatorId);
         });
       }
     } else {
       const spectatorId = `spec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      room.attachSpectator(spectatorId, ws);
+      room.attachSpectator(spectatorId, ws, wallet, telegramId);
       console.log(`[WS] Spectator ${spectatorId} attached to Match #${matchId}`);
 
       ws.on('close', () => {

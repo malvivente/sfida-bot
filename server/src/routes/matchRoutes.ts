@@ -543,6 +543,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.state = 'LOBBY';
     room.cancelLobbyExpirationTimer();
     room.startPlayerBExpirationTimer();
+    room.upgradeSpectatorToPlayer(body.playerBAddress, body.telegramUserId || '', body.telegramUsername || '');
 
     if (body.telegramUserId && room.gameType) {
       dbService.setLastPlayedGame(body.telegramUserId, room.gameType).catch((err) =>

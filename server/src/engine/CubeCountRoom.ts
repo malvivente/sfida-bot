@@ -134,7 +134,7 @@ function getFlashDurationMs(round: number, isSuddenDeath: boolean): number {
 
 export class CubeCountRoom extends BaseGameRoom {
   public currentRound: number = 1;
-  public phase: CubeCountPhase = 'COUNTDOWN';
+  public phase: CubeCountPhase = 'FLASH';
   public hpA: number = GAMES_CONFIG.cubecount.initialLives;
   public hpB: number = GAMES_CONFIG.cubecount.initialLives;
   public readonly maxHp: number = GAMES_CONFIG.cubecount.initialLives;
@@ -214,9 +214,12 @@ export class CubeCountRoom extends BaseGameRoom {
     this.exactCount = totalCount;
     this.flashDurationMs = getFlashDurationMs(this.currentRound, this.isSuddenDeath);
 
-    // Phase 1: 1.5s Countdown ("Get Ready")
-    this.phase = 'COUNTDOWN';
-    this.phaseEndEpochMs = Date.now() + 1500;
+    this.beginFlashPhase();
+  }
+
+  private beginFlashPhase(): void {
+    this.phase = 'FLASH';
+    this.phaseEndEpochMs = Date.now() + this.flashDurationMs;
 
     this.broadcast({
       type: 'CUBECOUNT_ROUND_START',
@@ -226,15 +229,6 @@ export class CubeCountRoom extends BaseGameRoom {
       phaseEndEpochMs: this.phaseEndEpochMs,
       gameData: this.getGamePayload(),
     });
-
-    this.phaseTimer = setTimeout(() => {
-      this.beginFlashPhase();
-    }, 1500);
-  }
-
-  private beginFlashPhase(): void {
-    this.phase = 'FLASH';
-    this.phaseEndEpochMs = Date.now() + this.flashDurationMs;
 
     this.broadcast({
       type: 'CUBECOUNT_FLASH',
@@ -480,7 +474,7 @@ export class CubeCountRoom extends BaseGameRoom {
     this.hpB = this.maxHp;
     this.isSuddenDeath = false;
     this.currentRound = 1;
-    this.phase = 'COUNTDOWN';
+    this.phase = 'FLASH';
     this.hasAnsweredA = false;
     this.hasAnsweredB = false;
     this.answerA = undefined;
