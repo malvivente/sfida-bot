@@ -278,7 +278,8 @@ export function useSocket({
           case 'HEADSOCCER_TICK':
           case 'HEADSOCCER_GOAL':
           case 'HEADSOCCER_OVERTIME':
-            setRoomState('GAME_ACTIVE');
+          case 'HEADSOCCER_FULLTIME':
+            setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : 'GAME_ACTIVE'));
             if (msg.gameData) setGameData(msg.gameData);
             if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);

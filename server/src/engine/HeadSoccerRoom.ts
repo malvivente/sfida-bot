@@ -203,6 +203,10 @@ export class HeadSoccerRoom extends BaseGameRoom {
         return;
       }
       this.stepPhysics();
+      if (this.state !== 'GAME_ACTIVE') {
+        this.cleanupGameTimers();
+        return;
+      }
       this.broadcast({
         type: 'HEADSOCCER_TICK',
         scoreA: this.playerA.score,
@@ -259,18 +263,18 @@ export class HeadSoccerRoom extends BaseGameRoom {
     p.vx = moveDir * MOVE_SPEED;
     p.x += p.vx;
 
-    // Constrain to arena bounds (allow entering goal mouth slightly, not deep net)
-    const minX = GOAL_LINE_LEFT - 8;
-    const maxX = GOAL_LINE_RIGHT + 8;
+    // Constrain to arena field in front of goal posts so players don't get stuck inside the goal frame
+    const minX = GOAL_LINE_LEFT + 18;
+    const maxX = GOAL_LINE_RIGHT - 18;
     if (p.x < minX) p.x = minX;
     if (p.x > maxX) p.x = maxX;
 
-    // Anti-camping inside own goal mouth (> 3.2 seconds)
-    const inOwnGoal = side === 'A' ? p.x < GOAL_LINE_LEFT + 30 : p.x > GOAL_LINE_RIGHT - 30;
+    // Anti-camping right on own goal line (> 3.2 seconds)
+    const inOwnGoal = side === 'A' ? p.x < GOAL_LINE_LEFT + 42 : p.x > GOAL_LINE_RIGHT - 42;
     if (inOwnGoal) {
       input.goalCampTicks += 1;
       if (input.goalCampTicks > TICK_RATE_HZ * 3.2) {
-        p.x = side === 'A' ? GOAL_LINE_LEFT + 55 : GOAL_LINE_RIGHT - 55;
+        p.x = side === 'A' ? GOAL_LINE_LEFT + 70 : GOAL_LINE_RIGHT - 70;
         p.vy = -6;
         p.isGrounded = false;
         input.goalCampTicks = 0;
@@ -331,8 +335,8 @@ export class HeadSoccerRoom extends BaseGameRoom {
     if (dist < minDist && dist > 0.001) {
       const overlap = (minDist - dist) * 0.5;
       const nx = dx / dist;
-      this.pA.x = Math.max(GOAL_LINE_LEFT, this.pA.x - nx * overlap);
-      this.pB.x = Math.min(GOAL_LINE_RIGHT, this.pB.x + nx * overlap);
+      this.pA.x = Math.max(GOAL_LINE_LEFT + 18, Math.min(GOAL_LINE_RIGHT - 18, this.pA.x - nx * overlap));
+      this.pB.x = Math.max(GOAL_LINE_LEFT + 18, Math.min(GOAL_LINE_RIGHT - 18, this.pB.x + nx * overlap));
     }
   }
 
@@ -621,10 +625,24 @@ export class HeadSoccerRoom extends BaseGameRoom {
     const scoreB = this.playerB?.score || 0;
 
     if (scoreA !== scoreB) {
-      this.cleanupGameTimers();
+      this.phase = 'FULL_TIME';
+      this.timeRemainingMs = 0;
       const winnerWallet =
         scoreA > scoreB ? this.playerA.walletAddress : this.playerB?.walletAddress || '';
-      this.settleMatch(winnerWallet);
+
+      this.broadcast({
+        type: 'HEADSOCCER_FULLTIME',
+        scoreA,
+        scoreB,
+        message: `⏱️ FULL TIME! Final Score: ${scoreA} - ${scoreB}`,
+        gameData: this.getGamePayload(),
+      });
+
+      if (this.celebrationTimeout) clearTimeout(this.celebrationTimeout);
+      this.celebrationTimeout = setTimeout(() => {
+        this.cleanupGameTimers();
+        this.settleMatch(winnerWallet);
+      }, 1500);
       return;
     }
 

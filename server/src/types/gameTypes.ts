@@ -221,7 +221,7 @@ export interface CubeCountState {
 }
 
 // --- Head Soccer Types ---
-export type HeadSoccerPhase = 'KICKOFF_COUNTDOWN' | 'PLAYING' | 'GOAL_CELEBRATION' | 'OVERTIME_INTRO';
+export type HeadSoccerPhase = 'KICKOFF_COUNTDOWN' | 'PLAYING' | 'GOAL_CELEBRATION' | 'OVERTIME_INTRO' | 'FULL_TIME';
 
 export interface HeadSoccerPlayerState {
   x: number;
