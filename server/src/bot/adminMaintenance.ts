@@ -96,7 +96,7 @@ export async function handleAddAdminCommand(ctx: Context): Promise<void> {
   dbService.addAdmin(targetIdStr);
 
   const confirmMsg =
-    `✅ <b>NUOVO AMMINISTRATORE AGGIUNTO</b>\n\n` +
+    `{{emoji.check}} <b>NUOVO AMMINISTRATORE AGGIUNTO</b>\n\n` +
     `• <b>ID Telegram</b>: <code>${targetIdStr}</code>\n` +
     `• <b>Privilegi</b>: Accesso autorizzato durante la modalità manutenzione & comandi bot.\n\n` +
     `<i>Usa <code>/listadmins</code> per visualizzare tutti gli amministratori attivi.</i>`;
@@ -141,7 +141,7 @@ export async function handleDelAdminCommand(ctx: Context): Promise<void> {
   const defaultAdmin = String(ADMIN_TELEGRAM_ID).trim();
   if (targetIdStr === defaultAdmin) {
     await ctx.reply(
-      `⚠️ <b>Operazione non consentita</b>: Impossibile rimuovere il Superadmin principale (<code>${defaultAdmin}</code>).`,
+      renderCustomEmojis(`{{emoji.warning}} <b>Operazione non consentita</b>: Impossibile rimuovere il Superadmin principale (<code>${defaultAdmin}</code>).`),
       { parse_mode: 'HTML' }
     );
     return;
@@ -151,13 +151,13 @@ export async function handleDelAdminCommand(ctx: Context): Promise<void> {
 
   if (removed) {
     const okMsg =
-      `🗑️ <b>AMMINISTRATORE RIMOSSO</b>\n\n` +
+      `{{emoji.cross}} <b>AMMINISTRATORE RIMOSSO</b>\n\n` +
       `• <b>ID Telegram</b>: <code>${targetIdStr}</code>\n` +
       `• I privilegi di amministrazione sono stati revocati con successo.`;
-    await ctx.reply(okMsg, { parse_mode: 'HTML' });
+    await ctx.reply(renderCustomEmojis(okMsg), { parse_mode: 'HTML' });
   } else {
     await ctx.reply(
-      `ℹ️ Nessun amministratore trovato con ID <code>${targetIdStr}</code> (o già rimosso).`,
+      renderCustomEmojis(`{{emoji.warning}} Nessun amministratore trovato con ID <code>${targetIdStr}</code> (o già rimosso).`),
       { parse_mode: 'HTML' }
     );
   }
@@ -178,13 +178,13 @@ export async function handleListAdminsCommand(ctx: Context): Promise<void> {
 
   let text =
     `{{emoji.gear}} <b>GESTIONE AMMINISTRATORI & SISTEMA</b> {{emoji.gear}}\n\n` +
-    `• <b>Modalità Manutenzione</b>: ${isMaintenance ? '🔴 <b>ATTIVA</b> (Accesso solo Admin)' : '🟢 <b>DISATTIVATA</b> (Online per tutti)'}\n` +
+    `• <b>Modalità Manutenzione</b>: ${isMaintenance ? '{{emoji.lock}} <b>ATTIVA</b> (Accesso solo Admin)' : '{{emoji.unlock}} <b>DISATTIVATA</b> (Online per tutti)'}\n` +
     `• <b>Totale Amministratori</b>: <b>${admins.length}</b>\n\n` +
     `<b>Elenco Amministratori Autorizzati:</b>\n`;
 
   admins.forEach((id, idx) => {
     const isRoot = id === defaultAdmin;
-    text += `${idx + 1}. <code>${id}</code> ${isRoot ? '⭐ <i>(Superadmin Root)</i>' : '🛡️ <i>(Admin)</i>'}\n`;
+    text += `${idx + 1}. <code>${id}</code> ${isRoot ? '{{emoji.crown}} <i>(Superadmin Root)</i>' : '{{emoji.shield}} <i>(Admin)</i>'}\n`;
   });
 
   text +=

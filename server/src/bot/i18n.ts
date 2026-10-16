@@ -72,7 +72,8 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• <code>/duel &lt;wager&gt; split</code> — Split or Steal (min. 5 GRAM, Trust Jackpot)\n` +
       `• <code>/duel &lt;wager&gt; shotgun</code> — Cyber Shotgun (3 HP & tactical items)\n` +
       `• <code>/duel &lt;wager&gt; connect4</code> — Connect 4 (turn-based 7x6 grid)\n` +
-      `• <code>/duel &lt;wager&gt; cubecount</code> — Cube Count (rapid 3D cube flash)`,
+      `• <code>/duel &lt;wager&gt; cubecount</code> — Cube Count (rapid 3D cube flash)\n` +
+      `• <code>/duel &lt;wager&gt; headsoccer</code> — Head Soccer (60s retro 1v1 soccer & super shot)`,
 
     lang_select_title: `{{emoji.gear}} <b>Select your language:</b>`,
     lang_changed: `{{emoji.check}} Language updated to <b>{language}</b>!`,
@@ -123,7 +124,8 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• <code>split</code> — Split or Steal (min. 5 GRAM)\n` +
       `• <code>shotgun</code> — Cyber Shotgun\n` +
       `• <code>connect4</code> — Connect 4\n` +
-      `• <code>cubecount</code> — Cube Count`,
+      `• <code>cubecount</code> — Cube Count\n` +
+      `• <code>headsoccer</code> — Head Soccer`,
     group_duel_suggest_last_title: `{{emoji.warning}} <b>GAME NOT SPECIFIED</b>`,
     group_duel_suggest_last_desc:
       `You haven't specified which game you want to play.\n` +
@@ -207,7 +209,8 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• <code>/duel &lt;importo&gt; split</code> — Split or Steal (min. 5 GRAM, con Trust Jackpot)\n` +
       `• <code>/duel &lt;importo&gt; shotgun</code> — Cyber Shotgun (3 HP e oggetti tattici)\n` +
       `• <code>/duel &lt;importo&gt; forza4</code> — Forza 4 (griglia 7x6 a turni)\n` +
-      `• <code>/duel &lt;importo&gt; cubecount</code> — Cube Count (conteggio rapido 3D)`,
+      `• <code>/duel &lt;importo&gt; cubecount</code> — Cube Count (conteggio rapido 3D)\n` +
+      `• <code>/duel &lt;importo&gt; headsoccer</code> — Head Soccer (calcio arcade 1v1 con super tiro)`,
 
     lang_select_title: `{{emoji.gear}} <b>Seleziona la tua lingua:</b>`,
     lang_changed: `{{emoji.check}} Lingua impostata su <b>{language}</b>!`,
@@ -258,7 +261,8 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• <code>split</code> — Split or Steal (min. 5 GRAM)\n` +
       `• <code>shotgun</code> — Cyber Shotgun\n` +
       `• <code>connect4</code> — Forza 4\n` +
-      `• <code>cubecount</code> — Cube Count`,
+      `• <code>cubecount</code> — Cube Count\n` +
+      `• <code>headsoccer</code> — Head Soccer`,
     group_duel_suggest_last_title: `{{emoji.warning}} <b>GIOCO NON SPECIFICATO</b>`,
     group_duel_suggest_last_desc:
       `Non hai indicato a quale gioco vuoi sfidare il gruppo.\n` +

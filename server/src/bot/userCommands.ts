@@ -138,7 +138,7 @@ export async function handleTipCommand(ctx: Context): Promise<void> {
   if (!recipientIdentifier || !amountStr) {
     const guideMsg =
       lang === 'it'
-        ? `💸 <b>SFIDA ARENA • INVIA UN TIP (MANCIA)</b>\n\n` +
+        ? `{{emoji.moneyBag}} <b>SFIDA ARENA • INVIA UN TIP (MANCIA)</b>\n\n` +
           `Puoi inviare GRAM istantaneamente a qualsiasi utente direttamente in chat:\n\n` +
           `<b>1. In risposta a un messaggio:</b>\n` +
           `• <code>/tip &lt;importo&gt; [nota opzionale]</code>\n` +
@@ -146,8 +146,8 @@ export async function handleTipCommand(ctx: Context): Promise<void> {
           `<b>2. Con username o ID Telegram:</b>\n` +
           `• <code>/tip &lt;@username|ID&gt; &lt;importo&gt; [nota opzionale]</code>\n` +
           `<i>Es: <code>/tip @mario 2.50</code> o <code>/tip 123456789 1 grazie</code></i>\n\n` +
-          `ℹ️ <i>Importo minimo: 0.10 GRAM. Nessuna commissione di trasferimento.</i>`
-        : `💸 <b>SFIDA ARENA • SEND A TIP</b>\n\n` +
+          `{{emoji.sparkles}} <i>Importo minimo: 0.10 GRAM. Nessuna commissione di trasferimento.</i>`
+        : `{{emoji.moneyBag}} <b>SFIDA ARENA • SEND A TIP</b>\n\n` +
           `Send GRAM instantly to any player directly from chat:\n\n` +
           `<b>1. By replying to a message:</b>\n` +
           `• <code>/tip &lt;amount&gt; [optional note]</code>\n` +
@@ -155,7 +155,7 @@ export async function handleTipCommand(ctx: Context): Promise<void> {
           `<b>2. By username or Telegram ID:</b>\n` +
           `• <code>/tip &lt;@username|ID&gt; &lt;amount&gt; [optional note]</code>\n` +
           `<i>Example: <code>/tip @mario 2.50</code> or <code>/tip 123456789 1 thanks</code></i>\n\n` +
-          `ℹ️ <i>Minimum tip: 0.10 GRAM. Zero transfer fees.</i>`;
+          `{{emoji.sparkles}} <i>Minimum tip: 0.10 GRAM. Zero transfer fees.</i>`;
 
     await ctx.reply(renderCustomEmojis(guideMsg), { parse_mode: 'HTML' });
     return;
@@ -229,12 +229,12 @@ export async function handleTipCommand(ctx: Context): Promise<void> {
     : (recipientAcc.displayName || recipientIdentifier);
 
   const successText =
-    `💸 <b>${lang === 'it' ? 'TIP INVIATO CON SUCCESSO!' : 'TIP SENT SUCCESSFULLY!'}</b>\n\n` +
+    `{{emoji.moneyBag}} <b>${lang === 'it' ? 'TIP INVIATO CON SUCCESSO!' : 'TIP SENT SUCCESSFULLY!'}</b>\n\n` +
     `• <b>${lang === 'it' ? 'Da' : 'From'}:</b> ${senderName}\n` +
     `• <b>${lang === 'it' ? 'A' : 'To'}:</b> ${recipientName}\n` +
     `• <b>${lang === 'it' ? 'Importo' : 'Amount'}:</b> <b>${cleanAmountNum.toFixed(2)} GRAM</b>\n` +
     (note ? `• <b>${lang === 'it' ? 'Messaggio' : 'Note'}:</b> <i>"${note}"</i>\n` : '') +
-    `\n💰 <b>${lang === 'it' ? 'Il tuo nuovo saldo' : 'Your new balance'}:</b> <b>${senderAcc.balanceGram} GRAM</b>`;
+    `\n{{emoji.coin}} <b>${lang === 'it' ? 'Il tuo nuovo saldo' : 'Your new balance'}:</b> <b>${senderAcc.balanceGram} GRAM</b>`;
 
   await ctx.reply(renderCustomEmojis(successText), { parse_mode: 'HTML' });
 
@@ -243,13 +243,13 @@ export async function handleTipCommand(ctx: Context): Promise<void> {
     try {
       const recipientLang = resolveLanguage(recipientAcc.languageCode);
       const dmText =
-        `💸 <b>SFIDA ARENA • ${recipientLang === 'it' ? 'HAI RICEVUTO UN TIP!' : 'YOU RECEIVED A TIP!'}</b>\n\n` +
+        `{{emoji.moneyBag}} <b>SFIDA ARENA • ${recipientLang === 'it' ? 'HAI RICEVUTO UN TIP!' : 'YOU RECEIVED A TIP!'}</b>\n\n` +
         `<b>${senderName}</b> ${recipientLang === 'it' ? 'ti ha inviato' : 'sent you'} <b>${cleanAmountNum.toFixed(2)} GRAM</b>!\n` +
         (note ? `💬 <i>"${note}"</i>\n` : '') +
-        `\n💰 <b>${recipientLang === 'it' ? 'Nuovo saldo' : 'New balance'}:</b> <b>${recipientAcc.balanceGram} GRAM</b>`;
+        `\n{{emoji.coin}} <b>${recipientLang === 'it' ? 'Nuovo saldo' : 'New balance'}:</b> <b>${recipientAcc.balanceGram} GRAM</b>`;
 
       const dmKeyboard = new InlineKeyboard().url(
-        recipientLang === 'it' ? '⚔️ APRI SFIDA ARENA' : '⚔️ OPEN SFIDA ARENA',
+        recipientLang === 'it' ? 'ENTRA NELL\'ARENA' : 'ENTER ARENA',
         `https://t.me/${botUsername}?startapp=menu`
       );
 

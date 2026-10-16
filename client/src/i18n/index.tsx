@@ -873,11 +873,18 @@ export const translations: Translations = {
   'profile.manageFriends': { it: 'GESTISCI', en: 'MANAGE' },
 
   // Lobby Subsections & Direct Duels
+  'lobby.subsections.public': { it: 'Pubbliche', en: 'Public' },
+  'lobby.subsections.private': { it: 'Private', en: 'Private' },
   'lobby.subsections.all': { it: 'Tutte', en: 'All' },
   'lobby.subsections.waiting': { it: 'In Attesa', en: 'Waiting' },
   'lobby.subsections.myDuels': { it: 'Mie Sfide', en: 'My Duels' },
   'lobby.subsections.live': { it: 'In Corso', en: 'Live' },
   'lobby.subsections.direct': { it: 'Dirette', en: 'Direct' },
+  'lobby.stateWaiting': { it: 'IN ATTESA', en: 'WAITING' },
+  'lobby.stateReady': { it: 'PRONTO', en: 'READY' },
+  'lobby.stateBetting': { it: 'SCOMMESSE', en: 'BETTING' },
+  'lobby.stateLive': { it: 'IN CORSO', en: 'LIVE' },
+  'lobby.stateFinished': { it: 'CONCLUSO', en: 'FINISHED' },
   'lobby.createdAtTooltip': { it: 'Ora di creazione', en: 'Created at' },
   'lobby.roomExpired': { it: 'Scaduta', en: 'Expired' },
   'lobby.directChallengeLabel': { it: 'Sfida Diretta (Opzionale)', en: 'Direct Challenge (Optional)' },
@@ -953,10 +960,13 @@ export const translations: Translations = {
   'maintenance.title': { it: 'PIATTAFORMA IN MANUTENZIONE', en: 'SYSTEM UNDER MAINTENANCE' },
   'maintenance.badge': { it: 'AGGIORNAMENTO IN CORSO', en: 'UPDATE IN PROGRESS' },
   'maintenance.desc': { it: 'Stiamo effettuando aggiornamenti programmati per migliorare la tua esperienza di gioco. Sfida tornerà operativa a brevissimo!', en: 'We are performing scheduled updates to improve your gameplay experience. Sfida will be back online shortly!' },
+  'maintenance.point1': { it: 'I tuoi fondi e saldi sono al 100% al sicuro.', en: 'Your funds and balances are 100% safe.' },
+  'maintenance.point2': { it: 'Nessuna partita o puntata andrà persa.', en: 'No matches or bets will be lost.' },
+  'maintenance.point3': { it: 'Gli accessi riprenderanno automaticamente al termine.', en: 'Access will resume automatically once completed.' },
   'maintenance.retry': { it: 'VERIFICA STATO', en: 'CHECK STATUS' },
   'maintenance.checking': { it: 'VERIFICA IN CORSO...', en: 'CHECKING STATUS...' },
   'maintenance.adminBanner': { it: 'MODALITÀ MANUTENZIONE ATTIVA • ACCESSO ADMIN RISERVATO', en: 'MAINTENANCE MODE ACTIVE • ADMIN ACCESS ONLY' },
-  'maintenance.officialChannel': { it: 'Canale Aggiornamenti', en: 'Official Updates' },
+  'maintenance.officialChannel': { it: 'Canale Aggiornamenti Telegram', en: 'Telegram Updates Channel' },
 
   // Head Soccer Game Rules & Arena UI
   'gameRules.headsoccer.title': { it: 'HEAD SOCCER', en: 'HEAD SOCCER' },

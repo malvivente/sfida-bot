@@ -229,88 +229,125 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
   const svgWidth = 320;
   const svgHeight = 250;
   const originX = 160;
-  const originY = 110;
+  const originY = 100;
   const tileW = 42;
   const tileH = 21;
   const cubeH = 22;
+  const slabH = 14;
 
-  // Render ground tile wireframe
+  // Render solid 3D ground pedestal and grid
   const renderGroundGrid = () => {
-    const tiles: React.ReactNode[] = [];
-    for (let x = 0; x < GRID_SIZE; x++) {
-      for (let y = 0; y < GRID_SIZE; y++) {
-        const pTop = projectIso(x, y, 0, originX, originY, tileW, tileH, cubeH);
-        const pRight = projectIso(x + 1, y, 0, originX, originY, tileW, tileH, cubeH);
-        const pBottom = projectIso(x + 1, y + 1, 0, originX, originY, tileW, tileH, cubeH);
-        const pLeft = projectIso(x, y + 1, 0, originX, originY, tileW, tileH, cubeH);
-
-        const d = `M ${pTop.x} ${pTop.y} L ${pRight.x} ${pRight.y} L ${pBottom.x} ${pBottom.y} L ${pLeft.x} ${pLeft.y} Z`;
-        tiles.push(
-          <path
-            key={`ground-${x}-${y}`}
-            d={d}
-            fill="#090d16"
-            stroke="#1e293b"
-            strokeWidth="0.8"
-            className="transition-colors duration-200"
-          />
-        );
-      }
-    }
-    return tiles;
-  };
-
-  // Render an individual 3D cube with top, left, right faces
-  const renderCube = (c: { x: number; y: number; z: number }, index: number) => {
-    const { x, y, z } = c;
-    const pCenter = projectIso(x, y, z, originX, originY, tileW, tileH, cubeH);
-
-    // Top face vertices
-    const tTop = { x: pCenter.x, y: pCenter.y - cubeH - tileH / 2 };
-    const tRight = { x: pCenter.x + tileW / 2, y: pCenter.y - cubeH };
-    const tBottom = { x: pCenter.x, y: pCenter.y - cubeH + tileH / 2 };
-    const tLeft = { x: pCenter.x - tileW / 2, y: pCenter.y - cubeH };
-    const topPath = `M ${tTop.x} ${tTop.y} L ${tRight.x} ${tRight.y} L ${tBottom.x} ${tBottom.y} L ${tLeft.x} ${tLeft.y} Z`;
-
-    // Left face vertices
-    const lTop = tLeft;
-    const lRight = tBottom;
-    const lBottom = { x: pCenter.x, y: pCenter.y + tileH / 2 };
-    const lLeft = { x: pCenter.x - tileW / 2, y: pCenter.y };
-    const leftPath = `M ${lTop.x} ${lTop.y} L ${lRight.x} ${lRight.y} L ${lBottom.x} ${lBottom.y} L ${lLeft.x} ${lLeft.y} Z`;
-
-    // Right face vertices
-    const rTop = tBottom;
-    const rRight = tRight;
-    const rBottom = { x: pCenter.x + tileW / 2, y: pCenter.y };
-    const rLeft = { x: pCenter.x, y: pCenter.y + tileH / 2 };
-    const rightPath = `M ${rTop.x} ${rTop.y} L ${rRight.x} ${rRight.y} L ${rBottom.x} ${rBottom.y} L ${rLeft.x} ${rLeft.y} Z`;
+    const pTop = projectIso(0, 0, 0, originX, originY, tileW, tileH, cubeH);
+    const pRight = projectIso(GRID_SIZE, 0, 0, originX, originY, tileW, tileH, cubeH);
+    const pBottom = projectIso(GRID_SIZE, GRID_SIZE, 0, originX, originY, tileW, tileH, cubeH);
+    const pLeft = projectIso(0, GRID_SIZE, 0, originX, originY, tileW, tileH, cubeH);
 
     return (
-      <g key={`cube-${x}-${y}-${z}-${index}`} className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
-        {/* Left Face (Medium shade) */}
+      <g key="ground-platform">
+        {/* Ambient shadow underneath platform */}
+        <ellipse
+          cx={originX}
+          cy={pBottom.y + slabH + 4}
+          rx={tileW * 2.8}
+          ry={tileH * 1.5}
+          fill="rgba(0, 0, 0, 0.45)"
+          className="filter blur-[6px]"
+        />
+
+        {/* 3D Platform Left Wall */}
+        <path
+          d={`M ${pLeft.x} ${pLeft.y} L ${pBottom.x} ${pBottom.y} L ${pBottom.x} ${pBottom.y + slabH} L ${pLeft.x} ${pLeft.y + slabH} Z`}
+          fill="#0c111d"
+          stroke="#1e293b"
+          strokeWidth="0.8"
+        />
+
+        {/* 3D Platform Right Wall */}
+        <path
+          d={`M ${pBottom.x} ${pBottom.y} L ${pRight.x} ${pRight.y} L ${pRight.x} ${pRight.y + slabH} L ${pBottom.x} ${pBottom.y + slabH} Z`}
+          fill="#070a12"
+          stroke="#1e293b"
+          strokeWidth="0.8"
+        />
+
+        {/* Platform Top Grid Tiles */}
+        {Array.from({ length: GRID_SIZE }).map((_, x) =>
+          Array.from({ length: GRID_SIZE }).map((_, y) => {
+            const t0 = projectIso(x, y, 0, originX, originY, tileW, tileH, cubeH);
+            const t1 = projectIso(x + 1, y, 0, originX, originY, tileW, tileH, cubeH);
+            const t2 = projectIso(x + 1, y + 1, 0, originX, originY, tileW, tileH, cubeH);
+            const t3 = projectIso(x, y + 1, 0, originX, originY, tileW, tileH, cubeH);
+
+            const d = `M ${t0.x} ${t0.y} L ${t1.x} ${t1.y} L ${t2.x} ${t2.y} L ${t3.x} ${t3.y} Z`;
+            return (
+              <path
+                key={`ground-${x}-${y}`}
+                d={d}
+                fill="#0f1523"
+                stroke="#243048"
+                strokeWidth="0.75"
+              />
+            );
+          })
+        )}
+
+        {/* Outer glowing border for the platform surface */}
+        <path
+          d={`M ${pTop.x} ${pTop.y} L ${pRight.x} ${pRight.y} L ${pBottom.x} ${pBottom.y} L ${pLeft.x} ${pLeft.y} Z`}
+          fill="none"
+          stroke="#f59e0b"
+          strokeWidth="1.2"
+          strokeOpacity="0.4"
+        />
+      </g>
+    );
+  };
+
+  // Render an individual 3D cube resting solidly on its base
+  const renderCube = (c: { x: number; y: number; z: number }, index: number) => {
+    const { x, y, z } = c;
+    // Bottom 4 vertices at elevation z (sits directly on ground grid or cube below)
+    const bTop = projectIso(x, y, z, originX, originY, tileW, tileH, cubeH);
+    const bRight = projectIso(x + 1, y, z, originX, originY, tileW, tileH, cubeH);
+    const bBottom = projectIso(x + 1, y + 1, z, originX, originY, tileW, tileH, cubeH);
+    const bLeft = projectIso(x, y + 1, z, originX, originY, tileW, tileH, cubeH);
+
+    // Top 4 vertices at elevation z + 1
+    const tTop = { x: bTop.x, y: bTop.y - cubeH };
+    const tRight = { x: bRight.x, y: bRight.y - cubeH };
+    const tBottom = { x: bBottom.x, y: bBottom.y - cubeH };
+    const tLeft = { x: bLeft.x, y: bLeft.y - cubeH };
+
+    // Isometric faces
+    const topPath = `M ${tTop.x} ${tTop.y} L ${tRight.x} ${tRight.y} L ${tBottom.x} ${tBottom.y} L ${tLeft.x} ${tLeft.y} Z`;
+    const leftPath = `M ${tLeft.x} ${tLeft.y} L ${tBottom.x} ${tBottom.y} L ${bBottom.x} ${bBottom.y} L ${bLeft.x} ${bLeft.y} Z`;
+    const rightPath = `M ${tBottom.x} ${tBottom.y} L ${tRight.x} ${tRight.y} L ${bRight.x} ${bRight.y} L ${bBottom.x} ${bBottom.y} Z`;
+
+    return (
+      <g key={`cube-${x}-${y}-${z}-${index}`} className="drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]">
+        {/* Left Face */}
         <path
           d={leftPath}
           fill="url(#cubeLeftGrad)"
-          stroke="#f59e0b"
-          strokeOpacity="0.4"
+          stroke="#b45309"
+          strokeOpacity="0.5"
           strokeWidth="0.8"
         />
-        {/* Right Face (Darkest shade) */}
+        {/* Right Face */}
         <path
           d={rightPath}
           fill="url(#cubeRightGrad)"
-          stroke="#d97706"
-          strokeOpacity="0.4"
+          stroke="#78350f"
+          strokeOpacity="0.5"
           strokeWidth="0.8"
         />
-        {/* Top Face (Highlight, lightest) */}
+        {/* Top Face */}
         <path
           d={topPath}
           fill="url(#cubeTopGrad)"
-          stroke="#fbbf24"
-          strokeOpacity="0.8"
-          strokeWidth="1"
+          stroke="#fde68a"
+          strokeOpacity="0.75"
+          strokeWidth="0.9"
         />
       </g>
     );
@@ -562,15 +599,50 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
                 </motion.div>
               )}
 
-              {/* Flash Bar Animation Indicator */}
-              {phase === 'FLASH' && (
-                <div className="absolute top-2 left-3 right-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-amber-400 shadow-[0_0_8px_#f59e0b]"
-                    initial={{ width: '100%' }}
-                    animate={{ width: '0%' }}
-                    transition={{ duration: flashDurationMs / 1000, ease: 'linear' }}
-                  />
+              {/* Top-Right Circular Phase Countdown Timer */}
+              {(phase === 'FLASH' || phase === 'INPUT') && (
+                <div className="absolute top-2.5 right-2.5 z-20 flex items-center justify-center pointer-events-none">
+                  <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-black/75 backdrop-blur-md border border-white/10 shadow-lg">
+                    <svg className="w-10 h-10 -rotate-90 transform" viewBox="0 0 40 40">
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r="16"
+                        className="text-white/10"
+                        strokeWidth="3"
+                        stroke="currentColor"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r="16"
+                        className={phase === 'FLASH' ? 'text-amber-400' : 'text-cyan-400'}
+                        strokeWidth="3"
+                        strokeDasharray={2 * Math.PI * 16}
+                        strokeDashoffset={
+                          2 *
+                          Math.PI *
+                          16 *
+                          (1 -
+                            Math.max(
+                              0,
+                              Math.min(
+                                1,
+                                timeRemainingMs / (phase === 'FLASH' ? flashDurationMs : 6000)
+                              )
+                            ))
+                        }
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="transparent"
+                        style={{ transition: 'stroke-dashoffset 80ms linear' }}
+                      />
+                    </svg>
+                    <span className="absolute font-mono font-black text-xs text-white">
+                      {Math.max(0, Math.ceil(timeRemainingMs / 1000))}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -578,17 +650,11 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
             {/* Input Phase: Integrated Virtual On-Screen Numpad */}
             {phase === 'INPUT' && (
               <div className="w-full flex flex-col items-center space-y-2 mt-1">
-                {/* Answer Display Row & Countdown Timer */}
-                <div className="w-full space-y-1.5">
-                  <div className="w-full flex items-center justify-between p-2 rounded-xl bg-black/60 border border-amber-500/40">
+                {/* Answer Display Row */}
+                <div className="w-full">
+                  <div className="w-full flex items-center justify-between p-2.5 rounded-xl bg-black/60 border border-amber-500/40 shadow-md">
                     <div className="flex items-center space-x-2">
-                      <div className="px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center space-x-1 shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-                        <span className="text-xs font-mono font-black text-amber-300">
-                          {Math.max(0, Math.ceil(timeRemainingMs / 1000))}s
-                        </span>
-                      </div>
-                      <span className="text-xs font-chakra text-slate-300">
+                      <span className="text-xs font-chakra text-slate-300 font-medium">
                         {role === 'player'
                           ? submittedThisRound
                             ? t('cubecount.answerSubmitted', { count: submittedValue ?? 0 })
@@ -597,19 +663,11 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center space-x-1 shrink-0 ml-2">
-                      <span className="text-lg font-mono font-black text-amber-400 tracking-wider">
+                      <span className="text-xl font-mono font-black text-amber-400 tracking-wider">
                         {role === 'player' ? (submittedThisRound ? submittedValue : typedInput || '0') : '--'}
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-400">{t('cubecount.cubesUnit')}</span>
                     </div>
-                  </div>
-
-                  {/* 6s Visual Timer Progress Bar */}
-                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-100 ease-linear shadow-[0_0_8px_#f59e0b]"
-                      style={{ width: `${Math.min(100, Math.max(0, (timeRemainingMs / 6000) * 100))}%` }}
-                    />
                   </div>
                 </div>
 

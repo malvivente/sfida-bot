@@ -146,11 +146,13 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   });
   const latestGameDataRef = useRef<HeadSoccerState | undefined>(gameData);
 
-  // Active button press visuals
+  // Active button press visuals & immediate zero-latency refs
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
   const [jumpPressed, setJumpPressed] = useState(false);
   const [kickPressed, setKickPressed] = useState(false);
+  const isLeftPressedRef = useRef(false);
+  const isRightPressedRef = useRef(false);
 
   // 2-Phase Settlement Popup state
   const [outcomePhase, setOutcomePhase] = useState<'idle' | 'splash' | 'settled'>('idle');
@@ -170,11 +172,13 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   // Ensure movement inputs are released if phase changes away from PLAYING
   useEffect(() => {
     if (roomState !== 'GAME_ACTIVE' || (gameData?.phase && gameData.phase !== 'PLAYING')) {
-      if (leftPressed) {
+      if (leftPressed || isLeftPressedRef.current) {
+        isLeftPressedRef.current = false;
         setLeftPressed(false);
         onInput({ left: false });
       }
-      if (rightPressed) {
+      if (rightPressed || isRightPressedRef.current) {
+        isRightPressedRef.current = false;
         setRightPressed(false);
         onInput({ right: false });
       }
@@ -288,14 +292,36 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           const rs = renderStateRef.current;
 
           if (gd) {
-            // Highly responsive interpolation to eliminate lag
-            const pLerp = 0.68;
-            rs.pAx += (gd.playerA.x - rs.pAx) * pLerp;
-            rs.pAy += (gd.playerA.y - rs.pAy) * pLerp;
+            const isLocalPlayer = role === 'player' && roomState === 'GAME_ACTIVE' && gd.phase === 'PLAYING';
+            const isUserA = userSide === 'A';
+            const isUserB = userSide === 'B';
+
+            // Local client prediction for Player A
+            if (isLocalPlayer && isUserA) {
+              const dir = (isRightPressedRef.current ? 1 : 0) - (isLeftPressedRef.current ? 1 : 0);
+              rs.pAx += dir * 7.4;
+              if (rs.pAx < 113) rs.pAx = 113;
+              if (rs.pAx > 687) rs.pAx = 687;
+              rs.pAx += (gd.playerA.x - rs.pAx) * 0.35;
+              rs.pAy += (gd.playerA.y - rs.pAy) * 0.85;
+            } else {
+              rs.pAx += (gd.playerA.x - rs.pAx) * 0.82;
+              rs.pAy += (gd.playerA.y - rs.pAy) * 0.85;
+            }
             rs.pAkick = gd.playerA.kickTimer;
 
-            rs.pBx += (gd.playerB.x - rs.pBx) * pLerp;
-            rs.pBy += (gd.playerB.y - rs.pBy) * pLerp;
+            // Local client prediction for Player B
+            if (isLocalPlayer && isUserB) {
+              const dir = (isRightPressedRef.current ? 1 : 0) - (isLeftPressedRef.current ? 1 : 0);
+              rs.pBx += dir * 7.4;
+              if (rs.pBx < 113) rs.pBx = 113;
+              if (rs.pBx > 687) rs.pBx = 687;
+              rs.pBx += (gd.playerB.x - rs.pBx) * 0.35;
+              rs.pBy += (gd.playerB.y - rs.pBy) * 0.85;
+            } else {
+              rs.pBx += (gd.playerB.x - rs.pBx) * 0.82;
+              rs.pBy += (gd.playerB.y - rs.pBy) * 0.85;
+            }
             rs.pBkick = gd.playerB.kickTimer;
 
             if (Math.hypot(gd.ball.x - rs.bx, gd.ball.y - rs.by) > 180) {
@@ -304,10 +330,10 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               trailRef.current = [];
             } else {
               // Smooth velocity extrapolation to eliminate 30Hz network micro-stutter
-              rs.bx += gd.ball.vx * 0.28;
-              rs.by += gd.ball.vy * 0.28;
-              rs.bx += (gd.ball.x - rs.bx) * 0.62;
-              rs.by += (gd.ball.y - rs.by) * 0.62;
+              rs.bx += gd.ball.vx * 0.32;
+              rs.by += gd.ball.vy * 0.32;
+              rs.bx += (gd.ball.x - rs.bx) * 0.72;
+              rs.by += (gd.ball.y - rs.by) * 0.72;
             }
             rs.bAngle += gd.ball.vx * 0.04;
             rs.isSuper = gd.ball.isSuperShot;
@@ -607,6 +633,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const handleMoveLeft = useCallback(
     (active: boolean) => {
       if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+      isLeftPressedRef.current = active;
       setLeftPressed(active);
       onInput({ left: active });
       if (active) triggerImpact('light');
@@ -617,6 +644,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const handleMoveRight = useCallback(
     (active: boolean) => {
       if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+      isRightPressedRef.current = active;
       setRightPressed(active);
       onInput({ right: active });
       if (active) triggerImpact('light');

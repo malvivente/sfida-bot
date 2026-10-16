@@ -13,9 +13,48 @@ import { areAddressesEqual } from '../utils/ton.js';
 import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { EpicBanners } from './EpicBanners.js';
-import { LiveActivityTicker } from './LiveActivityTicker.js';
 import { PlayHubView } from './PlayHubView.js';
+import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
+
+const GAME_CARD_THEMES: Record<string, { bg: string; border: string }> = {
+  shotgun: {
+    bg: 'from-red-950/45 via-[#181216] to-[#0d0f18]',
+    border: 'border-red-500/30 hover:border-red-500/60',
+  },
+  connect4: {
+    bg: 'from-blue-950/45 via-[#121626] to-[#0d0f18]',
+    border: 'border-blue-500/30 hover:border-blue-500/60',
+  },
+  split: {
+    bg: 'from-purple-950/45 via-[#191326] to-[#0d0f18]',
+    border: 'border-purple-500/30 hover:border-purple-500/60',
+  },
+  cubecount: {
+    bg: 'from-amber-950/45 via-[#1c1612] to-[#0d0f18]',
+    border: 'border-amber-500/30 hover:border-amber-500/60',
+  },
+  roulette: {
+    bg: 'from-rose-950/45 via-[#1c1218] to-[#0d0f18]',
+    border: 'border-rose-500/30 hover:border-rose-500/60',
+  },
+  blackjack: {
+    bg: 'from-teal-950/45 via-[#111c1d] to-[#0d0f18]',
+    border: 'border-teal-500/30 hover:border-teal-500/60',
+  },
+  bridge: {
+    bg: 'from-cyan-950/45 via-[#101b22] to-[#0d0f18]',
+    border: 'border-cyan-500/30 hover:border-cyan-500/60',
+  },
+  chrono: {
+    bg: 'from-orange-950/45 via-[#1c1410] to-[#0d0f18]',
+    border: 'border-orange-500/30 hover:border-orange-500/60',
+  },
+  headsoccer: {
+    bg: 'from-emerald-950/45 via-[#101c18] to-[#0d0f18]',
+    border: 'border-emerald-500/30 hover:border-emerald-400/60',
+  },
+};
 
 const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => {
   const { t } = useI18n();
@@ -147,7 +186,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
-  const [lobbySubSection, setLobbySubSection] = useState<'ALL' | 'OPEN' | 'MY_DUELS' | 'LIVE' | 'DIRECT'>('ALL');
+  const [lobbySubSection, setLobbySubSection] = useState<'PUBLIC' | 'PRIVATE' | 'OPEN' | 'MY_DUELS' | 'DIRECT'>('PUBLIC');
   const [targetOpponentInput, setTargetOpponentInput] = useState<string>('');
   const [showFriendPicker, setShowFriendPicker] = useState<boolean>(false);
   const [friendsList, setFriendsList] = useState<FriendUser[]>([]);
@@ -391,22 +430,25 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     return isA || isB || isTarget;
   }).length;
 
+  const publicRoomsCount = matches.filter((m) => !m.isPrivate).length;
+  const privateRoomsCount = matches.filter((m) => m.isPrivate).length;
   const openRoomsCount = matches.filter((m) => m.state === 'LOBBY' && !m.playerB).length;
-  const liveMatchesCount = matches.filter((m) => m.state !== 'LOBBY' || m.playerB).length;
   const directChallengesCount = matches.filter((m) => Boolean(m.targetOpponentUsername || m.targetOpponentId)).length;
 
   const filteredMatches = matches
     .filter((m: MatchData) => {
-      // 0. Subsection filter
-      if (lobbySubSection === 'OPEN') {
+      // 0. Subsection filter: division between Public and Private, plus Open / My Duels / Direct
+      if (lobbySubSection === 'PUBLIC') {
+        if (m.isPrivate) return false;
+      } else if (lobbySubSection === 'PRIVATE') {
+        if (!m.isPrivate) return false;
+      } else if (lobbySubSection === 'OPEN') {
         if (m.playerB !== null || m.state !== 'LOBBY') return false;
       } else if (lobbySubSection === 'MY_DUELS') {
         const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
         const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
         const isTarget = isTargetForDuel(m);
         if (!isA && !isB && !isTarget) return false;
-      } else if (lobbySubSection === 'LIVE') {
-        if (m.state === 'LOBBY' && !m.playerB) return false;
       } else if (lobbySubSection === 'DIRECT') {
         if (!m.targetOpponentUsername && !m.targetOpponentId) return false;
       }
@@ -573,20 +615,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         />
       ) : (
         <>
-          {/* Live Activity Ticker (Real-time and previous victories ticker) */}
-          <LiveActivityTicker
-            matches={matches}
-            onSelectGame={(g) => {
-              if (onNavigateToDuels) {
-                onNavigateToDuels(g);
-              } else {
-                setFilterGameType(g);
-                setPreviousView('hub');
-                setSectionView('pvp');
-              }
-            }}
-          />
-
           {/* Epic Banners only in Hub mode */}
           {showBanners && sectionView === 'hub' && (
             <EpicBanners
@@ -660,10 +688,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         {/* Subsection Filter Tabs */}
         <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1">
           {[
-            { id: 'ALL', label: t('lobby.subsections.all'), count: matches.length, hasIncoming: false },
+            { id: 'PUBLIC', label: t('lobby.subsections.public'), count: publicRoomsCount, hasIncoming: false },
+            { id: 'PRIVATE', label: t('lobby.subsections.private'), count: privateRoomsCount, hasIncoming: false },
             { id: 'OPEN', label: t('lobby.subsections.waiting'), count: openRoomsCount, hasIncoming: false },
             { id: 'MY_DUELS', label: t('lobby.subsections.myDuels'), count: myDuelsCount, hasIncoming: incomingDirectMatches.length > 0 },
-            { id: 'LIVE', label: t('lobby.subsections.live'), count: liveMatchesCount, hasIncoming: false },
             { id: 'DIRECT', label: t('lobby.subsections.direct'), count: directChallengesCount, hasIncoming: incomingDirectMatches.length > 0 },
           ].map((tab) => {
             const isActive = lobbySubSection === tab.id;
@@ -1056,115 +1084,112 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               const isTargetForThisDuel = isTargetForDuel(m);
 
               const effectiveInviteCode = getMatchInviteCode(m);
+              const gameTheme = GAME_CARD_THEMES[m.gameType || 'roulette'] || {
+                bg: 'from-[#181b29] to-[#121420]',
+                border: 'border-white/10 hover:border-purple-500/40',
+              };
 
               return (
                 <div
-                  key={m.matchId}
-                  className={`bg-gradient-to-b from-[#181b29] to-[#121420] border ${
-                    isTargetForThisDuel && m.state === 'LOBBY' && !m.playerB
-                      ? 'border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50'
-                      : 'border-white/10 hover:border-purple-500/40 shadow-xl hover:shadow-purple-900/10'
-                  } rounded-3xl p-4 transition-all`}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                        <span className="text-xs font-heading font-extrabold text-white tracking-wide">
-                          MATCH #{m.matchId}
-                        </span>
-                        <span
-                          className={`text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border ${
-                            m.state === 'LOBBY'
-                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                          }`}
-                        >
-                          {m.state}
-                        </span>
-                        <span
-                          className={`text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border ${gameMeta.borderColor.split(' ')[0]} ${gameMeta.accentColor} bg-black/60`}
-                        >
-                          {gameMeta.title}
-                        </span>
-                        {m.isPrivate && (
-                          <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/15 text-purple-300 flex items-center space-x-1">
-                            <Lock className="w-2.5 h-2.5" />
-                            <span>{t('lobby.privateBadge')}</span>
+                    key={m.matchId}
+                    className={`relative overflow-hidden rounded-3xl p-4 transition-all bg-gradient-to-br ${gameTheme.bg} border ${
+                      isTargetForThisDuel && m.state === 'LOBBY' && !m.playerB
+                        ? 'border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50'
+                        : `${gameTheme.border} shadow-xl hover:shadow-2xl`
+                    }`}
+                  >
+                    {/* Game Art Background Watermark */}
+                    <CardBackgroundArt
+                      type={m.gameType as any}
+                      className="absolute -right-3 top-1/2 -translate-y-1/2 w-32 sm:w-36 h-auto opacity-20 pointer-events-none select-none transition-transform group-hover:scale-105"
+                    />
+
+                    <div className="flex justify-between items-start mb-3 relative z-10">
+                      <div>
+                        {/* Minimal 3-Badge Header: 1) Lobby State, 2) Game Title, 3) Expiry Countdown */}
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                          {/* 1. Dynamic Lobby State Badge */}
+                          <span
+                            className={`text-[10px] font-heading font-black px-2.5 py-0.5 rounded-full border ${
+                              m.state === 'LOBBY'
+                                ? m.playerB
+                                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50'
+                                  : 'bg-amber-500/20 text-amber-300 border-amber-400/50 animate-pulse'
+                                : m.state === 'BETTING_WINDOW'
+                                ? 'bg-purple-500/20 text-purple-300 border-purple-400/50 animate-pulse'
+                                : m.state === 'GAME_ACTIVE'
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50'
+                                : 'bg-slate-700/40 text-slate-300 border-slate-600/40'
+                            }`}
+                          >
+                            {m.state === 'LOBBY'
+                              ? m.playerB
+                                ? t('lobby.stateReady')
+                                : t('lobby.stateWaiting')
+                              : m.state === 'BETTING_WINDOW'
+                              ? t('lobby.stateBetting')
+                              : m.state === 'GAME_ACTIVE'
+                              ? t('lobby.stateLive')
+                              : t('lobby.stateFinished')}
                           </span>
-                        )}
-                        {m.groupChatId && (
-                          <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/15 text-cyan-300 flex items-center space-x-1">
-                            <MessageSquare className="w-2.5 h-2.5" />
-                            <span>COMMUNITY</span>
+
+                          {/* 2. Game Title Badge */}
+                          <span
+                            className={`text-[10px] font-heading font-black px-2.5 py-0.5 rounded-full border ${gameMeta.borderColor.split(' ')[0]} ${gameMeta.accentColor} bg-black/60 shadow-sm`}
+                          >
+                            {gameMeta.title}
                           </span>
-                        )}
-                        {m.createdAt && (
-                          <span className="text-[10px] text-slate-400 font-sans flex items-center space-x-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10" title={t('lobby.createdAtTooltip')}>
-                            <Clock className="w-2.5 h-2.5 text-slate-400" />
-                            <span>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </span>
-                        )}
-                        {m.state === 'LOBBY' && !m.playerB && m.expiresAt && (
-                          <RoomCountdownBadge expiresAt={m.expiresAt} />
-                        )}
-                        {m.targetOpponentUsername && (
-                          <span className="text-[10px] font-heading font-bold px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-300 flex items-center space-x-1">
-                            <Target className="w-2.5 h-2.5" />
-                            <span>@{m.targetOpponentUsername.replace(/^@/, '')}</span>
-                          </span>
-                        )}
-                        {isTargetForThisDuel && m.state === 'LOBBY' && !m.playerB && (
-                          <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full border border-amber-400 bg-amber-400/20 text-amber-300 flex items-center space-x-1 animate-pulse">
-                            <Target className="w-2.5 h-2.5 text-amber-400" />
-                            <span>{t('lobby.challengeForYouBadge')}</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-400 font-sans mt-1.5 space-y-1">
-                        <div className="flex items-center space-x-1.5 flex-wrap">
-                          <span className="text-[11px] text-slate-400">{t('lobby.createdByName')}</span>
-                          <span className="inline-flex items-center space-x-1.5 text-slate-200 font-semibold">
-                            <UserAvatar
-                              name={cleanPlayerName(m.playerA.name)}
-                              photoUrl={m.playerA.photoUrl}
-                              sizeClass="w-4 h-4"
-                              textClass="text-[8px]"
-                            />
-                            <span>{cleanPlayerName(m.playerA.name)}</span>
-                          </span>
-                          {isCreator && (
-                            <span className="text-[10px] text-purple-300 font-bold font-sans bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded-md">
-                              {t('lobby.yourDuelTag')}
-                            </span>
+
+                          {/* 3. Expiry Countdown Timer */}
+                          {m.state === 'LOBBY' && !m.playerB && m.expiresAt && (
+                            <RoomCountdownBadge expiresAt={m.expiresAt} />
                           )}
                         </div>
-                        {m.playerB && (
-                          <div className="flex items-center space-x-1.5 text-[11px] text-slate-400">
-                            <span>vs</span>
-                            <span className="inline-flex items-center space-x-1.5 text-purple-300 font-semibold">
+                        <div className="text-xs text-slate-400 font-sans mt-1.5 space-y-1">
+                          <div className="flex items-center space-x-1.5 flex-wrap">
+                            <span className="text-[11px] text-slate-400">{t('lobby.createdByName')}</span>
+                            <span className="inline-flex items-center space-x-1.5 text-slate-200 font-semibold">
                               <UserAvatar
-                                name={cleanPlayerName(m.playerB.name)}
-                                photoUrl={m.playerB.photoUrl}
+                                name={cleanPlayerName(m.playerA.name)}
+                                photoUrl={m.playerA.photoUrl}
                                 sizeClass="w-4 h-4"
                                 textClass="text-[8px]"
                               />
-                              <span>{cleanPlayerName(m.playerB.name)}</span>
+                              <span>{cleanPlayerName(m.playerA.name)}</span>
                             </span>
+                            {isCreator && (
+                              <span className="text-[10px] text-purple-300 font-bold font-sans bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded-md">
+                                {t('lobby.yourDuelTag')}
+                              </span>
+                            )}
                           </div>
-                        )}
+                          {m.playerB && (
+                            <div className="flex items-center space-x-1.5 text-[11px] text-slate-400">
+                              <span>vs</span>
+                              <span className="inline-flex items-center space-x-1.5 text-purple-300 font-semibold">
+                                <UserAvatar
+                                  name={cleanPlayerName(m.playerB.name)}
+                                  photoUrl={m.playerB.photoUrl}
+                                  sizeClass="w-4 h-4"
+                                  textClass="text-[8px]"
+                                />
+                                <span>{cleanPlayerName(m.playerB.name)}</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[11px] text-slate-400 font-sans block">{t('lobby.poolLabel')}</span>
+                        <span className="text-sm font-heading font-black text-amber-300 flex items-center justify-end space-x-1">
+                          <span>{totalPotGram}</span>
+                          <GramIcon className="w-3.5 h-3.5 text-amber-400" />
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-[11px] text-slate-400 font-sans block">{t('lobby.poolLabel')}</span>
-                      <span className="text-sm font-heading font-black text-amber-300 flex items-center justify-end space-x-1">
-                        <span>{totalPotGram}</span>
-                        <GramIcon className="w-3.5 h-3.5 text-amber-400" />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-2xl p-2.5 mb-3 text-xs font-sans">
+                  <div className="flex items-center justify-between bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 mb-3 text-xs font-sans relative z-10 backdrop-blur-xs">
                     <span className="text-slate-400">{t('lobby.wagerLabel')}:</span>
                     <span className="text-white font-bold flex items-center space-x-1">
                       <span>{wagerGram}</span>
@@ -1173,7 +1198,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 relative z-10">
                     {/* If user is already a participant, provide direct RESUME DUEL button */}
                     {isAlreadyPlayer ? (
                       <button

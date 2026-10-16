@@ -324,6 +324,11 @@ export class HeadSoccerRoom extends BaseGameRoom {
     if (input.kickCooldown > 0) input.kickCooldown -= 1;
     if (p.kickTimer > 0) p.kickTimer -= 1;
 
+    // If Super Shot is armed, auto-fire immediately upon reaching or touching ball
+    if (p.superActive) {
+      this.tryKickBall(side, p);
+    }
+
     if (input.kick && input.kickCooldown <= 0) {
       p.kickTimer = 8;
       input.kickCooldown = 12;
@@ -357,11 +362,13 @@ export class HeadSoccerRoom extends BaseGameRoom {
     const dy = this.ball.y - footY;
     const dist = Math.hypot(dx, dy);
 
-    if (dist <= 68) {
+    const maxDist = p.superActive ? 78 : 68;
+
+    if (dist <= maxDist) {
       const now = Date.now();
       this.ball.lastTouch = side;
 
-      if (p.superActive || p.superCharge >= 100 && this.inputFor(side).super) {
+      if (p.superActive || (p.superCharge >= 100 && this.inputFor(side).super)) {
         // Unleash Super Shot!
         p.superActive = false;
         p.superCharge = 0;
@@ -517,6 +524,12 @@ export class HeadSoccerRoom extends BaseGameRoom {
       if (this.ball.isSuperShot && this.ball.superOwner !== side) {
         p.x = Math.max(GOAL_LINE_LEFT, Math.min(GOAL_LINE_RIGHT, p.x - dir * 18));
         this.ball.isSuperShot = false;
+      }
+
+      // If Super Shot is armed, auto-fire immediately on ball contact
+      if (p.superActive) {
+        this.tryKickBall(side, p);
+        return;
       }
 
       // If player is actively swinging shoe (`kickTimer > 0`), trigger kick impulse
