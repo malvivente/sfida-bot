@@ -40,7 +40,8 @@ const TICK_MS = Math.round(1000 / TICK_RATE_HZ); // 33ms
 interface PlayerInputState {
   left: boolean;
   right: boolean;
-  jump: boolean;
+  jumpBufferTicks: number; // short buffer window (~160ms) to prevent stuck input or phantom landing jumps
+  jumpCooldownTicks: number; // minimum delay between jumps (~360ms) to strictly prevent double jumping
   kick: boolean;
   super: boolean;
   kickCooldown: number;
@@ -62,7 +63,8 @@ export class HeadSoccerRoom extends BaseGameRoom {
   private inputA: PlayerInputState = {
     left: false,
     right: false,
-    jump: false,
+    jumpBufferTicks: 0,
+    jumpCooldownTicks: 0,
     kick: false,
     super: false,
     kickCooldown: 0,
@@ -71,7 +73,8 @@ export class HeadSoccerRoom extends BaseGameRoom {
   private inputB: PlayerInputState = {
     left: false,
     right: false,
-    jump: false,
+    jumpBufferTicks: 0,
+    jumpCooldownTicks: 0,
     kick: false,
     super: false,
     kickCooldown: 0,
@@ -163,8 +166,8 @@ export class HeadSoccerRoom extends BaseGameRoom {
   }
 
   private resetInputs() {
-    this.inputA = { left: false, right: false, jump: false, kick: false, super: false, kickCooldown: 0, goalCampTicks: 0 };
-    this.inputB = { left: false, right: false, jump: false, kick: false, super: false, kickCooldown: 0, goalCampTicks: 0 };
+    this.inputA = { left: false, right: false, jumpBufferTicks: 0, jumpCooldownTicks: 0, kick: false, super: false, kickCooldown: 0, goalCampTicks: 0 };
+    this.inputB = { left: false, right: false, jumpBufferTicks: 0, jumpCooldownTicks: 0, kick: false, super: false, kickCooldown: 0, goalCampTicks: 0 };
   }
 
   private startKickoffCountdown(seconds: number, kickoffTo?: 'A' | 'B') {
@@ -283,11 +286,19 @@ export class HeadSoccerRoom extends BaseGameRoom {
       input.goalCampTicks = Math.max(0, input.goalCampTicks - 2);
     }
 
-    // Jump
-    if (input.jump && p.isGrounded) {
-      p.vy = JUMP_VELOCITY;
-      p.isGrounded = false;
-      input.jump = false;
+    // Jump Cooldown & Execution with buffer to prevent double jumps
+    if (input.jumpCooldownTicks > 0) {
+      input.jumpCooldownTicks -= 1;
+    }
+    if (input.jumpBufferTicks > 0) {
+      if (p.isGrounded && input.jumpCooldownTicks <= 0) {
+        p.vy = JUMP_VELOCITY;
+        p.isGrounded = false;
+        input.jumpBufferTicks = 0;
+        input.jumpCooldownTicks = 11; // ~360ms cooldown before another jump
+      } else {
+        input.jumpBufferTicks -= 1;
+      }
     }
 
     // Gravity
@@ -301,15 +312,12 @@ export class HeadSoccerRoom extends BaseGameRoom {
       }
     }
 
-    // Super activation
-    if (input.super && p.superCharge >= 100) {
-      p.superActive = true;
-      input.super = false;
-      // If ball is already close when pressing SUPER, trigger kick automatically
-      const distToBall = Math.hypot(this.ball.x - p.x, this.ball.y - p.y);
-      if (distToBall <= 86 && input.kickCooldown <= 0) {
-        input.kick = true;
+    // Super activation toggle (arms or disarms for the next kick)
+    if (input.super) {
+      if (p.superCharge >= 100 || p.superActive) {
+        p.superActive = !p.superActive;
       }
+      input.super = false;
     }
 
     // Kick timer & cooldown
@@ -565,6 +573,8 @@ export class HeadSoccerRoom extends BaseGameRoom {
     this.phase = 'GOAL_CELEBRATION';
     this.lastGoalBy = scorer;
     this.ball.isSuperShot = false;
+    this.pA.superActive = false;
+    this.pB.superActive = false;
 
     if (scorer === 'A') {
       this.playerA.score += 1;
@@ -680,9 +690,18 @@ export class HeadSoccerRoom extends BaseGameRoom {
 
     if (typeof data.left === 'boolean') targetInput.left = data.left;
     if (typeof data.right === 'boolean') targetInput.right = data.right;
-    if (data.jump === true) targetInput.jump = true;
+    if (data.jump === true) {
+      if (targetInput.jumpCooldownTicks <= 0) {
+        targetInput.jumpBufferTicks = 6;
+      }
+    }
     if (data.kick === true) targetInput.kick = true;
-    if (data.super === true) targetInput.super = true;
+    if (data.super === true) {
+      const p = isA ? this.pA : this.pB;
+      if (p.superCharge >= 100 || p.superActive) {
+        p.superActive = !p.superActive;
+      }
+    }
   }
 
   public cleanupGameTimers(): void {

@@ -129,6 +129,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const lastEventTsRef = useRef<number>(0);
   const screenShakeRef = useRef<number>(0);
   const floatingBannerRef = useRef<{ text: string; color: string; expiresAt: number } | null>(null);
+  const lastJumpTsRef = useRef<number>(0);
 
   // Smooth client-side interpolation target & current state
   const renderStateRef = useRef({
@@ -287,13 +288,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           const rs = renderStateRef.current;
 
           if (gd) {
-            const lerp = 0.48;
-            rs.pAx += (gd.playerA.x - rs.pAx) * lerp;
-            rs.pAy += (gd.playerA.y - rs.pAy) * lerp;
+            // Highly responsive interpolation to eliminate lag
+            const pLerp = 0.68;
+            rs.pAx += (gd.playerA.x - rs.pAx) * pLerp;
+            rs.pAy += (gd.playerA.y - rs.pAy) * pLerp;
             rs.pAkick = gd.playerA.kickTimer;
 
-            rs.pBx += (gd.playerB.x - rs.pBx) * lerp;
-            rs.pBy += (gd.playerB.y - rs.pBy) * lerp;
+            rs.pBx += (gd.playerB.x - rs.pBx) * pLerp;
+            rs.pBy += (gd.playerB.y - rs.pBy) * pLerp;
             rs.pBkick = gd.playerB.kickTimer;
 
             if (Math.hypot(gd.ball.x - rs.bx, gd.ball.y - rs.by) > 180) {
@@ -301,8 +303,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               rs.by = gd.ball.y;
               trailRef.current = [];
             } else {
-              rs.bx += (gd.ball.x - rs.bx) * lerp;
-              rs.by += (gd.ball.y - rs.by) * lerp;
+              // Smooth velocity extrapolation to eliminate 30Hz network micro-stutter
+              rs.bx += gd.ball.vx * 0.28;
+              rs.by += gd.ball.vy * 0.28;
+              rs.bx += (gd.ball.x - rs.bx) * 0.62;
+              rs.by += (gd.ball.y - rs.by) * 0.62;
             }
             rs.bAngle += gd.ball.vx * 0.04;
             rs.isSuper = gd.ball.isSuperShot;
@@ -369,16 +374,101 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           }
           trailRef.current = trailRef.current.filter((pt) => pt.alpha > 0.03);
 
-          // 4. Draw Player A (Left, Cyan)
-          const pASuperReady = (gd?.playerA.superCharge ?? 0) >= 100 || gd?.playerA.superActive;
-          if (pASuperReady) {
+          // Super Shot Visual Aura Renderer (Fiery / Electric Super Saiyan Aura)
+          const drawSuperAura = (
+            targetX: number,
+            targetY: number,
+            side: 'A' | 'B',
+            isArmed: boolean,
+            isCharged: boolean
+          ) => {
+            if (!isArmed && !isCharged) return;
+            const now = Date.now();
             ctx.save();
-            ctx.beginPath();
-            ctx.arc(rs.pAx, rs.pAy, 42, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(34, 211, 238, 0.22)';
-            ctx.fill();
+
+            if (isArmed) {
+              // 1. Concentric pulsing fiery halo
+              const pulse = 1 + 0.12 * Math.sin(now * 0.012);
+              const gradR = 48 * pulse;
+              const auraGrad = ctx.createRadialGradient(targetX, targetY, 8, targetX, targetY, gradR);
+              auraGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)'); // incandescent yellow core
+              auraGrad.addColorStop(0.35, 'rgba(249, 115, 22, 0.7)'); // flame orange
+              auraGrad.addColorStop(0.75, 'rgba(239, 68, 68, 0.4)'); // fiery red
+              auraGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+              ctx.beginPath();
+              ctx.arc(targetX, targetY, gradR, 0, Math.PI * 2);
+              ctx.fillStyle = auraGrad;
+              ctx.fill();
+
+              // 2. Rising flame sparks
+              for (let i = 0; i < 8; i++) {
+                const angle = now * 0.0035 + (i * Math.PI * 2) / 8;
+                const orbitR = 30 + Math.sin(now * 0.008 + i) * 6;
+                const progress = ((now * 0.045 + i * 16) % 40) / 40;
+                const fx = targetX + Math.cos(angle) * orbitR;
+                const fy = targetY + Math.sin(angle) * orbitR * 0.65 - progress * 32;
+                const alpha = Math.max(0, 0.9 - progress);
+
+                ctx.beginPath();
+                ctx.arc(fx, fy, 4 * (1 - progress * 0.6) + 1.5, 0, Math.PI * 2);
+                ctx.fillStyle =
+                  i % 2 === 0
+                    ? `rgba(253, 224, 71, ${alpha})`
+                    : `rgba(249, 115, 22, ${alpha})`;
+                ctx.fill();
+              }
+
+              // 3. Crackling electric arcs around player perimeter
+              ctx.strokeStyle = '#FDE047';
+              ctx.lineWidth = 1.8;
+              ctx.shadowColor = '#F59E0B';
+              ctx.shadowBlur = 8;
+              ctx.beginPath();
+              const segments = 8;
+              for (let s = 0; s <= segments; s++) {
+                const a = (s * Math.PI * 2) / segments + now * 0.002;
+                const jitter = Math.sin(now * 0.03 + s * 3) * 6;
+                const jx = targetX + Math.cos(a) * (36 + jitter);
+                const jy = targetY + Math.sin(a) * (36 + jitter);
+                if (s === 0) ctx.moveTo(jx, jy);
+                else ctx.lineTo(jx, jy);
+              }
+              ctx.stroke();
+
+              // 4. Floating "SUPER ARMED" banner over player head
+              ctx.shadowBlur = 0;
+              const badgeW = 78;
+              const badgeH = 15;
+              const badgeY = targetY - 62;
+              ctx.fillStyle = 'rgba(220, 38, 38, 0.95)';
+              ctx.strokeStyle = '#FDE047';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.roundRect(targetX - badgeW / 2, badgeY, badgeW, badgeH, 4);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.fillStyle = '#FFFFFF';
+              ctx.font = '900 8.5px Orbitron, monospace';
+              ctx.textAlign = 'center';
+              ctx.fillText('🔥 SUPER ARMED', targetX, badgeY + 11);
+            } else if (isCharged) {
+              // Subtle pulsing charge aura indicating ready to arm
+              const pulse = 1 + 0.08 * Math.sin(now * 0.008);
+              ctx.beginPath();
+              ctx.arc(targetX, targetY, 42 * pulse, 0, Math.PI * 2);
+              ctx.fillStyle = side === 'A' ? 'rgba(34, 211, 238, 0.28)' : 'rgba(251, 146, 60, 0.28)';
+              ctx.fill();
+            }
+
             ctx.restore();
-          }
+          };
+
+          // 4. Draw Player A (Left, Cyan)
+          const pASuperCharged = (gd?.playerA.superCharge ?? 0) >= 100;
+          const pASuperActive = Boolean(gd?.playerA.superActive);
+          drawSuperAura(rs.pAx, rs.pAy, 'A', pASuperActive, pASuperCharged);
 
           ctx.save();
           const shoeAX = rs.pAx + (rs.pAkick > 0 ? 22 : 8);
@@ -400,15 +490,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           }
 
           // 5. Draw Player B (Right, Orange)
-          const pBSuperReady = (gd?.playerB.superCharge ?? 0) >= 100 || gd?.playerB.superActive;
-          if (pBSuperReady) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(rs.pBx, rs.pBy, 42, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(251, 146, 60, 0.22)';
-            ctx.fill();
-            ctx.restore();
-          }
+          const pBSuperCharged = (gd?.playerB.superCharge ?? 0) >= 100;
+          const pBSuperActive = Boolean(gd?.playerB.superActive);
+          drawSuperAura(rs.pBx, rs.pBy, 'B', pBSuperActive, pBSuperCharged);
 
           ctx.save();
           const shoeBX = rs.pBx - (rs.pBkick > 0 ? 22 : 8);
@@ -431,8 +515,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           // "YOU" Floating Marker above active player's character
           if (role === 'player') {
+            const isMyPlayerArmed = userSide === 'A' ? pASuperActive : pBSuperActive;
             const myX = userSide === 'A' ? rs.pAx : rs.pBx;
-            const myY = (userSide === 'A' ? rs.pAy : rs.pBy) - 48;
+            const myY = (userSide === 'A' ? rs.pAy : rs.pBy) - (isMyPlayerArmed ? 82 : 48);
             const badgeColor = userSide === 'A' ? '#22D3EE' : '#FB923C';
 
             ctx.save();
@@ -541,6 +626,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
   const handleJump = useCallback(() => {
     if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+    const now = Date.now();
+    if (now - lastJumpTsRef.current < 350) return; // Strict 350ms debounce against double-jumping
+    lastJumpTsRef.current = now;
     setJumpPressed(true);
     onInput({ jump: true });
     triggerImpact('light');
@@ -557,7 +645,8 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
   const handleSuper = useCallback(() => {
     if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
-    onInput({ super: true, kick: true });
+    // Toggles armed state for next kick
+    onInput({ super: true });
     triggerImpact('heavy');
   }, [onInput, role, roomState, triggerImpact]);
 
@@ -606,9 +695,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const superChargeA = Math.round(gameData?.playerA.superCharge ?? 0);
   const superChargeB = Math.round(gameData?.playerB.superCharge ?? 0);
   const mySuperCharge = userSide === 'A' ? superChargeA : superChargeB;
-  const mySuperReady =
-    mySuperCharge >= 100 ||
-    (userSide === 'A' ? gameData?.playerA.superActive : gameData?.playerB.superActive);
+  const mySuperActive = Boolean(
+    userSide === 'A' ? gameData?.playerA.superActive : gameData?.playerB.superActive
+  );
+  const mySuperCanArm = mySuperCharge >= 100 || mySuperActive;
+  const mySuperReady = mySuperCanArm;
 
   const winnerPayoutTon = (parseFloat(wagerTon || '1') * 2.0).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
@@ -799,15 +890,17 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* FULL TIME (Time Expired) Overlay inside Screen */}
           {roomState === 'GAME_ACTIVE' && gameData?.phase === 'FULL_TIME' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm pointer-events-none animate-in fade-in duration-200 p-4 text-center">
-              <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400 text-amber-300 text-xs font-orbitron font-black uppercase tracking-widest mb-1.5 animate-pulse">
-                ⏱️ 0:00 • {t('headsoccer.fullTime')}
-              </span>
-              <span className="text-3xl sm:text-4xl font-orbitron font-black text-white drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm pointer-events-none animate-in zoom-in-95 duration-200 p-4 text-center">
+              <div className="px-3.5 py-1.5 rounded-full bg-amber-500/25 border-2 border-amber-400 text-amber-300 text-xs sm:text-sm font-orbitron font-black uppercase tracking-widest mb-2 shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-pulse flex items-center space-x-1.5">
+                <span>⏱️</span>
+                <span>{t('headsoccer.finalWhistle')}</span>
+              </div>
+              <span className="text-3xl sm:text-5xl font-orbitron font-black text-white drop-shadow-[0_0_25px_rgba(16,185,129,0.9)]">
                 {scoreA} - {scoreB}
               </span>
-              <span className="text-xs font-chakra text-slate-300 mt-1">
-                {t('headsoccer.fullTimeSub')}
+              <span className="text-xs font-chakra text-emerald-300 mt-2 flex items-center space-x-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin inline" />
+                <span>{t('headsoccer.settlingMatch')}</span>
               </span>
             </div>
           )}
@@ -858,184 +951,154 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
       {/* Classic Handheld Console Lower Deck — SHOWN TO PLAYERS DURING ACTIVE MATCH */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && (
-        <div className="w-full mt-3 pt-4 pb-5 px-3 sm:px-5 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-3">
+        <div className="w-full mt-3 pt-3.5 pb-4 px-2.5 sm:px-4 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-2.5">
           {/* Top SUPER SHOT Trigger Bar */}
-          <div className="w-full flex items-center justify-between gap-3">
+          <div className="w-full flex items-center justify-between gap-2">
             <div className="flex items-center space-x-1.5 opacity-60">
-              <div className="w-1.5 h-4 rounded-full bg-slate-600" />
-              <div className="w-1.5 h-4 rounded-full bg-slate-600" />
-              <div className="w-1.5 h-4 rounded-full bg-slate-600" />
+              <div className="w-1.5 h-3.5 rounded-full bg-slate-600" />
+              <div className="w-1.5 h-3.5 rounded-full bg-slate-600" />
+              <div className="w-1.5 h-3.5 rounded-full bg-slate-600" />
               <span className="text-[9px] font-orbitron font-bold text-slate-400 tracking-widest ml-1">
                 POCKET PAD
               </span>
             </div>
 
-            {/* Dedicated Wide SUPER SHOT Button */}
+            {/* Dedicated Wide SUPER SHOT Button with Active Armed State */}
             <button
               type="button"
-              disabled={!mySuperReady}
-              onTouchStart={(e) => {
+              disabled={!mySuperCanArm}
+              onPointerDown={(e) => {
                 e.preventDefault();
-                if (mySuperReady) handleSuper();
+                if (mySuperCanArm) handleSuper();
               }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (mySuperReady) handleSuper();
-              }}
-              className={`px-4 py-2 rounded-xl border-2 flex items-center space-x-2 transition-all touch-none select-none ${
-                mySuperReady
-                  ? 'bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 text-black border-yellow-200 shadow-[0_0_25px_rgba(249,115,22,0.85)] animate-pulse active:scale-95'
+              className={`px-3.5 py-1.5 rounded-xl border-2 flex items-center space-x-2 transition-all touch-none select-none ${
+                mySuperActive
+                  ? 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white border-yellow-300 shadow-[0_0_28px_rgba(249,115,22,1)] animate-pulse ring-2 ring-yellow-400 active:scale-95'
+                  : mySuperCharge >= 100
+                  ? 'bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 text-black border-yellow-200 shadow-[0_0_20px_rgba(249,115,22,0.85)] animate-pulse active:scale-95'
                   : 'bg-slate-900/90 text-slate-500 border-slate-700/80 cursor-not-allowed'
               }`}
             >
-              <Flame className={`w-4 h-4 ${mySuperReady ? 'text-black fill-black' : 'text-slate-600'}`} />
+              <Flame
+                className={`w-4 h-4 ${
+                  mySuperActive
+                    ? 'text-yellow-200 fill-yellow-200 animate-bounce'
+                    : mySuperCharge >= 100
+                    ? 'text-black fill-black'
+                    : 'text-slate-600'
+                }`}
+              />
               <span className="text-[11px] font-orbitron font-black uppercase tracking-wider">
-                SUPER SHOT
+                {mySuperActive ? t('headsoccer.superArmed') : 'SUPER SHOT'}
               </span>
               <span
                 className={`text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md ${
-                  mySuperReady ? 'bg-black/20 text-black' : 'bg-black/50 text-slate-400'
+                  mySuperActive
+                    ? 'bg-black/40 text-yellow-300'
+                    : mySuperCharge >= 100
+                    ? 'bg-black/20 text-black'
+                    : 'bg-black/50 text-slate-400'
                 }`}
               >
-                {mySuperReady ? 'READY!' : `${mySuperCharge}%`}
+                {mySuperActive
+                  ? 'ON'
+                  : mySuperCharge >= 100
+                  ? t('headsoccer.superReady')
+                  : `${mySuperCharge}%`}
               </span>
             </button>
           </div>
 
-          {/* Main Console Controls Row: Left D-Pad Cradle & Right Diagonal B / A Action Buttons */}
-          <div className="w-full flex items-center justify-between pt-1">
+          {/* Main Console Controls Row: Left D-Pad Cradle & Right Action Buttons */}
+          <div className="w-full flex items-center justify-between px-1">
             {/* Left Side: Recessed Console D-Pad (Left / Right) */}
-            <div className="flex flex-col items-center">
-              <div className="p-2 rounded-3xl bg-black/55 border border-slate-700/80 shadow-inner flex items-center space-x-2.5">
-                <button
-                  type="button"
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    handleMoveLeft(true);
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    handleMoveLeft(false);
-                  }}
-                  onTouchCancel={() => handleMoveLeft(false)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleMoveLeft(true);
-                  }}
-                  onMouseUp={() => handleMoveLeft(false)}
-                  onMouseLeave={() => {
-                    if (leftPressed) handleMoveLeft(false);
-                  }}
-                  className={`w-16 h-16 sm:w-[70px] sm:h-[70px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
-                    leftPressed
-                      ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
-                      : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_5px_0_#090d16] active:translate-y-1'
-                  }`}
-                >
-                  <ArrowLeft className="w-7 h-7 stroke-[2.8]" />
-                  <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
-                    {t('headsoccer.btnLeft')}
-                  </span>
-                </button>
+            <div className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2">
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleMoveLeft(true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  handleMoveLeft(false);
+                }}
+                onPointerCancel={() => handleMoveLeft(false)}
+                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                  leftPressed
+                    ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
+                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16] active:translate-y-1'
+                }`}
+              >
+                <ArrowLeft className="w-6 h-6 stroke-[2.8]" />
+                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
+                  {t('headsoccer.btnLeft')}
+                </span>
+              </button>
 
-                <button
-                  type="button"
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    handleMoveRight(true);
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    handleMoveRight(false);
-                  }}
-                  onTouchCancel={() => handleMoveRight(false)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleMoveRight(true);
-                  }}
-                  onMouseUp={() => handleMoveRight(false)}
-                  onMouseLeave={() => {
-                    if (rightPressed) handleMoveRight(false);
-                  }}
-                  className={`w-16 h-16 sm:w-[70px] sm:h-[70px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
-                    rightPressed
-                      ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
-                      : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_5px_0_#090d16] active:translate-y-1'
-                  }`}
-                >
-                  <ArrowRight className="w-7 h-7 stroke-[2.8]" />
-                  <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
-                    {t('headsoccer.btnRight')}
-                  </span>
-                </button>
-              </div>
-              <span className="text-[9px] font-orbitron font-bold text-slate-500 uppercase tracking-widest mt-1.5">
-                {t('headsoccer.dpadLabel')}
-              </span>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleMoveRight(true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  handleMoveRight(false);
+                }}
+                onPointerCancel={() => handleMoveRight(false)}
+                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                  rightPressed
+                    ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
+                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16] active:translate-y-1'
+                }`}
+              >
+                <ArrowRight className="w-6 h-6 stroke-[2.8]" />
+                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
+                  {t('headsoccer.btnRight')}
+                </span>
+              </button>
             </div>
 
-            {/* Right Side: Classic Console Diagonal B (KICK) & A (JUMP) Buttons */}
-            <div className="flex flex-col items-center">
-              <div className="p-2 rounded-3xl bg-black/55 border border-slate-700/80 shadow-inner flex items-center space-x-3">
-                {/* Button B: KICK (slightly lower) */}
-                <div className="flex flex-col items-center translate-y-1.5">
-                  <button
-                    type="button"
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      handleKick();
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleKick();
-                    }}
-                    className={`w-16 h-16 sm:w-[70px] sm:h-[70px] rounded-full border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
-                      kickPressed
-                        ? 'bg-emerald-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(16,185,129,0.85)]'
-                        : 'bg-gradient-to-b from-emerald-500 to-teal-700 text-white border-emerald-300 shadow-[0_5px_0_#064e3b] active:translate-y-1'
-                    }`}
-                  >
-                    <Zap className="w-6 h-6 stroke-[2.6]" />
-                    <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
-                      {t('headsoccer.btnKick')}
-                    </span>
-                  </button>
-                  <span className="text-[9px] font-orbitron font-black text-emerald-400/80 mt-1">
-                    B
-                  </span>
-                </div>
+            {/* Right Side: Action Buttons KICK & JUMP (clean layout, no A/B letters, 100% inside card bounds) */}
+            <div className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2.5">
+              {/* KICK Button */}
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleKick();
+                }}
+                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-full border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                  kickPressed
+                    ? 'bg-emerald-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(16,185,129,0.85)]'
+                    : 'bg-gradient-to-b from-emerald-500 to-teal-700 text-white border-emerald-300 shadow-[0_4px_0_#064e3b] active:translate-y-1'
+                }`}
+              >
+                <Zap className="w-5 h-5 stroke-[2.6]" />
+                <span className="text-[8.5px] font-orbitron font-black tracking-wider mt-0.5">
+                  {t('headsoccer.btnKick')}
+                </span>
+              </button>
 
-                {/* Button A: JUMP (slightly elevated like a Game Boy) */}
-                <div className="flex flex-col items-center -translate-y-1.5">
-                  <button
-                    type="button"
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      handleJump();
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleJump();
-                    }}
-                    className={`w-16 h-16 sm:w-[70px] sm:h-[70px] rounded-full border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
-                      jumpPressed
-                        ? 'bg-indigo-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(99,102,241,0.85)]'
-                        : 'bg-gradient-to-b from-indigo-500 to-purple-700 text-white border-indigo-300 shadow-[0_5px_0_#312e81] active:translate-y-1'
-                    }`}
-                  >
-                    <ArrowUp className="w-6 h-6 stroke-[2.8]" />
-                    <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
-                      {t('headsoccer.btnJump')}
-                    </span>
-                  </button>
-                  <span className="text-[9px] font-orbitron font-black text-indigo-400/80 mt-1">
-                    A
-                  </span>
-                </div>
-              </div>
-              <span className="text-[9px] font-orbitron font-bold text-slate-500 uppercase tracking-widest mt-1.5">
-                {t('headsoccer.actionsLabel')}
-              </span>
+              {/* JUMP Button */}
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleJump();
+                }}
+                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-full border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                  jumpPressed
+                    ? 'bg-indigo-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(99,102,241,0.85)]'
+                    : 'bg-gradient-to-b from-indigo-500 to-purple-700 text-white border-indigo-300 shadow-[0_4px_0_#312e81] active:translate-y-1'
+                }`}
+              >
+                <ArrowUp className="w-5 h-5 stroke-[2.8]" />
+                <span className="text-[8.5px] font-orbitron font-black tracking-wider mt-0.5">
+                  {t('headsoccer.btnJump')}
+                </span>
+              </button>
             </div>
           </div>
         </div>

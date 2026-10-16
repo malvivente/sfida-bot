@@ -993,6 +993,10 @@ export const translations: Translations = {
   'headsoccer.defeatDesc': { it: 'Il tuo avversario ha segnato più gol allo scadere del tempo.', en: 'Your opponent scored more goals before full time.' },
   'headsoccer.superShotBanner': { it: '🔥 SUPER SHOT! 🔥', en: '🔥 SUPER SHOT! 🔥' },
   'headsoccer.crossbarBanner': { it: '💥 TRAVERSA! 💥', en: '💥 CROSSBAR! 💥' },
+  'headsoccer.superArmed': { it: 'ATTIVO (PROSSIMO TIRO)', en: 'ACTIVE (NEXT KICK)' },
+  'headsoccer.superArmedBadge': { it: '🔥 SUPER ATTIVO', en: '🔥 SUPER ARMED' },
+  'headsoccer.finalWhistle': { it: 'FISCHIO FINALE!', en: 'FINAL WHISTLE!' },
+  'headsoccer.settlingMatch': { it: 'Caricamento premiazione...', en: 'Settling match...' },
   'headsoccer.dpadLabel': { it: 'MOVIMENTO', en: 'MOVEMENT' },
   'headsoccer.actionsLabel': { it: 'AZIONI', en: 'ACTIONS' },
 };
