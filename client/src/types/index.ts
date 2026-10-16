@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -430,3 +430,50 @@ export interface CubeCountState {
   roundDamageB?: number; // 0 or 1
   roundMessage?: string;
 }
+
+// --- Head Soccer Types ---
+export type HeadSoccerPhase = 'KICKOFF_COUNTDOWN' | 'PLAYING' | 'GOAL_CELEBRATION' | 'OVERTIME_INTRO';
+
+export interface HeadSoccerPlayerState {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  isGrounded: boolean;
+  kickTimer: number;
+  superCharge: number;
+  superActive: boolean;
+}
+
+export interface HeadSoccerBallState {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  spin: number;
+  isSuperShot: boolean;
+  superOwner?: 'A' | 'B';
+  lastTouch?: 'A' | 'B';
+}
+
+export interface HeadSoccerState {
+  phase: HeadSoccerPhase;
+  scoreA: number;
+  scoreB: number;
+  timeRemainingMs: number;
+  isOvertime: boolean;
+  countdownSec: number;
+  playerA: HeadSoccerPlayerState;
+  playerB: HeadSoccerPlayerState;
+  ball: HeadSoccerBallState;
+  lastGoalBy?: 'A' | 'B';
+  lastEvent?: {
+    type: 'KICK' | 'HEADER' | 'SUPER_SHOT' | 'CROSSBAR' | 'GOAL';
+    side?: 'A' | 'B';
+    x: number;
+    y: number;
+    ts: number;
+  };
+  serverTs: number;
+}
+

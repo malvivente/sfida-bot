@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 160" width="80" height="160">
+  <defs>
+    <pattern id="netPatternLeft" width="12" height="12" patternUnits="userSpaceOnUse">
+      <path d="M0 0 L12 12 M12 0 L0 12" stroke="#22D3EE" stroke-width="1.2" opacity="0.45"/>
+    </pattern>
+    <linearGradient id="postGradLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94A3B8"/>
+      <stop offset="50%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#64748B"/>
+    </linearGradient>
+  </defs>
+  <!-- Goal Depth Background -->
+  <polygon points="8,10 68,6 68,158 8,158" fill="#0B1120" opacity="0.72"/>
+  <!-- Net Mesh -->
+  <polygon points="8,10 68,6 68,158 8,158" fill="url(#netPatternLeft)" stroke="#06B6D4" stroke-width="1.5" opacity="0.8"/>
+  <!-- Back Support Bar -->
+  <path d="M68 6 L12 24 L12 158" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Crossbar & Front Post -->
+  <rect x="62" y="2" width="10" height="156" rx="4" fill="url(#postGradLeft)" stroke="#0F172A" stroke-width="2"/>
+  <rect x="6" y="2" width="66" height="10" rx="4" fill="url(#postGradLeft)" stroke="#0F172A" stroke-width="2"/>
+  <!-- Neon Accent Strip -->
+  <rect x="65" y="10" width="3" height="142" rx="1.5" fill="#22D3EE" opacity="0.9"/>
+</svg>

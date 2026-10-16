@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="glowHS" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="90" fill="url(#glowHS)"/>
+  <!-- Goal Frame -->
+  <path d="M30 145 L30 55 L170 55 L170 145" fill="none" stroke="#34D399" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+  <!-- Soccer Ball -->
+  <circle cx="105" cy="95" r="38" fill="#F8FAFC" stroke="#10B981" stroke-width="4"/>
+  <polygon points="105,74 123,87 116,109 94,109 87,87" fill="#0F172A"/>
+  <!-- Motion Flame Lines -->
+  <path d="M35 80 L65 85 M25 98 L60 98 M38 115 L68 110" stroke="#F59E0B" stroke-width="5" stroke-linecap="round"/>
+</svg>

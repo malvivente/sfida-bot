@@ -55,4 +55,11 @@ export const GAMES_CONFIG = {
     gridSize: 5,
     inputTimeoutSeconds: 6,
   },
+  headsoccer: {
+    name: 'Head Soccer',
+    description: '1v1 Cyber Retro arcade soccer duel. 60 seconds, headers, bicycle kicks and Super Shots!',
+    matchDurationSeconds: 60,
+    overtimeDurationSeconds: 30,
+  },
 } as const;
+

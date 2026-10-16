@@ -274,8 +274,14 @@ export function useSocket({
           case 'CUBECOUNT_INPUT':
           case 'CUBECOUNT_ANSWER_STATUS':
           case 'CUBECOUNT_REVEAL':
+          case 'HEADSOCCER_START':
+          case 'HEADSOCCER_TICK':
+          case 'HEADSOCCER_GOAL':
+          case 'HEADSOCCER_OVERTIME':
             setRoomState('GAME_ACTIVE');
             if (msg.gameData) setGameData(msg.gameData);
+            if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
+            if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.message) setFeedMessage(msg.message);
             if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
             break;
@@ -695,6 +701,18 @@ export function useSocket({
     }
   }, []);
 
+  const sendHeadSoccerInput = useCallback((input: {
+    left?: boolean;
+    right?: boolean;
+    jump?: boolean;
+    kick?: boolean;
+    super?: boolean;
+  }) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'HEADSOCCER_INPUT', ...input }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -741,6 +759,7 @@ export function useSocket({
     sendShotgunUseItem,
     sendConnect4Drop,
     sendCubeCountSubmit,
+    sendHeadSoccerInput,
     placeSpectatorBet,
     placedBet,
     betStatus,

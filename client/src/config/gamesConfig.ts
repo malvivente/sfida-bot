@@ -101,5 +101,17 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-amber-500/50 hover:border-amber-400',
     bgGradient: 'from-amber-950/30 via-orange-950/20 to-black/80',
   },
+  headsoccer: {
+    id: 'headsoccer',
+    title: 'Head Soccer',
+    badge: 'ARCADE 1V1',
+    tagline: '60s Match · Super Shots · Golden Goal',
+    description: 'Fast-paced 1v1 arcade soccer in a Cyber Retro handheld shell. Jump, header, kick and unleash fiery Super Shots to outscore your rival in 60 seconds.',
+    spectatorAppeal: 'Real-time stadium broadcast view with explosive goals, crossbar hits and Golden Goal overtime!',
+    accentColor: 'text-emerald-400',
+    borderColor: 'border-emerald-500/50 hover:border-emerald-400',
+    bgGradient: 'from-emerald-950/35 via-teal-950/20 to-black/80',
+  },
 };
+
 

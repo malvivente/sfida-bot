@@ -8,6 +8,7 @@ import { SplitStealArena } from '../components/games/SplitStealArena.js';
 import { CyberShotgunArena } from '../components/games/CyberShotgunArena.js';
 import { Connect4Arena } from '../components/games/Connect4Arena.js';
 import { CubeCountArena } from '../components/games/CubeCountArena.js';
+import { HeadSoccerArena } from '../components/games/HeadSoccerArena.js';
 import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
@@ -1398,6 +1399,45 @@ export const Arena: React.FC<ArenaProps> = ({
               opponentConnected={isOpponentInRoom}
               userSide={userSide}
               userAddress={effectivePlayerAddress}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
+            />
+          ) : effectiveGameType === 'headsoccer' ? (
+            <HeadSoccerArena
+              gameData={socketData.gameData as any}
+              role={effectiveRole}
+              onInput={socketData.sendHeadSoccerInput}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {
                 if (missing) setDepositAmount(missing);

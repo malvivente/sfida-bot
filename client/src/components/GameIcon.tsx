@@ -230,6 +230,36 @@ export const GameIcon: React.FC<GameIconProps> = ({ type, className = 'w-5 h-5',
         </svg>
       );
 
+    case 'headsoccer':
+      // Head Soccer: Soccer ball with dynamic motion flame / goal net accents
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+          style={style}
+        >
+          {/* Soccer Ball */}
+          <circle cx="13" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+          {/* Center Pentagon */}
+          <polygon
+            points="13,8.5 16,10.7 14.9,14.2 11.1,14.2 10,10.7"
+            fill="currentColor"
+            fillOpacity="0.3"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          {/* Seam lines */}
+          <path d="M13 8.5 L13 4.2 M16 10.7 L20.5 9.5 M14.9 14.2 L18 18.2 M11.1 14.2 L8 18.2 M10 10.7 L5.5 9.5" stroke="currentColor" strokeWidth="1.3" />
+          {/* Speed trails on left */}
+          <path d="M2 8 H5 M1 12 H4 M2 16 H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+
     default:
       // Default: Crossed Swords
       return (

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bootB" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="60%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#881337"/>
+    </linearGradient>
+  </defs>
+  <!-- Cleats / Studs -->
+  <rect x="22" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+  <rect x="40" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+  <rect x="76" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+  <rect x="96" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
+  <!-- Boot Body (Facing Left) -->
+  <path d="M110 38 L70 38 L58 58 L20 64 Q8 68 10 86 L112 86 Q118 64 110 38 Z" fill="url(#bootB)" stroke="#0f172a" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Neon Pink Stripes -->
+  <path d="M82 52 L64 82 M66 56 L50 82" stroke="#ff0055" stroke-width="6" stroke-linecap="round"/>
+  <!-- Sole Plate -->
+  <rect x="10" y="84" width="104" height="10" rx="5" fill="#ff0055" stroke="#0f172a" stroke-width="4"/>
+</svg>

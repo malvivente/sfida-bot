@@ -56,6 +56,9 @@ export function parseGameType(raw?: string): { type: GameType; title: string } |
   if (clean.includes('cube') || clean.includes('cubi') || clean.includes('count') || clean.includes('cubecount')) {
     return { type: 'cubecount', title: 'Cube Count' };
   }
+  if (clean.includes('soccer') || clean.includes('head') || clean.includes('calcio') || clean === 'hs') {
+    return { type: 'headsoccer', title: 'Head Soccer' };
+  }
   if (clean.includes('roulette') || clean.includes('russian') || clean === 'rr' || clean.includes('russa')) {
     return { type: 'roulette', title: 'Russian Roulette' };
   }

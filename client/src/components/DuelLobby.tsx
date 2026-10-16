@@ -771,7 +771,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   {t('lobby.gameTypeLabel') || 'Disciplina / Gioco'}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split', 'shotgun', 'connect4', 'cubecount'].map((gKey) => {
+                  {['ALL', 'roulette', 'blackjack', 'bridge', 'chrono', 'split', 'shotgun', 'connect4', 'cubecount', 'headsoccer'].map((gKey) => {
                     const isSelected = filterGameType === gKey;
                     const label = gKey === 'ALL' ? t('lobby.allGames') : GAMES_METADATA[gKey as GameType]?.title || gKey;
                     return (

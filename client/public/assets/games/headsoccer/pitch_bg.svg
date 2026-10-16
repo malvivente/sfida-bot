@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050816"/>
+      <stop offset="55%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+    <linearGradient id="turfDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#065F46"/>
+      <stop offset="100%" stop-color="#064E3B"/>
+    </linearGradient>
+    <linearGradient id="turfLight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#065F46"/>
+    </linearGradient>
+    <radialGradient id="stadiumLightL" cx="15%" cy="10%" r="50%">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="stadiumLightR" cx="85%" cy="10%" r="50%">
+      <stop offset="0%" stop-color="#F97316" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Night Stadium Sky -->
+  <rect width="800" height="390" fill="url(#skyGrad)"/>
+  <rect width="800" height="390" fill="url(#stadiumLightL)"/>
+  <rect width="800" height="390" fill="url(#stadiumLightR)"/>
+
+  <!-- Stadium Roof Trusses -->
+  <path d="M0 28 L800 28 M0 42 L800 42" stroke="#1E293B" stroke-width="3"/>
+  <!-- Floodlight Towers -->
+  <g opacity="0.85">
+    <rect x="90" y="12" width="70" height="18" rx="4" fill="#0F172A" stroke="#38BDF8" stroke-width="1.5"/>
+    <circle cx="105" cy="21" r="4" fill="#E0F2FE"/>
+    <circle cx="125" cy="21" r="4" fill="#E0F2FE"/>
+    <circle cx="145" cy="21" r="4" fill="#E0F2FE"/>
+
+    <rect x="640" y="12" width="70" height="18" rx="4" fill="#0F172A" stroke="#FB923C" stroke-width="1.5"/>
+    <circle cx="655" cy="21" r="4" fill="#FFEDD5"/>
+    <circle cx="675" cy="21" r="4" fill="#FFEDD5"/>
+    <circle cx="695" cy="21" r="4" fill="#FFEDD5"/>
+  </g>
+
+  <!-- Distant Stadium Crowd Tiers -->
+  <rect x="0" y="235" width="800" height="155" fill="#090D1A"/>
+  <path d="M0 265 L800 265 M0 295 L800 295 M0 325 L800 325" stroke="#1E293B" stroke-width="2"/>
+
+  <!-- Stylized Crowd Lights / Silhouettes -->
+  <g opacity="0.45">
+    <circle cx="60" cy="252" r="3" fill="#38BDF8"/>
+    <circle cx="95" cy="280" r="2.5" fill="#A855F7"/>
+    <circle cx="140" cy="250" r="3" fill="#22D3EE"/>
+    <circle cx="190" cy="310" r="3" fill="#38BDF8"/>
+    <circle cx="235" cy="278" r="2.5" fill="#F43F5E"/>
+    <circle cx="290" cy="252" r="3" fill="#22D3EE"/>
+    <circle cx="345" cy="308" r="2.5" fill="#FACC15"/>
+    <circle cx="400" cy="276" r="3" fill="#FFFFFF"/>
+    <circle cx="455" cy="308" r="2.5" fill="#FACC15"/>
+    <circle cx="510" cy="252" r="3" fill="#FB923C"/>
+    <circle cx="565" cy="278" r="2.5" fill="#F43F5E"/>
+    <circle cx="610" cy="310" r="3" fill="#FB923C"/>
+    <circle cx="660" cy="250" r="3" fill="#F97316"/>
+    <circle cx="705" cy="280" r="2.5" fill="#A855F7"/>
+    <circle cx="740" cy="252" r="3" fill="#FB923C"/>
+  </g>
+
+  <!-- LED Advertising Perimeter Board -->
+  <rect x="0" y="352" width="800" height="38" fill="#0F172A" stroke="#334155" stroke-width="2"/>
+  <rect x="12" y="358" width="240" height="26" rx="4" fill="#083344" stroke="#06B6D4" stroke-width="1"/>
+  <text x="132" y="376" fill="#22D3EE" font-family="monospace" font-weight="900" font-size="13" text-anchor="middle" letter-spacing="3">SFIDA ARENA</text>
+
+  <rect x="280" y="358" width="240" height="26" rx="4" fill="#1E1B4B" stroke="#8B5CF6" stroke-width="1"/>
+  <text x="400" y="376" fill="#C4B5FD" font-family="monospace" font-weight="900" font-size="13" text-anchor="middle" letter-spacing="3">HEAD SOCCER 1V1</text>
+
+  <rect x="548" y="358" width="240" height="26" rx="4" fill="#431407" stroke="#F97316" stroke-width="1"/>
+  <text x="668" y="376" fill="#FB923C" font-family="monospace" font-weight="900" font-size="13" text-anchor="middle" letter-spacing="3">SUPER SHOT</text>
+
+  <!-- Pitch Turf with Stripes -->
+  <rect x="0" y="390" width="800" height="60" fill="url(#turfDark)"/>
+  <g>
+    <polygon points="80,390 160,390 140,450 50,450" fill="url(#turfLight)"/>
+    <polygon points="240,390 320,390 310,450 220,450" fill="url(#turfLight)"/>
+    <polygon points="400,390 480,390 485,450 395,450" fill="url(#turfLight)"/>
+    <polygon points="560,390 640,390 660,450 570,450" fill="url(#turfLight)"/>
+  </g>
+
+  <!-- Pitch White Chalk Lines -->
+  <line x1="0" y1="392" x2="800" y2="392" stroke="#ECFDF5" stroke-width="3" opacity="0.8"/>
+  <line x1="400" y1="392" x2="400" y2="450" stroke="#ECFDF5" stroke-width="3" opacity="0.7"/>
+  <ellipse cx="400" cy="420" rx="52" ry="14" fill="none" stroke="#ECFDF5" stroke-width="2.5" opacity="0.65"/>
+  <circle cx="400" cy="420" r="4" fill="#ECFDF5" opacity="0.85"/>
+</svg>

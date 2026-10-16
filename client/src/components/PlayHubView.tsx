@@ -60,7 +60,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {t('playHub.allGamesLabel')}
           </span>
           <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
-            (8)
+            (9)
           </span>
         </button>
         <button
@@ -80,7 +80,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {t('playHub.quickMatchLabel')}
           </span>
           <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
-            (4)
+            (5)
           </span>
         </button>
         <button
@@ -579,6 +579,61 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                 {t('playHub.openRooms', { count: getOpenRoomsCount('chrono') })}
               </span>
               <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
+                <span>{t('playHub.playNow')}</span>
+                <ArrowRight className="w-3 h-3" />
+              </span>
+            </div>
+          </div>
+
+          {/* Card 5: Head Soccer 1v1 */}
+          <div
+            onClick={() => {
+              triggerImpact('medium');
+              onCreateMatchForGame('headsoccer');
+            }}
+            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[115px]"
+          >
+            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
+
+            {/* 2D Minimal Graphic in Background */}
+            <CardBackgroundArt
+              type="headsoccer"
+              className="absolute right-20 top-1/2 -translate-y-1/2 w-28 h-28 opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+            />
+
+            <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
+              <div className="space-y-1 min-w-0 max-w-[68%]">
+                <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
+                  {t('playHub.badgeHeadSoccer')}
+                </span>
+                <h4 className="text-base font-heading font-black text-white">
+                  HEAD SOCCER
+                </h4>
+                <p className="text-[10px] text-emerald-100 font-medium leading-tight line-clamp-2">
+                  {t('playHub.headSoccerDesc')}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch">
+              <div className="flex items-center space-x-1.5">
+                <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
+                  {t('playHub.openRooms', { count: getOpenRoomsCount('headsoccer') })}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerImpact('light');
+                    setSelectedRulesGame('headsoccer');
+                  }}
+                  className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+                  title={t('gameRules.infoTooltip')}
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform mt-auto">
                 <span>{t('playHub.playNow')}</span>
                 <ArrowRight className="w-3 h-3" />
               </span>
