@@ -10,6 +10,7 @@ import { isTelegramChatMember } from '../bot/index.js';
 import { TonClient, WalletContractV4, WalletContractV5R1, SendMode, internal, toNano, Address } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { depositWatcher } from '../services/depositWatcher.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 export async function matchRoutes(fastify: FastifyInstance) {
   const roomManager = RoomManager.getInstance();
@@ -435,7 +436,32 @@ export async function matchRoutes(fastify: FastifyInstance) {
     if (!room) {
       return reply.status(404).send({ error: 'Match not found' });
     }
-    if (room.state !== 'LOBBY' || room.playerB) {
+
+    // Idempotent join check: if this user is already Player B in this room, return success
+    if (room.playerB) {
+      const isAlreadyPlayerB =
+        room.isSameWallet(body.playerBAddress, room.playerB.walletAddress) ||
+        (body.telegramUserId && room.playerB.telegramId && String(body.telegramUserId) === String(room.playerB.telegramId)) ||
+        (body.rawUsername && room.playerB.username && cleanPlayerName(body.rawUsername).toLowerCase() === room.playerB.username.toLowerCase());
+
+      if (isAlreadyPlayerB) {
+        return reply.send({
+          success: true,
+          message: 'Already joined match',
+          matchId: room.matchId.toString(),
+          state: room.state,
+          playerB: {
+            wallet: room.playerB.walletAddress,
+            name: room.playerB.username,
+            score: room.playerB.score,
+            ready: room.playerB.ready,
+          },
+        });
+      }
+      return reply.status(400).send({ error: 'Match is no longer available to join' });
+    }
+
+    if (room.state !== 'LOBBY') {
       return reply.status(400).send({ error: 'Match is no longer available to join' });
     }
     if (room.playerA.walletAddress.toLowerCase() === body.playerBAddress.toLowerCase()) {

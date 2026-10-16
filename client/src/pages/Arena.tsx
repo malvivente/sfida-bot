@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QuickdrawCanvas } from '../components/QuickdrawCanvas.js';
 import { RussianRouletteArena } from '../components/games/RussianRouletteArena.js';
 import { BlackjackArena } from '../components/games/BlackjackArena.js';
@@ -86,6 +86,8 @@ export const Arena: React.FC<ArenaProps> = ({
   const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
   const [matchToCancel, setMatchToCancel] = useState<MatchData | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const isJoiningMatchRef = useRef(false);
+  const deepMatchesJoinedRef = useRef<Set<string>>(new Set());
 
   // In-bot balance & fee configuration
   const [userBalance, setUserBalance] = useState<UserBalance | null>(() => {
@@ -460,13 +462,16 @@ export const Arena: React.FC<ArenaProps> = ({
 
     const isAlreadyPlayer = isPlayerA || isPlayerB;
 
-    if (isAlreadyPlayer) {
+    if (isAlreadyPlayer || (activeMatchId === match.matchId && role === 'player')) {
       setActiveMatchId(match.matchId);
       setRole('player');
       setIsReady(false);
       setCreateError(null);
       return;
     }
+
+    if (isJoiningMatchRef.current) return;
+    isJoiningMatchRef.current = true;
 
     const wagerGram = (parseFloat(match.wagerAmountNano) / 1e9).toFixed(2);
     setCreateStatus('Joining duel and reserving wager from balance...');
@@ -534,6 +539,8 @@ export const Arena: React.FC<ArenaProps> = ({
     } catch (err: any) {
       setCreateStatus(null);
       setCreateError(err?.message || t('arena.joinMatchError'));
+    } finally {
+      isJoiningMatchRef.current = false;
     }
   };
 
@@ -625,12 +632,15 @@ export const Arena: React.FC<ArenaProps> = ({
           } catch {}
         }
         // User opened invite link: auto-join as Player B
-        const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
-        if (playerAddress) {
-          await handleJoinMatch(m, initialInviteCode, false);
-        } else {
-          setActiveMatchId(initialMatchId);
-          setRole('player');
+        if (!deepMatchesJoinedRef.current.has(initialMatchId)) {
+          deepMatchesJoinedRef.current.add(initialMatchId);
+          const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
+          if (playerAddress) {
+            await handleJoinMatch(m, initialInviteCode, false);
+          } else {
+            setActiveMatchId(initialMatchId);
+            setRole('player');
+          }
         }
       } else {
         // Duel is full or spectator requested
@@ -902,6 +912,12 @@ export const Arena: React.FC<ArenaProps> = ({
       window.removeEventListener('sfida_rematch_accepted', handleRematchAccepted);
     };
   }, []);
+
+  useEffect(() => {
+    if (socketData.roomState === 'GAME_ACTIVE' || socketData.roomState === 'BETTING_WINDOW') {
+      if (createError) setCreateError(null);
+    }
+  }, [socketData.roomState, createError]);
 
   useEffect(() => {
     if (activeMatchId && !canCancelCurrentMatch && matchToCancel?.matchId === activeMatchId) {

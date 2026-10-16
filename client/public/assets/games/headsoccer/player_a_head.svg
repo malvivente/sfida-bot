@@ -1,38 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
   <defs>
-    <radialGradient id="skinA" cx="45%" cy="40%" r="55%">
-      <stop offset="0%" stop-color="#fde68a"/>
-      <stop offset="65%" stop-color="#f59e0b"/>
-      <stop offset="100%" stop-color="#b45309"/>
-    </radialGradient>
-    <linearGradient id="helmetA" x1="0%" y1="0%" x2="100%" y2="100%">
+    <radialGradient id="headBlue" cx="38%" cy="32%" r="68%">
       <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="55%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </radialGradient>
+    <linearGradient id="bodyBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
       <stop offset="100%" stop-color="#1e3a8a"/>
     </linearGradient>
-    <linearGradient id="visorA" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00f0ff"/>
-      <stop offset="50%" stop-color="#e0f2fe"/>
-      <stop offset="100%" stop-color="#00f0ff"/>
-    </linearGradient>
   </defs>
-  <!-- Jersey Collar / Mini Torso -->
-  <path d="M78 195 Q128 215 178 195 L192 238 Q128 250 64 238 Z" fill="url(#helmetA)" stroke="#00f0ff" stroke-width="5"/>
-  <path d="M108 202 L128 232 L148 202" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/>
-  <!-- Main Big Head -->
-  <circle cx="128" cy="124" r="82" fill="url(#skinA)" stroke="#0f172a" stroke-width="7"/>
-  <!-- Ear Left -->
-  <circle cx="46" cy="132" r="14" fill="#f59e0b" stroke="#0f172a" stroke-width="5"/>
-  <!-- Cyber Hair / Headband -->
-  <path d="M44 108 Q48 34 128 30 Q204 30 212 102 Q185 78 128 82 Q70 84 44 108 Z" fill="url(#helmetA)" stroke="#0f172a" stroke-width="6"/>
-  <!-- Spiky Hair Crest -->
-  <path d="M90 36 L112 12 L128 30 L152 10 L166 36 L192 22 L196 48" fill="#0284c7" stroke="#0f172a" stroke-width="5" stroke-linejoin="round"/>
-  <!-- Neon Headband Stripe -->
-  <path d="M46 102 Q128 76 210 100" fill="none" stroke="#00f0ff" stroke-width="8" stroke-linecap="round"/>
-  <!-- Cyber Visor / Fierce Eyes (Facing Right) -->
-  <path d="M102 108 L206 102 L198 134 L110 136 Z" fill="#0f172a" stroke="#00f0ff" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M118 116 L150 115 L146 127 L120 128 Z" fill="url(#visorA)"/>
-  <path d="M168 114 L194 112 L190 125 L170 126 Z" fill="url(#visorA)"/>
-  <!-- Determined Grin -->
-  <path d="M126 164 Q158 174 184 156 L180 176 Q154 188 122 176 Z" fill="#ffffff" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Mini Bean Torso & Arm -->
+  <path d="M100 178 C80 200, 82 232, 110 236 C136 240, 168 230, 172 202 C175 182, 150 174, 130 176 Z" fill="url(#bodyBlue)" stroke="#0f172a" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Front Arm / Hand -->
+  <path d="M150 196 C176 196, 188 214, 172 222 C160 228, 142 216, 142 208 Z" fill="#0284c7" stroke="#0f172a" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- Big Smooth Round Head -->
+  <circle cx="128" cy="116" r="92" fill="url(#headBlue)" stroke="#0f172a" stroke-width="9"/>
+
+  <!-- Glossy Cel Specular Highlight (Top Left Curve) -->
+  <ellipse cx="92" cy="68" rx="26" ry="11" transform="rotate(-32 92 68)" fill="#ffffff" opacity="0.82"/>
+  <circle cx="68" cy="88" r="6" fill="#ffffff" opacity="0.75"/>
+
+  <!-- Fierce Stylized Ninja/Chibi Eyes (Facing Right toward ball) -->
+  <!-- Left Eye -->
+  <polygon points="126,98 162,106 154,136 122,126" fill="#0f172a"/>
+  <!-- Right Eye -->
+  <polygon points="176,104 208,120 196,144 168,132" fill="#0f172a"/>
 </svg>

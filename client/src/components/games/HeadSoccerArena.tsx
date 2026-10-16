@@ -297,15 +297,26 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     }
   }, [gameData, role, spawnBurst, t, triggerImpact, triggerNotification]);
 
-  // 60FPS Canvas Render Loop
+  // 60FPS / 120FPS Delta-Time Normalized Canvas Render Loop
   useEffect(() => {
     let animId: number;
+    let lastTs = performance.now();
+    let lastPAx = renderStateRef.current.pAx;
+    let lastPBx = renderStateRef.current.pBx;
 
-    const renderFrame = () => {
+    const renderFrame = (timestamp: number) => {
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
+          const now = timestamp || performance.now();
+          let dtMs = now - lastTs;
+          lastTs = now;
+          if (dtMs > 66) dtMs = 66; // Clamp to avoid huge teleport jumps if tab paused or frame dropped
+          if (dtMs < 2) dtMs = 2;
+          const dtSec = dtMs / 1000;
+          const dtScale = dtMs / 33.333; // 1.0 at 30Hz server tick
+
           const gd = latestGameDataRef.current;
           const rs = renderStateRef.current;
 
@@ -314,31 +325,37 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             const isUserA = userSide === 'A';
             const isUserB = userSide === 'B';
 
+            // Frame-rate independent client prediction & reconciliation
+            const moveSpeed = 222; // px per second (~7.4px per 33ms)
+            const localLerp = 1 - Math.exp(-12 * dtSec);
+            const remoteLerp = 1 - Math.exp(-22 * dtSec);
+            const yLerp = 1 - Math.exp(-28 * dtSec);
+
             // Local client prediction for Player A
             if (isLocalPlayer && isUserA) {
               const dir = (isRightPressedRef.current ? 1 : 0) - (isLeftPressedRef.current ? 1 : 0);
-              rs.pAx += dir * 7.4;
+              rs.pAx += dir * moveSpeed * dtSec;
               if (rs.pAx < 113) rs.pAx = 113;
               if (rs.pAx > 687) rs.pAx = 687;
-              rs.pAx += (gd.playerA.x - rs.pAx) * 0.35;
-              rs.pAy += (gd.playerA.y - rs.pAy) * 0.85;
+              rs.pAx += (gd.playerA.x - rs.pAx) * localLerp;
+              rs.pAy += (gd.playerA.y - rs.pAy) * yLerp;
             } else {
-              rs.pAx += (gd.playerA.x - rs.pAx) * 0.82;
-              rs.pAy += (gd.playerA.y - rs.pAy) * 0.85;
+              rs.pAx += (gd.playerA.x - rs.pAx) * remoteLerp;
+              rs.pAy += (gd.playerA.y - rs.pAy) * yLerp;
             }
             rs.pAkick = gd.playerA.kickTimer;
 
             // Local client prediction for Player B
             if (isLocalPlayer && isUserB) {
               const dir = (isRightPressedRef.current ? 1 : 0) - (isLeftPressedRef.current ? 1 : 0);
-              rs.pBx += dir * 7.4;
+              rs.pBx += dir * moveSpeed * dtSec;
               if (rs.pBx < 113) rs.pBx = 113;
               if (rs.pBx > 687) rs.pBx = 687;
-              rs.pBx += (gd.playerB.x - rs.pBx) * 0.35;
-              rs.pBy += (gd.playerB.y - rs.pBy) * 0.85;
+              rs.pBx += (gd.playerB.x - rs.pBx) * localLerp;
+              rs.pBy += (gd.playerB.y - rs.pBy) * yLerp;
             } else {
-              rs.pBx += (gd.playerB.x - rs.pBx) * 0.82;
-              rs.pBy += (gd.playerB.y - rs.pBy) * 0.85;
+              rs.pBx += (gd.playerB.x - rs.pBx) * remoteLerp;
+              rs.pBy += (gd.playerB.y - rs.pBy) * yLerp;
             }
             rs.pBkick = gd.playerB.kickTimer;
 
@@ -348,12 +365,13 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               trailRef.current = [];
             } else {
               // Smooth velocity extrapolation to eliminate 30Hz network micro-stutter
-              rs.bx += gd.ball.vx * 0.32;
-              rs.by += gd.ball.vy * 0.32;
-              rs.bx += (gd.ball.x - rs.bx) * 0.72;
-              rs.by += (gd.ball.y - rs.by) * 0.72;
+              rs.bx += gd.ball.vx * dtScale;
+              rs.by += gd.ball.vy * dtScale;
+              const ballLerp = 1 - Math.exp(-20 * dtSec);
+              rs.bx += (gd.ball.x - rs.bx) * ballLerp;
+              rs.by += (gd.ball.y - rs.by) * ballLerp;
             }
-            rs.bAngle += gd.ball.vx * 0.04;
+            rs.bAngle += gd.ball.vx * 0.04 * dtScale;
             rs.isSuper = gd.ball.isSuperShot;
 
             if (Math.hypot(gd.ball.vx, gd.ball.vy) > 5.5 || gd.ball.isSuperShot) {
@@ -368,6 +386,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               }
             }
           }
+
+          // Calculate instantaneous movement speed to trigger walk cycle
+          const pASpeed = Math.abs(rs.pAx - lastPAx) / Math.max(0.001, dtSec);
+          const pBSpeed = Math.abs(rs.pBx - lastPBx) / Math.max(0.001, dtSec);
+          lastPAx = rs.pAx;
+          lastPBx = rs.pBx;
+          const isMovingA = pASpeed > 15 || (userSide === 'A' && (isLeftPressedRef.current || isRightPressedRef.current));
+          const isMovingB = pBSpeed > 15 || (userSide === 'B' && (isLeftPressedRef.current || isRightPressedRef.current));
 
           ctx.save();
 
@@ -405,7 +431,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           // 3. Draw Ball Trail (in-place pool update)
           for (let i = trailRef.current.length - 1; i >= 0; i--) {
             const pt = trailRef.current[i];
-            pt.alpha *= 0.84;
+            pt.alpha *= Math.pow(0.84, dtScale);
             if (pt.alpha <= 0.04) {
               trailRef.current.splice(i, 1);
               continue;
@@ -428,12 +454,12 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             isCharged: boolean
           ) => {
             if (!isArmed && !isCharged) return;
-            const now = Date.now();
+            const animNow = Date.now();
             ctx.save();
 
             if (isArmed) {
               // 1. Concentric pulsing fiery halo
-              const pulse = 1 + 0.12 * Math.sin(now * 0.012);
+              const pulse = 1 + 0.12 * Math.sin(animNow * 0.012);
               const gradR = 48 * pulse;
               const auraGrad = ctx.createRadialGradient(targetX, targetY, 8, targetX, targetY, gradR);
               auraGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)'); // incandescent yellow core
@@ -448,9 +474,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
               // 2. Rising flame sparks
               for (let i = 0; i < 8; i++) {
-                const angle = now * 0.0035 + (i * Math.PI * 2) / 8;
-                const orbitR = 30 + Math.sin(now * 0.008 + i) * 6;
-                const progress = ((now * 0.045 + i * 16) % 40) / 40;
+                const angle = animNow * 0.0035 + (i * Math.PI * 2) / 8;
+                const orbitR = 30 + Math.sin(animNow * 0.008 + i) * 6;
+                const progress = ((animNow * 0.045 + i * 16) % 40) / 40;
                 const fx = targetX + Math.cos(angle) * orbitR;
                 const fy = targetY + Math.sin(angle) * orbitR * 0.65 - progress * 32;
                 const alpha = Math.max(0, 0.9 - progress);
@@ -468,8 +494,8 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               const segments = 8;
               ctx.beginPath();
               for (let s = 0; s <= segments; s++) {
-                const a = (s * Math.PI * 2) / segments + now * 0.002;
-                const jitter = Math.sin(now * 0.03 + s * 3) * 6;
+                const a = (s * Math.PI * 2) / segments + animNow * 0.002;
+                const jitter = Math.sin(animNow * 0.03 + s * 3) * 6;
                 const jx = targetX + Math.cos(a) * (36 + jitter);
                 const jy = targetY + Math.sin(a) * (36 + jitter);
                 if (s === 0) ctx.moveTo(jx, jy);
@@ -501,7 +527,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               ctx.fillText('🔥 SUPER ARMED', targetX, badgeY + 11);
             } else if (isCharged) {
               // Subtle pulsing charge aura indicating ready to arm
-              const pulse = 1 + 0.08 * Math.sin(now * 0.008);
+              const pulse = 1 + 0.08 * Math.sin(animNow * 0.008);
               ctx.beginPath();
               ctx.arc(targetX, targetY, 42 * pulse, 0, Math.PI * 2);
               ctx.fillStyle = side === 'A' ? 'rgba(34, 211, 238, 0.28)' : 'rgba(251, 146, 60, 0.28)';
@@ -511,53 +537,195 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             ctx.restore();
           };
 
+          // Chibi Character Renderer (Matching official Head Soccer sticker art)
+          const drawChibiPlayer = (
+            pCtx: CanvasRenderingContext2D,
+            side: 'A' | 'B',
+            x: number,
+            y: number,
+            kickTimer: number,
+            isMoving: boolean,
+            isSuperActive: boolean,
+            isSuperCharged: boolean,
+            animTime: number
+          ) => {
+            // 1. Super Aura
+            drawSuperAura(x, y, side, isSuperActive, isSuperCharged);
+
+            const headImg = side === 'A' ? spritesRef.current.headA : spritesRef.current.headB;
+            const shoeImg = side === 'A' ? spritesRef.current.shoeA : spritesRef.current.shoeB;
+            const isFacingRight = side === 'A';
+
+            // Walk cycle animation
+            const walkPhase = animTime * 0.022;
+            const walkBobX = isMoving ? Math.sin(walkPhase) * 6 : 0;
+            const walkBobY = isMoving ? Math.abs(Math.cos(walkPhase)) * -4 : 0;
+            const frontBobX = isMoving ? -Math.sin(walkPhase) * 6 : 0;
+            const frontBobY = isMoving ? Math.abs(Math.sin(walkPhase)) * -4 : 0;
+
+            // 2. Draw Back Foot (behind body)
+            pCtx.save();
+            const backFootX = isFacingRight ? x - 10 + walkBobX : x + 10 - walkBobX;
+            const backFootY = y + 26 + walkBobY;
+            pCtx.translate(backFootX, backFootY);
+            pCtx.scale(0.88, 0.88);
+            pCtx.globalAlpha = 0.85; // Slightly shaded for depth
+            if (shoeImg) {
+              pCtx.drawImage(shoeImg, -18, -12, 36, 24);
+            } else {
+              pCtx.fillStyle = isFacingRight ? '#0284C7' : '#DC2626';
+              pCtx.beginPath();
+              pCtx.ellipse(0, 0, 14, 8, isFacingRight ? 0.2 : -0.2, 0, Math.PI * 2);
+              pCtx.fill();
+            }
+            pCtx.restore();
+
+            // 3. Draw Chibi Head & Mini Bean Torso
+            pCtx.save();
+            if (headImg) {
+              pCtx.drawImage(headImg, x - 37, y - 41, 74, 74);
+            } else {
+              // Vector Chibi fallback matching sticker art
+              // Mini Bean Body
+              const bodyGrad = pCtx.createLinearGradient(x - 12, y + 10, x + 12, y + 30);
+              if (isFacingRight) {
+                bodyGrad.addColorStop(0, '#0284C7');
+                bodyGrad.addColorStop(1, '#1E3A8A');
+              } else {
+                bodyGrad.addColorStop(0, '#DC2626');
+                bodyGrad.addColorStop(1, '#7F1D1D');
+              }
+              pCtx.fillStyle = bodyGrad;
+              pCtx.strokeStyle = '#0F172A';
+              pCtx.lineWidth = 3;
+              pCtx.beginPath();
+              pCtx.roundRect(x - 12, y + 12, 24, 18, 9);
+              pCtx.fill();
+              pCtx.stroke();
+
+              // Big Round Head
+              const headGrad = pCtx.createRadialGradient(x - 6, y - 10, 4, x, y - 4, 32);
+              if (isFacingRight) {
+                headGrad.addColorStop(0, '#38BDF8');
+                headGrad.addColorStop(0.6, '#0284C7');
+                headGrad.addColorStop(1, '#1D4ED8');
+              } else {
+                headGrad.addColorStop(0, '#F87171');
+                headGrad.addColorStop(0.6, '#DC2626');
+                headGrad.addColorStop(1, '#991B1B');
+              }
+              pCtx.fillStyle = headGrad;
+              pCtx.beginPath();
+              pCtx.arc(x, y - 6, 29, 0, Math.PI * 2);
+              pCtx.fill();
+              pCtx.stroke();
+
+              // Specular glossy highlight
+              pCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+              pCtx.beginPath();
+              pCtx.ellipse(x - 10, y - 18, 9, 4, -0.5, 0, Math.PI * 2);
+              pCtx.fill();
+
+              // Fierce slanted chibi ninja eyes
+              pCtx.fillStyle = '#0F172A';
+              if (isFacingRight) {
+                pCtx.beginPath();
+                pCtx.moveTo(x + 2, y - 10);
+                pCtx.lineTo(x + 13, y - 7);
+                pCtx.lineTo(x + 10, y + 2);
+                pCtx.lineTo(x + 1, y - 1);
+                pCtx.closePath();
+                pCtx.fill();
+
+                pCtx.beginPath();
+                pCtx.moveTo(x + 16, y - 8);
+                pCtx.lineTo(x + 24, y - 3);
+                pCtx.lineTo(x + 20, y + 4);
+                pCtx.lineTo(x + 14, y);
+                pCtx.closePath();
+                pCtx.fill();
+              } else {
+                pCtx.beginPath();
+                pCtx.moveTo(x - 2, y - 10);
+                pCtx.lineTo(x - 13, y - 7);
+                pCtx.lineTo(x - 10, y + 2);
+                pCtx.lineTo(x - 1, y - 1);
+                pCtx.closePath();
+                pCtx.fill();
+
+                pCtx.beginPath();
+                pCtx.moveTo(x - 16, y - 8);
+                pCtx.lineTo(x - 24, y - 3);
+                pCtx.lineTo(x - 20, y + 4);
+                pCtx.lineTo(x - 14, y);
+                pCtx.closePath();
+                pCtx.fill();
+              }
+            }
+            pCtx.restore();
+
+            // 4. Draw Front Foot / Kicking Foot (in front of body)
+            pCtx.save();
+            const isKicking = kickTimer > 0;
+            let frontFootX: number;
+            let frontFootY: number;
+            let frontRot = 0;
+
+            if (isKicking) {
+              const kickProgress = Math.min(1, kickTimer / 5);
+              if (isFacingRight) {
+                frontFootX = x + 16 + kickProgress * 14;
+                frontFootY = y + 22 - kickProgress * 15;
+                frontRot = -0.7 - kickProgress * 0.4;
+              } else {
+                frontFootX = x - 16 - kickProgress * 14;
+                frontFootY = y + 22 - kickProgress * 15;
+                frontRot = 0.7 + kickProgress * 0.4;
+              }
+            } else {
+              frontFootX = isFacingRight ? x + 10 + frontBobX : x - 10 - frontBobX;
+              frontFootY = y + 26 + frontBobY;
+            }
+
+            pCtx.translate(frontFootX, frontFootY);
+            pCtx.rotate(frontRot);
+            if (shoeImg) {
+              pCtx.drawImage(shoeImg, -19, -12, 38, 24);
+            } else {
+              pCtx.fillStyle = isFacingRight ? '#38BDF8' : '#F87171';
+              pCtx.strokeStyle = '#0F172A';
+              pCtx.lineWidth = 2.5;
+              pCtx.beginPath();
+              pCtx.ellipse(0, 0, 16, 9, isFacingRight ? 0.15 : -0.15, 0, Math.PI * 2);
+              pCtx.fill();
+              pCtx.stroke();
+            }
+
+            // If kicking, draw dynamic motion swoosh arc
+            if (isKicking) {
+              pCtx.beginPath();
+              if (isFacingRight) {
+                pCtx.arc(-10, 8, 22, -1.3, 0.4);
+              } else {
+                pCtx.arc(10, 8, 22, Math.PI - 0.4, Math.PI + 1.3);
+              }
+              pCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+              pCtx.lineWidth = 3;
+              pCtx.lineCap = 'round';
+              pCtx.stroke();
+            }
+            pCtx.restore();
+          };
+
           // 4. Draw Player A (Left, Cyan)
           const pASuperCharged = (gd?.playerA.superCharge ?? 0) >= 100;
           const pASuperActive = Boolean(gd?.playerA.superActive);
-          drawSuperAura(rs.pAx, rs.pAy, 'A', pASuperActive, pASuperCharged);
-
-          ctx.save();
-          const shoeAX = rs.pAx + (rs.pAkick > 0 ? 22 : 8);
-          const shoeAY = rs.pAy + 26 - (rs.pAkick > 0 ? 8 : 0);
-          ctx.translate(shoeAX, shoeAY);
-          if (rs.pAkick > 0) ctx.rotate(-0.55);
-          if (spritesRef.current.shoeA) {
-            ctx.drawImage(spritesRef.current.shoeA, -22, -14, 44, 28);
-          }
-          ctx.restore();
-
-          if (spritesRef.current.headA) {
-            ctx.drawImage(spritesRef.current.headA, rs.pAx - 36, rs.pAy - 38, 72, 72);
-          } else {
-            ctx.fillStyle = '#22D3EE';
-            ctx.beginPath();
-            ctx.arc(rs.pAx, rs.pAy, 32, 0, Math.PI * 2);
-            ctx.fill();
-          }
+          drawChibiPlayer(ctx, 'A', rs.pAx, rs.pAy, rs.pAkick, isMovingA, pASuperActive, pASuperCharged, now);
 
           // 5. Draw Player B (Right, Orange)
           const pBSuperCharged = (gd?.playerB.superCharge ?? 0) >= 100;
           const pBSuperActive = Boolean(gd?.playerB.superActive);
-          drawSuperAura(rs.pBx, rs.pBy, 'B', pBSuperActive, pBSuperCharged);
-
-          ctx.save();
-          const shoeBX = rs.pBx - (rs.pBkick > 0 ? 22 : 8);
-          const shoeBY = rs.pBy + 26 - (rs.pBkick > 0 ? 8 : 0);
-          ctx.translate(shoeBX, shoeBY);
-          if (rs.pBkick > 0) ctx.rotate(0.55);
-          if (spritesRef.current.shoeB) {
-            ctx.drawImage(spritesRef.current.shoeB, -22, -14, 44, 28);
-          }
-          ctx.restore();
-
-          if (spritesRef.current.headB) {
-            ctx.drawImage(spritesRef.current.headB, rs.pBx - 36, rs.pBy - 38, 72, 72);
-          } else {
-            ctx.fillStyle = '#FB923C';
-            ctx.beginPath();
-            ctx.arc(rs.pBx, rs.pBy, 32, 0, Math.PI * 2);
-            ctx.fill();
-          }
+          drawChibiPlayer(ctx, 'B', rs.pBx, rs.pBy, rs.pBkick, isMovingB, pBSuperActive, pBSuperCharged, now);
 
           // "YOU" Floating Marker above active player's character
           if (role === 'player') {
@@ -855,7 +1023,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const displayPlayerBName = hasPlayerB ? playerBName : t('arena.waitingOpponentShort');
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black p-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col justify-between select-none">
+    <div className="relative w-full min-h-[calc(100vh-140px)] sm:min-h-0 rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black p-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col justify-between select-none">
       {/* Top Stadium LED Scoreboard (3-column grid so long names never overlap scores) */}
       <div className="w-full z-10 mb-2.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-black/80 border border-white/15 rounded-2xl px-3 py-2.5 shadow-inner">
@@ -1100,7 +1268,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
       {/* Classic Handheld Console Lower Deck — SHOWN TO PLAYERS DURING ACTIVE MATCH */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && (
-        <div className="w-full mt-3 pt-3.5 pb-4 px-2.5 sm:px-4 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-2.5">
+        <div className="w-full mt-auto pt-3.5 pb-3 sm:pb-4 px-2 sm:px-4 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-2.5">
           {/* Top SUPER SHOT Trigger Bar */}
           <div className="w-full flex items-center justify-between gap-2">
             <div className="flex items-center space-x-1.5 opacity-60">
@@ -1167,29 +1335,29 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               onPointerMove={handlePointerMoveDpad}
               onPointerUp={handlePointerUpDpad}
               onPointerCancel={handlePointerCancelDpad}
-              className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2 touch-none select-none cursor-pointer"
+              className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2.5 touch-none select-none cursor-pointer"
             >
               <div
-                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
+                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   leftPressed
                     ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
                     : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16]'
                 }`}
               >
-                <ArrowLeft className="w-6 h-6 stroke-[2.8]" />
+                <ArrowLeft className="w-7 h-7 stroke-[2.8]" />
                 <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
                   {t('headsoccer.btnLeft')}
                 </span>
               </div>
 
               <div
-                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
+                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   rightPressed
                     ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
                     : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16]'
                 }`}
               >
-                <ArrowRight className="w-6 h-6 stroke-[2.8]" />
+                <ArrowRight className="w-7 h-7 stroke-[2.8]" />
                 <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
                   {t('headsoccer.btnRight')}
                 </span>
@@ -1205,14 +1373,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                   e.preventDefault();
                   handleKick();
                 }}
-                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-full border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
                   kickPressed
                     ? 'bg-emerald-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(16,185,129,0.85)]'
                     : 'bg-gradient-to-b from-emerald-500 to-teal-700 text-white border-emerald-300 shadow-[0_4px_0_#064e3b] active:translate-y-1'
                 }`}
               >
-                <Zap className="w-5 h-5 stroke-[2.6]" />
-                <span className="text-[8.5px] font-orbitron font-black tracking-wider mt-0.5">
+                <Zap className="w-6 h-6 stroke-[2.6]" />
+                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
                   {t('headsoccer.btnKick')}
                 </span>
               </button>
@@ -1224,14 +1392,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                   e.preventDefault();
                   handleJump();
                 }}
-                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-full border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
                   jumpPressed
                     ? 'bg-indigo-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(99,102,241,0.85)]'
                     : 'bg-gradient-to-b from-indigo-500 to-purple-700 text-white border-indigo-300 shadow-[0_4px_0_#312e81] active:translate-y-1'
                 }`}
               >
-                <ArrowUp className="w-5 h-5 stroke-[2.8]" />
-                <span className="text-[8.5px] font-orbitron font-black tracking-wider mt-0.5">
+                <ArrowUp className="w-6 h-6 stroke-[2.8]" />
+                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
                   {t('headsoccer.btnJump')}
                 </span>
               </button>
@@ -1249,172 +1417,176 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
         </div>
       )}
 
-      {/* Full-Card Settlement Views (Rendered cleanly below/over the arena without clipping) */}
+      {/* Full-Card Settlement Views (Fixed overlay directly over game screen and device viewport) */}
       {outcomePhase === 'splash' && (
-        <div className="w-full mt-3 py-8 px-4 rounded-3xl bg-black/90 border-2 border-emerald-500/50 flex flex-col items-center justify-center text-center shadow-2xl animate-in fade-in duration-300">
-          {isWinner ? (
-            <>
-              <Trophy className="w-16 h-16 text-amber-400 animate-bounce mb-3 filter drop-shadow-[0_0_15px_#f59e0b]" />
-              <h2 className="text-2xl font-orbitron font-black text-emerald-400 tracking-wider uppercase animate-pulse">
-                {t('headsoccer.victoryTitle')}
-              </h2>
-              <p className="text-xs font-chakra text-slate-200 mt-1.5">
-                {t('headsoccer.victoryDesc')}
-              </p>
-            </>
-          ) : role === 'player' ? (
-            <>
-              <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-rose-400 animate-pulse">
-                <Swords className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
-                {t('headsoccer.defeatTitle')}
-              </h2>
-              <p className="text-xs font-chakra text-slate-300 mt-1.5">
-                {t('headsoccer.defeatDesc')}
-              </p>
-            </>
-          ) : (
-            <>
-              <Swords className="w-14 h-14 text-cyan-400 mb-3 animate-pulse" />
-              <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
-                {t('arena.duelConcluded')}
-              </h2>
-            </>
-          )}
-          <div className="mt-3 px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-lg font-orbitron font-black text-white">
-            {playerAName} {scoreA} - {scoreB} {playerBName}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-sm py-8 px-5 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-emerald-500/60 flex flex-col items-center justify-center text-center shadow-[0_0_50px_rgba(16,185,129,0.35)]">
+            {isWinner ? (
+              <>
+                <Trophy className="w-16 h-16 text-amber-400 animate-bounce mb-3 filter drop-shadow-[0_0_15px_#f59e0b]" />
+                <h2 className="text-2xl font-orbitron font-black text-emerald-400 tracking-wider uppercase animate-pulse">
+                  {t('headsoccer.victoryTitle')}
+                </h2>
+                <p className="text-xs font-chakra text-slate-200 mt-1.5">
+                  {t('headsoccer.victoryDesc')}
+                </p>
+              </>
+            ) : role === 'player' ? (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-3 text-rose-400 animate-pulse">
+                  <Swords className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-orbitron font-black text-rose-500 tracking-wider uppercase">
+                  {t('headsoccer.defeatTitle')}
+                </h2>
+                <p className="text-xs font-chakra text-slate-300 mt-1.5">
+                  {t('headsoccer.defeatDesc')}
+                </p>
+              </>
+            ) : (
+              <>
+                <Swords className="w-14 h-14 text-cyan-400 mb-3 animate-pulse" />
+                <h2 className="text-xl font-orbitron font-black text-white tracking-wider uppercase">
+                  {t('arena.duelConcluded')}
+                </h2>
+              </>
+            )}
+            <div className="mt-4 px-5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xl font-orbitron font-black text-white tracking-widest shadow-inner">
+              {playerAName} {scoreA} - {scoreB} {playerBName}
+            </div>
           </div>
         </div>
       )}
 
       {outcomePhase === 'settled' && (
-        <motion.div
-          initial={{ scale: 0.94, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className={`w-full mt-3 p-5 bg-[#121520] border-2 rounded-3xl shadow-2xl flex flex-col items-center text-center ${
-            isWinner ? 'border-emerald-400/80' : 'border-white/15'
-          }`}
-        >
-          {isWinner ? (
-            <Trophy className="w-12 h-12 text-amber-400 mb-2 animate-bounce" />
-          ) : (
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
-              <Swords className="w-6 h-6" />
-            </div>
-          )}
-
-          <h2 className="text-xl font-orbitron font-black text-white uppercase">
-            {role === 'player'
-              ? isWinner
-                ? t('headsoccer.victoryTitle')
-                : t('headsoccer.defeatTitle')
-              : t('arena.duelConcluded')}
-          </h2>
-
-          <p className="text-sm font-orbitron font-bold text-emerald-400 mt-1 mb-3">
-            {playerAName} {scoreA} - {scoreB} {playerBName}
-          </p>
-
-          {isWinner && role === 'player' && (
-            <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-white/10 w-full flex justify-between items-center text-xs font-chakra">
-              <span className="text-slate-400">{t('arena.winnerPrize')}</span>
-              <span className="font-bold text-emerald-300 flex items-center space-x-1">
-                <span>+{winnerPayoutTon}</span>
-                <GramIcon className="w-3.5 h-3.5 text-emerald-400 inline" />
-              </span>
-            </div>
-          )}
-
-          {/* Rematch Offer Sent by Me */}
-          {rematchOffer && isRematchProposer && role === 'player' && (
-            <div className="w-full p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/60 flex flex-col space-y-1.5 mb-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                  <span>{t('arena.rematchOfferSent')}</span>
-                </span>
-                <span className="text-xs font-mono font-bold text-emerald-300">
-                  {rematchOffer.newWagerTon} GRAM
-                </span>
-              </div>
-              <span className="text-[10px] font-chakra text-slate-300">
-                {t('arena.waitingForOpponentRematch')}
-              </span>
-            </div>
-          )}
-
-          {/* Rematch Offer Received */}
-          {rematchOffer && !isRematchProposer && role === 'player' && (
-            <div className="w-full p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-400/60 mb-2.5 flex flex-col space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-orbitron font-bold text-white">
-                  {t('arena.rematchChallengeReceived')}
-                </span>
-                <span className="text-xs font-mono font-bold text-emerald-300">
-                  {rematchOffer.newWagerTon} GRAM
-                </span>
-              </div>
-              {!hasEnoughForRematch ? (
-                <button
-                  onClick={() => onOpenDeposit && onOpenDeposit(missingForRematch)}
-                  className="w-full py-1.5 rounded-lg bg-amber-400 text-black text-xs font-bold font-orbitron"
-                >
-                  {t('arena.depositForRematch')}
-                </button>
-              ) : (
-                <div className="flex space-x-2 pt-1">
-                  <button
-                    onClick={onDeclineRematch}
-                    className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300"
-                  >
-                    {t('arena.decline')}
-                  </button>
-                  <button
-                    onClick={onAcceptRematch}
-                    className="flex-1 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold font-orbitron shadow-md"
-                  >
-                    {t('arena.accept2x')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Rematch Request Button */}
-          {!rematchOffer && onRequestRematch && role === 'player' && (
-            !opponentConnected ? (
-              <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
-                {t('arena.opponentLeft')}
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
+          <motion.div
+            initial={{ scale: 0.94, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={`w-full max-w-sm p-5 bg-[#121520] border-2 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col items-center text-center ${
+              isWinner ? 'border-emerald-400/80' : 'border-white/15'
+            }`}
+          >
+            {isWinner ? (
+              <Trophy className="w-12 h-12 text-amber-400 mb-2 animate-bounce" />
             ) : (
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500 flex items-center justify-center mb-2 text-rose-400">
+                <Swords className="w-6 h-6" />
+              </div>
+            )}
+
+            <h2 className="text-xl font-orbitron font-black text-white uppercase">
+              {role === 'player'
+                ? isWinner
+                  ? t('headsoccer.victoryTitle')
+                  : t('headsoccer.defeatTitle')
+                : t('arena.duelConcluded')}
+            </h2>
+
+            <p className="text-sm font-orbitron font-bold text-emerald-400 mt-1 mb-3">
+              {playerAName} {scoreA} - {scoreB} {playerBName}
+            </p>
+
+            {isWinner && role === 'player' && (
+              <div className="my-2 p-2.5 rounded-xl bg-black/60 border border-white/10 w-full flex justify-between items-center text-xs font-chakra">
+                <span className="text-slate-400">{t('arena.winnerPrize')}</span>
+                <span className="font-bold text-emerald-300 flex items-center space-x-1">
+                  <span>+{winnerPayoutTon}</span>
+                  <GramIcon className="w-3.5 h-3.5 text-emerald-400 inline" />
+                </span>
+              </div>
+            )}
+
+            {/* Rematch Offer Sent by Me */}
+            {rematchOffer && isRematchProposer && role === 'player' && (
+              <div className="w-full p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/60 flex flex-col space-y-1.5 mb-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-orbitron font-bold text-white flex items-center space-x-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                    <span>{t('arena.rematchOfferSent')}</span>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-emerald-300">
+                    {rematchOffer.newWagerTon} GRAM
+                  </span>
+                </div>
+                <span className="text-[10px] font-chakra text-slate-300">
+                  {t('arena.waitingForOpponentRematch')}
+                </span>
+              </div>
+            )}
+
+            {/* Rematch Offer Received */}
+            {rematchOffer && !isRematchProposer && role === 'player' && (
+              <div className="w-full p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-400/60 mb-2.5 flex flex-col space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-orbitron font-bold text-white">
+                    {t('arena.rematchChallengeReceived')}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-emerald-300">
+                    {rematchOffer.newWagerTon} GRAM
+                  </span>
+                </div>
+                {!hasEnoughForRematch ? (
+                  <button
+                    onClick={() => onOpenDeposit && onOpenDeposit(missingForRematch)}
+                    className="w-full py-1.5 rounded-lg bg-amber-400 text-black text-xs font-bold font-orbitron"
+                  >
+                    {t('arena.depositForRematch')}
+                  </button>
+                ) : (
+                  <div className="flex space-x-2 pt-1">
+                    <button
+                      onClick={onDeclineRematch}
+                      className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300"
+                    >
+                      {t('arena.decline')}
+                    </button>
+                    <button
+                      onClick={onAcceptRematch}
+                      className="flex-1 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold font-orbitron shadow-md"
+                    >
+                      {t('arena.accept2x')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rematch Request Button */}
+            {!rematchOffer && onRequestRematch && role === 'player' && (
+              !opponentConnected ? (
+                <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-chakra font-bold text-center mb-2">
+                  {t('arena.opponentLeft')}
+                </div>
+              ) : (
+                <button
+                  onClick={onRequestRematch}
+                  className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>{t('arena.rematch2x')}</span>
+                </button>
+              )
+            )}
+
+            {isWinner && (
+              <div className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center space-x-1.5 mb-2">
+                <span className="text-xs font-orbitron font-bold text-emerald-400">
+                  {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
+                </span>
+              </div>
+            )}
+
+            {onReturnToLobby && (
               <button
-                onClick={onRequestRematch}
-                className="w-full py-2.5 rounded-xl font-orbitron font-extrabold text-xs uppercase bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5 mb-2"
+                onClick={onReturnToLobby}
+                className="w-full py-2.5 rounded-xl bg-white/10 text-slate-300 text-xs font-chakra font-bold hover:text-white"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span>{t('arena.rematch2x')}</span>
+                {t('arena.backToLobby')}
               </button>
-            )
-          )}
-
-          {isWinner && (
-            <div className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/60 flex items-center justify-center space-x-1.5 mb-2">
-              <span className="text-xs font-orbitron font-bold text-emerald-400">
-                {t('arena.prizeAutoCredited', { amount: winnerPayoutTon })}
-              </span>
-            </div>
-          )}
-
-          {onReturnToLobby && (
-            <button
-              onClick={onReturnToLobby}
-              className="w-full py-2.5 rounded-xl bg-white/10 text-slate-300 text-xs font-chakra font-bold hover:text-white"
-            >
-              {t('arena.backToLobby')}
-            </button>
-          )}
-        </motion.div>
+            )}
+          </motion.div>
+        </div>
       )}
 
       {/* Lobby Controls when in LOBBY state */}

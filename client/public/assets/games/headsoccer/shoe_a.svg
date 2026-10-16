@@ -1,20 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="bootA" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="chibiShoeA" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#38bdf8"/>
       <stop offset="60%" stop-color="#0284c7"/>
-      <stop offset="100%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
     </linearGradient>
   </defs>
-  <!-- Cleats / Studs -->
-  <rect x="22" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
-  <rect x="42" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
-  <rect x="78" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
-  <rect x="96" y="92" width="10" height="12" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="3"/>
-  <!-- Boot Body (Facing Right) -->
-  <path d="M18 38 L58 38 L70 58 L108 64 Q120 68 118 86 L16 86 Q10 64 18 38 Z" fill="url(#bootA)" stroke="#0f172a" stroke-width="6" stroke-linejoin="round"/>
-  <!-- Neon Cyan Stripes -->
-  <path d="M46 52 L64 82 M62 56 L78 82" stroke="#00f0ff" stroke-width="6" stroke-linecap="round"/>
-  <!-- Sole Plate -->
-  <rect x="14" y="84" width="104" height="10" rx="5" fill="#00f0ff" stroke="#0f172a" stroke-width="4"/>
+  <!-- Stylized Chibi Shoe / Foot (Facing Right) -->
+  <path d="M22 42 C40 38, 52 48, 64 62 C78 66, 102 70, 114 78 C122 84, 120 96, 110 98 L24 98 C12 98, 14 62, 22 42 Z" fill="url(#chibiShoeA)" stroke="#0f172a" stroke-width="7" stroke-linejoin="round"/>
+  <!-- Curved Top Specular Shine -->
+  <path d="M34 52 C48 50, 68 64, 82 70" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+  <!-- Clean Bottom Sole -->
+  <path d="M18 96 L112 96" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
 </svg>
