@@ -83,8 +83,14 @@ interface SpriteBank {
   goalLeft?: HTMLImageElement;
   goalRight?: HTMLImageElement;
   playerAIdle?: HTMLImageElement;
+  playerARun1?: HTMLImageElement;
+  playerARun2?: HTMLImageElement;
+  playerAJump?: HTMLImageElement;
   playerAKick?: HTMLImageElement;
   playerBIdle?: HTMLImageElement;
+  playerBRun1?: HTMLImageElement;
+  playerBRun2?: HTMLImageElement;
+  playerBJump?: HTMLImageElement;
   playerBKick?: HTMLImageElement;
   ball?: HTMLImageElement;
   ballSuper?: HTMLImageElement;
@@ -220,16 +226,34 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     loadImg('/assets/games/headsoccer/goal_right.svg', (img) => {
       spritesRef.current.goalRight = img;
     });
-    loadImg('/assets/games/headsoccer/player_a_idle.png', (img) => {
+    loadImg('/assets/games/headsoccer/player_a_idle.webp', (img) => {
       spritesRef.current.playerAIdle = img;
     });
-    loadImg('/assets/games/headsoccer/player_a_kick.png', (img) => {
+    loadImg('/assets/games/headsoccer/player_a_run1.webp', (img) => {
+      spritesRef.current.playerARun1 = img;
+    });
+    loadImg('/assets/games/headsoccer/player_a_run2.webp', (img) => {
+      spritesRef.current.playerARun2 = img;
+    });
+    loadImg('/assets/games/headsoccer/player_a_jump.webp', (img) => {
+      spritesRef.current.playerAJump = img;
+    });
+    loadImg('/assets/games/headsoccer/player_a_kick.webp', (img) => {
       spritesRef.current.playerAKick = img;
     });
-    loadImg('/assets/games/headsoccer/player_b_idle.png', (img) => {
+    loadImg('/assets/games/headsoccer/player_b_idle.webp', (img) => {
       spritesRef.current.playerBIdle = img;
     });
-    loadImg('/assets/games/headsoccer/player_b_kick.png', (img) => {
+    loadImg('/assets/games/headsoccer/player_b_run1.webp', (img) => {
+      spritesRef.current.playerBRun1 = img;
+    });
+    loadImg('/assets/games/headsoccer/player_b_run2.webp', (img) => {
+      spritesRef.current.playerBRun2 = img;
+    });
+    loadImg('/assets/games/headsoccer/player_b_jump.webp', (img) => {
+      spritesRef.current.playerBJump = img;
+    });
+    loadImg('/assets/games/headsoccer/player_b_kick.webp', (img) => {
       spritesRef.current.playerBKick = img;
     });
     loadImg('/assets/games/headsoccer/ball.svg', (img) => {
@@ -554,25 +578,40 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
             const isFacingRight = side === 'A';
             const idleImg = side === 'A' ? spritesRef.current.playerAIdle : spritesRef.current.playerBIdle;
+            const run1Img = side === 'A' ? spritesRef.current.playerARun1 : spritesRef.current.playerBRun1;
+            const run2Img = side === 'A' ? spritesRef.current.playerARun2 : spritesRef.current.playerBRun2;
+            const jumpImg = side === 'A' ? spritesRef.current.playerAJump : spritesRef.current.playerBJump;
             const kickImg = side === 'A' ? spritesRef.current.playerAKick : spritesRef.current.playerBKick;
-            const isKicking = kickTimer > 0;
 
-            // Running / Jumping bob and athletic forward tilt
-            const runPhase = animTime * 0.024;
-            const bobY = isMoving ? Math.abs(Math.sin(runPhase)) * 4 : 0;
-            const tilt = isMoving ? (isFacingRight ? 0.08 : -0.08) + Math.sin(runPhase) * 0.04 : 0;
-            const stretch = isMoving ? 1 + Math.sin(runPhase * 2) * 0.03 : 1;
+            const isKicking = kickTimer > 0;
+            const isJumping = y < GROUND_Y - 36;
+            const stepIdx = Math.floor((animTime / 110) % 2);
+
+            let activeImg: HTMLImageElement | undefined;
+            let targetH = 84;
+
+            if (isKicking) {
+              activeImg = kickImg;
+              targetH = 86;
+            } else if (isJumping) {
+              activeImg = jumpImg || idleImg;
+              targetH = 76;
+            } else if (isMoving) {
+              activeImg = (stepIdx === 0 ? run1Img : run2Img) || idleImg;
+              targetH = 78;
+            } else {
+              activeImg = idleImg;
+              targetH = 84;
+            }
+
+            // Subtle footfall bounce during sprint stride
+            const bobY = isMoving && !isJumping ? (stepIdx === 0 ? 0 : 2) : 0;
 
             pCtx.save();
             // Bottom of feet lands around y + 32 (ground is 390, resting y is 358)
             const feetBottomY = y + 32;
             pCtx.translate(x, feetBottomY - bobY);
-            pCtx.rotate(tilt);
-            pCtx.scale(1, stretch);
-
-            const activeImg = isKicking ? kickImg : idleImg;
             if (activeImg && activeImg.complete && activeImg.naturalWidth > 0) {
-              const targetH = isKicking ? 88 : 84;
               const targetW = targetH * (activeImg.naturalWidth / activeImg.naturalHeight);
 
               // Center the sprite horizontally over player x
@@ -954,7 +993,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const displayPlayerBName = hasPlayerB ? playerBName : t('arena.waitingOpponentShort');
 
   return (
-    <div className="relative w-full min-h-[calc(100vh-140px)] sm:min-h-0 rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black p-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col justify-between select-none">
+    <div className="relative w-full max-w-lg mx-auto rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black p-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col gap-2.5 sm:gap-3 select-none">
       {/* Top Stadium LED Scoreboard (3-column grid so long names never overlap scores) */}
       <div className="w-full z-10 mb-2.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-black/80 border border-white/15 rounded-2xl px-3 py-2.5 shadow-inner">
@@ -1199,7 +1238,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
       {/* Classic Handheld Console Lower Deck — SHOWN TO PLAYERS DURING ACTIVE MATCH */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && (
-        <div className="w-full mt-auto pt-3.5 pb-3 sm:pb-4 px-2 sm:px-4 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-2.5">
+        <div className="w-full mt-1.5 sm:mt-2.5 pt-3 pb-3 sm:pb-4 px-2 sm:px-4 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-2.5">
           {/* Top SUPER SHOT Trigger Bar */}
           <div className="w-full flex items-center justify-between gap-2">
             <div className="flex items-center space-x-1.5 opacity-60">
