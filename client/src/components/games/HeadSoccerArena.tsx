@@ -82,10 +82,10 @@ interface SpriteBank {
   pitchBg?: HTMLImageElement;
   goalLeft?: HTMLImageElement;
   goalRight?: HTMLImageElement;
-  headA?: HTMLImageElement;
-  headB?: HTMLImageElement;
-  shoeA?: HTMLImageElement;
-  shoeB?: HTMLImageElement;
+  playerAIdle?: HTMLImageElement;
+  playerAKick?: HTMLImageElement;
+  playerBIdle?: HTMLImageElement;
+  playerBKick?: HTMLImageElement;
   ball?: HTMLImageElement;
   ballSuper?: HTMLImageElement;
 }
@@ -220,17 +220,17 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     loadImg('/assets/games/headsoccer/goal_right.svg', (img) => {
       spritesRef.current.goalRight = img;
     });
-    loadImg('/assets/games/headsoccer/player_a_head.svg', (img) => {
-      spritesRef.current.headA = img;
+    loadImg('/assets/games/headsoccer/player_a_idle.png', (img) => {
+      spritesRef.current.playerAIdle = img;
     });
-    loadImg('/assets/games/headsoccer/player_b_head.svg', (img) => {
-      spritesRef.current.headB = img;
+    loadImg('/assets/games/headsoccer/player_a_kick.png', (img) => {
+      spritesRef.current.playerAKick = img;
     });
-    loadImg('/assets/games/headsoccer/shoe_a.svg', (img) => {
-      spritesRef.current.shoeA = img;
+    loadImg('/assets/games/headsoccer/player_b_idle.png', (img) => {
+      spritesRef.current.playerBIdle = img;
     });
-    loadImg('/assets/games/headsoccer/shoe_b.svg', (img) => {
-      spritesRef.current.shoeB = img;
+    loadImg('/assets/games/headsoccer/player_b_kick.png', (img) => {
+      spritesRef.current.playerBKick = img;
     });
     loadImg('/assets/games/headsoccer/ball.svg', (img) => {
       spritesRef.current.ball = img;
@@ -537,7 +537,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             ctx.restore();
           };
 
-          // Chibi Character Renderer (Matching official Head Soccer sticker art)
+          // Chibi Character Renderer (Using Official Mascot Sticker PNGs)
           const drawChibiPlayer = (
             pCtx: CanvasRenderingContext2D,
             side: 'A' | 'B',
@@ -552,168 +552,99 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             // 1. Super Aura
             drawSuperAura(x, y, side, isSuperActive, isSuperCharged);
 
-            const headImg = side === 'A' ? spritesRef.current.headA : spritesRef.current.headB;
-            const shoeImg = side === 'A' ? spritesRef.current.shoeA : spritesRef.current.shoeB;
             const isFacingRight = side === 'A';
-
-            // Walk cycle animation
-            const walkPhase = animTime * 0.022;
-            const walkBobX = isMoving ? Math.sin(walkPhase) * 6 : 0;
-            const walkBobY = isMoving ? Math.abs(Math.cos(walkPhase)) * -4 : 0;
-            const frontBobX = isMoving ? -Math.sin(walkPhase) * 6 : 0;
-            const frontBobY = isMoving ? Math.abs(Math.sin(walkPhase)) * -4 : 0;
-
-            // 2. Draw Back Foot (behind body)
-            pCtx.save();
-            const backFootX = isFacingRight ? x - 10 + walkBobX : x + 10 - walkBobX;
-            const backFootY = y + 26 + walkBobY;
-            pCtx.translate(backFootX, backFootY);
-            pCtx.scale(0.88, 0.88);
-            pCtx.globalAlpha = 0.85; // Slightly shaded for depth
-            if (shoeImg) {
-              pCtx.drawImage(shoeImg, -18, -12, 36, 24);
-            } else {
-              pCtx.fillStyle = isFacingRight ? '#0284C7' : '#DC2626';
-              pCtx.beginPath();
-              pCtx.ellipse(0, 0, 14, 8, isFacingRight ? 0.2 : -0.2, 0, Math.PI * 2);
-              pCtx.fill();
-            }
-            pCtx.restore();
-
-            // 3. Draw Chibi Head & Mini Bean Torso
-            pCtx.save();
-            if (headImg) {
-              pCtx.drawImage(headImg, x - 37, y - 41, 74, 74);
-            } else {
-              // Vector Chibi fallback matching sticker art
-              // Mini Bean Body
-              const bodyGrad = pCtx.createLinearGradient(x - 12, y + 10, x + 12, y + 30);
-              if (isFacingRight) {
-                bodyGrad.addColorStop(0, '#0284C7');
-                bodyGrad.addColorStop(1, '#1E3A8A');
-              } else {
-                bodyGrad.addColorStop(0, '#DC2626');
-                bodyGrad.addColorStop(1, '#7F1D1D');
-              }
-              pCtx.fillStyle = bodyGrad;
-              pCtx.strokeStyle = '#0F172A';
-              pCtx.lineWidth = 3;
-              pCtx.beginPath();
-              pCtx.roundRect(x - 12, y + 12, 24, 18, 9);
-              pCtx.fill();
-              pCtx.stroke();
-
-              // Big Round Head
-              const headGrad = pCtx.createRadialGradient(x - 6, y - 10, 4, x, y - 4, 32);
-              if (isFacingRight) {
-                headGrad.addColorStop(0, '#38BDF8');
-                headGrad.addColorStop(0.6, '#0284C7');
-                headGrad.addColorStop(1, '#1D4ED8');
-              } else {
-                headGrad.addColorStop(0, '#F87171');
-                headGrad.addColorStop(0.6, '#DC2626');
-                headGrad.addColorStop(1, '#991B1B');
-              }
-              pCtx.fillStyle = headGrad;
-              pCtx.beginPath();
-              pCtx.arc(x, y - 6, 29, 0, Math.PI * 2);
-              pCtx.fill();
-              pCtx.stroke();
-
-              // Specular glossy highlight
-              pCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-              pCtx.beginPath();
-              pCtx.ellipse(x - 10, y - 18, 9, 4, -0.5, 0, Math.PI * 2);
-              pCtx.fill();
-
-              // Fierce slanted chibi ninja eyes
-              pCtx.fillStyle = '#0F172A';
-              if (isFacingRight) {
-                pCtx.beginPath();
-                pCtx.moveTo(x + 2, y - 10);
-                pCtx.lineTo(x + 13, y - 7);
-                pCtx.lineTo(x + 10, y + 2);
-                pCtx.lineTo(x + 1, y - 1);
-                pCtx.closePath();
-                pCtx.fill();
-
-                pCtx.beginPath();
-                pCtx.moveTo(x + 16, y - 8);
-                pCtx.lineTo(x + 24, y - 3);
-                pCtx.lineTo(x + 20, y + 4);
-                pCtx.lineTo(x + 14, y);
-                pCtx.closePath();
-                pCtx.fill();
-              } else {
-                pCtx.beginPath();
-                pCtx.moveTo(x - 2, y - 10);
-                pCtx.lineTo(x - 13, y - 7);
-                pCtx.lineTo(x - 10, y + 2);
-                pCtx.lineTo(x - 1, y - 1);
-                pCtx.closePath();
-                pCtx.fill();
-
-                pCtx.beginPath();
-                pCtx.moveTo(x - 16, y - 8);
-                pCtx.lineTo(x - 24, y - 3);
-                pCtx.lineTo(x - 20, y + 4);
-                pCtx.lineTo(x - 14, y);
-                pCtx.closePath();
-                pCtx.fill();
-              }
-            }
-            pCtx.restore();
-
-            // 4. Draw Front Foot / Kicking Foot (in front of body)
-            pCtx.save();
+            const idleImg = side === 'A' ? spritesRef.current.playerAIdle : spritesRef.current.playerBIdle;
+            const kickImg = side === 'A' ? spritesRef.current.playerAKick : spritesRef.current.playerBKick;
             const isKicking = kickTimer > 0;
-            let frontFootX: number;
-            let frontFootY: number;
-            let frontRot = 0;
 
-            if (isKicking) {
-              const kickProgress = Math.min(1, kickTimer / 5);
-              if (isFacingRight) {
-                frontFootX = x + 16 + kickProgress * 14;
-                frontFootY = y + 22 - kickProgress * 15;
-                frontRot = -0.7 - kickProgress * 0.4;
-              } else {
-                frontFootX = x - 16 - kickProgress * 14;
-                frontFootY = y + 22 - kickProgress * 15;
-                frontRot = 0.7 + kickProgress * 0.4;
+            // Running / Jumping bob and athletic forward tilt
+            const runPhase = animTime * 0.024;
+            const bobY = isMoving ? Math.abs(Math.sin(runPhase)) * 4 : 0;
+            const tilt = isMoving ? (isFacingRight ? 0.08 : -0.08) + Math.sin(runPhase) * 0.04 : 0;
+            const stretch = isMoving ? 1 + Math.sin(runPhase * 2) * 0.03 : 1;
+
+            pCtx.save();
+            // Bottom of feet lands around y + 32 (ground is 390, resting y is 358)
+            const feetBottomY = y + 32;
+            pCtx.translate(x, feetBottomY - bobY);
+            pCtx.rotate(tilt);
+            pCtx.scale(1, stretch);
+
+            const activeImg = isKicking ? kickImg : idleImg;
+            if (activeImg && activeImg.complete && activeImg.naturalWidth > 0) {
+              const targetH = isKicking ? 88 : 84;
+              const targetW = targetH * (activeImg.naturalWidth / activeImg.naturalHeight);
+
+              // Center the sprite horizontally over player x
+              // For kick pose, slightly offset so the torso center aligns with x
+              let offsetX = -targetW / 2;
+              if (isKicking) {
+                offsetX = isFacingRight ? -targetW * 0.40 : -targetW * 0.60;
+              }
+              const offsetY = -targetH;
+
+              pCtx.drawImage(activeImg, offsetX, offsetY, targetW, targetH);
+
+              // Dynamic Kick Action Swoosh when kicking
+              if (isKicking) {
+                pCtx.save();
+                pCtx.beginPath();
+                if (isFacingRight) {
+                  pCtx.arc(targetW * 0.25, -targetH * 0.38, 26, -1.2, 0.4);
+                } else {
+                  pCtx.arc(-targetW * 0.25, -targetH * 0.38, 26, Math.PI - 0.4, Math.PI + 1.2);
+                }
+                pCtx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+                pCtx.lineWidth = 3.5;
+                pCtx.lineCap = 'round';
+                pCtx.stroke();
+                pCtx.restore();
               }
             } else {
-              frontFootX = isFacingRight ? x + 10 + frontBobX : x - 10 - frontBobX;
-              frontFootY = y + 26 + frontBobY;
-            }
+              // High-quality canvas fallback matching mascot style
+              const bodyColor = isFacingRight ? '#0284C7' : '#DC2626';
+              const headColor = isFacingRight ? '#38BDF8' : '#F87171';
 
-            pCtx.translate(frontFootX, frontFootY);
-            pCtx.rotate(frontRot);
-            if (shoeImg) {
-              pCtx.drawImage(shoeImg, -19, -12, 38, 24);
-            } else {
-              pCtx.fillStyle = isFacingRight ? '#38BDF8' : '#F87171';
+              // Torso & Legs
+              pCtx.fillStyle = bodyColor;
               pCtx.strokeStyle = '#0F172A';
-              pCtx.lineWidth = 2.5;
+              pCtx.lineWidth = 3.5;
               pCtx.beginPath();
-              pCtx.ellipse(0, 0, 16, 9, isFacingRight ? 0.15 : -0.15, 0, Math.PI * 2);
+              pCtx.roundRect(-14, -40, 28, 38, 12);
               pCtx.fill();
               pCtx.stroke();
-            }
 
-            // If kicking, draw dynamic motion swoosh arc
-            if (isKicking) {
+              // Big Head
+              pCtx.fillStyle = headColor;
+              pCtx.beginPath();
+              pCtx.arc(0, -56, 28, 0, Math.PI * 2);
+              pCtx.fill();
+              pCtx.stroke();
+
+              // Specular Shine
+              pCtx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+              pCtx.beginPath();
+              pCtx.ellipse(-8, -68, 8, 4, -0.4, 0, Math.PI * 2);
+              pCtx.fill();
+
+              // Slanted Fierce Eyes
+              pCtx.fillStyle = '#0F172A';
               pCtx.beginPath();
               if (isFacingRight) {
-                pCtx.arc(-10, 8, 22, -1.3, 0.4);
+                pCtx.moveTo(2, -58);
+                pCtx.lineTo(14, -54);
+                pCtx.lineTo(10, -46);
+                pCtx.lineTo(0, -50);
               } else {
-                pCtx.arc(10, 8, 22, Math.PI - 0.4, Math.PI + 1.3);
+                pCtx.moveTo(-2, -58);
+                pCtx.lineTo(-14, -54);
+                pCtx.lineTo(-10, -46);
+                pCtx.lineTo(0, -50);
               }
-              pCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-              pCtx.lineWidth = 3;
-              pCtx.lineCap = 'round';
-              pCtx.stroke();
+              pCtx.closePath();
+              pCtx.fill();
             }
+
             pCtx.restore();
           };
 
