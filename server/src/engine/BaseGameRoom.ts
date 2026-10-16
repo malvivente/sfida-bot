@@ -1186,6 +1186,9 @@ export abstract class BaseGameRoom {
   }
 
   public broadcast(data: any) {
+    if (data && typeof data === 'object' && data.serverTime === undefined) {
+      data.serverTime = Date.now();
+    }
     const payload = JSON.stringify(data);
 
     if (this.playerA.ws && this.playerA.ws.readyState === WebSocket.OPEN) {

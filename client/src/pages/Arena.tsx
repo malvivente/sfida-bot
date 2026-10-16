@@ -1464,6 +1464,7 @@ export const Arena: React.FC<ArenaProps> = ({
               gameData={socketData.gameData as any}
               role={effectiveRole}
               onInput={socketData.sendHeadSoccerInput}
+              onSubscribeTick={socketData.subscribeToGameTick}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
               playerAReady={socketData.playerAReady}

@@ -185,6 +185,7 @@ export class CubeCountRoom extends BaseGameRoom {
       roundDamageA: this.roundDamageA,
       roundDamageB: this.roundDamageB,
       roundMessage: this.roundMessage,
+      serverTime: Date.now(),
     };
   }
 

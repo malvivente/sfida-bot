@@ -115,6 +115,20 @@ export function useSocket({
   const [kickedInactivity, setKickedInactivity] = useState<string | null>(null);
   const [isRematch, setIsRematch] = useState<boolean>(false);
 
+  // High-frequency tick listener system for zero-overhead canvas render loops
+  const gameTickSubscribersRef = useRef<Set<(data: any) => void>>(new Set());
+  const lastHsReactUpdateRef = useRef<number>(0);
+  const lastHsPhaseRef = useRef<string | undefined>(undefined);
+  const lastHsScoreARef = useRef<number | undefined>(undefined);
+  const lastHsScoreBRef = useRef<number | undefined>(undefined);
+
+  const subscribeToGameTick = useCallback((cb: (data: any) => void) => {
+    gameTickSubscribersRef.current.add(cb);
+    return () => {
+      gameTickSubscribersRef.current.delete(cb);
+    };
+  }, []);
+
   useEffect(() => {
     // Reset room state when entering a new match or switching rooms
     setRoomState('LOBBY');
@@ -275,15 +289,57 @@ export function useSocket({
           case 'CUBECOUNT_ANSWER_STATUS':
           case 'CUBECOUNT_REVEAL':
           case 'HEADSOCCER_START':
-          case 'HEADSOCCER_TICK':
           case 'HEADSOCCER_GOAL':
           case 'HEADSOCCER_OVERTIME':
           case 'HEADSOCCER_FULLTIME':
             setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : 'GAME_ACTIVE'));
-            if (msg.gameData) setGameData(msg.gameData);
+            if (msg.gameData) {
+              setGameData(msg.gameData);
+              gameTickSubscribersRef.current.forEach((cb) => {
+                try {
+                  cb(msg.gameData);
+                } catch {}
+              });
+            }
             if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.message) setFeedMessage(msg.message);
+            if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
+            break;
+
+          case 'HEADSOCCER_TICK':
+            setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : 'GAME_ACTIVE'));
+            if (msg.gameData) {
+              // Direct notification to render loop without forcing React component re-render
+              gameTickSubscribersRef.current.forEach((cb) => {
+                try {
+                  cb(msg.gameData);
+                } catch {}
+              });
+
+              // Throttle React state update to ~4Hz to keep mobile WebView main thread silky smooth
+              const now = Date.now();
+              const isPhaseChanged = msg.gameData.phase !== lastHsPhaseRef.current;
+              const isScoreChanged =
+                msg.gameData.scoreA !== lastHsScoreARef.current ||
+                msg.gameData.scoreB !== lastHsScoreBRef.current;
+              const isEvent = Boolean(msg.gameData.lastEvent);
+              const shouldUpdateReact =
+                isPhaseChanged ||
+                isScoreChanged ||
+                isEvent ||
+                now - lastHsReactUpdateRef.current >= 250;
+
+              if (shouldUpdateReact) {
+                lastHsReactUpdateRef.current = now;
+                lastHsPhaseRef.current = msg.gameData.phase;
+                lastHsScoreARef.current = msg.gameData.scoreA;
+                lastHsScoreBRef.current = msg.gameData.scoreB;
+                setGameData(msg.gameData);
+              }
+            }
+            if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
+            if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
             break;
 
@@ -781,6 +837,7 @@ export function useSocket({
     kickedInactivity,
     setKickedInactivity,
     isRematch,
+    subscribeToGameTick,
   };
 }
 

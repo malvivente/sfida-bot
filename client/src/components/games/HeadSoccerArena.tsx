@@ -53,6 +53,7 @@ interface HeadSoccerArenaProps {
   hasPlayerB?: boolean;
   onJoinAsPlayer?: () => void;
   onInviteChallenger?: () => void;
+  onSubscribeTick?: (callback: (data: HeadSoccerState) => void) => () => void;
 }
 
 const ARENA_W = 800;
@@ -118,6 +119,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   hasPlayerB = true,
   onJoinAsPlayer,
   onInviteChallenger,
+  onSubscribeTick,
 }) => {
   const { t } = useI18n();
   const { triggerImpact, triggerNotification } = useHaptics();
@@ -146,6 +148,15 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   });
   const latestGameDataRef = useRef<HeadSoccerState | undefined>(gameData);
 
+  // Direct socket tick subscription to update physics targets without React re-render overhead
+  useEffect(() => {
+    if (!onSubscribeTick) return;
+    const unsub = onSubscribeTick((freshData) => {
+      latestGameDataRef.current = freshData;
+    });
+    return unsub;
+  }, [onSubscribeTick]);
+
   // Active button press visuals & immediate zero-latency refs
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
@@ -153,6 +164,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const [kickPressed, setKickPressed] = useState(false);
   const isLeftPressedRef = useRef(false);
   const isRightPressedRef = useRef(false);
+
+  // D-Pad continuous slide / touch tracking refs
+  const dpadContainerRef = useRef<HTMLDivElement | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
+  const currentDirectionRef = useRef<'left' | 'right' | null>(null);
 
   // 2-Phase Settlement Popup state
   const [outcomePhase, setOutcomePhase] = useState<'idle' | 'splash' | 'settled'>('idle');
@@ -172,6 +188,8 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   // Ensure movement inputs are released if phase changes away from PLAYING
   useEffect(() => {
     if (roomState !== 'GAME_ACTIVE' || (gameData?.phase && gameData.phase !== 'PLAYING')) {
+      activePointerIdRef.current = null;
+      currentDirectionRef.current = null;
       if (leftPressed || isLeftPressedRef.current) {
         isLeftPressedRef.current = false;
         setLeftPressed(false);
@@ -345,7 +363,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                 isSuper: gd.ball.isSuperShot,
                 alpha: gd.ball.isSuperShot ? 0.75 : 0.4,
               });
-              if (trailRef.current.length > 12) {
+              if (trailRef.current.length > 8) {
                 trailRef.current.shift();
               }
             }
@@ -384,21 +402,22 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           drawShadow(rs.pBx, rs.pBy + 30, 30);
           drawShadow(rs.bx, rs.by + 18, 20);
 
-          // 3. Draw Ball Trail
-          for (let i = 0; i < trailRef.current.length; i++) {
+          // 3. Draw Ball Trail (in-place pool update)
+          for (let i = trailRef.current.length - 1; i >= 0; i--) {
             const pt = trailRef.current[i];
-            pt.alpha *= 0.86;
-            if (pt.alpha > 0.03) {
-              ctx.beginPath();
-              const r = 8 + (i / trailRef.current.length) * 10;
-              ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
-              ctx.fillStyle = pt.isSuper
-                ? `rgba(249, 115, 22, ${pt.alpha})`
-                : `rgba(56, 189, 248, ${pt.alpha * 0.7})`;
-              ctx.fill();
+            pt.alpha *= 0.84;
+            if (pt.alpha <= 0.04) {
+              trailRef.current.splice(i, 1);
+              continue;
             }
+            ctx.beginPath();
+            const r = 7 + (i / 8) * 8;
+            ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = pt.isSuper
+              ? `rgba(249, 115, 22, ${pt.alpha})`
+              : `rgba(56, 189, 248, ${pt.alpha * 0.7})`;
+            ctx.fill();
           }
-          trailRef.current = trailRef.current.filter((pt) => pt.alpha > 0.03);
 
           // Super Shot Visual Aura Renderer (Fiery / Electric Super Saiyan Aura)
           const drawSuperAura = (
@@ -445,13 +464,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                 ctx.fill();
               }
 
-              // 3. Crackling electric arcs around player perimeter
-              ctx.strokeStyle = '#FDE047';
-              ctx.lineWidth = 1.8;
-              ctx.shadowColor = '#F59E0B';
-              ctx.shadowBlur = 8;
-              ctx.beginPath();
+              // 3. Crackling electric arcs around player perimeter (crisp layered stroke, 0 blur overhead)
               const segments = 8;
+              ctx.beginPath();
               for (let s = 0; s <= segments; s++) {
                 const a = (s * Math.PI * 2) / segments + now * 0.002;
                 const jitter = Math.sin(now * 0.03 + s * 3) * 6;
@@ -460,10 +475,15 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                 if (s === 0) ctx.moveTo(jx, jy);
                 else ctx.lineTo(jx, jy);
               }
+              ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
+              ctx.lineWidth = 3.8;
+              ctx.stroke();
+
+              ctx.strokeStyle = '#FDE047';
+              ctx.lineWidth = 1.8;
               ctx.stroke();
 
               // 4. Floating "SUPER ARMED" banner over player head
-              ctx.shadowBlur = 0;
               const badgeW = 78;
               const badgeH = 15;
               const badgeY = targetY - 62;
@@ -612,9 +632,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             ctx.save();
             ctx.font = '900 24px Orbitron, monospace';
             ctx.textAlign = 'center';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#000000';
+            ctx.strokeText(fb.text, ARENA_W / 2, 85);
             ctx.fillStyle = fb.color;
-            ctx.shadowColor = '#000000';
-            ctx.shadowBlur = 10;
             ctx.fillText(fb.text, ARENA_W / 2, 85);
             ctx.restore();
           }
@@ -650,6 +672,101 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
       if (active) triggerImpact('light');
     },
     [onInput, role, roomState, triggerImpact]
+  );
+
+  // Seamless Slide-to-Switch movement calculation
+  const updateMovementFromPointer = useCallback(
+    (clientX: number, clientY: number) => {
+      if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+      const container = dpadContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const marginX = 35;
+      const marginY = 45;
+      const inBounds =
+        clientX >= rect.left - marginX &&
+        clientX <= rect.right + marginX &&
+        clientY >= rect.top - marginY &&
+        clientY <= rect.bottom + marginY;
+
+      if (!inBounds) {
+        if (currentDirectionRef.current !== null) {
+          currentDirectionRef.current = null;
+          handleMoveLeft(false);
+          handleMoveRight(false);
+        }
+        return;
+      }
+
+      const midX = rect.left + rect.width / 2;
+      const targetDir: 'left' | 'right' = clientX < midX ? 'left' : 'right';
+
+      if (targetDir !== currentDirectionRef.current) {
+        currentDirectionRef.current = targetDir;
+        if (targetDir === 'left') {
+          handleMoveRight(false);
+          handleMoveLeft(true);
+        } else {
+          handleMoveLeft(false);
+          handleMoveRight(true);
+        }
+      }
+    },
+    [handleMoveLeft, handleMoveRight, role, roomState]
+  );
+
+  const handlePointerDownDpad = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      activePointerIdRef.current = e.pointerId;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+      updateMovementFromPointer(e.clientX, e.clientY);
+    },
+    [updateMovementFromPointer]
+  );
+
+  const handlePointerMoveDpad = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (activePointerIdRef.current === e.pointerId) {
+        e.preventDefault();
+        updateMovementFromPointer(e.clientX, e.clientY);
+      }
+    },
+    [updateMovementFromPointer]
+  );
+
+  const handlePointerUpDpad = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (activePointerIdRef.current === e.pointerId) {
+        e.preventDefault();
+        activePointerIdRef.current = null;
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {}
+        currentDirectionRef.current = null;
+        handleMoveLeft(false);
+        handleMoveRight(false);
+      }
+    },
+    [handleMoveLeft, handleMoveRight]
+  );
+
+  const handlePointerCancelDpad = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (activePointerIdRef.current === e.pointerId) {
+        activePointerIdRef.current = null;
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {}
+        currentDirectionRef.current = null;
+        handleMoveLeft(false);
+        handleMoveRight(false);
+      }
+    },
+    [handleMoveLeft, handleMoveRight]
   );
 
   const handleJump = useCallback(() => {
@@ -872,12 +989,16 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
         </div>
 
         {/* 16:9 Canvas Viewport */}
-        <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border-2 border-emerald-500/40 bg-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.2)]">
+        <div
+          className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border-2 border-emerald-500/40 bg-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.2)]"
+          style={{ transform: 'translateZ(0)', willChange: 'transform' }}
+        >
           <canvas
             ref={canvasRef}
             width={ARENA_W}
             height={ARENA_H}
             className="w-full h-full object-contain block"
+            style={{ transform: 'translateZ(0)' }}
           />
 
           {/* Final 5 Seconds Big Pulse Warning on Pitch */}
@@ -1039,53 +1160,40 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* Main Console Controls Row: Left D-Pad Cradle & Right Action Buttons */}
           <div className="w-full flex items-center justify-between px-1">
-            {/* Left Side: Recessed Console D-Pad (Left / Right) */}
-            <div className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2">
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleMoveLeft(true);
-                }}
-                onPointerUp={(e) => {
-                  e.preventDefault();
-                  handleMoveLeft(false);
-                }}
-                onPointerCancel={() => handleMoveLeft(false)}
-                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+            {/* Left Side: Recessed Console D-Pad (Left / Right with seamless Slide-to-Switch support) */}
+            <div
+              ref={dpadContainerRef}
+              onPointerDown={handlePointerDownDpad}
+              onPointerMove={handlePointerMoveDpad}
+              onPointerUp={handlePointerUpDpad}
+              onPointerCancel={handlePointerCancelDpad}
+              className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2 touch-none select-none cursor-pointer"
+            >
+              <div
+                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   leftPressed
                     ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
-                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16] active:translate-y-1'
+                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16]'
                 }`}
               >
                 <ArrowLeft className="w-6 h-6 stroke-[2.8]" />
                 <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
                   {t('headsoccer.btnLeft')}
                 </span>
-              </button>
+              </div>
 
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleMoveRight(true);
-                }}
-                onPointerUp={(e) => {
-                  e.preventDefault();
-                  handleMoveRight(false);
-                }}
-                onPointerCancel={() => handleMoveRight(false)}
-                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+              <div
+                className={`w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   rightPressed
                     ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
-                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16] active:translate-y-1'
+                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16]'
                 }`}
               >
                 <ArrowRight className="w-6 h-6 stroke-[2.8]" />
                 <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
                   {t('headsoccer.btnRight')}
                 </span>
-              </button>
+              </div>
             </div>
 
             {/* Right Side: Action Buttons KICK & JUMP (clean layout, no A/B letters, 100% inside card bounds) */}

@@ -139,12 +139,21 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
     }
   }, [phase]);
 
-  // Phase Countdown timer calculation
+  // Server clock skew offset calculation to ensure 100% sync across different devices
+  const serverOffsetRef = useRef<number>(0);
+  useEffect(() => {
+    if (gameData?.serverTime) {
+      serverOffsetRef.current = gameData.serverTime - Date.now();
+    }
+  }, [gameData?.serverTime]);
+
+  // Phase Countdown timer calculation (synchronized across players)
   const [timeRemainingMs, setTimeRemainingMs] = useState<number>(0);
   useEffect(() => {
     if (!phaseEndEpochMs) return;
     const update = () => {
-      const remaining = Math.max(0, phaseEndEpochMs - Date.now());
+      const currentServerTime = Date.now() + serverOffsetRef.current;
+      const remaining = Math.max(0, phaseEndEpochMs - currentServerTime);
       setTimeRemainingMs(remaining);
     };
     update();
@@ -722,7 +731,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
 
         {/* 2-Phase Settlement Popups */}
         {outcomePhase === 'splash' && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
             <div
               className={`flex flex-col items-center p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center border-2 ${
                 isWinner
@@ -768,7 +777,7 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
 
         {/* Phase 2: Settled Concluded Modal */}
         {outcomePhase === 'settled' && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

@@ -218,6 +218,7 @@ export interface CubeCountState {
   roundDamageA?: number; // 0 or 1
   roundDamageB?: number; // 0 or 1
   roundMessage?: string;
+  serverTime?: number;
 }
 
 // --- Head Soccer Types ---
