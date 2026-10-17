@@ -216,6 +216,10 @@ export class HeadSoccerRoom extends BaseGameRoom {
         scoreB: this.playerB?.score || 0,
         gameData: this.getGamePayload(),
       });
+      // Clear one-shot physics event so subsequent ticks do not re-broadcast stale events
+      if (this.lastEvent && this.phase === 'PLAYING') {
+        this.lastEvent = undefined;
+      }
     }, TICK_MS);
   }
 

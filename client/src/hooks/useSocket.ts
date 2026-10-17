@@ -121,6 +121,10 @@ export function useSocket({
   const lastHsPhaseRef = useRef<string | undefined>(undefined);
   const lastHsScoreARef = useRef<number | undefined>(undefined);
   const lastHsScoreBRef = useRef<number | undefined>(undefined);
+  const lastHsTimeSecRef = useRef<number | undefined>(undefined);
+  const lastHsCountdownSecRef = useRef<number | undefined>(undefined);
+  const lastHsSuperActiveARef = useRef<boolean | undefined>(undefined);
+  const lastHsSuperActiveBRef = useRef<boolean | undefined>(undefined);
   const currentRoomStateRef = useRef<RoomState>('LOBBY');
   const currentScoreARef = useRef<number>(-1);
   const currentScoreBRef = useRef<number>(-1);
@@ -333,25 +337,45 @@ export function useSocket({
                 } catch {}
               });
 
-              // Throttle React state update to ~4Hz to keep mobile WebView main thread silky smooth
+              // Intelligently update React DOM state ONLY when user-visible UI actually changes:
+              // - Phase transition (KICKOFF_COUNTDOWN, PLAYING, GOAL_CELEBRATION, FULL_TIME)
+              // - Score changed
+              // - Integer clock second changed (once per sec)
+              // - Kickoff countdown second changed (3 -> 2 -> 1 -> 0)
+              // - Super activation toggled
+              // - Heartbeat fallback at 1000ms
+              const gd = msg.gameData;
               const now = Date.now();
-              const isPhaseChanged = msg.gameData.phase !== lastHsPhaseRef.current;
+              const isPhaseChanged = gd.phase !== lastHsPhaseRef.current;
               const isScoreChanged =
-                msg.gameData.scoreA !== lastHsScoreARef.current ||
-                msg.gameData.scoreB !== lastHsScoreBRef.current;
-              const isEvent = Boolean(msg.gameData.lastEvent);
+                gd.scoreA !== lastHsScoreARef.current ||
+                gd.scoreB !== lastHsScoreBRef.current;
+              const currentSec = Math.floor((gd.timeRemainingMs || 0) / 1000);
+              const isTimeSecChanged = currentSec !== lastHsTimeSecRef.current;
+              const isCountdownChanged = gd.countdownSec !== lastHsCountdownSecRef.current;
+              const isSuperChanged =
+                gd.playerA?.superActive !== lastHsSuperActiveARef.current ||
+                gd.playerB?.superActive !== lastHsSuperActiveBRef.current;
+              const isHeartbeat = now - lastHsReactUpdateRef.current >= 800;
+
               const shouldUpdateReact =
                 isPhaseChanged ||
                 isScoreChanged ||
-                isEvent ||
-                now - lastHsReactUpdateRef.current >= 250;
+                isTimeSecChanged ||
+                isCountdownChanged ||
+                isSuperChanged ||
+                isHeartbeat;
 
               if (shouldUpdateReact) {
                 lastHsReactUpdateRef.current = now;
-                lastHsPhaseRef.current = msg.gameData.phase;
-                lastHsScoreARef.current = msg.gameData.scoreA;
-                lastHsScoreBRef.current = msg.gameData.scoreB;
-                setGameData(msg.gameData);
+                lastHsPhaseRef.current = gd.phase;
+                lastHsScoreARef.current = gd.scoreA;
+                lastHsScoreBRef.current = gd.scoreB;
+                lastHsTimeSecRef.current = currentSec;
+                lastHsCountdownSecRef.current = gd.countdownSec;
+                lastHsSuperActiveARef.current = gd.playerA?.superActive;
+                lastHsSuperActiveBRef.current = gd.playerB?.superActive;
+                setGameData(gd);
               }
             }
             if (msg.scoreA !== undefined && msg.scoreA !== currentScoreARef.current) {

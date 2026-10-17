@@ -139,7 +139,7 @@ if (typeof window !== 'undefined') {
   Object.values(HEADSOCCER_SPRITE_PATHS).forEach((src) => getOrLoadHeadSoccerSprite(src));
 }
 
-export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
+const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   gameData,
   role,
   onInput,
@@ -194,6 +194,13 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     ball: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.ball),
     ballSuper: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.ballSuper),
   });
+
+  // Pre-rasterized offscreen canvas caches to avoid repeating expensive SVG vector rasterization on every 60fps frame
+  const pitchCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const goalLeftCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const goalRightCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const hasWarmedUpRef = useRef(false);
+
   const particlesRef = useRef<VisualParticle[]>([]);
   const trailRef = useRef<BallTrailPoint[]>([]);
   const lastEventTsRef = useRef<number>(0);
@@ -216,14 +223,65 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   });
   const latestGameDataRef = useRef<HeadSoccerState | undefined>(gameData);
 
-  // Direct socket tick subscription to update physics targets without React re-render overhead
+  const spawnBurst = useCallback((x: number, y: number, color: string, count = 14, speedScale = 1) => {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+      const spd = (2.5 + Math.random() * 5.5) * speedScale;
+      particlesRef.current.push({
+        x,
+        y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd - 1.2,
+        radius: 3 + Math.random() * 4,
+        color,
+        alpha: 1,
+        decay: 0.035 + Math.random() * 0.025,
+      });
+    }
+  }, []);
+
+  // Direct socket tick subscription: updates physics targets & triggers sfx/particles with ZERO React re-render overhead
   useEffect(() => {
     if (!onSubscribeTick) return;
     const unsub = onSubscribeTick((freshData) => {
       latestGameDataRef.current = freshData;
+
+      const ev = freshData.lastEvent;
+      if (ev && ev.ts !== lastEventTsRef.current) {
+        lastEventTsRef.current = ev.ts;
+
+        if (ev.type === 'KICK') {
+          spawnBurst(ev.x, ev.y, ev.side === 'A' ? '#22D3EE' : '#FB923C', 10, 0.9);
+        } else if (ev.type === 'HEADER') {
+          spawnBurst(ev.x, ev.y, '#FACC15', 12, 0.95);
+        } else if (ev.type === 'SUPER_SHOT') {
+          spawnBurst(ev.x, ev.y, '#F97316', 24, 1.5);
+          screenShakeRef.current = 10;
+          floatingBannerRef.current = {
+            text: t('headsoccer.superShotBanner'),
+            color: '#FB923C',
+            expiresAt: Date.now() + 1100,
+          };
+          if (role === 'player') triggerImpact('heavy');
+        } else if (ev.type === 'CROSSBAR') {
+          spawnBurst(ev.x, ev.y, '#E2E8F0', 18, 1.2);
+          screenShakeRef.current = 8;
+          floatingBannerRef.current = {
+            text: t('headsoccer.crossbarBanner'),
+            color: '#38BDF8',
+            expiresAt: Date.now() + 950,
+          };
+          if (role === 'player') triggerImpact('medium');
+        } else if (ev.type === 'GOAL') {
+          spawnBurst(ev.x, ev.y, '#10B981', 32, 1.7);
+          spawnBurst(ARENA_W / 2, ARENA_H / 2, '#FACC15', 28, 1.6);
+          screenShakeRef.current = 16;
+          if (role === 'player') triggerNotification('success');
+        }
+      }
     });
     return unsub;
-  }, [onSubscribeTick]);
+  }, [onSubscribeTick, role, spawnBurst, t, triggerImpact, triggerNotification]);
 
   // Active button press visuals & immediate zero-latency refs
   const [leftPressed, setLeftPressed] = useState(false);
@@ -279,62 +337,69 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     });
   }, []);
 
-  const spawnBurst = useCallback((x: number, y: number, color: string, count = 14, speedScale = 1) => {
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
-      const spd = (2.5 + Math.random() * 5.5) * speedScale;
-      particlesRef.current.push({
-        x,
-        y,
-        vx: Math.cos(angle) * spd,
-        vy: Math.sin(angle) * spd - 1.2,
-        radius: 3 + Math.random() * 4,
-        color,
-        alpha: 1,
-        decay: 0.035 + Math.random() * 0.025,
-      });
+  // Pre-rasterize SVG assets to offscreen bitmap canvases once
+  const getOrRenderPitchCanvas = useCallback((): HTMLCanvasElement | null => {
+    if (pitchCanvasRef.current) return pitchCanvasRef.current;
+    const bgImg = spritesRef.current.pitchBg;
+    if (!bgImg || !bgImg.complete || bgImg.naturalWidth === 0) return null;
+
+    try {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = ARENA_W;
+      offCanvas.height = ARENA_H;
+      const offCtx = offCanvas.getContext('2d');
+      if (!offCtx) return null;
+
+      offCtx.drawImage(bgImg, 0, 0, ARENA_W, ARENA_H);
+      pitchCanvasRef.current = offCanvas;
+      return offCanvas;
+    } catch {
+      return null;
     }
   }, []);
 
-  // Sync latest server tick & trigger visual particles / haptics (ZERO audio)
-  useEffect(() => {
-    latestGameDataRef.current = gameData;
-    if (!gameData) return;
+  const getOrRenderGoalCanvas = useCallback((side: 'left' | 'right'): HTMLCanvasElement | null => {
+    const targetRef = side === 'left' ? goalLeftCanvasRef : goalRightCanvasRef;
+    if (targetRef.current) return targetRef.current;
 
-    const ev = gameData.lastEvent;
-    if (ev && ev.ts !== lastEventTsRef.current) {
-      lastEventTsRef.current = ev.ts;
+    const img = side === 'left' ? spritesRef.current.goalLeft : spritesRef.current.goalRight;
+    if (!img || !img.complete || img.naturalWidth === 0) return null;
 
-      if (ev.type === 'KICK') {
-        spawnBurst(ev.x, ev.y, ev.side === 'A' ? '#22D3EE' : '#FB923C', 10, 0.9);
-      } else if (ev.type === 'HEADER') {
-        spawnBurst(ev.x, ev.y, '#FACC15', 12, 0.95);
-      } else if (ev.type === 'SUPER_SHOT') {
-        spawnBurst(ev.x, ev.y, '#F97316', 24, 1.5);
-        screenShakeRef.current = 10;
-        floatingBannerRef.current = {
-          text: t('headsoccer.superShotBanner'),
-          color: '#FB923C',
-          expiresAt: Date.now() + 1100,
-        };
-        if (role === 'player') triggerImpact('heavy');
-      } else if (ev.type === 'CROSSBAR') {
-        spawnBurst(ev.x, ev.y, '#E2E8F0', 18, 1.2);
-        screenShakeRef.current = 8;
-        floatingBannerRef.current = {
-          text: t('headsoccer.crossbarBanner'),
-          color: '#38BDF8',
-          expiresAt: Date.now() + 950,
-        };
-        if (role === 'player') triggerImpact('medium');
-      } else if (ev.type === 'GOAL') {
-        spawnBurst(ev.x, ev.y, '#10B981', 32, 1.7);
-        spawnBurst(ARENA_W / 2, ARENA_H / 2, '#FACC15', 28, 1.6);
-        screenShakeRef.current = 16;
-        if (role === 'player') triggerNotification('success');
-      }
+    try {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = 74;
+      offCanvas.height = 162;
+      const offCtx = offCanvas.getContext('2d');
+      if (!offCtx) return null;
+
+      offCtx.drawImage(img, 0, 0, 74, 162);
+      targetRef.current = offCanvas;
+      return offCanvas;
+    } catch {
+      return null;
     }
-  }, [gameData, role, spawnBurst, t, triggerImpact, triggerNotification]);
+  }, []);
+
+  // GPU Pipeline & Texture Warm-up: runs during 3-second kickoff countdown to ensure zero-stutter when match starts
+  const warmUpGpuPipeline = useCallback((ctx: CanvasRenderingContext2D) => {
+    if (hasWarmedUpRef.current) return;
+    hasWarmedUpRef.current = true;
+    try {
+      getOrRenderPitchCanvas();
+      getOrRenderGoalCanvas('left');
+      getOrRenderGoalCanvas('right');
+
+      ctx.save();
+      ctx.globalAlpha = 0.001;
+      const sprites = spritesRef.current;
+      Object.values(sprites).forEach((img) => {
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, -200, -200, 40, 40);
+        }
+      });
+      ctx.restore();
+    } catch {}
+  }, [getOrRenderGoalCanvas, getOrRenderPitchCanvas]);
 
   // 60FPS / 120FPS Delta-Time Normalized Canvas Render Loop
   useEffect(() => {
@@ -456,8 +521,16 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             screenShakeRef.current = 0;
           }
 
-          // 1. Draw Stadium Pitch Background
-          if (spritesRef.current.pitchBg) {
+          // Warm up GPU pipelines and offscreen canvases on early frame
+          if (!hasWarmedUpRef.current) {
+            warmUpGpuPipeline(ctx);
+          }
+
+          // 1. Draw Stadium Pitch Background (via offscreen bitmap blit for silky 60fps)
+          const pitchCv = getOrRenderPitchCanvas();
+          if (pitchCv) {
+            ctx.drawImage(pitchCv, 0, 0);
+          } else if (spritesRef.current.pitchBg) {
             ctx.drawImage(spritesRef.current.pitchBg, 0, 0, ARENA_W, ARENA_H);
           } else {
             ctx.fillStyle = '#0B1120';
@@ -759,11 +832,18 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           }
           ctx.restore();
 
-          // 7. Draw Left & Right Goals in Foreground
-          if (spritesRef.current.goalLeft) {
+          // 7. Draw Left & Right Goals in Foreground (via offscreen bitmap blits)
+          const glCv = getOrRenderGoalCanvas('left');
+          if (glCv) {
+            ctx.drawImage(glCv, 0, 232);
+          } else if (spritesRef.current.goalLeft) {
             ctx.drawImage(spritesRef.current.goalLeft, 0, 232, 74, 162);
           }
-          if (spritesRef.current.goalRight) {
+
+          const grCv = getOrRenderGoalCanvas('right');
+          if (grCv) {
+            ctx.drawImage(grCv, ARENA_W - 74, 232);
+          } else if (spritesRef.current.goalRight) {
             ctx.drawImage(spritesRef.current.goalRight, ARENA_W - 74, 232, 74, 162);
           }
 
@@ -810,7 +890,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
     animId = requestAnimationFrame(renderFrame);
     return () => cancelAnimationFrame(animId);
-  }, [role, t, userSide]);
+  }, [getOrRenderGoalCanvas, getOrRenderPitchCanvas, role, t, userSide, warmUpGpuPipeline]);
 
   // Input handlers
   const handleMoveLeft = useCallback(
@@ -1174,7 +1254,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* Kickoff Countdown Overlay */}
           {roomState === 'GAME_ACTIVE' && gameData?.phase === 'KICKOFF_COUNTDOWN' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[2px] pointer-events-none">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 pointer-events-none">
               <span className="text-xs font-orbitron font-bold uppercase tracking-widest text-emerald-300 mb-1">
                 {gameData.isOvertime ? t('headsoccer.goldenGoal') : t('headsoccer.getReady')}
               </span>
@@ -1186,7 +1266,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* GOAL Celebration Overlay */}
           {roomState === 'GAME_ACTIVE' && gameData?.phase === 'GOAL_CELEBRATION' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px] pointer-events-none animate-in zoom-in-95 duration-200">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 pointer-events-none animate-in zoom-in-95 duration-200">
               <span className="text-4xl sm:text-5xl font-orbitron font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-emerald-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.8)]">
                 GOOOAL!! ⚽
               </span>
@@ -1198,7 +1278,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* FULL TIME (Time Expired) Overlay inside Screen */}
           {roomState === 'GAME_ACTIVE' && gameData?.phase === 'FULL_TIME' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm pointer-events-none animate-in zoom-in-95 duration-200 p-4 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 pointer-events-none animate-in zoom-in-95 duration-200 p-4 text-center">
               <div className="px-3.5 py-1.5 rounded-full bg-amber-500/25 border-2 border-amber-400 text-amber-300 text-xs sm:text-sm font-orbitron font-black uppercase tracking-widest mb-2 shadow-[0_0_20px_rgba(245,158,11,0.6)] animate-pulse flex items-center space-x-1.5">
                 <span>⏱️</span>
                 <span>{t('headsoccer.finalWhistle')}</span>
@@ -1215,7 +1295,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* Betting Window Overlay inside Screen */}
           {roomState === 'BETTING_WINDOW' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 p-4 text-center">
               <span className="text-xs font-mono font-bold text-cyber-amber uppercase tracking-wider animate-pulse flex items-center space-x-1 mb-1">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{t('arena.bettingWindowTitle')}</span>
@@ -1236,7 +1316,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
           {/* Lobby Overlay inside Screen */}
           {roomState === 'LOBBY' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 backdrop-blur-[2px] p-4 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 p-4 text-center">
               <div className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-orbitron font-bold uppercase tracking-widest mb-2">
                 ⚽ HEAD SOCCER 1V1 • 60S
               </div>
@@ -1677,3 +1757,5 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     </div>
   );
 };
+
+export const HeadSoccerArena = React.memo(HeadSoccerArenaComponent);
