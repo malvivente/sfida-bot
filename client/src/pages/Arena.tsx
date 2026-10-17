@@ -246,7 +246,7 @@ export const Arena: React.FC<ArenaProps> = ({
 
   // Auto-refresh user balance when match settles or is cancelled
   useEffect(() => {
-    if (socketData.roomState === 'MATCH_SETTLED' || socketData.roomState === 'CANCELLED') {
+    if (socketData.roomState === 'MATCH_SETTLED' || socketData.roomState === 'FORFEITED' || socketData.roomState === 'CANCELLED') {
       fetchUserBalance();
       const t1 = setTimeout(fetchUserBalance, 1200);
       const t2 = setTimeout(fetchUserBalance, 2500);
@@ -327,7 +327,8 @@ export const Arena: React.FC<ArenaProps> = ({
     wagerGram: string,
     gameType: GameType = 'roulette',
     isPrivate?: boolean,
-    targetOpponentUsername?: string
+    targetOpponentUsername?: string,
+    allowSpectators?: boolean
   ): Promise<boolean> => {
     setCreateError(null);
 
@@ -345,6 +346,8 @@ export const Arena: React.FC<ArenaProps> = ({
 
     try {
       const playerName = cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (username ? username.replace(/^@/, '') : 'Warrior')));
+      const roomIsPrivate = Boolean(isPrivate) || Boolean(targetOpponentUsername);
+      const effectiveAllowSpectators = roomIsPrivate ? (allowSpectators !== undefined ? allowSpectators : true) : true;
 
       // Call server to create match with in-bot balance
       const res = await fetch(`${serverUrl}/api/matches`, {
@@ -357,7 +360,8 @@ export const Arena: React.FC<ArenaProps> = ({
           telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player A'),
           photoUrl: photoUrl || '',
           gameType,
-          isPrivate: Boolean(isPrivate) || Boolean(targetOpponentUsername),
+          isPrivate: roomIsPrivate,
+          allowSpectators: effectiveAllowSpectators,
           groupChatId,
           targetOpponentUsername: targetOpponentUsername?.trim() || undefined,
         }),
@@ -391,6 +395,7 @@ export const Arena: React.FC<ArenaProps> = ({
         matchId: data.matchId.toString(),
         gameType,
         isPrivate: data.isPrivate || false,
+        allowSpectators: data.allowSpectators !== undefined ? data.allowSpectators : effectiveAllowSpectators,
         inviteCode: data.inviteCode,
         escrowAddress: data.escrowAddress,
         createdAt: data.createdAt || Date.now(),
@@ -772,7 +777,7 @@ export const Arena: React.FC<ArenaProps> = ({
   ) ? 'B' : 'A';
 
   const isUserWinner = Boolean(
-    socketData.roomState === 'MATCH_SETTLED' &&
+    (socketData.roomState === 'MATCH_SETTLED' || socketData.roomState === 'FORFEITED') &&
     (
       socketData.winnerSide
         ? (socketData.winnerSide === userSide && effectiveRole === 'player')
@@ -932,6 +937,12 @@ export const Arena: React.FC<ArenaProps> = ({
     if (!activeMatchId) return;
     triggerImpact('light');
     const m = currentActiveMatch;
+    if (m?.isPrivate && m?.allowSpectators === false) {
+      if (!hasPlayerB) {
+        handleInviteChallenger();
+      }
+      return;
+    }
     const wager = m ? (parseFloat(m.wagerAmountNano) / 1e9).toFixed(2) : (socketData.activeWagerTon || activeWagerTon || '1.0');
     const gType = effectiveGameType || 'roulette';
     const meta = GAMES_METADATA[gType] || GAMES_METADATA.roulette;
@@ -1115,15 +1126,21 @@ export const Arena: React.FC<ArenaProps> = ({
             </button>
 
             <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={handleInGameShare}
-                className="flex items-center space-x-1.5 text-[11px] font-heading font-bold text-cyan-300 hover:text-white bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/30 px-2.5 py-1 rounded-xl transition-all active:scale-95 shadow-sm"
-                title={t('arena.shareDuel')}
-              >
-                <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{t('arena.shareDuel')}</span>
-              </button>
+              {!(currentActiveMatch?.isPrivate && currentActiveMatch?.allowSpectators === false && hasPlayerB) && (
+                <button
+                  type="button"
+                  onClick={handleInGameShare}
+                  className="flex items-center space-x-1.5 text-[11px] font-heading font-bold text-cyan-300 hover:text-white bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/30 px-2.5 py-1 rounded-xl transition-all active:scale-95 shadow-sm"
+                  title={t('arena.shareDuel')}
+                >
+                  <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>
+                    {currentActiveMatch?.isPrivate && currentActiveMatch?.allowSpectators === false
+                      ? t('arena.inviteChallenger')
+                      : t('arena.shareDuel')}
+                  </span>
+                </button>
+              )}
 
               {canCancelCurrentMatch && currentActiveMatch && (
                 <button
@@ -1514,6 +1531,9 @@ export const Arena: React.FC<ArenaProps> = ({
               hasPlayerB={hasPlayerB}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
               onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
+              forfeitCountdown={socketData.forfeitCountdown}
+              disconnectedOpponentName={userSide === 'A' ? playerB_Name : playerA_Name}
+              isConnected={socketData.isConnected}
             />
           ) : (
             <RussianRouletteArena
@@ -1564,8 +1584,8 @@ export const Arena: React.FC<ArenaProps> = ({
             />
           )}
 
-          {/* Spectator Totalizer Betting Bar - Hidden for Duelists */}
-          {!isMatchPlayer && (
+          {/* Spectator Totalizer Betting Bar - Hidden for Duelists and matches without spectators */}
+          {!isMatchPlayer && currentActiveMatch?.allowSpectators !== false && (
             <SpectatorOddsBar
               oddsA={socketData.oddsA}
               oddsB={socketData.oddsB}

@@ -171,24 +171,33 @@ export function useSocket({
       return;
     }
 
-    let ws: WebSocket | null = null;
-    try {
-      const url = `${wsEndpoint}/ws/duel?matchId=${matchId}&role=${role}&wallet=${wallet || ''}&telegramId=${telegramId || ''}&username=${encodeURIComponent(username || '')}`;
-      ws = new WebSocket(url);
-      wsRef.current = ws;
+    let isDisposed = false;
+    let reconnectTimeout: any = null;
+    let pingTimer: any = null;
 
-      ws.onopen = () => {
-        setIsConnected(true);
-        setFeedMessage('Connesso all\'Arena Cyber.');
-      };
+    const connect = () => {
+      if (isDisposed) return;
+      try {
+        const url = `${wsEndpoint}/ws/duel?matchId=${matchId}&role=${role}&wallet=${wallet || ''}&telegramId=${telegramId || ''}&username=${encodeURIComponent(username || '')}`;
+        const ws = new WebSocket(url);
+        wsRef.current = ws;
 
-      ws.onerror = (e) => {
-        console.warn('[WebSocket] Warning/error on connection:', e);
-        setIsConnected(false);
-        setFeedMessage('Server di gioco temporaneamente non raggiungibile.');
-      };
+        ws.onopen = () => {
+          if (isDisposed) {
+            try { ws.close(); } catch {}
+            return;
+          }
+          setIsConnected(true);
+          setFeedMessage('Connesso all\'Arena Cyber.');
+        };
 
-    ws.onmessage = (event) => {
+        ws.onerror = (e) => {
+          console.warn('[WebSocket] Warning/error on connection:', e);
+          setIsConnected(false);
+          setFeedMessage('Server di gioco temporaneamente non raggiungibile.');
+        };
+
+        ws.onmessage = (event) => {
       try {
         const msg: WsMessage = JSON.parse(event.data);
 
@@ -418,7 +427,7 @@ export function useSocket({
 
           case 'MATCH_SETTLED':
           case 'MATCH_FORFEITED':
-            setRoomState('MATCH_SETTLED');
+            setRoomState(msg.type === 'MATCH_FORFEITED' ? 'FORFEITED' : 'MATCH_SETTLED');
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.winnerSide) setWinnerSide(msg.winnerSide);
@@ -513,6 +522,12 @@ export function useSocket({
             if (msg.side === 'B') setPlayerBConnected(false);
             if (msg.gracePeriodSeconds) setForfeitCountdown(msg.gracePeriodSeconds);
             if (msg.message) setFeedMessage(msg.message);
+            break;
+
+          case 'PLAYER_DISCONNECTED_TICK':
+            if (msg.side === 'A') setPlayerAConnected(false);
+            if (msg.side === 'B') setPlayerBConnected(false);
+            if (typeof msg.secondsLeft === 'number') setForfeitCountdown(msg.secondsLeft);
             break;
 
           case 'PLAYER_RECONNECTED':
@@ -620,24 +635,41 @@ export function useSocket({
       }
     };
 
-      ws.onclose = () => {
+        ws.onclose = () => {
+          setIsConnected(false);
+          if (!isDisposed) {
+            setFeedMessage('Connessione interrotta. Riconnessione in corso...');
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            reconnectTimeout = setTimeout(() => {
+              if (!isDisposed) connect();
+            }, 1200);
+          }
+        };
+      } catch (err) {
+        console.warn('[WebSocket] Safe catch on WebSocket init:', err);
         setIsConnected(false);
-        setFeedMessage('Disconnesso dal server.');
-      };
-    } catch (err) {
-      console.warn('[WebSocket] Safe catch on WebSocket init:', err);
-      setIsConnected(false);
-      setFeedMessage('Impossibile connettersi al server WebSocket.');
-    }
+        setFeedMessage('Impossibile connettersi al server WebSocket.');
+        if (!isDisposed) {
+          if (reconnectTimeout) clearTimeout(reconnectTimeout);
+          reconnectTimeout = setTimeout(() => {
+            if (!isDisposed) connect();
+          }, 2000);
+        }
+      }
+    };
 
-    const pingTimer = setInterval(() => {
+    connect();
+
+    pingTimer = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'PING' }));
       }
     }, 15000);
 
     return () => {
-      clearInterval(pingTimer);
+      isDisposed = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (pingTimer) clearInterval(pingTimer);
       try {
         wsRef.current?.close();
       } catch {}

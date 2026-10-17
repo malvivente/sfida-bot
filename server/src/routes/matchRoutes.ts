@@ -77,6 +77,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         escrowAddress,
         state: r.state,
         isPrivate: r.isPrivate || false,
+        allowSpectators: r.allowSpectators !== undefined ? r.allowSpectators : true,
         isRematch: (r as any).isRematch || false,
         groupChatId: r.config.groupChatId,
         winnerAddress: r.winnerAddress,
@@ -151,6 +152,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       escrowAddress,
       state: room.state,
       isPrivate: room.isPrivate || false,
+      allowSpectators: room.allowSpectators !== undefined ? room.allowSpectators : true,
       groupChatId: room.config.groupChatId,
       winnerAddress: room.winnerAddress,
       winnerName: room.winnerName,
@@ -225,6 +227,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       groupAdminAddress?: string;
       groupChatId?: string;
       isPrivate?: boolean;
+      allowSpectators?: boolean;
       targetOpponentUsername?: string;
       targetOpponentId?: string;
     };
@@ -315,6 +318,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     const isPrivate = Boolean(body.isPrivate) || Boolean(body.targetOpponentUsername || body.targetOpponentId);
+    const allowSpectators = isPrivate ? (body.allowSpectators !== undefined ? Boolean(body.allowSpectators) : true) : true;
     const inviteCode = isPrivate ? Math.random().toString(36).substring(2, 8).toUpperCase() : undefined;
 
     const room = roomManager.createRoom(
@@ -328,6 +332,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         groupChatId: body.groupChatId,
         escrowAddress,
         isPrivate,
+        allowSpectators,
         inviteCode,
         targetOpponentUsername: body.targetOpponentUsername,
         targetOpponentId: body.targetOpponentId,

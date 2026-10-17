@@ -18,6 +18,7 @@ export interface RoomConfig {
   escrowAddress?: string;
   bettingWindowSeconds?: number;
   isPrivate?: boolean;
+  allowSpectators?: boolean;
   inviteCode?: string;
   targetOpponentUsername?: string;
   targetOpponentId?: string;
@@ -85,6 +86,7 @@ export abstract class BaseGameRoom {
   public forfeitWinner?: string;
 
   public isPrivate: boolean = false;
+  public allowSpectators: boolean = true;
   public inviteCode?: string;
   public spectatorBets: SpectatorBet[] = [];
 
@@ -115,6 +117,7 @@ export abstract class BaseGameRoom {
     this.escrowAddress = config.escrowAddress;
     this.onMatchSettledCallback = onSettled;
     this.isPrivate = Boolean(config.isPrivate);
+    this.allowSpectators = this.isPrivate ? Boolean(config.allowSpectators ?? true) : true;
     this.inviteCode = config.inviteCode;
 
     this.createdAt = config.createdAt || Date.now();
@@ -233,12 +236,13 @@ export abstract class BaseGameRoom {
 
     // Clear grace timer if reconnecting
     if (player.disconnectTimer) {
-      clearTimeout(player.disconnectTimer);
+      clearInterval(player.disconnectTimer);
+      clearTimeout(player.disconnectTimer as any);
       player.disconnectTimer = undefined;
       this.broadcast({
         type: 'PLAYER_RECONNECTED',
         side,
-        message: `${player.username} reconnected. Resuming match.`,
+        message: `${player.username} si è riconnesso. Il duello riprende!`,
       });
     }
 
@@ -285,6 +289,8 @@ export abstract class BaseGameRoom {
       createdAt: this.createdAt,
       expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
       playerBExpiresAt: this.playerBExpiresAt,
+      isPrivate: this.isPrivate,
+      allowSpectators: this.allowSpectators,
       isRematch: (this as any).isRematch || false,
     });
 
@@ -293,6 +299,17 @@ export abstract class BaseGameRoom {
 
   // Spectator connection
   public attachSpectator(id: string, ws: WebSocket, wallet?: string, telegramId?: string) {
+    if (!this.allowSpectators) {
+      this.sendTo(ws, {
+        type: 'ERROR',
+        message: 'Questa stanza privata non ammette spettatori.',
+      });
+      try {
+        ws.close();
+      } catch {}
+      return;
+    }
+
     this.spectators.set(id, { id, ws, wallet, telegramId });
 
     this.sendTo(ws, {
@@ -338,6 +355,8 @@ export abstract class BaseGameRoom {
       createdAt: this.createdAt,
       expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,
       playerBExpiresAt: this.playerBExpiresAt,
+      isPrivate: this.isPrivate,
+      allowSpectators: this.allowSpectators,
       isRematch: (this as any).isRematch || false,
     });
   }
@@ -402,37 +421,63 @@ export abstract class BaseGameRoom {
     }
 
     if (isGameActive && opponent) {
+      let secondsRemaining = 15;
       this.broadcast({
         type: 'PLAYER_DISCONNECTED',
         side,
-        gracePeriodSeconds: 8,
-        message: `${disconnectedPlayer.username} disconnected. 8-second forfeit countdown initiated.`,
+        gracePeriodSeconds: secondsRemaining,
+        forfeiterName: disconnectedPlayer.username,
+        message: `${disconnectedPlayer.username} disconnesso. Conto alla rovescia di 15 secondi per la vittoria a tavolino.`,
       });
 
-      disconnectedPlayer.disconnectTimer = setTimeout(() => {
-        if (!disconnectedPlayer?.connected && opponent) {
-          this.triggerForfeit(opponent.walletAddress, disconnectedPlayer!.username);
+      disconnectedPlayer.disconnectTimer = setInterval(() => {
+        secondsRemaining -= 1;
+        if (secondsRemaining > 0) {
+          this.broadcast({
+            type: 'PLAYER_DISCONNECTED_TICK',
+            side,
+            secondsLeft: secondsRemaining,
+            forfeiterName: disconnectedPlayer!.username,
+          });
+        } else {
+          if (disconnectedPlayer?.disconnectTimer) {
+            clearInterval(disconnectedPlayer.disconnectTimer);
+            disconnectedPlayer.disconnectTimer = undefined;
+          }
+          if (!disconnectedPlayer?.connected && opponent) {
+            this.triggerForfeit(opponent.walletAddress, disconnectedPlayer!.username);
+          }
         }
-      }, 8000);
+      }, 1000);
     } else {
       // In LOBBY or BETTING_WINDOW, no forfeit penalty
       this.broadcast({
         type: 'PLAYER_DISCONNECTED',
         side,
-        message: `${disconnectedPlayer.username} stepped away from the room.`,
+        message: `${disconnectedPlayer.username} si è allontanato dalla stanza.`,
       });
       this.broadcastRoomState();
     }
   }
 
   protected triggerForfeit(winnerWallet: string, forfeiterName: string) {
+    if (this.playerA.disconnectTimer) {
+      clearInterval(this.playerA.disconnectTimer);
+      clearTimeout(this.playerA.disconnectTimer as any);
+      this.playerA.disconnectTimer = undefined;
+    }
+    if (this.playerB?.disconnectTimer) {
+      clearInterval(this.playerB.disconnectTimer);
+      clearTimeout(this.playerB.disconnectTimer as any);
+      this.playerB.disconnectTimer = undefined;
+    }
     this.state = 'FORFEITED';
     this.forfeitWinner = winnerWallet;
     this.broadcast({
       type: 'MATCH_FORFEITED',
       forfeiterName,
       winnerAddress: winnerWallet,
-      message: `${forfeiterName} failed to reconnect in time. Match forfeited!`,
+      message: `${forfeiterName} non si è riconnesso in tempo. Vittoria a tavolino assegnata!`,
     });
     this.settleMatch(winnerWallet);
   }
@@ -533,7 +578,7 @@ export abstract class BaseGameRoom {
     }
   }
 
-  // Spectator Pari-Mutuel Window (configurable, default 20s when both players are ready)
+  // Spectator Pari-Mutuel Window (20s for public/spectator-enabled rooms, immediate start if no spectators)
   public startBettingWindow() {
     this.cancelLobbyExpirationTimer();
     this.cancelPlayerBExpirationTimer();
@@ -542,9 +587,16 @@ export abstract class BaseGameRoom {
       this.bettingTimer = undefined;
     }
 
+    if (!this.allowSpectators) {
+      // Spectators not allowed for this private match: start match immediately!
+      this.state = 'GAME_ACTIVE';
+      this.onGameStart();
+      return;
+    }
+
     this.state = 'BETTING_WINDOW';
     const dynamicConfig = feeConfig.getConfig();
-    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 10;
+    const duration = this.config.bettingWindowSeconds ?? dynamicConfig.bettingWindowSeconds ?? 20;
     let countdown = duration;
 
     this.bettingCountdownSeconds = duration;

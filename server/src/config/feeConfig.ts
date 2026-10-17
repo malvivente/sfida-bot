@@ -65,7 +65,7 @@ const DEFAULT_CONFIG: FeeConfig = {
   splitRound3ProbabilityPercent: 70,
   splitJackpotCooldownHours: 48,
   presetsWagerGram: ['0.1', '0.5', '1', '2', '5', '10', '25', '50'],
-  bettingWindowSeconds: process.env.BETTING_WINDOW_SECONDS ? parseInt(process.env.BETTING_WINDOW_SECONDS, 10) : 10,
+  bettingWindowSeconds: process.env.BETTING_WINDOW_SECONDS ? parseInt(process.env.BETTING_WINDOW_SECONDS, 10) : 20,
   lobbyRoomExpirationMinutes: 10,
 };
 

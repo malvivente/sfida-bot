@@ -213,7 +213,7 @@ export const translations: Translations = {
   'spectator.minBetNotice': { it: 'Puntata minima: 0.1 GRAM', en: 'Minimum bet: 0.1 GRAM' },
   'spectator.isPlayerNotice': { it: 'Sei un duellante in questa partita: le scommesse spettatori sono disabilitate per i combattenti.', en: 'You are a duelist in this match: spectator betting is disabled for combatants.' },
   'spectator.waitingReady': { it: 'IN ATTESA DEI DUELLANTI', en: 'WAITING FOR DUELISTS' },
-  'spectator.waitingReadyNotice': { it: 'Le scommesse apriranno per 10s quando entrambi i duellanti saranno pronti', en: '10s betting window unlocks once both duelists are ready' },
+  'spectator.waitingReadyNotice': { it: 'Le scommesse apriranno per 20s quando entrambi i duellanti saranno pronti', en: '20s betting window unlocks once both duelists are ready' },
   'spectator.bettingWindowActive': { it: 'FINESTRA SCOMMESSE ATTIVA', en: 'BETTING WINDOW ACTIVE' },
   'spectator.bettingClosed': { it: 'SCOMMESSE CHIUSE', en: 'BETTING CLOSED' },
   'spectator.bettingClosedNotice': { it: 'Scommesse chiuse • Duello in corso', en: 'Betting closed • Duel in progress' },
@@ -350,6 +350,11 @@ export const translations: Translations = {
   'lobby.incomingDirectChallengeDesc': { it: '{name} ti ha sfidato a {game}!', en: '{name} challenged you to {game}!' },
   'lobby.acceptDuelBtn': { it: 'ACCETTA SFIDA', en: 'ACCEPT DUEL' },
   'lobby.challengeForYouBadge': { it: '🎯 SFIDA PER TE', en: '🎯 FOR YOU' },
+  'lobby.allowSpectatorsTitle': { it: 'Accetta Spettatori', en: 'Allow Spectators' },
+  'lobby.allowSpectatorsEnabledDesc': { it: 'Gli spettatori possono guardare e scommettere', en: 'Spectators can watch and bet' },
+  'lobby.allowSpectatorsDisabledDesc': { it: 'Partita privata esclusiva (nessuno spettatore né scommesse)', en: 'Exclusive private match (no spectators or betting)' },
+  'lobby.privateNoSpectators': { it: 'Stanza privata senza spettatori', en: 'Private room without spectators' },
+  'lobby.filterSpectatorsOnly': { it: 'Solo con spettatori', en: 'Spectators enabled only' },
 
   // Arena & Rematch
   'arena.cancelModalTitle': { it: 'ANNULLA DUELLO E RIMBORSA', en: 'CANCEL DUEL & REFUND' },
@@ -421,6 +426,12 @@ export const translations: Translations = {
   'arena.spectatorWinBanner': { it: '🎉 HAI INDOVINATO IL VINCITORE!', en: '🎉 YOU PREDICTED THE WINNER!' },
   'arena.spectatorLoseBanner': { it: '❌ PREVISIONE SBAGLIATA', en: '❌ WRONG PREDICTION' },
   'arena.spectatorRefundBanner': { it: '↩️ PUNTATA RIMBORSATA', en: '↩️ BET REFUNDED' },
+  'arena.opponentDisconnectedTitle': { it: 'AVVERSARIO DISCONNESSO', en: 'OPPONENT DISCONNECTED' },
+  'arena.opponentDisconnectedDesc': { it: 'si è allontanato. In attesa di riconnessione...', en: 'stepped away. Waiting for reconnection...' },
+  'arena.forfeitCountdownNotice': { it: 'Vittoria a tavolino se non si riconnette entro:', en: 'Forfeit victory awarded if not reconnected in:' },
+  'arena.forfeitRuleInfo': { it: 'Se l\'avversario non si riconnette prima dello scadere del timer, la vittoria e la vincita ti verranno assegnate automaticamente a tavolino!', en: 'If the opponent does not reconnect before the timer expires, forfeit victory and winnings are automatically awarded to you!' },
+  'arena.reconnectingToMatch': { it: 'Riconnessione all\'arena in corso...', en: 'Reconnecting to arena...' },
+  'arena.inviteChallenger': { it: 'INVITA SFIDANTE', en: 'INVITE CHALLENGER' },
 
   // Cyber Shotgun Arena Translations
   'shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },

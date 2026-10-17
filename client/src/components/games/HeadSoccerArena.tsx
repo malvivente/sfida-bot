@@ -11,6 +11,8 @@ import {
   ArrowRight,
   ArrowUp,
   Zap,
+  WifiOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { HeadSoccerState } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
@@ -54,6 +56,9 @@ interface HeadSoccerArenaProps {
   onJoinAsPlayer?: () => void;
   onInviteChallenger?: () => void;
   onSubscribeTick?: (callback: (data: HeadSoccerState) => void) => () => void;
+  forfeitCountdown?: number | null;
+  disconnectedOpponentName?: string;
+  isConnected?: boolean;
 }
 
 const ARENA_W = 800;
@@ -126,6 +131,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   onJoinAsPlayer,
   onInviteChallenger,
   onSubscribeTick,
+  forfeitCountdown,
+  disconnectedOpponentName,
+  isConnected = true,
 }) => {
   const { t } = useI18n();
   const { triggerImpact, triggerNotification } = useHaptics();
@@ -180,7 +188,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const [outcomePhase, setOutcomePhase] = useState<'idle' | 'splash' | 'settled'>('idle');
 
   useEffect(() => {
-    if (roomState === 'MATCH_SETTLED') {
+    if (roomState === 'MATCH_SETTLED' || roomState === 'FORFEITED') {
       setOutcomePhase('splash');
       const timer = setTimeout(() => {
         setOutcomePhase('settled');
@@ -604,13 +612,10 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               targetH = 84;
             }
 
-            // Subtle footfall bounce during sprint stride
-            const bobY = isMoving && !isJumping ? (stepIdx === 0 ? 0 : 2) : 0;
-
             pCtx.save();
             // Bottom of feet lands around y + 32 (ground is 390, resting y is 358)
             const feetBottomY = y + 32;
-            pCtx.translate(x, feetBottomY - bobY);
+            pCtx.translate(x, feetBottomY);
             if (activeImg && activeImg.complete && activeImg.naturalWidth > 0) {
               const targetW = targetH * (activeImg.naturalWidth / activeImg.naturalHeight);
 
@@ -1556,6 +1561,44 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               </button>
             )}
           </motion.div>
+        </div>
+      )}
+
+      {/* In-Game Disconnect & Forfeit Countdown Popup */}
+      {role === 'player' && roomState === 'GAME_ACTIVE' && !opponentConnected && typeof forfeitCountdown === 'number' && forfeitCountdown > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-500/70 shadow-[0_0_40px_rgba(245,158,11,0.35)] flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center mb-3 animate-pulse">
+              <WifiOff className="w-7 h-7 text-amber-400" />
+            </div>
+            <h3 className="text-lg font-orbitron font-black text-amber-400 tracking-wider uppercase mb-1">
+              {t('arena.opponentDisconnectedTitle')}
+            </h3>
+            <p className="text-xs font-chakra text-slate-300 max-w-xs mb-3">
+              <span className="font-bold text-white">{disconnectedOpponentName || playerBName || 'Avversario'}</span> {t('arena.opponentDisconnectedDesc')}
+            </p>
+            <div className="w-full py-3 px-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex flex-col items-center justify-center mb-3">
+              <span className="text-[10px] font-orbitron font-bold text-amber-300 uppercase tracking-widest mb-0.5">
+                {t('arena.forfeitCountdownNotice')}
+              </span>
+              <span className="text-4xl font-mono font-black text-white tracking-widest animate-pulse">
+                00:{forfeitCountdown < 10 ? `0${forfeitCountdown}` : forfeitCountdown}
+              </span>
+            </div>
+            <p className="text-[11px] font-chakra text-slate-400 leading-tight">
+              {t('arena.forfeitRuleInfo')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Reconnecting Banner if Local Player Network Drops */}
+      {role === 'player' && roomState === 'GAME_ACTIVE' && !isConnected && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-amber-500/90 text-black border border-amber-300 shadow-xl flex items-center space-x-2 animate-bounce">
+          <Loader2 className="w-4 h-4 animate-spin text-black" />
+          <span className="text-xs font-orbitron font-black tracking-wide">
+            {t('arena.reconnectingToMatch')}
+          </span>
         </div>
       )}
 

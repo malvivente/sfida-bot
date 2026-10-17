@@ -93,7 +93,7 @@ export class HeadSoccerRoom extends BaseGameRoom {
     super(config, 'headsoccer', onSettled);
   }
 
-  private createInitialPlayer(side: 'A' | 'B', keepSuper = 0): HeadSoccerPlayerState {
+  private createInitialPlayer(side: 'A' | 'B', keepSuper = 0, keepSuperActive = false): HeadSoccerPlayerState {
     return {
       x: side === 'A' ? 175 : ARENA_W - 175,
       y: PLAYER_GROUND_Y,
@@ -102,7 +102,7 @@ export class HeadSoccerRoom extends BaseGameRoom {
       isGrounded: true,
       kickTimer: 0,
       superCharge: keepSuper,
-      superActive: false,
+      superActive: keepSuperActive,
     };
   }
 
@@ -175,8 +175,8 @@ export class HeadSoccerRoom extends BaseGameRoom {
     this.phase = 'KICKOFF_COUNTDOWN';
     this.countdownSec = seconds;
 
-    this.pA = this.createInitialPlayer('A', this.pA.superCharge);
-    this.pB = this.createInitialPlayer('B', this.pB.superCharge);
+    this.pA = this.createInitialPlayer('A', this.pA.superCharge, this.pA.superActive);
+    this.pB = this.createInitialPlayer('B', this.pB.superCharge, this.pB.superActive);
     this.ball = this.createInitialBall(kickoffTo);
 
     this.countdownTimer = setInterval(() => {
@@ -225,6 +225,11 @@ export class HeadSoccerRoom extends BaseGameRoom {
     this.lastTickEpoch = now;
 
     if (this.phase !== 'PLAYING') {
+      return;
+    }
+
+    // If either player is temporarily disconnected during match, pause play while forfeit countdown runs
+    if (!this.playerA.connected || (this.playerB && !this.playerB.connected)) {
       return;
     }
 
@@ -586,8 +591,6 @@ export class HeadSoccerRoom extends BaseGameRoom {
     this.phase = 'GOAL_CELEBRATION';
     this.lastGoalBy = scorer;
     this.ball.isSuperShot = false;
-    this.pA.superActive = false;
-    this.pB.superActive = false;
 
     if (scorer === 'A') {
       this.playerA.score += 1;
@@ -598,6 +601,9 @@ export class HeadSoccerRoom extends BaseGameRoom {
       // Give defender A a comeback Super Charge boost (+30%)
       this.pA.superCharge = Math.min(100, this.pA.superCharge + 30);
     }
+
+    const scoreA = this.playerA.score;
+    const scoreB = this.playerB?.score || 0;
 
     this.lastEvent = {
       type: 'GOAL',
@@ -613,12 +619,35 @@ export class HeadSoccerRoom extends BaseGameRoom {
     this.broadcast({
       type: 'HEADSOCCER_GOAL',
       scorer,
-      scoreA: this.playerA.score,
-      scoreB: this.playerB?.score || 0,
-      message: `⚽ GOAL! ${scorerName} scores! (${this.playerA.score} - ${this.playerB?.score || 0})`,
+      scoreA,
+      scoreB,
+      message: `⚽ GOAL! ${scorerName} scores! (${scoreA} - ${scoreB})`,
       gameData: this.getGamePayload(),
     });
     this.broadcastRoomState();
+
+    // First to 5 goals rule: immediate match victory!
+    if (scoreA >= 5 || scoreB >= 5) {
+      this.phase = 'FULL_TIME';
+      this.timeRemainingMs = 0;
+      const winnerWallet =
+        scoreA >= 5 ? this.playerA.walletAddress : this.playerB?.walletAddress || '';
+
+      this.broadcast({
+        type: 'HEADSOCCER_FULLTIME',
+        scoreA,
+        scoreB,
+        message: `🏆 REGOLA 5 GOAL! ${scorerName} raggiunge 5 goal e vince il duello! (${scoreA} - ${scoreB})`,
+        gameData: this.getGamePayload(),
+      });
+
+      if (this.celebrationTimeout) clearTimeout(this.celebrationTimeout);
+      this.celebrationTimeout = setTimeout(() => {
+        this.cleanupGameTimers();
+        this.settleMatch(winnerWallet);
+      }, 1800);
+      return;
+    }
 
     // If Golden Goal Overtime, match ends immediately after celebration!
     if (this.isOvertime) {

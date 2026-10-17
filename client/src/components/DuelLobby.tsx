@@ -103,7 +103,7 @@ const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => 
 
 interface DuelLobbyProps {
   matches: MatchData[];
-  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean, targetOpponentUsername?: string) => Promise<boolean | void> | void;
+  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean, targetOpponentUsername?: string, allowSpectators?: boolean) => Promise<boolean | void> | void;
   onJoinMatch: (match: MatchData, inviteCode?: string) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (match: MatchData) => void;
@@ -173,6 +173,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [lockedGameType, setLockedGameType] = useState<GameType | null>(null);
   const [isPrivateRoom, setIsPrivateRoom] = useState(false);
+  const [allowSpectators, setAllowSpectators] = useState<boolean>(true);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
   const [selectedGameType, setSelectedGameType] = useState<GameType>('roulette');
   const [filterGameType, setFilterGameType] = useState<string>(initialGameFilter || 'ALL');
@@ -193,6 +194,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [filterVisibility, setFilterVisibility] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
   const [filterBetTier, setFilterBetTier] = useState<'ALL' | 'MICRO' | 'MID' | 'HIGH'>('ALL');
   const [filterOpenOnly, setFilterOpenOnly] = useState<boolean>(false);
+  const [filterSpectatorsOnly, setFilterSpectatorsOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
@@ -270,6 +272,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     setLockedGameType(lockGame && defaultGame ? defaultGame : null);
     setTargetOpponentInput(targetOpponent || '');
     setShowFriendPicker(false);
+    setAllowSpectators(true);
     if (defaultGame) {
       setSelectedGameType(defaultGame);
       if (defaultWager) {
@@ -340,7 +343,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         wagerChoice,
         selectedGameType,
         isPrivateRoom,
-        targetOpponentInput.trim() || undefined
+        targetOpponentInput.trim() || undefined,
+        isPrivateRoom ? allowSpectators : true
       );
       if (result !== false) {
         setShowCreateModal(false);
@@ -406,6 +410,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     filterVisibility !== 'ALL' ||
     filterBetTier !== 'ALL' ||
     filterOpenOnly ||
+    filterSpectatorsOnly ||
     searchQuery.trim() !== '' ||
     sortBy !== 'newest';
 
@@ -414,6 +419,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     setFilterVisibility('ALL');
     setFilterBetTier('ALL');
     setFilterOpenOnly(false);
+    setFilterSpectatorsOnly(false);
     setSearchQuery('');
     setSortBy('newest');
   };
@@ -472,6 +478,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
       // 3. Open Rooms Only (Waiting for Player B)
       if (filterOpenOnly && (m.playerB !== null || m.state !== 'LOBBY')) return false;
+
+      // 3b. Spectators allowed only
+      if (filterSpectatorsOnly && m.allowSpectators === false) return false;
 
       // 4. Bet Tier
       const wagerGram = parseFloat(m.wagerAmountNano) / 1e9;
@@ -901,21 +910,39 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
               {/* Status & Sorting Row */}
               <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap">
-                {/* Open Rooms Only Toggle */}
-                <button
-                  onClick={() => {
-                    triggerImpact('light');
-                    setFilterOpenOnly(!filterOpenOnly);
-                  }}
-                  className={`py-1 px-2.5 rounded-xl text-xs font-heading font-bold border transition-all flex items-center space-x-1.5 active:scale-95 ${
-                    filterOpenOnly
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${filterOpenOnly ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-                  <span>{t('lobby.filterOpenOnly')}</span>
-                </button>
+                <div className="flex items-center space-x-1.5 flex-wrap gap-1.5">
+                  {/* Open Rooms Only Toggle */}
+                  <button
+                    onClick={() => {
+                      triggerImpact('light');
+                      setFilterOpenOnly(!filterOpenOnly);
+                    }}
+                    className={`py-1 px-2.5 rounded-xl text-xs font-heading font-bold border transition-all flex items-center space-x-1.5 active:scale-95 ${
+                      filterOpenOnly
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                        : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${filterOpenOnly ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                    <span>{t('lobby.filterOpenOnly')}</span>
+                  </button>
+
+                  {/* Spectators Allowed Only Toggle */}
+                  <button
+                    onClick={() => {
+                      triggerImpact('light');
+                      setFilterSpectatorsOnly(!filterSpectatorsOnly);
+                    }}
+                    className={`py-1 px-2.5 rounded-xl text-xs font-heading font-bold border transition-all flex items-center space-x-1.5 active:scale-95 ${
+                      filterSpectatorsOnly
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-400/40'
+                        : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5 text-purple-400" />
+                    <span>{t('lobby.filterSpectatorsOnly')}</span>
+                  </button>
+                </div>
 
                 {/* Sort selector */}
                 <div className="flex items-center space-x-1">
@@ -1228,13 +1255,20 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     ) : !m.playerB ? (
                       ((Boolean(m.targetOpponentUsername || m.targetOpponentId) && !isTargetForThisDuel) ||
                        (m.isPrivate && !effectiveInviteCode && !isTargetForThisDuel)) ? (
-                        <button
-                          onClick={() => onSpectateMatch(m.matchId)}
-                          className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-purple-400" />
-                          <span>{Boolean(m.targetOpponentUsername || m.targetOpponentId) ? t('lobby.spectateOnlyReserved') : t('lobby.spectatePrivate')}</span>
-                        </button>
+                        m.allowSpectators === false ? (
+                          <div className="flex-1 py-2.5 bg-slate-800/40 border border-slate-700/50 text-slate-400 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5">
+                            <Lock className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{t('lobby.privateNoSpectators')}</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => onSpectateMatch(m.matchId)}
+                            className="flex-1 py-2.5 bg-purple-950/40 border border-purple-500/40 text-purple-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-purple-400 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-purple-400" />
+                            <span>{Boolean(m.targetOpponentUsername || m.targetOpponentId) ? t('lobby.spectateOnlyReserved') : t('lobby.spectatePrivate')}</span>
+                          </button>
+                        )
                       ) : (
                         <>
                           <button
@@ -1257,24 +1291,33 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                               <span>)</span>
                             </span>
                           </button>
-                          <button
-                            onClick={() => onSpectateMatch(m.matchId)}
-                            title={t('lobby.spectateBtn')}
-                            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>{t('lobby.spectateBtn')}</span>
-                          </button>
+                          {m.allowSpectators !== false && (
+                            <button
+                              onClick={() => onSpectateMatch(m.matchId)}
+                              title={t('lobby.spectateBtn')}
+                              className="py-2.5 px-3 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center space-x-1"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{t('lobby.spectateBtn')}</span>
+                            </button>
+                          )}
                         </>
                       )
                     ) : (
-                      <button
-                        onClick={() => onSpectateMatch(m.matchId)}
-                        className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-white/20 active:scale-95 transition-all flex items-center justify-center space-x-1"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>{t('lobby.spectateBtn')}</span>
-                      </button>
+                      m.allowSpectators === false ? (
+                        <div className="flex-1 py-2.5 bg-slate-800/40 border border-slate-700/50 text-slate-400 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5">
+                          <Lock className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{t('lobby.privateNoSpectators')}</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onSpectateMatch(m.matchId)}
+                          className="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-200 font-heading font-bold rounded-2xl text-xs uppercase tracking-wider hover:border-white/20 active:scale-95 transition-all flex items-center justify-center space-x-1"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>{t('lobby.spectateBtn')}</span>
+                        </button>
+                      )
                     )}
 
                     <button
@@ -1579,6 +1622,41 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </p>
                   </button>
                 </div>
+                {isPrivateRoom && (
+                  <div className="mt-2.5 p-3 rounded-2xl bg-black/40 border border-purple-500/25 flex items-center justify-between gap-3">
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
+                        <Eye className="w-3.5 h-3.5 text-purple-300" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-heading font-bold text-white block">
+                          {t('lobby.allowSpectatorsTitle')}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block leading-tight">
+                          {allowSpectators
+                            ? t('lobby.allowSpectatorsEnabledDesc')
+                            : t('lobby.allowSpectatorsDisabledDesc')}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        setAllowSpectators(!allowSpectators);
+                      }}
+                      className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
+                        allowSpectators ? 'bg-purple-600' : 'bg-slate-700'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                          allowSpectators ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
                 {selectedGameType === 'split' && isPrivateRoom && (
                   <div className="mt-2 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-2.5 py-1.5 font-sans flex items-center space-x-1.5">
                     <span>ℹ️</span>
