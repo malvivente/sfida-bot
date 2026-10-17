@@ -101,6 +101,44 @@ interface SpriteBank {
   ballSuper?: HTMLImageElement;
 }
 
+const HEADSOCCER_SPRITE_PATHS = {
+  pitchBg: '/assets/games/headsoccer/pitch_bg.svg',
+  goalLeft: '/assets/games/headsoccer/goal_left.svg',
+  goalRight: '/assets/games/headsoccer/goal_right.svg',
+  playerAIdle: '/assets/games/headsoccer/player_a_idle.webp',
+  playerARun1: '/assets/games/headsoccer/player_a_run1.webp',
+  playerARun2: '/assets/games/headsoccer/player_a_run2.webp',
+  playerAJump: '/assets/games/headsoccer/player_a_jump.webp',
+  playerAKick: '/assets/games/headsoccer/player_a_kick.webp',
+  playerBIdle: '/assets/games/headsoccer/player_b_idle.webp',
+  playerBRun1: '/assets/games/headsoccer/player_b_run1.webp',
+  playerBRun2: '/assets/games/headsoccer/player_b_run2.webp',
+  playerBJump: '/assets/games/headsoccer/player_b_jump.webp',
+  playerBKick: '/assets/games/headsoccer/player_b_kick.webp',
+  ball: '/assets/games/headsoccer/ball.svg',
+  ballSuper: '/assets/games/headsoccer/ball_super.svg',
+};
+
+const HEADSOCCER_SPRITE_CACHE: Record<string, HTMLImageElement> = {};
+
+export function getOrLoadHeadSoccerSprite(src: string): HTMLImageElement {
+  if (HEADSOCCER_SPRITE_CACHE[src]) {
+    return HEADSOCCER_SPRITE_CACHE[src];
+  }
+  const img = new Image();
+  img.src = src;
+  if ('decode' in img) {
+    img.decode().catch(() => {});
+  }
+  HEADSOCCER_SPRITE_CACHE[src] = img;
+  return img;
+}
+
+// Immediate asynchronous pre-decoding on module load
+if (typeof window !== 'undefined') {
+  Object.values(HEADSOCCER_SPRITE_PATHS).forEach((src) => getOrLoadHeadSoccerSprite(src));
+}
+
 export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   gameData,
   role,
@@ -139,7 +177,23 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const { triggerImpact, triggerNotification } = useHaptics();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const spritesRef = useRef<SpriteBank>({});
+  const spritesRef = useRef<SpriteBank>({
+    pitchBg: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.pitchBg),
+    goalLeft: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.goalLeft),
+    goalRight: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.goalRight),
+    playerAIdle: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerAIdle),
+    playerARun1: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerARun1),
+    playerARun2: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerARun2),
+    playerAJump: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerAJump),
+    playerAKick: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerAKick),
+    playerBIdle: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerBIdle),
+    playerBRun1: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerBRun1),
+    playerBRun2: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerBRun2),
+    playerBJump: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerBJump),
+    playerBKick: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.playerBKick),
+    ball: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.ball),
+    ballSuper: getOrLoadHeadSoccerSprite(HEADSOCCER_SPRITE_PATHS.ballSuper),
+  });
   const particlesRef = useRef<VisualParticle[]>([]);
   const trailRef = useRef<BallTrailPoint[]>([]);
   const lastEventTsRef = useRef<number>(0);
@@ -149,14 +203,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
   // Smooth client-side interpolation target & current state
   const renderStateRef = useRef({
-    pAx: 175,
-    pAy: 358,
+    pAx: gameData?.playerA?.x ?? 175,
+    pAy: gameData?.playerA?.y ?? 358,
     pAkick: 0,
-    pBx: 625,
-    pBy: 358,
+    pBx: gameData?.playerB?.x ?? 625,
+    pBy: gameData?.playerB?.y ?? 358,
     pBkick: 0,
-    bx: 400,
-    by: 165,
+    bx: gameData?.ball?.x ?? 400,
+    by: gameData?.ball?.y ?? 165,
     bAngle: 0,
     isSuper: false,
   });
@@ -217,58 +271,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
     }
   }, [gameData?.phase, leftPressed, onInput, rightPressed, roomState]);
 
-  // Preload custom SVG/PNG sprites from /assets/games/headsoccer/
+  // Ensure all sprites are fully decoded into memory without main-thread jank
   useEffect(() => {
-    const loadImg = (src: string, onLoad: (img: HTMLImageElement) => void) => {
-      const img = new Image();
-      img.onload = () => onLoad(img);
-      img.src = src;
-    };
-
-    loadImg('/assets/games/headsoccer/pitch_bg.svg', (img) => {
-      spritesRef.current.pitchBg = img;
-    });
-    loadImg('/assets/games/headsoccer/goal_left.svg', (img) => {
-      spritesRef.current.goalLeft = img;
-    });
-    loadImg('/assets/games/headsoccer/goal_right.svg', (img) => {
-      spritesRef.current.goalRight = img;
-    });
-    loadImg('/assets/games/headsoccer/player_a_idle.webp', (img) => {
-      spritesRef.current.playerAIdle = img;
-    });
-    loadImg('/assets/games/headsoccer/player_a_run1.webp', (img) => {
-      spritesRef.current.playerARun1 = img;
-    });
-    loadImg('/assets/games/headsoccer/player_a_run2.webp', (img) => {
-      spritesRef.current.playerARun2 = img;
-    });
-    loadImg('/assets/games/headsoccer/player_a_jump.webp', (img) => {
-      spritesRef.current.playerAJump = img;
-    });
-    loadImg('/assets/games/headsoccer/player_a_kick.webp', (img) => {
-      spritesRef.current.playerAKick = img;
-    });
-    loadImg('/assets/games/headsoccer/player_b_idle.webp', (img) => {
-      spritesRef.current.playerBIdle = img;
-    });
-    loadImg('/assets/games/headsoccer/player_b_run1.webp', (img) => {
-      spritesRef.current.playerBRun1 = img;
-    });
-    loadImg('/assets/games/headsoccer/player_b_run2.webp', (img) => {
-      spritesRef.current.playerBRun2 = img;
-    });
-    loadImg('/assets/games/headsoccer/player_b_jump.webp', (img) => {
-      spritesRef.current.playerBJump = img;
-    });
-    loadImg('/assets/games/headsoccer/player_b_kick.webp', (img) => {
-      spritesRef.current.playerBKick = img;
-    });
-    loadImg('/assets/games/headsoccer/ball.svg', (img) => {
-      spritesRef.current.ball = img;
-    });
-    loadImg('/assets/games/headsoccer/ball_super.svg', (img) => {
-      spritesRef.current.ballSuper = img;
+    Object.entries(HEADSOCCER_SPRITE_PATHS).forEach(([key, src]) => {
+      const img = getOrLoadHeadSoccerSprite(src);
+      (spritesRef.current as any)[key] = img;
     });
   }, []);
 
@@ -391,17 +398,28 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             }
             rs.pBkick = gd.playerB.kickTimer;
 
-            if (Math.hypot(gd.ball.x - rs.bx, gd.ball.y - rs.by) > 180) {
+            if (gd.phase === 'PLAYING') {
+              if (Math.hypot(gd.ball.x - rs.bx, gd.ball.y - rs.by) > 180) {
+                rs.bx = gd.ball.x;
+                rs.by = gd.ball.y;
+                trailRef.current = [];
+              } else {
+                // Smooth velocity extrapolation to eliminate 30Hz network micro-stutter
+                rs.bx += gd.ball.vx * dtScale;
+                rs.by += gd.ball.vy * dtScale;
+                const ballLerp = 1 - Math.exp(-20 * dtSec);
+                rs.bx += (gd.ball.x - rs.bx) * ballLerp;
+                rs.by += (gd.ball.y - rs.by) * ballLerp;
+              }
+            } else {
+              // During kickoff countdown or goal celebration, snap smoothly to server spawn coordinates without jitter
+              rs.pAx = gd.playerA.x;
+              rs.pAy = gd.playerA.y;
+              rs.pBx = gd.playerB.x;
+              rs.pBy = gd.playerB.y;
               rs.bx = gd.ball.x;
               rs.by = gd.ball.y;
               trailRef.current = [];
-            } else {
-              // Smooth velocity extrapolation to eliminate 30Hz network micro-stutter
-              rs.bx += gd.ball.vx * dtScale;
-              rs.by += gd.ball.vy * dtScale;
-              const ballLerp = 1 - Math.exp(-20 * dtSec);
-              rs.bx += (gd.ball.x - rs.bx) * ballLerp;
-              rs.by += (gd.ball.y - rs.by) * ballLerp;
             }
             rs.bAngle += gd.ball.vx * 0.04 * dtScale;
             rs.isSuper = gd.ball.isSuperShot;
@@ -825,8 +843,8 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
-      const marginX = 35;
-      const marginY = 45;
+      const marginX = 45;
+      const marginY = 55;
       const inBounds =
         clientX >= rect.left - marginX &&
         clientX <= rect.right + marginX &&
@@ -998,7 +1016,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const displayPlayerBName = hasPlayerB ? playerBName : t('arena.waitingOpponentShort');
 
   return (
-    <div className="relative w-full max-w-lg mx-auto rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black px-2 py-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col gap-2.5 sm:gap-3 select-none">
+    <div className="relative w-full max-w-lg mx-auto rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black px-2 pt-3 pb-8 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col gap-2.5 sm:gap-3 select-none">
       {/* Top Stadium LED Scoreboard (3-column grid so long names never overlap scores) */}
       <div className="w-full z-10 mb-2.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-black/80 border border-white/15 rounded-2xl px-3 py-2.5 shadow-inner">
@@ -1240,7 +1258,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
 
       {/* Detached On-Screen Game Controls — SHOWN TO PLAYERS DURING ACTIVE MATCH */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && (
-        <div className="w-full mt-3 sm:mt-4 flex flex-col space-y-3">
+        <div className="w-full mt-4 sm:mt-5 flex flex-col space-y-3.5 sm:space-y-4">
           {/* Centered SUPER SHOT Trigger Button */}
           <div className="w-full flex items-center justify-center">
             <button
@@ -1250,7 +1268,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                 e.preventDefault();
                 if (mySuperCanArm) handleSuper();
               }}
-              className={`px-5 py-2 rounded-2xl border-2 flex items-center space-x-2.5 transition-all touch-none select-none shadow-md ${
+              className={`px-6 py-2.5 sm:py-3 rounded-2xl border-2 flex items-center space-x-3 transition-all touch-none select-none shadow-md ${
                 mySuperActive
                   ? 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white border-yellow-300 shadow-[0_0_28px_rgba(249,115,22,1)] animate-pulse ring-2 ring-yellow-400 active:scale-95'
                   : mySuperCharge >= 100
@@ -1259,7 +1277,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               }`}
             >
               <Flame
-                className={`w-4 h-4 ${
+                className={`w-4 h-4 sm:w-5 sm:h-5 ${
                   mySuperActive
                     ? 'text-yellow-200 fill-yellow-200 animate-bounce'
                     : mySuperCharge >= 100
@@ -1267,11 +1285,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                     : 'text-slate-600'
                 }`}
               />
-              <span className="text-xs font-orbitron font-black uppercase tracking-wider">
+              <span className="text-xs sm:text-sm font-orbitron font-black uppercase tracking-wider">
                 {mySuperActive ? t('headsoccer.superArmed') : 'SUPER SHOT'}
               </span>
               <span
-                className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-lg ${
+                className={`text-[10px] sm:text-[11px] font-mono font-black px-2 py-0.5 rounded-lg ${
                   mySuperActive
                     ? 'bg-black/40 text-yellow-300'
                     : mySuperCharge >= 100
@@ -1289,7 +1307,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
           </div>
 
           {/* Main Controls Row: Detached Left Movement D-Pad & Detached Right Action Buttons */}
-          <div className="w-full flex items-center justify-between px-1 sm:px-2 pt-0.5">
+          <div className="w-full flex items-center justify-between px-1 sm:px-2 pt-0.5 sm:pt-1">
             {/* Left Side: Movement D-Pad (Left / Right with seamless Slide-to-Switch support) */}
             <div
               ref={dpadContainerRef}
@@ -1297,37 +1315,37 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               onPointerMove={handlePointerMoveDpad}
               onPointerUp={handlePointerUpDpad}
               onPointerCancel={handlePointerCancelDpad}
-              className="p-1 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center space-x-3 touch-none select-none cursor-pointer"
+              className="p-1 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center space-x-3 sm:space-x-4 touch-none select-none cursor-pointer"
             >
               <div
-                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
+                className={`w-[72px] h-[72px] sm:w-[82px] sm:h-[82px] min-[400px]:w-[76px] min-[400px]:h-[76px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   leftPressed
                     ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_24px_rgba(34,211,238,0.9)]'
                     : 'bg-slate-800/90 text-slate-100 border-slate-600/80 shadow-[0_4px_0_#090d16]'
                 }`}
               >
-                <ArrowLeft className="w-7 h-7 stroke-[2.8]" />
-                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
+                <ArrowLeft className="w-8 h-8 stroke-[3]" />
+                <span className="text-[10px] sm:text-[11px] font-orbitron font-black tracking-wider mt-1">
                   {t('headsoccer.btnLeft')}
                 </span>
               </div>
 
               <div
-                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
+                className={`w-[72px] h-[72px] sm:w-[82px] sm:h-[82px] min-[400px]:w-[76px] min-[400px]:h-[76px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   rightPressed
                     ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_24px_rgba(34,211,238,0.9)]'
                     : 'bg-slate-800/90 text-slate-100 border-slate-600/80 shadow-[0_4px_0_#090d16]'
                 }`}
               >
-                <ArrowRight className="w-7 h-7 stroke-[2.8]" />
-                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
+                <ArrowRight className="w-8 h-8 stroke-[3]" />
+                <span className="text-[10px] sm:text-[11px] font-orbitron font-black tracking-wider mt-1">
                   {t('headsoccer.btnRight')}
                 </span>
               </div>
             </div>
 
             {/* Right Side: Action Buttons KICK & JUMP (Detached, Spaced Out) */}
-            <div className="p-1 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center space-x-3">
+            <div className="p-1 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center space-x-3 sm:space-x-4">
               {/* KICK Button */}
               <button
                 type="button"
@@ -1335,14 +1353,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                   e.preventDefault();
                   handleKick();
                 }}
-                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                className={`w-[72px] h-[72px] sm:w-[82px] sm:h-[82px] min-[400px]:w-[76px] min-[400px]:h-[76px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
                   kickPressed
                     ? 'bg-emerald-400 text-black border-white scale-95 shadow-[0_0_26px_rgba(16,185,129,0.9)]'
                     : 'bg-gradient-to-b from-emerald-500 to-teal-700 text-white border-emerald-300 shadow-[0_4px_0_#064e3b] active:translate-y-1'
                 }`}
               >
-                <Zap className="w-6 h-6 stroke-[2.6]" />
-                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
+                <Zap className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.8]" />
+                <span className="text-[10px] sm:text-[11px] font-orbitron font-black tracking-wider mt-1">
                   {t('headsoccer.btnKick')}
                 </span>
               </button>
@@ -1354,14 +1372,14 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                   e.preventDefault();
                   handleJump();
                 }}
-                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                className={`w-[72px] h-[72px] sm:w-[82px] sm:h-[82px] min-[400px]:w-[76px] min-[400px]:h-[76px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
                   jumpPressed
                     ? 'bg-indigo-400 text-black border-white scale-95 shadow-[0_0_26px_rgba(99,102,241,0.9)]'
                     : 'bg-gradient-to-b from-indigo-500 to-purple-700 text-white border-indigo-300 shadow-[0_4px_0_#312e81] active:translate-y-1'
                 }`}
               >
-                <ArrowUp className="w-6 h-6 stroke-[2.8]" />
-                <span className="text-[9px] font-orbitron font-black tracking-wider mt-0.5">
+                <ArrowUp className="w-8 h-8 stroke-[3]" />
+                <span className="text-[10px] sm:text-[11px] font-orbitron font-black tracking-wider mt-1">
                   {t('headsoccer.btnJump')}
                 </span>
               </button>

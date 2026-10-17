@@ -383,19 +383,34 @@ export abstract class BaseGameRoom {
   }
 
   // Player Disconnect Handler
-  public handleDisconnect(wallet: string) {
+  public handleDisconnect(wallet: string, ws?: WebSocket, telegramId?: string) {
     let disconnectedPlayer: PlayerSession | undefined;
     let opponent: PlayerSession | undefined;
-    let side: 'A' | 'B' = 'A';
+    let side: 'A' | 'B' | null = null;
 
-    if (this.isSameWallet(wallet, this.playerA.walletAddress)) {
+    if (ws) {
+      if (this.playerA?.ws === ws) side = 'A';
+      else if (this.playerB?.ws === ws) side = 'B';
+    }
+    if (!side && telegramId) {
+      if (this.playerA?.telegramId && String(this.playerA.telegramId) === String(telegramId)) side = 'A';
+      else if (this.playerB?.telegramId && String(this.playerB.telegramId) === String(telegramId)) side = 'B';
+    }
+    if (!side && wallet) {
+      if (this.isSameWallet(wallet, this.playerA.walletAddress)) side = 'A';
+      else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) side = 'B';
+      else if (this.playerA.telegramId && (this.isSameWallet(wallet, `tg_${this.playerA.telegramId}`) || wallet === String(this.playerA.telegramId))) side = 'A';
+      else if (this.playerB?.telegramId && (this.isSameWallet(wallet, `tg_${this.playerB.telegramId}`) || wallet === String(this.playerB.telegramId))) side = 'B';
+    }
+
+    if (!side) return;
+
+    if (side === 'A') {
       disconnectedPlayer = this.playerA;
       opponent = this.playerB;
-      side = 'A';
-    } else if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) {
+    } else {
       disconnectedPlayer = this.playerB;
       opponent = this.playerA;
-      side = 'B';
     }
 
     if (!disconnectedPlayer) return;

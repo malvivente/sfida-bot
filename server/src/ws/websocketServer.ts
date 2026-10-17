@@ -212,11 +212,19 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             room?.handleGameAction(senderWallet, data);
             break;
 
+          case 'LEAVE':
+            console.log(`[WS] Client ${username} explicitly left Match #${matchId}`);
+            room?.handleDisconnect(wallet, ws, telegramId);
+            try { ws.close(1000, 'User left'); } catch {}
+            break;
+
           case 'PING':
+            (ws as any).lastActivity = Date.now();
             ws.send(JSON.stringify({ type: 'PONG', time: Date.now() }));
             break;
 
           default:
+            (ws as any).lastActivity = Date.now();
             room?.handleGameAction(senderWallet, data);
             break;
         }
@@ -225,14 +233,29 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       }
     });
 
-    ws.on('close', () => {
-      if (role === 'player') {
-        console.log(`[WS] Player ${username} (${wallet}) disconnected. Starting grace timer...`);
-        room?.handleDisconnect(wallet);
+    // Mobile dead-connection detector (terminates hung sockets if inactive for >12s in active match)
+    (ws as any).lastActivity = Date.now();
+    const heartbeatInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const inactiveMs = Date.now() - ((ws as any).lastActivity || Date.now());
+        if (inactiveMs > 12000 && room && (room.state === 'GAME_ACTIVE' || room.state === 'ROUND_START')) {
+          console.warn(`[WS] Dead socket detected for ${username} in Match #${matchId} (inactive ${Math.round(inactiveMs / 1000)}s). Terminating...`);
+          clearInterval(heartbeatInterval);
+          ws.terminate();
+        }
+      } else {
+        clearInterval(heartbeatInterval);
       }
+    }, 4000);
+
+    ws.on('close', () => {
+      clearInterval(heartbeatInterval);
+      console.log(`[WS] Connection closed for ${username} (${wallet}, tg: ${telegramId}) in Match #${matchId}`);
+      room?.handleDisconnect(wallet, ws, telegramId);
     });
 
     ws.on('error', (err) => {
+      clearInterval(heartbeatInterval);
       console.error(`[WS] Socket error for ${wallet}:`, err);
     });
   });

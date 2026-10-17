@@ -121,6 +121,10 @@ export function useSocket({
   const lastHsPhaseRef = useRef<string | undefined>(undefined);
   const lastHsScoreARef = useRef<number | undefined>(undefined);
   const lastHsScoreBRef = useRef<number | undefined>(undefined);
+  const currentRoomStateRef = useRef<RoomState>('LOBBY');
+  const currentScoreARef = useRef<number>(-1);
+  const currentScoreBRef = useRef<number>(-1);
+  const currentSecondsLeftRef = useRef<number | null>(null);
 
   const subscribeToGameTick = useCallback((cb: (data: any) => void) => {
     gameTickSubscribersRef.current.add(cb);
@@ -317,7 +321,10 @@ export function useSocket({
             break;
 
           case 'HEADSOCCER_TICK':
-            setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : 'GAME_ACTIVE'));
+            if (currentRoomStateRef.current !== 'GAME_ACTIVE' && currentRoomStateRef.current !== 'MATCH_SETTLED' && currentRoomStateRef.current !== 'FORFEITED') {
+              currentRoomStateRef.current = 'GAME_ACTIVE';
+              setRoomState('GAME_ACTIVE');
+            }
             if (msg.gameData) {
               // Direct notification to render loop without forcing React component re-render
               gameTickSubscribersRef.current.forEach((cb) => {
@@ -347,9 +354,18 @@ export function useSocket({
                 setGameData(msg.gameData);
               }
             }
-            if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
-            if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
-            if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
+            if (msg.scoreA !== undefined && msg.scoreA !== currentScoreARef.current) {
+              currentScoreARef.current = msg.scoreA;
+              setScoreA(msg.scoreA);
+            }
+            if (msg.scoreB !== undefined && msg.scoreB !== currentScoreBRef.current) {
+              currentScoreBRef.current = msg.scoreB;
+              setScoreB(msg.scoreB);
+            }
+            if (msg.secondsLeft !== undefined && msg.secondsLeft !== currentSecondsLeftRef.current) {
+              currentSecondsLeftRef.current = msg.secondsLeft;
+              setCountdownSeconds(msg.secondsLeft);
+            }
             break;
 
           case 'BETTING_WINDOW_OPEN':
@@ -660,18 +676,36 @@ export function useSocket({
 
     connect();
 
+    // Active ping heartbeat every 3 seconds for immediate drop detection
     pingTimer = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'PING' }));
       }
-    }, 15000);
+    }, 3000);
+
+    const handleUnload = () => {
+      try {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'LEAVE', wallet, telegramId }));
+          wsRef.current.close(1000, 'Page hidden');
+        }
+      } catch {}
+    };
+
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
 
     return () => {
       isDisposed = true;
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (pingTimer) clearInterval(pingTimer);
       try {
-        wsRef.current?.close();
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'LEAVE', wallet, telegramId }));
+          wsRef.current.close(1000, 'Disposed');
+        }
       } catch {}
     };
   }, [matchId, role, wallet, telegramId, username, serverUrl]);
