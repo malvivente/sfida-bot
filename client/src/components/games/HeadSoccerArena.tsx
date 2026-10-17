@@ -102,9 +102,9 @@ interface SpriteBank {
 }
 
 const HEADSOCCER_SPRITE_PATHS = {
-  pitchBg: '/assets/games/headsoccer/pitch_bg.svg',
-  goalLeft: '/assets/games/headsoccer/goal_left.svg',
-  goalRight: '/assets/games/headsoccer/goal_right.svg',
+  pitchBg: '/assets/games/headsoccer/pitch_bg.webp',
+  goalLeft: '/assets/games/headsoccer/goal_left.webp',
+  goalRight: '/assets/games/headsoccer/goal_right.webp',
   playerAIdle: '/assets/games/headsoccer/player_a_idle.webp',
   playerARun1: '/assets/games/headsoccer/player_a_run1.webp',
   playerARun2: '/assets/games/headsoccer/player_a_run2.webp',
@@ -115,8 +115,8 @@ const HEADSOCCER_SPRITE_PATHS = {
   playerBRun2: '/assets/games/headsoccer/player_b_run2.webp',
   playerBJump: '/assets/games/headsoccer/player_b_jump.webp',
   playerBKick: '/assets/games/headsoccer/player_b_kick.webp',
-  ball: '/assets/games/headsoccer/ball.svg',
-  ballSuper: '/assets/games/headsoccer/ball_super.svg',
+  ball: '/assets/games/headsoccer/ball.webp',
+  ballSuper: '/assets/games/headsoccer/ball_super.webp',
 };
 
 const HEADSOCCER_SPRITE_CACHE: Record<string, HTMLImageElement> = {};
@@ -199,6 +199,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   const pitchCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const goalLeftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const goalRightCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const superHaloCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const hasWarmedUpRef = useRef(false);
 
   const particlesRef = useRef<VisualParticle[]>([]);
@@ -380,6 +381,30 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
     }
   }, []);
 
+  const getSuperHaloCanvas = useCallback((): HTMLCanvasElement | null => {
+    if (superHaloCanvasRef.current) return superHaloCanvasRef.current;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const hCtx = canvas.getContext('2d');
+      if (!hCtx) return null;
+
+      const grad = hCtx.createRadialGradient(64, 64, 8, 64, 64, 60);
+      grad.addColorStop(0, 'rgba(254, 240, 138, 0.88)');
+      grad.addColorStop(0.35, 'rgba(249, 115, 22, 0.65)');
+      grad.addColorStop(0.75, 'rgba(239, 68, 68, 0.35)');
+      grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+      hCtx.fillStyle = grad;
+      hCtx.fillRect(0, 0, 128, 128);
+
+      superHaloCanvasRef.current = canvas;
+      return canvas;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // GPU Pipeline & Texture Warm-up: runs during 3-second kickoff countdown to ensure zero-stutter when match starts
   const warmUpGpuPipeline = useCallback((ctx: CanvasRenderingContext2D) => {
     if (hasWarmedUpRef.current) return;
@@ -388,6 +413,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
       getOrRenderPitchCanvas();
       getOrRenderGoalCanvas('left');
       getOrRenderGoalCanvas('right');
+      getSuperHaloCanvas();
 
       ctx.save();
       ctx.globalAlpha = 0.001;
@@ -399,7 +425,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
       });
       ctx.restore();
     } catch {}
-  }, [getOrRenderGoalCanvas, getOrRenderPitchCanvas]);
+  }, [getOrRenderGoalCanvas, getOrRenderPitchCanvas, getSuperHaloCanvas]);
 
   // 60FPS / 120FPS Delta-Time Normalized Canvas Render Loop
   useEffect(() => {
@@ -581,19 +607,13 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
             ctx.save();
 
             if (isArmed) {
-              // 1. Concentric pulsing fiery halo
+              // 1. Concentric pulsing fiery halo (using cached offscreen texture, 0 per-frame allocation)
               const pulse = 1 + 0.12 * Math.sin(animNow * 0.012);
-              const gradR = 48 * pulse;
-              const auraGrad = ctx.createRadialGradient(targetX, targetY, 8, targetX, targetY, gradR);
-              auraGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)'); // incandescent yellow core
-              auraGrad.addColorStop(0.35, 'rgba(249, 115, 22, 0.7)'); // flame orange
-              auraGrad.addColorStop(0.75, 'rgba(239, 68, 68, 0.4)'); // fiery red
-              auraGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
-
-              ctx.beginPath();
-              ctx.arc(targetX, targetY, gradR, 0, Math.PI * 2);
-              ctx.fillStyle = auraGrad;
-              ctx.fill();
+              const halo = getSuperHaloCanvas();
+              const size = 112 * pulse;
+              if (halo) {
+                ctx.drawImage(halo, targetX - size / 2, targetY - size / 2, size, size);
+              }
 
               // 2. Rising flame sparks
               for (let i = 0; i < 8; i++) {
@@ -890,7 +910,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
 
     animId = requestAnimationFrame(renderFrame);
     return () => cancelAnimationFrame(animId);
-  }, [getOrRenderGoalCanvas, getOrRenderPitchCanvas, role, t, userSide, warmUpGpuPipeline]);
+  }, [getOrRenderGoalCanvas, getOrRenderPitchCanvas, getSuperHaloCanvas, role, t, userSide, warmUpGpuPipeline]);
 
   // Input handlers
   const handleMoveLeft = useCallback(
@@ -1679,9 +1699,9 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
 
       {/* Floating Reconnecting Banner if Local Player Network Drops */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && !isConnected && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-amber-500/90 text-black border border-amber-300 shadow-xl flex items-center space-x-2 animate-bounce">
-          <Loader2 className="w-4 h-4 animate-spin text-black" />
-          <span className="text-xs font-orbitron font-black tracking-wide">
+        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-amber-500 text-slate-950 border-2 border-amber-300 shadow-[0_4px_25px_rgba(245,158,11,0.6)] flex items-center space-x-2.5 pointer-events-none animate-bounce">
+          <Loader2 className="w-4 h-4 animate-spin text-slate-950 shrink-0" />
+          <span className="text-xs font-orbitron font-black tracking-wide uppercase whitespace-nowrap">
             {t('arena.reconnectingToMatch')}
           </span>
         </div>

@@ -64,6 +64,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
 
     ws.on('message', async (raw: Buffer | string) => {
       try {
+        (ws as any).lastActivity = Date.now();
         const data = JSON.parse(raw.toString());
         // Determine whether sender is Player A, Player B, or spectator
         const senderSide = room ? room.getPlayerSide(wallet, ws) : null;
@@ -233,12 +234,12 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       }
     });
 
-    // Mobile dead-connection detector (terminates hung sockets if inactive for >12s in active match)
+    // Mobile dead-connection detector (terminates zombie sockets if completely inactive for >45s in active match)
     (ws as any).lastActivity = Date.now();
     const heartbeatInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         const inactiveMs = Date.now() - ((ws as any).lastActivity || Date.now());
-        if (inactiveMs > 12000 && room && (room.state === 'GAME_ACTIVE' || room.state === 'ROUND_START')) {
+        if (inactiveMs > 45000 && room && (room.state === 'GAME_ACTIVE' || room.state === 'ROUND_START')) {
           console.warn(`[WS] Dead socket detected for ${username} in Match #${matchId} (inactive ${Math.round(inactiveMs / 1000)}s). Terminating...`);
           clearInterval(heartbeatInterval);
           ws.terminate();
@@ -246,7 +247,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       } else {
         clearInterval(heartbeatInterval);
       }
-    }, 4000);
+    }, 10000);
 
     ws.on('close', () => {
       clearInterval(heartbeatInterval);
