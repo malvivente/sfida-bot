@@ -13,6 +13,7 @@ import { areAddressesEqual } from '../utils/ton.js';
 import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { EpicBanners } from './EpicBanners.js';
+import { LiveActivityTicker } from './LiveActivityTicker.js';
 import { PlayHubView } from './PlayHubView.js';
 import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
@@ -631,6 +632,22 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         />
       ) : (
         <>
+          {/* Live Activity Ticker (Real-time and previous victories ticker) - Only in Home hub */}
+          {showBanners && sectionView === 'hub' && (
+            <LiveActivityTicker
+              matches={matches}
+              onSelectGame={(g) => {
+                if (onNavigateToDuels) {
+                  onNavigateToDuels(g);
+                } else {
+                  setFilterGameType(g);
+                  setPreviousView('hub');
+                  setSectionView('pvp');
+                }
+              }}
+            />
+          )}
+
           {/* Epic Banners only in Hub mode */}
           {showBanners && sectionView === 'hub' && (
             <EpicBanners

@@ -998,7 +998,7 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
   const displayPlayerBName = hasPlayerB ? playerBName : t('arena.waitingOpponentShort');
 
   return (
-    <div className="relative w-full max-w-lg mx-auto rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black p-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col gap-2.5 sm:gap-3 select-none">
+    <div className="relative w-full max-w-lg mx-auto rounded-3xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-black px-2 py-3 sm:p-4 shadow-[0_0_40px_rgba(16,185,129,0.18)] flex flex-col gap-2.5 sm:gap-3 select-none">
       {/* Top Stadium LED Scoreboard (3-column grid so long names never overlap scores) */}
       <div className="w-full z-10 mb-2.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-black/80 border border-white/15 rounded-2xl px-3 py-2.5 shadow-inner">
@@ -1089,53 +1089,51 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
         </div>
       )}
 
-      {/* Horizontal Screen Bezel */}
-      <div className="relative w-full rounded-2xl p-2 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)]">
-        {/* Top Bezel Status Strip (No "16:9 ARENA", clean side indicator pill) */}
-        <div className="flex items-center justify-between px-2 pb-1.5 text-[10px] font-mono tracking-wider uppercase">
-          <div className="flex items-center space-x-1.5">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                roomState === 'GAME_ACTIVE'
-                  ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]'
-                  : 'bg-amber-400 animate-pulse'
-              }`}
-            />
-            <span className="font-orbitron font-black text-slate-300 tracking-widest">
-              SFIDA BOY
-            </span>
-          </div>
-
-          {role === 'spectator' ? (
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[9px] font-orbitron font-bold">
-              {t('headsoccer.liveBroadcast')}
-            </span>
-          ) : (
-            <span
-              className={`px-2 py-0.5 rounded-full border text-[9px] font-orbitron font-bold flex items-center space-x-1 ${
-                userSide === 'A'
-                  ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300'
-                  : 'bg-orange-500/15 border-orange-400/40 text-orange-300'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  userSide === 'A' ? 'bg-cyan-400' : 'bg-orange-400'
-                }`}
-              />
-              <span>
-                {t('headsoccer.youTag')}:{' '}
-                {userSide === 'A' ? t('headsoccer.leftSide') : t('headsoccer.rightSide')}
-              </span>
-            </span>
-          )}
+      {/* Top Mode / Side Indicator Strip */}
+      <div className="w-full flex items-center justify-between px-1 text-[10px] font-mono tracking-wider uppercase">
+        <div className="flex items-center space-x-1.5">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              roomState === 'GAME_ACTIVE'
+                ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]'
+                : 'bg-amber-400 animate-pulse'
+            }`}
+          />
+          <span className="font-heading font-black text-slate-300 tracking-wider text-[11px]">
+            HEAD SOCCER 1v1
+          </span>
         </div>
 
-        {/* 16:9 Canvas Viewport */}
-        <div
-          className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border-2 border-emerald-500/40 bg-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.2)]"
-          style={{ transform: 'translateZ(0)', willChange: 'transform' }}
-        >
+        {role === 'spectator' ? (
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-heading font-bold">
+            {t('headsoccer.liveBroadcast')}
+          </span>
+        ) : (
+          <span
+            className={`px-2.5 py-0.5 rounded-full border text-[10px] font-heading font-bold flex items-center space-x-1.5 ${
+              userSide === 'A'
+                ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300'
+                : 'bg-orange-500/15 border-orange-400/40 text-orange-300'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                userSide === 'A' ? 'bg-cyan-400' : 'bg-orange-400'
+              }`}
+            />
+            <span>
+              {t('headsoccer.youTag')}:{' '}
+              {userSide === 'A' ? t('headsoccer.leftSide') : t('headsoccer.rightSide')}
+            </span>
+          </span>
+        )}
+      </div>
+
+      {/* Main Game Screen (Maximum Width, Clean Modern Border, No Bulky Frame) */}
+      <div
+        className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden border border-emerald-500/50 bg-slate-950 shadow-[0_0_30px_rgba(16,185,129,0.22)]"
+        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
+      >
           <canvas
             ref={canvasRef}
             width={ARENA_W}
@@ -1239,23 +1237,12 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             </div>
           )}
         </div>
-      </div>
 
-      {/* Classic Handheld Console Lower Deck — SHOWN TO PLAYERS DURING ACTIVE MATCH */}
+      {/* Detached On-Screen Game Controls — SHOWN TO PLAYERS DURING ACTIVE MATCH */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && (
-        <div className="w-full mt-1.5 sm:mt-2.5 pt-3 pb-3 sm:pb-4 px-2 sm:px-4 rounded-3xl bg-gradient-to-b from-slate-800/95 via-slate-900 to-slate-950 border-2 border-slate-700/80 shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_10px_25px_rgba(0,0,0,0.6)] flex flex-col space-y-2.5">
-          {/* Top SUPER SHOT Trigger Bar */}
-          <div className="w-full flex items-center justify-between gap-2">
-            <div className="flex items-center space-x-1.5 opacity-60">
-              <div className="w-1.5 h-3.5 rounded-full bg-slate-600" />
-              <div className="w-1.5 h-3.5 rounded-full bg-slate-600" />
-              <div className="w-1.5 h-3.5 rounded-full bg-slate-600" />
-              <span className="text-[9px] font-orbitron font-bold text-slate-400 tracking-widest ml-1">
-                POCKET PAD
-              </span>
-            </div>
-
-            {/* Dedicated Wide SUPER SHOT Button with Active Armed State */}
+        <div className="w-full mt-3 sm:mt-4 flex flex-col space-y-3">
+          {/* Centered SUPER SHOT Trigger Button */}
+          <div className="w-full flex items-center justify-center">
             <button
               type="button"
               disabled={!mySuperCanArm}
@@ -1263,12 +1250,12 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                 e.preventDefault();
                 if (mySuperCanArm) handleSuper();
               }}
-              className={`px-3.5 py-1.5 rounded-xl border-2 flex items-center space-x-2 transition-all touch-none select-none ${
+              className={`px-5 py-2 rounded-2xl border-2 flex items-center space-x-2.5 transition-all touch-none select-none shadow-md ${
                 mySuperActive
                   ? 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-white border-yellow-300 shadow-[0_0_28px_rgba(249,115,22,1)] animate-pulse ring-2 ring-yellow-400 active:scale-95'
                   : mySuperCharge >= 100
-                  ? 'bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 text-black border-yellow-200 shadow-[0_0_20px_rgba(249,115,22,0.85)] animate-pulse active:scale-95'
-                  : 'bg-slate-900/90 text-slate-500 border-slate-700/80 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 text-black border-yellow-200 shadow-[0_0_22px_rgba(249,115,22,0.85)] animate-pulse active:scale-95'
+                  : 'bg-slate-900/90 text-slate-500 border-slate-800 cursor-not-allowed'
               }`}
             >
               <Flame
@@ -1280,11 +1267,11 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                     : 'text-slate-600'
                 }`}
               />
-              <span className="text-[11px] font-orbitron font-black uppercase tracking-wider">
+              <span className="text-xs font-orbitron font-black uppercase tracking-wider">
                 {mySuperActive ? t('headsoccer.superArmed') : 'SUPER SHOT'}
               </span>
               <span
-                className={`text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md ${
+                className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-lg ${
                   mySuperActive
                     ? 'bg-black/40 text-yellow-300'
                     : mySuperCharge >= 100
@@ -1301,22 +1288,22 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
             </button>
           </div>
 
-          {/* Main Console Controls Row: Left D-Pad Cradle & Right Action Buttons */}
-          <div className="w-full flex items-center justify-between px-1">
-            {/* Left Side: Recessed Console D-Pad (Left / Right with seamless Slide-to-Switch support) */}
+          {/* Main Controls Row: Detached Left Movement D-Pad & Detached Right Action Buttons */}
+          <div className="w-full flex items-center justify-between px-1 sm:px-2 pt-0.5">
+            {/* Left Side: Movement D-Pad (Left / Right with seamless Slide-to-Switch support) */}
             <div
               ref={dpadContainerRef}
               onPointerDown={handlePointerDownDpad}
               onPointerMove={handlePointerMoveDpad}
               onPointerUp={handlePointerUpDpad}
               onPointerCancel={handlePointerCancelDpad}
-              className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2.5 touch-none select-none cursor-pointer"
+              className="p-1 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center space-x-3 touch-none select-none cursor-pointer"
             >
               <div
-                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
+                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   leftPressed
-                    ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
-                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16]'
+                    ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_24px_rgba(34,211,238,0.9)]'
+                    : 'bg-slate-800/90 text-slate-100 border-slate-600/80 shadow-[0_4px_0_#090d16]'
                 }`}
               >
                 <ArrowLeft className="w-7 h-7 stroke-[2.8]" />
@@ -1326,10 +1313,10 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               </div>
 
               <div
-                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
+                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-xl border-2 flex flex-col items-center justify-center transition-all pointer-events-none select-none ${
                   rightPressed
-                    ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_20px_rgba(34,211,238,0.8)]'
-                    : 'bg-slate-800 text-slate-100 border-slate-600 shadow-[0_4px_0_#090d16]'
+                    ? 'bg-cyan-400 text-black border-white scale-95 shadow-[0_0_24px_rgba(34,211,238,0.9)]'
+                    : 'bg-slate-800/90 text-slate-100 border-slate-600/80 shadow-[0_4px_0_#090d16]'
                 }`}
               >
                 <ArrowRight className="w-7 h-7 stroke-[2.8]" />
@@ -1339,8 +1326,8 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
               </div>
             </div>
 
-            {/* Right Side: Action Buttons KICK & JUMP (clean layout, no A/B letters, 100% inside card bounds) */}
-            <div className="p-1.5 rounded-2xl bg-black/60 border border-slate-700/80 shadow-inner flex items-center space-x-2.5">
+            {/* Right Side: Action Buttons KICK & JUMP (Detached, Spaced Out) */}
+            <div className="p-1 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center space-x-3">
               {/* KICK Button */}
               <button
                 type="button"
@@ -1348,9 +1335,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                   e.preventDefault();
                   handleKick();
                 }}
-                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
                   kickPressed
-                    ? 'bg-emerald-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(16,185,129,0.85)]'
+                    ? 'bg-emerald-400 text-black border-white scale-95 shadow-[0_0_26px_rgba(16,185,129,0.9)]'
                     : 'bg-gradient-to-b from-emerald-500 to-teal-700 text-white border-emerald-300 shadow-[0_4px_0_#064e3b] active:translate-y-1'
                 }`}
               >
@@ -1367,9 +1354,9 @@ export const HeadSoccerArena: React.FC<HeadSoccerArenaProps> = ({
                   e.preventDefault();
                   handleJump();
                 }}
-                className={`w-[60px] h-[60px] sm:w-16 sm:h-16 rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
+                className={`w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] rounded-2xl border-2 flex flex-col items-center justify-center transition-all touch-none select-none ${
                   jumpPressed
-                    ? 'bg-indigo-400 text-black border-white scale-95 shadow-[0_0_25px_rgba(99,102,241,0.85)]'
+                    ? 'bg-indigo-400 text-black border-white scale-95 shadow-[0_0_26px_rgba(99,102,241,0.9)]'
                     : 'bg-gradient-to-b from-indigo-500 to-purple-700 text-white border-indigo-300 shadow-[0_4px_0_#312e81] active:translate-y-1'
                 }`}
               >
