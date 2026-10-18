@@ -112,7 +112,7 @@ export const Arena: React.FC<ArenaProps> = ({
     openWalletModal,
     placeSpectatorBetOnChain,
   } = useTonClashContract();
-  const { userId, username, fullName, displayName, botUsername, photoUrl } = useTelegram();
+  const { userId, username, firstName, fullName, displayName, botUsername, photoUrl } = useTelegram();
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
@@ -237,6 +237,7 @@ export const Arena: React.FC<ArenaProps> = ({
     role: initialEffectiveRole,
     telegramId: userId,
     username: cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (userId ? `Player_${String(userId).slice(-4)}` : 'Warrior'))),
+    firstName: firstName || (displayName ? displayName.split(' ')[0] : ''),
     serverUrl,
   });
 
@@ -365,6 +366,8 @@ export const Arena: React.FC<ArenaProps> = ({
           playerAAddress: playerAddress,
           telegramUserId: userId,
           telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player A'),
+          rawUsername: username ? username.replace(/^@/, '') : '',
+          firstName: firstName || (displayName ? displayName.split(' ')[0] : ''),
           photoUrl: photoUrl || '',
           gameType,
           isPrivate: roomIsPrivate,
@@ -504,6 +507,7 @@ export const Arena: React.FC<ArenaProps> = ({
           telegramUserId: userId,
           telegramUsername: cleanPlayerName(displayName || fullName || username || 'Player B'),
           rawUsername: username || '',
+          firstName: firstName || (displayName ? displayName.split(' ')[0] : ''),
           photoUrl: photoUrl || '',
           inviteCode: resolvedCode,
         }),

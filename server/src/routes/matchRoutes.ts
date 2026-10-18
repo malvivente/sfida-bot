@@ -244,6 +244,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       gameType?: any;
       telegramUserId?: string;
       telegramUsername?: string;
+      rawUsername?: string;
+      firstName?: string;
       photoUrl?: string;
       recruiterA?: string;
       groupAdminAddress?: string;
@@ -381,6 +383,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.state = 'LOBBY';
     room.playerA.telegramId = body.telegramUserId || '';
     room.playerA.username = body.telegramUsername || 'Player A';
+    room.playerA.firstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
     room.playerA.photoUrl = body.photoUrl || userAccount.photoUrl || '';
     room.targetOpponentUsername = body.targetOpponentUsername;
     room.targetOpponentId = body.targetOpponentId;
@@ -405,7 +408,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
             if (bot) {
               const gameConfig = (GAMES_CONFIG as any)[gameType];
               const gameTitle = gameConfig?.name || gameType.toUpperCase();
-              const creatorName = body.telegramUsername ? `@${body.telegramUsername.replace(/^@/, '')}` : 'Un duellante';
+              const rawUser = (body.rawUsername || userAccount.username || '').trim().replace(/^@/, '');
+              const creatorFirstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
+              const creatorName = rawUser ? `@${rawUser}` : (creatorFirstName || 'Un duellante');
               const text =
                 `{{emoji.swords}} <b>SFIDA ARENA • SFIDA DIRETTA!</b>\n\n` +
                 `<b>${creatorName}</b> ti ha lanciato una sfida diretta a <b>${gameTitle}</b>!\n\n` +
@@ -451,6 +456,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       telegramUserId?: string;
       telegramUsername?: string;
       rawUsername?: string;
+      firstName?: string;
       photoUrl?: string;
       inviteCode?: string;
     };
@@ -587,6 +593,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       walletAddress: body.playerBAddress,
       telegramId: body.telegramUserId || '',
       username: body.telegramUsername || 'Player B',
+      firstName: body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined),
       photoUrl: body.photoUrl || userAccount.photoUrl || '',
       connected: false,
       ready: false,

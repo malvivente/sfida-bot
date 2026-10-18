@@ -77,6 +77,8 @@ export interface UserAccount {
   walletAddress: string;
   telegramId?: string;
   username?: string;
+  firstName?: string;
+  lastName?: string;
   displayName?: string; // Real Telegram display name (first_name + last_name)
   photoUrl?: string; // Telegram profile picture url
   languageCode?: string; // Telegram user client language (e.g. 'it', 'en', 'ru')
@@ -664,7 +666,9 @@ export class DatabaseService {
     telegramId?: string,
     username?: string,
     displayName?: string,
-    photoUrl?: string
+    photoUrl?: string,
+    firstName?: string,
+    lastName?: string
   ): Promise<UserAccount> {
     const cleanTgId = telegramId ? String(telegramId).trim() : '';
     const normWallet = walletAddress ? this.normalizeAddress(walletAddress) : '';
@@ -711,6 +715,14 @@ export class DatabaseService {
         account.displayName = displayName.trim();
         changed = true;
       }
+      if (firstName && account.firstName !== firstName.trim()) {
+        account.firstName = firstName.trim();
+        changed = true;
+      }
+      if (lastName && account.lastName !== lastName.trim()) {
+        account.lastName = lastName.trim();
+        changed = true;
+      }
       if (photoUrl && account.photoUrl !== photoUrl) {
         account.photoUrl = photoUrl;
         changed = true;
@@ -749,6 +761,8 @@ export class DatabaseService {
       walletAddress: friendlyWallet,
       telegramId: cleanTgId,
       username: username || '',
+      firstName: firstName || (displayName ? displayName.trim().split(/\s+/)[0] : undefined),
+      lastName: lastName,
       displayName: displayName || (username ? username : (cleanTgId ? `Duelist #${cleanTgId}` : 'Duelist')),
       photoUrl: photoUrl || '',
       balanceNano: '0',
@@ -798,7 +812,10 @@ export class DatabaseService {
       undefined,
       cleanTgId,
       user.username,
-      fullName
+      fullName,
+      undefined,
+      user.firstName,
+      user.lastName
     );
 
     let changed = false;

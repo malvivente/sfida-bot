@@ -31,6 +31,7 @@ interface UseSocketProps {
   role: 'player' | 'spectator';
   telegramId?: string;
   username?: string;
+  firstName?: string;
   serverUrl?: string;
 }
 
@@ -66,6 +67,7 @@ export function useSocket({
   role,
   telegramId,
   username,
+  firstName,
   serverUrl,
 }: UseSocketProps) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -186,7 +188,7 @@ export function useSocket({
     const connect = () => {
       if (isDisposed) return;
       try {
-        const url = `${wsEndpoint}/ws/duel?matchId=${matchId}&role=${role}&wallet=${wallet || ''}&telegramId=${telegramId || ''}&username=${encodeURIComponent(username || '')}`;
+        const url = `${wsEndpoint}/ws/duel?matchId=${matchId}&role=${role}&wallet=${wallet || ''}&telegramId=${telegramId || ''}&username=${encodeURIComponent(username || '')}&firstName=${encodeURIComponent(firstName || '')}`;
         const ws = new WebSocket(url);
         wsRef.current = ws;
 

@@ -39,6 +39,8 @@ export interface PlayerSession {
   walletAddress: string;
   telegramId: string;
   username: string;
+  firstName?: string;
+  displayName?: string;
   photoUrl?: string;
   ws?: WebSocket;
   connected: boolean;
@@ -180,12 +182,12 @@ export abstract class BaseGameRoom {
   }
 
   // Bind WebSocket to Player A or B
-  public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket): boolean {
+  public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket, firstName?: string): boolean {
     if (
       this.isSameWallet(wallet, this.playerA.walletAddress) ||
       (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
     ) {
-      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A');
+      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName);
       return true;
     }
 
@@ -194,7 +196,7 @@ export abstract class BaseGameRoom {
       (this.isSameWallet(wallet, this.playerB.walletAddress) ||
         (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
     ) {
-      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
       return true;
     }
 
@@ -204,12 +206,13 @@ export abstract class BaseGameRoom {
         walletAddress: wallet,
         telegramId,
         username: cleanPlayerName(username),
+        firstName: firstName?.trim(),
         ws,
         connected: true,
         ready: false,
         score: 0,
       };
-      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B');
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
       return true;
     }
 
@@ -221,11 +224,13 @@ export abstract class BaseGameRoom {
     telegramId: string,
     username: string,
     ws: WebSocket,
-    side: 'A' | 'B'
+    side: 'A' | 'B',
+    firstName?: string
   ) {
     player.ws = ws;
     if (telegramId) player.telegramId = telegramId;
     if (username) player.username = cleanPlayerName(username);
+    if (firstName && !player.firstName) player.firstName = firstName.trim();
     player.connected = true;
     if (side === 'B') {
       this.cancelLobbyExpirationTimer();
@@ -557,6 +562,7 @@ export abstract class BaseGameRoom {
       const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
       const { renderCustomEmojis } = await import('../bot/emojis.js');
       const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+      const { dbService } = await import('../services/db.js');
 
       const bot = getTelegramBot();
       if (!bot) return;
@@ -564,7 +570,69 @@ export abstract class BaseGameRoom {
       const gameConfig = (GAMES_CONFIG as any)[this.gameType];
       const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
       const wagerGram = (Number(this.config.wagerAmountNano) / 1e9).toFixed(2);
-      const senderName = senderPlayer.username ? `@${senderPlayer.username.replace(/^@/, '')}` : 'Un giocatore';
+
+      // Helper to identify generic fallback names/placeholders
+      const isPlaceholder = (name?: string): boolean => {
+        if (!name) return true;
+        const n = name.trim().toLowerCase();
+        return (
+          n === 'player a' ||
+          n === 'player b' ||
+          n === 'guerriero' ||
+          n === 'warrior' ||
+          n === 'spettatore' ||
+          n === 'un giocatore' ||
+          n === 'un duellante' ||
+          n.startsWith('player_') ||
+          n.startsWith('user #') ||
+          n.startsWith('id:')
+        );
+      };
+
+      let senderUsername = '';
+      let senderFirstName = senderPlayer.firstName;
+
+      try {
+        const senderAccount = senderPlayer.telegramId
+          ? dbService.findUser(senderPlayer.telegramId)
+          : (senderPlayer.walletAddress ? dbService.findUser(senderPlayer.walletAddress) : null);
+
+        if (senderAccount) {
+          if (senderAccount.username && typeof senderAccount.username === 'string') {
+            const cleanU = senderAccount.username.trim().replace(/^@/, '');
+            if (cleanU && !isPlaceholder(cleanU)) {
+              senderUsername = cleanU;
+            }
+          }
+          if (!senderFirstName) {
+            senderFirstName = senderAccount.firstName || (senderAccount.displayName ? senderAccount.displayName.trim().split(/\s+/)[0] : undefined);
+          }
+        }
+      } catch (err) {
+        console.warn('[BaseGameRoom] Could not lookup sender in dbService:', err);
+      }
+
+      if (!senderUsername && senderPlayer.username) {
+        const cleanPlayerU = senderPlayer.username.trim();
+        if (cleanPlayerU.startsWith('@')) {
+          const stripped = cleanPlayerU.replace(/^@/, '').trim();
+          if (stripped && !isPlaceholder(stripped)) {
+            senderUsername = stripped;
+          }
+        } else if (!isPlaceholder(cleanPlayerU) && !cleanPlayerU.includes(' ')) {
+          if (!senderFirstName) {
+            senderFirstName = cleanPlayerU;
+          }
+        } else if (!senderFirstName && !isPlaceholder(cleanPlayerU)) {
+          senderFirstName = cleanPlayerU.split(/\s+/)[0];
+        }
+      }
+
+      const rawSenderName = senderUsername
+        ? `@${senderUsername}`
+        : (senderFirstName && !isPlaceholder(senderFirstName) ? senderFirstName : 'Un giocatore');
+
+      const senderName = rawSenderName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       const title = action === 'ready'
         ? `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO PRONTO!</b>`
