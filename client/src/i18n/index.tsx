@@ -434,7 +434,7 @@ export const translations: Translations = {
   'arena.inviteSpectators': { it: 'Invita spettatori', en: 'Invite spectators' },
   'arena.inviteDuelConfirmationTitle': { it: 'Invito al Duello', en: 'Duel Invitation' },
   'arena.inviteDuelConfirmationDesc': { it: 'Sei stato invitato a un duello!', en: 'You have been invited to a duel!' },
-  'arena.acceptAndEnter': { it: 'Accetta ed Entra', en: 'Accept & Enter' },
+  'arena.acceptAndEnter': { it: 'Accetta', en: 'Accept' },
   'arena.declineInvite': { it: 'Rifiuta', en: 'Decline' },
 
   // Cyber Shotgun Arena Translations
