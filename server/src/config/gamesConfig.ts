@@ -37,8 +37,8 @@ export const GAMES_CONFIG = {
   },
   shotgun: {
     name: 'Cyber Shotgun',
-    description: 'Buckshot roulette style cyber duel. 3 HP, 15s turn, tactical items (Saw, Ejector, Handcuffs, Inverter).',
-    initialHp: 3,
+    description: 'Buckshot roulette style cyber duel. 5 HP, 15s turn, tactical items (Saw, Ejector, Handcuffs, Inverter).',
+    initialHp: 5,
     turnTimeoutSeconds: 15,
   },
   connect4: {

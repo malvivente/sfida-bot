@@ -26,6 +26,7 @@ import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
+import { UserAvatar } from '../components/UserAvatar.js';
 
 interface ArenaProps {
   initialMatchId?: string;
@@ -73,7 +74,8 @@ export const Arena: React.FC<ArenaProps> = ({
   const { isFullscreen, topInset } = useTelegramViewport();
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
   const modalBottomOffset = isFullscreen ? 24 : 12;
-  const [activeMatchId, setActiveMatchId] = useState<string | null>(initialMatchId || null);
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
+  const [pendingInviteMatch, setPendingInviteMatch] = useState<{ match: MatchData; inviteCode?: string } | null>(null);
   const [unavailableMatchNotice, setUnavailableMatchNotice] = useState<{ matchId?: string } | null>(null);
 
   useEffect(() => {
@@ -174,7 +176,12 @@ export const Arena: React.FC<ArenaProps> = ({
     setIsRefreshing(true);
     const minSpinPromise = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      const url = serverUrl ? `${serverUrl}/api/matches?_t=${Date.now()}` : `/api/matches?_t=${Date.now()}`;
+      const q = new URLSearchParams();
+      q.set('_t', Date.now().toString());
+      if (effectivePlayerAddress) q.set('wallet', effectivePlayerAddress);
+      if (userId) q.set('userId', String(userId));
+      if (username) q.set('username', username);
+      const url = serverUrl ? `${serverUrl}/api/matches?${q.toString()}` : `/api/matches?${q.toString()}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
@@ -629,24 +636,8 @@ export const Arena: React.FC<ArenaProps> = ({
           return;
         }
 
-        if (initialInviteCode) {
-          try {
-            const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
-            stored[initialMatchId] = initialInviteCode;
-            localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
-          } catch {}
-        }
-        // User opened invite link: auto-join as Player B
-        if (!deepMatchesJoinedRef.current.has(initialMatchId)) {
-          deepMatchesJoinedRef.current.add(initialMatchId);
-          const playerAddress = userAddress || (userId ? `tg_${userId}` : '');
-          if (playerAddress) {
-            await handleJoinMatch(m, initialInviteCode, false);
-          } else {
-            setActiveMatchId(initialMatchId);
-            setRole('player');
-          }
-        }
+        // Prompt confirmation dialog before entering/joining the match
+        setPendingInviteMatch({ match: m, inviteCode: initialInviteCode });
       } else {
         // Duel is full or spectator requested
         setActiveMatchId(initialMatchId);
@@ -656,6 +647,27 @@ export const Arena: React.FC<ArenaProps> = ({
 
     resolveDeepMatch();
   }, [initialMatchId, initialInviteCode, initialRole, userAddress, userId, displayName, fullName, username, serverUrl]);
+
+  const handleConfirmInvite = async () => {
+    if (!pendingInviteMatch) return;
+    const { match: m, inviteCode } = pendingInviteMatch;
+    setPendingInviteMatch(null);
+    triggerImpact('heavy');
+    if (inviteCode) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('sfidabot_invite_codes') || '{}');
+        stored[m.matchId] = inviteCode;
+        localStorage.setItem('sfidabot_invite_codes', JSON.stringify(stored));
+      } catch {}
+    }
+    await handleJoinMatch(m, inviteCode, false);
+  };
+
+  const handleDeclineInvite = () => {
+    setPendingInviteMatch(null);
+    onClearDeepMatch?.();
+    triggerImpact('light');
+  };
 
   const handleSpectateMatch = (matchId: string) => {
     setActiveMatchId(matchId);
@@ -1126,19 +1138,20 @@ export const Arena: React.FC<ArenaProps> = ({
             </button>
 
             <div className="flex items-center space-x-2">
-              {!(currentActiveMatch?.isPrivate && currentActiveMatch?.allowSpectators === false && hasPlayerB) && (
+              {!(currentActiveMatch?.isPrivate && currentActiveMatch?.allowSpectators === false && (hasDesignatedOpponent || hasPlayerB)) && (
                 <button
                   type="button"
                   onClick={handleInGameShare}
-                  className="flex items-center space-x-1.5 text-[11px] font-heading font-bold text-cyan-300 hover:text-white bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/30 px-2.5 py-1 rounded-xl transition-all active:scale-95 shadow-sm"
-                  title={t('arena.shareDuel')}
+                  className={`flex items-center ${
+                    currentActiveMatch?.allowSpectators !== false ? 'p-1.5' : 'space-x-1.5 px-2.5 py-1'
+                  } text-[11px] font-heading font-bold text-cyan-300 hover:text-white bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/30 rounded-xl transition-all active:scale-95 shadow-sm`}
+                  title={currentActiveMatch?.allowSpectators !== false ? t('arena.inviteSpectators') : t('arena.inviteChallenger')}
+                  aria-label={currentActiveMatch?.allowSpectators !== false ? t('arena.inviteSpectators') : t('arena.inviteChallenger')}
                 >
                   <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>
-                    {currentActiveMatch?.isPrivate && currentActiveMatch?.allowSpectators === false
-                      ? t('arena.inviteChallenger')
-                      : t('arena.shareDuel')}
-                  </span>
+                  {currentActiveMatch?.allowSpectators === false && !hasDesignatedOpponent && !hasPlayerB && (
+                    <span>{t('arena.inviteChallenger')}</span>
+                  )}
                 </button>
               )}
 
@@ -1732,6 +1745,81 @@ export const Arena: React.FC<ArenaProps> = ({
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-epic-cyan active:scale-95 transition-all"
               >
                 {t('arena.goToDuelsBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Invite Confirmation Modal */}
+      {pendingInviteMatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-[#141724] border-2 border-purple-500/50 p-6 shadow-2xl space-y-5 text-center relative">
+            <button
+              onClick={handleDeclineInvite}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-95"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-16 h-16 rounded-3xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center mx-auto text-purple-300 shadow-[0_0_25px_rgba(168,85,247,0.35)]">
+              <Swords className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className={`text-[10px] font-heading font-black px-2 py-0.5 rounded-md bg-black/60 ${(GAMES_METADATA[pendingInviteMatch.match.gameType || 'roulette'] || GAMES_METADATA.roulette).accentColor}`}>
+                {(GAMES_METADATA[pendingInviteMatch.match.gameType || 'roulette'] || GAMES_METADATA.roulette).badge}
+              </span>
+              <h3 className="text-lg font-heading font-black text-white uppercase tracking-wide">
+                {(GAMES_METADATA[pendingInviteMatch.match.gameType || 'roulette'] || GAMES_METADATA.roulette).title}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                {t('arena.inviteDuelConfirmationDesc')}
+              </p>
+            </div>
+
+            {/* Challenger & Stake Details Card */}
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-3.5 space-y-3 text-left">
+              <div className="flex items-center space-x-2.5">
+                <UserAvatar
+                  name={cleanPlayerName(pendingInviteMatch.match.playerA.name)}
+                  photoUrl={pendingInviteMatch.match.playerA.photoUrl}
+                  sizeClass="w-10 h-10"
+                  textClass="text-xs font-bold"
+                />
+                <div className="min-w-0">
+                  <span className="text-[11px] text-slate-400 block font-heading uppercase tracking-wider">{t('friends.duelBtn')}</span>
+                  <span className="text-xs font-heading font-bold text-white block truncate">
+                    {cleanPlayerName(pendingInviteMatch.match.playerA.name)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                <span className="text-xs text-slate-300 font-heading">{t('lobby.yourWager')}</span>
+                <span className="text-sm font-heading font-black text-amber-300 flex items-center space-x-1">
+                  <span>{(parseFloat(pendingInviteMatch.match.wagerAmountNano) / 1e9).toFixed(2)}</span>
+                  <GramIcon className="w-4 h-4 text-amber-400 inline" />
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-2.5 pt-1">
+              <button
+                type="button"
+                onClick={handleDeclineInvite}
+                className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-heading font-bold text-xs uppercase tracking-wider active:scale-95 transition-all"
+              >
+                {t('arena.declineInvite')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmInvite}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg shadow-purple-900/40 active:scale-95 transition-all flex items-center justify-center space-x-1"
+              >
+                <Swords className="w-3.5 h-3.5" />
+                <span>{t('arena.acceptAndEnter')}</span>
               </button>
             </div>
           </div>

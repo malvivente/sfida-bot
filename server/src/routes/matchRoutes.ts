@@ -45,13 +45,35 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
   // List all active matches (exclude WAITING_FOR_DEPLOY)
   fastify.get('/api/matches', async (_req, reply) => {
+    const { userId, wallet, username } = (_req.query || {}) as any;
     const now = Date.now();
-    const rooms = roomManager.getAllRooms().filter((r) =>
-      r.state !== 'WAITING_FOR_DEPLOY' &&
-      r.state !== 'CANCELLED' &&
-      r.state !== 'FORFEITED' &&
-      (r.state === 'MATCH_SETTLED' || r.state === 'GAME_ACTIVE' || r.state === 'BETTING_WINDOW' || (r.state === 'LOBBY' && r.expiresAt > now))
-    );
+    const cleanUsername = username ? String(username).toLowerCase().replace(/^@/, '').trim() : '';
+
+    const rooms = roomManager.getAllRooms().filter((r) => {
+      if (
+        r.state === 'WAITING_FOR_DEPLOY' ||
+        r.state === 'CANCELLED' ||
+        r.state === 'FORFEITED' ||
+        !(r.state === 'MATCH_SETTLED' || r.state === 'GAME_ACTIVE' || r.state === 'BETTING_WINDOW' || (r.state === 'LOBBY' && r.expiresAt > now))
+      ) {
+        return false;
+      }
+
+      // Private rooms without spectators are strictly visible to participants only
+      if (r.isPrivate && r.allowSpectators === false) {
+        const isParticipant =
+          (wallet && (r.isSameWallet(r.playerA.walletAddress, wallet) || (r.playerB && r.isSameWallet(r.playerB.walletAddress, wallet)))) ||
+          (userId && (String(r.playerA.telegramId) === String(userId) || (r.playerB && String(r.playerB.telegramId) === String(userId)) || (r.targetOpponentId && String(r.targetOpponentId) === String(userId)))) ||
+          (cleanUsername && (
+            (r.playerA.username && r.playerA.username.toLowerCase().replace(/^@/, '').trim() === cleanUsername) ||
+            (r.playerB?.username && r.playerB.username.toLowerCase().replace(/^@/, '').trim() === cleanUsername) ||
+            (r.targetOpponentUsername && r.targetOpponentUsername.toLowerCase().replace(/^@/, '').trim() === cleanUsername)
+          ));
+        if (!isParticipant) return false;
+      }
+
+      return true;
+    });
     const clashMasterAddr = process.env.CLASH_MASTER_ADDRESS || '';
 
     const matches = rooms.map((r) => {

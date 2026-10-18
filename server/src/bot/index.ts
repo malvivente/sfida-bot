@@ -429,8 +429,8 @@ export function createTelegramBot(token?: string): Bot {
         id: 'shotgun',
         title: 'Cyber Shotgun',
         icon: '💥',
-        descIt: 'Buckshot roulette: 3 HP, cartucce e oggetti tattici',
-        descEn: 'Buckshot roulette: 3 HP, shells & tactical items',
+        descIt: 'Buckshot roulette: 5 HP, cartucce e oggetti tattici',
+        descEn: 'Buckshot roulette: 5 HP, shells & tactical items',
         minWager: 0.1,
       },
       {

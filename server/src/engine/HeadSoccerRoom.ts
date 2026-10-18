@@ -364,14 +364,19 @@ export class HeadSoccerRoom extends BaseGameRoom {
 
   private tryKickBall(side: 'A' | 'B', p: HeadSoccerPlayerState) {
     const dir = side === 'A' ? 1 : -1;
+    // Ball must be in front of the player (cannot kick ball behind back)
+    if ((this.ball.x - p.x) * dir < -6) {
+      return;
+    }
+
     // Kick sweet spot is slightly in front and lower/mid of the player
-    const footX = p.x + dir * 24;
+    const footX = p.x + dir * 22;
     const footY = p.y + 10;
     const dx = this.ball.x - footX;
     const dy = this.ball.y - footY;
     const dist = Math.hypot(dx, dy);
 
-    const maxDist = p.superActive ? 78 : 68;
+    const maxDist = p.superActive ? 52 : 48;
 
     if (dist <= maxDist) {
       const now = Date.now();
@@ -533,6 +538,9 @@ export class HeadSoccerRoom extends BaseGameRoom {
       if (this.ball.isSuperShot && this.ball.superOwner !== side) {
         p.x = Math.max(GOAL_LINE_LEFT, Math.min(GOAL_LINE_RIGHT, p.x - dir * 18));
         this.ball.isSuperShot = false;
+        this.ball.superOwner = undefined;
+        this.ball.vx *= 0.45;
+        this.ball.vy = -6;
       }
 
       // If Super Shot is armed, auto-fire immediately on ball contact

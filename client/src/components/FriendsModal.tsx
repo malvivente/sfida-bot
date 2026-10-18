@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Swords, Coins, Check, X, Trash2, Search, Loader2, Sparkles, UserCheck } from 'lucide-react';
-import { FriendUser, FriendRequestItem } from '../types/index.js';
+import { Users, UserPlus, Swords, Coins, Check, X, Trash2, Search, Loader2, Sparkles, UserCheck, ArrowLeft, ChevronRight } from 'lucide-react';
+import { FriendUser, FriendRequestItem, GameType } from '../types/index.js';
 import { UserAvatar } from './UserAvatar.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
+import { GAMES_METADATA } from '../config/gamesConfig.js';
 
 interface FriendsModalProps {
   isOpen: boolean;
   initialTab?: 'friends' | 'requests' | 'add';
   onClose: () => void;
-  onChallengeFriend?: (friend: FriendUser) => void;
+  onChallengeFriend?: (friend: FriendUser, gameType?: GameType) => void;
   onTipFriend?: (friend: FriendUser) => void;
   onPendingRequestsChange?: (count: number) => void;
 }
@@ -40,6 +41,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
   const [addLoading, setAddLoading] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [friendToDelete, setFriendToDelete] = useState<FriendUser | null>(null);
+  const [challengingFriend, setChallengingFriend] = useState<FriendUser | null>(null);
 
   const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
 
@@ -76,6 +78,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
       fetchFriendsData();
       setFeedbackMsg(null);
       setFriendToDelete(null);
+      setChallengingFriend(null);
     }
   }, [isOpen, initialTab, userId, userAddress]);
 
@@ -180,15 +183,30 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
-              <Users className="w-4 h-4" />
-            </div>
+            {challengingFriend ? (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerImpact('light');
+                  setChallengingFriend(null);
+                }}
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-95"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
+                <Users className="w-4 h-4" />
+              </div>
+            )}
             <div>
               <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                {t('friends.title')}
+                {challengingFriend ? t('friends.selectGameTitle') : t('friends.title')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                {t('friends.subtitle')}
+                {challengingFriend
+                  ? t('friends.selectGameDesc', { name: cleanPlayerName(challengingFriend.displayName || challengingFriend.name || challengingFriend.username || 'Amico') })
+                  : t('friends.subtitle')}
               </p>
             </div>
           </div>
@@ -203,8 +221,40 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
           </button>
         </div>
 
-        {/* Tabs Switcher */}
-        <div className="grid grid-cols-3 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1 shrink-0">
+        {challengingFriend ? (
+          <div className="flex-1 overflow-y-auto pr-1 space-y-2 no-scrollbar min-h-0">
+            {(Object.values(GAMES_METADATA) as any[]).map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => {
+                  triggerImpact('medium');
+                  const friend = challengingFriend;
+                  setChallengingFriend(null);
+                  onClose();
+                  onChallengeFriend?.(friend, g.id as GameType);
+                }}
+                className="w-full text-left p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-500/40 transition-all flex items-center justify-between group active:scale-[0.98]"
+              >
+                <div className="space-y-0.5 pr-2 min-w-0">
+                  <div className="flex items-center space-x-1.5">
+                    <span className={`text-[9px] font-heading font-black px-1.5 py-0.5 rounded bg-black/50 ${g.accentColor}`}>
+                      {g.badge}
+                    </span>
+                    <h4 className="text-xs font-heading font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+                      {g.title}
+                    </h4>
+                  </div>
+                  <p className="text-[10px] text-slate-400 truncate">{g.tagline}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Tabs Switcher */}
+            <div className="grid grid-cols-3 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -340,9 +390,8 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              triggerImpact('medium');
-                              onClose();
-                              onChallengeFriend(f);
+                              triggerImpact('light');
+                              setChallengingFriend(f);
                             }}
                             className="px-2 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white text-[11px] font-heading font-black uppercase tracking-wider active:scale-95 flex items-center space-x-1 shadow-sm"
                             title={t('friends.duelBtn')}
@@ -508,7 +557,9 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
             </form>
           )}
         </div>
-      </div>
+      </>
+    )}
+    </div>
 
       {/* Friend Delete Confirmation Modal */}
       {friendToDelete && (

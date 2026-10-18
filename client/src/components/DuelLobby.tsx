@@ -445,12 +445,29 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   }).length;
 
   const publicRoomsCount = matches.filter((m) => !m.isPrivate).length;
-  const privateRoomsCount = matches.filter((m) => m.isPrivate).length;
+  const privateRoomsCount = matches.filter((m) => {
+    if (!m.isPrivate) return false;
+    if (m.allowSpectators !== false) return true;
+    const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
+    const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
+    const isTarget = isTargetForDuel(m);
+    return Boolean(isA || isB || isTarget);
+  }).length;
   const openRoomsCount = matches.filter((m) => m.state === 'LOBBY' && !m.playerB).length;
   const directChallengesCount = matches.filter((m) => Boolean(m.targetOpponentUsername || m.targetOpponentId)).length;
 
   const filteredMatches = matches
     .filter((m: MatchData) => {
+      const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
+      const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
+      const isTarget = isTargetForDuel(m);
+      const isParticipant = Boolean(isA || isB || isTarget);
+
+      // Private rooms without spectators are strictly visible to participants only
+      if (m.isPrivate && m.allowSpectators === false && !isParticipant) {
+        return false;
+      }
+
       // 0. Subsection filter: division between Public and Private, plus Open / My Duels / Direct
       if (lobbySubSection === 'PUBLIC') {
         if (m.isPrivate) return false;
@@ -459,10 +476,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       } else if (lobbySubSection === 'OPEN') {
         if (m.playerB !== null || m.state !== 'LOBBY') return false;
       } else if (lobbySubSection === 'MY_DUELS') {
-        const isA = (userAddress && areAddressesEqual(m.playerA.wallet, userAddress)) || (userId && String((m.playerA as any)?.telegramUserId) === String(userId));
-        const isB = m.playerB && ((userAddress && areAddressesEqual(m.playerB.wallet, userAddress)) || (userId && String((m.playerB as any)?.telegramUserId) === String(userId)));
-        const isTarget = isTargetForDuel(m);
-        if (!isA && !isB && !isTarget) return false;
+        if (!isParticipant) return false;
       } else if (lobbySubSection === 'DIRECT') {
         if (!m.targetOpponentUsername && !m.targetOpponentId) return false;
       }

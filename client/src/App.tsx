@@ -562,7 +562,7 @@ export const App: React.FC = () => {
         initialTab={friendsInitialTab}
         onClose={() => setShowFriendsModal(false)}
         onPendingRequestsChange={setPendingFriendsCount}
-        onChallengeFriend={(friend) => {
+        onChallengeFriend={(friend, gameType = 'roulette') => {
           setShowFriendsModal(false);
           setActiveTab('home');
           setTimeout(() => {
@@ -570,7 +570,7 @@ export const App: React.FC = () => {
               window.dispatchEvent(
                 new CustomEvent('sfida_open_direct_duel', {
                   detail: {
-                    game: 'roulette',
+                    game: gameType,
                     opponent: friend.username ? `@${friend.username}` : (friend.displayName || friend.name || ''),
                   },
                 })

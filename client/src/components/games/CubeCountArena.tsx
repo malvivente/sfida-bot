@@ -983,14 +983,14 @@ export const CubeCountArena: React.FC<CubeCountArenaProps> = ({
             <div className="w-full text-center">
               <span className="text-[10px] font-chakra text-slate-400">
                 {phase === 'COUNTDOWN'
-                  ? 'Il flash dei cubi sta per iniziare...'
+                  ? t('cubecount.footerCountdown')
                   : phase === 'FLASH'
-                  ? 'Conta i cubi prima che il flash sparisca!'
+                  ? t('cubecount.footerFlash')
                   : phase === 'INPUT'
                   ? submittedThisRound
-                    ? 'Risposta registrata! Il round si risolverà a fine timer.'
-                    : 'Inserisci il conteggio esatto sul tastierino.'
-                  : 'Risoluzione del round in corso...'}
+                    ? t('cubecount.footerInputSubmitted')
+                    : t('cubecount.footerInputPrompt')
+                  : t('cubecount.footerResolving')}
               </span>
             </div>
           ) : (

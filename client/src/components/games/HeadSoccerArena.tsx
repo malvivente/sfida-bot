@@ -291,6 +291,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   const [kickPressed, setKickPressed] = useState(false);
   const isLeftPressedRef = useRef(false);
   const isRightPressedRef = useRef(false);
+  const localJumpVyRef = useRef(0);
 
   // D-Pad continuous slide / touch tracking refs
   const dpadContainerRef = useRef<HTMLDivElement | null>(null);
@@ -468,6 +469,16 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
               if (rs.pAx < 113) rs.pAx = 113;
               if (rs.pAx > 687) rs.pAx = 687;
               rs.pAx += (gd.playerA.x - rs.pAx) * localLerp;
+
+              // Immediate zero-latency local jump simulation
+              if (localJumpVyRef.current !== 0 || rs.pAy < 358) {
+                rs.pAy += localJumpVyRef.current * dtScale;
+                localJumpVyRef.current += 0.82 * dtScale;
+                if (rs.pAy >= 358) {
+                  rs.pAy = 358;
+                  localJumpVyRef.current = 0;
+                }
+              }
               rs.pAy += (gd.playerA.y - rs.pAy) * yLerp;
             } else {
               rs.pAx += (gd.playerA.x - rs.pAx) * remoteLerp;
@@ -482,6 +493,16 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
               if (rs.pBx < 113) rs.pBx = 113;
               if (rs.pBx > 687) rs.pBx = 687;
               rs.pBx += (gd.playerB.x - rs.pBx) * localLerp;
+
+              // Immediate zero-latency local jump simulation
+              if (localJumpVyRef.current !== 0 || rs.pBy < 358) {
+                rs.pBy += localJumpVyRef.current * dtScale;
+                localJumpVyRef.current += 0.82 * dtScale;
+                if (rs.pBy >= 358) {
+                  rs.pBy = 358;
+                  localJumpVyRef.current = 0;
+                }
+              }
               rs.pBy += (gd.playerB.y - rs.pBy) * yLerp;
             } else {
               rs.pBx += (gd.playerB.x - rs.pBx) * remoteLerp;
@@ -510,6 +531,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
               rs.pBy = gd.playerB.y;
               rs.bx = gd.ball.x;
               rs.by = gd.ball.y;
+              localJumpVyRef.current = 0;
               trailRef.current = [];
             }
             rs.bAngle += gd.ball.vx * 0.04 * dtScale;
@@ -1036,10 +1058,18 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
     if (now - lastJumpTsRef.current < 350) return; // Strict 350ms debounce against double-jumping
     lastJumpTsRef.current = now;
     setJumpPressed(true);
+
+    // Immediate zero-latency jump impulse
+    const rs = renderStateRef.current;
+    const currentY = userSide === 'A' ? rs.pAy : rs.pBy;
+    if (currentY >= 354) {
+      localJumpVyRef.current = -14.4;
+    }
+
     onInput({ jump: true });
     triggerImpact('light');
     setTimeout(() => setJumpPressed(false), 140);
-  }, [onInput, role, roomState, triggerImpact]);
+  }, [onInput, role, roomState, triggerImpact, userSide]);
 
   const handleKick = useCallback(() => {
     if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;

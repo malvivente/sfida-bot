@@ -70,7 +70,7 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• <code>/duel &lt;wager&gt; bridge</code> — Glass Bridge (stepping glass panels)\n` +
       `• <code>/duel &lt;wager&gt; chrono</code> — Chrono Blind (blind millisecond timer)\n` +
       `• <code>/duel &lt;wager&gt; split</code> — Split or Steal (min. 5 GRAM, Trust Jackpot)\n` +
-      `• <code>/duel &lt;wager&gt; shotgun</code> — Cyber Shotgun (3 HP & tactical items)\n` +
+      `• <code>/duel &lt;wager&gt; shotgun</code> — Cyber Shotgun (5 HP & tactical items)\n` +
       `• <code>/duel &lt;wager&gt; connect4</code> — Connect 4 (turn-based 7x6 grid)\n` +
       `• <code>/duel &lt;wager&gt; cubecount</code> — Cube Count (rapid 3D cube flash)\n` +
       `• <code>/duel &lt;wager&gt; headsoccer</code> — Head Soccer (60s retro 1v1 soccer & super shot)`,
@@ -207,7 +207,7 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `• <code>/duel &lt;importo&gt; bridge</code> — Glass Bridge (passi su lastre di vetro)\n` +
       `• <code>/duel &lt;importo&gt; chrono</code> — Chrono Blind (timer al buio)\n` +
       `• <code>/duel &lt;importo&gt; split</code> — Split or Steal (min. 5 GRAM, con Trust Jackpot)\n` +
-      `• <code>/duel &lt;importo&gt; shotgun</code> — Cyber Shotgun (3 HP e oggetti tattici)\n` +
+      `• <code>/duel &lt;importo&gt; shotgun</code> — Cyber Shotgun (5 HP e oggetti tattici)\n` +
       `• <code>/duel &lt;importo&gt; forza4</code> — Forza 4 (griglia 7x6 a turni)\n` +
       `• <code>/duel &lt;importo&gt; cubecount</code> — Cube Count (conteggio rapido 3D)\n` +
       `• <code>/duel &lt;importo&gt; headsoccer</code> — Head Soccer (calcio arcade 1v1 con super tiro)`,

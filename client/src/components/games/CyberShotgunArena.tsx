@@ -182,9 +182,9 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   const { t } = useI18n();
   const { triggerImpact } = useHaptics();
 
-  const hpA = gameData?.hpA ?? 3;
-  const hpB = gameData?.hpB ?? 3;
-  const maxHp = gameData?.maxHp ?? 3;
+  const hpA = gameData?.hpA ?? 5;
+  const hpB = gameData?.hpB ?? 5;
+  const maxHp = gameData?.maxHp ?? 5;
   const currentTurn = gameData?.currentTurn ?? 'A';
   const liveCount = gameData?.liveCount ?? 0;
   const blankCount = gameData?.blankCount ?? 0;

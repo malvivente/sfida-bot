@@ -282,8 +282,8 @@ export const translations: Translations = {
   'lobby.privateDesc': { it: 'Solo chi possiede il tuo link d\'invito può combattere. Spettatori e scommesse rimangono aperti a tutti.', en: 'Only fighters with your direct invite link can join. Spectators and betting remain open to all.' },
   'lobby.splitPrivateJackpotNotice': { it: 'Nelle stanze private il Bonus Trust Jackpot non è attivo (riservato alle partite pubbliche della lobby).', en: 'In private rooms, the Trust Jackpot Bonus is inactive (reserved for public lobby matches).' },
   'lobby.privateBadge': { it: 'PRIVATA', en: 'PRIVATE' },
-  'lobby.spectatePrivate': { it: 'GUARDA (PRIVATA)', en: 'WATCH (PRIVATE)' },
-  'lobby.spectateOnlyReserved': { it: 'RISERVATA (GUARDA)', en: 'RESERVED (WATCH)' },
+  'lobby.spectatePrivate': { it: 'SPETTATORE & SCOMMESSE', en: 'SPECTATE & BET' },
+  'lobby.spectateOnlyReserved': { it: 'SPETTATORE (RISERVATA)', en: 'SPECTATE (RESERVED)' },
   'lobby.creationError': { it: 'Errore di Creazione', en: 'Creation Error' },
   'lobby.presetAmount': { it: 'Importo preimpostato:', en: 'Preset amount:' },
   'lobby.maxWagerLabel': { it: 'Max: {max}', en: 'Max: {max}' },
@@ -430,8 +430,12 @@ export const translations: Translations = {
   'arena.opponentDisconnectedDesc': { it: 'si è allontanato. In attesa di riconnessione...', en: 'stepped away. Waiting for reconnection...' },
   'arena.forfeitCountdownNotice': { it: 'Vittoria a tavolino se non si riconnette entro:', en: 'Forfeit victory awarded if not reconnected in:' },
   'arena.forfeitRuleInfo': { it: 'Se l\'avversario non si riconnette prima dello scadere del timer, la vittoria e la vincita ti verranno assegnate automaticamente a tavolino!', en: 'If the opponent does not reconnect before the timer expires, forfeit victory and winnings are automatically awarded to you!' },
-  'arena.reconnectingToMatch': { it: 'Riconnessione all\'arena in corso...', en: 'Reconnecting to arena...' },
   'arena.inviteChallenger': { it: 'INVITA SFIDANTE', en: 'INVITE CHALLENGER' },
+  'arena.inviteSpectators': { it: 'Invita spettatori', en: 'Invite spectators' },
+  'arena.inviteDuelConfirmationTitle': { it: 'Invito al Duello', en: 'Duel Invitation' },
+  'arena.inviteDuelConfirmationDesc': { it: 'Sei stato invitato a un duello!', en: 'You have been invited to a duel!' },
+  'arena.acceptAndEnter': { it: 'Accetta ed Entra', en: 'Accept & Enter' },
+  'arena.declineInvite': { it: 'Rifiuta', en: 'Decline' },
 
   // Cyber Shotgun Arena Translations
   'shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },
@@ -525,6 +529,11 @@ export const translations: Translations = {
   'cubecount.answerLabel': { it: 'RISPOSTA: {count}', en: 'ANSWER: {count}' },
   'cubecount.cubesUnit': { it: 'cubi', en: 'cubes' },
   'cubecount.timeLeft': { it: '{sec}s rimasti', en: '{sec}s left' },
+  'cubecount.footerCountdown': { it: 'Il flash dei cubi sta per iniziare...', en: 'Cube flash is about to start...' },
+  'cubecount.footerFlash': { it: 'Conta i cubi prima che il flash sparisca!', en: 'Count the cubes before the flash vanishes!' },
+  'cubecount.footerInputSubmitted': { it: 'Risposta registrata! Il round si risolverà a fine timer.', en: 'Answer registered! Round resolves when the timer ends.' },
+  'cubecount.footerInputPrompt': { it: 'Inserisci il conteggio esatto sul tastierino.', en: 'Enter the exact cube count on the keypad.' },
+  'cubecount.footerResolving': { it: 'Risoluzione del round in corso...', en: 'Resolving current round...' },
 
   // Blackjack Arena Translations
   'blackjack.title': { it: 'BLACKJACK SCOPERTO', en: 'FACE-UP BLACKJACK' },
@@ -718,7 +727,7 @@ export const translations: Translations = {
   // Cyber Shotgun
   'gameRules.shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },
   'gameRules.shotgun.badge': { it: 'DUELLO RUSSO 1V1', en: '1V1 TACTICAL DUEL' },
-  'gameRules.shotgun.goal': { it: 'Sopravvivi al duello e azzera i 3 punti vita dell\'avversario prima che lui azzeri i tuoi.', en: 'Deplete the opponent\'s 3 HP before they eliminate you.' },
+  'gameRules.shotgun.goal': { it: 'Sopravvivi al duello e azzera i 5 punti vita dell\'avversario prima che lui azzeri i tuoi.', en: 'Deplete the opponent\'s 5 HP before they eliminate you.' },
   'gameRules.shotgun.r1': { it: 'A ogni round il fucile viene caricato con una sequenza segreta di colpi veri (rossi, infliggono 1 danno) e a salve (blu, 0 danni).', en: 'Each round the shotgun is chambered with a secret sequence of live shells (red, 1 damage) and blanks (blue, 0 damage).' },
   'gameRules.shotgun.r2': { it: 'Al tuo turno scegli se sparare al rivale o a te stesso: se spari a te stesso con un colpo a salve, non subisci danni e guadagni subito un turno extra!', en: 'On your turn, shoot your rival or yourself: shooting yourself with a blank deals 0 damage and grants you an immediate extra turn!' },
   'gameRules.shotgun.r3': { it: 'Usa gli oggetti speciali per cambiare la partita: Sega (danno raddoppiato a 2 HP), Espulsore (scarta la cartuccia in canna), Manette (salta il turno avversario) e Invertitore (trasforma il colpo da salve a vero o viceversa).', en: 'Use tactical items to turn the tide: Saw (2x damage), Ejector (discards chambered round), Handcuffs (skips opponent\'s turn), and Inverter (turns blank into live or vice versa).' },
@@ -946,6 +955,8 @@ export const translations: Translations = {
   'friends.confirmDeleteTitle': { it: 'Rimuovi Amico', en: 'Remove Friend' },
   'friends.confirmDeleteDesc': { it: 'Sei sicuro di voler rimuovere {name} dagli amici?', en: 'Are you sure you want to remove {name} from your friends?' },
   'friends.confirmDeleteBtn': { it: 'Rimuovi', en: 'Remove' },
+  'friends.selectGameTitle': { it: 'Scegli il Gioco', en: 'Select Game' },
+  'friends.selectGameDesc': { it: 'Seleziona il gioco con cui sfidare {name}:', en: 'Select the game to challenge {name}:' },
 
   // Tip Modal Translations
   'tip.title': { it: 'Invia Tip (Mancia)', en: 'Send Tip (Transfer)' },
