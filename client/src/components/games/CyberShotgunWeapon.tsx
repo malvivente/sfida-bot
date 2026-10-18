@@ -57,27 +57,50 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   const prevSawActiveRef = useRef<boolean>(isSawActive);
   const lastActionIdRef = useRef<string>('');
   const isSawCuttingRef = useRef<boolean>(false);
+  const sawCutTimer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sawCutTimer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Synchronize barrel state if prop changes directly (e.g. initial load or rematch reset)
+  const clearSawTimers = () => {
+    if (sawCutTimer1Ref.current) clearTimeout(sawCutTimer1Ref.current);
+    if (sawCutTimer2Ref.current) clearTimeout(sawCutTimer2Ref.current);
+    sawCutTimer1Ref.current = null;
+    sawCutTimer2Ref.current = null;
+  };
+
   useEffect(() => {
-    // If an active saw cut animation is in progress, let it finish naturally
-    if (isSawCuttingRef.current) return;
+    return () => {
+      clearSawTimers();
+    };
+  }, []);
 
-    if (isSawActive && barrelState === 'long') {
-      // If saw was just activated from false -> true, play full saw cutting animation
-      if (!prevSawActiveRef.current) {
-        triggerSawCutAnimation();
-      } else {
-        // Already active on mount / re-render
-        setBarrelState('short');
+  // Synchronize barrel state if prop changes directly (e.g. initial load, shot consumed saw, or rematch reset)
+  useEffect(() => {
+    if (isSawActive) {
+      if (barrelState === 'long' && !isSawCuttingRef.current) {
+        if (!prevSawActiveRef.current) {
+          triggerSawCutAnimation();
+        } else {
+          setBarrelState('short');
+        }
       }
-    } else if (!isSawActive && barrelState === 'short') {
-      setBarrelState('long');
-      setIsSeveredBarrelFalling(false);
-      setIsPolarityReversed(false);
+    } else {
+      // Saw is not active: clear any pending cutting timers and restore standard long barrel
+      clearSawTimers();
+      isSawCuttingRef.current = false;
+      setIsSawCutting(false);
+      setSparks([]);
+
+      // If weapon is currently recoiling from the shot that consumed the saw, allow recoil to finish first
+      const resetDelay = isRecoilActive ? 450 : 0;
+      const t = setTimeout(() => {
+        setBarrelState('long');
+        setIsSeveredBarrelFalling(false);
+      }, resetDelay);
+
+      return () => clearTimeout(t);
     }
     prevSawActiveRef.current = isSawActive;
-  }, [isSawActive]);
+  }, [isSawActive, isRecoilActive, barrelState]);
 
   // Handle Action-driven animations from server
   useEffect(() => {
@@ -106,6 +129,15 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
         // Blank shot: subtle recoil click and blank shell ejection
         triggerBlankShotAnimation();
       }
+
+      // Ensure barrel returns to normal standard long barrel after shot recoil settles
+      setTimeout(() => {
+        clearSawTimers();
+        isSawCuttingRef.current = false;
+        setIsSawCutting(false);
+        setBarrelState('long');
+        setIsSeveredBarrelFalling(false);
+      }, 480);
     }
     // --- ANIMATION 4: INVERT POLARITY ---
     else if (lastAction.result === 'CONVERTED') {
@@ -119,6 +151,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   // ==========================================
   const triggerSawCutAnimation = () => {
     if (isSawCuttingRef.current) return;
+    clearSawTimers();
     isSawCuttingRef.current = true;
     setIsSawCutting(true);
     setBarrelState('long');
@@ -138,7 +171,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     setSparks(newSparks);
 
     // At 1100ms: laser blade finishes slicing through barrel
-    setTimeout(() => {
+    sawCutTimer1Ref.current = setTimeout(() => {
       // Instant switch to shotgun_short
       setBarrelState('short');
       // Drop severed barrel piece with tumbling physics
@@ -148,7 +181,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     }, 1100);
 
     // Blade retracts and sequence wraps up at 1800ms
-    setTimeout(() => {
+    sawCutTimer2Ref.current = setTimeout(() => {
       setIsSawCutting(false);
       isSawCuttingRef.current = false;
     }, 1800);
@@ -241,8 +274,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   // Long barrel muzzle tip: 99.46% X, 31.53% Y
   // Short barrel muzzle tip: 82.15% X, 31.53% Y
   // Ejection port: 43.0% X, 38.0% Y
-  // Pump slide: left 61.15%, top 36.95%, width 20.31%, height 25.62%
-  const isShortBarrel = barrelState === 'short';
+  const isShortBarrel = barrelState === 'short' && (isSawActive || isRecoilActive);
   const muzzleTipX = isShortBarrel ? '82.15%' : '99.46%';
   const muzzleTipY = '31.53%';
 
@@ -502,7 +534,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
         </motion.div>
 
         {/* Sawed-Off Visual Badge Overlay */}
-        {isShortBarrel && (
+        {isSawActive && barrelState === 'short' && (
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400 text-[9px] font-orbitron font-black text-amber-300 flex items-center space-x-1 shadow-[0_0_10px_rgba(245,158,11,0.5)] z-20">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
             <span>SAWED-OFF (2X DMG)</span>

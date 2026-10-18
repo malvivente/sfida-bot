@@ -256,27 +256,27 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
   // Render High-Tech Cyber Battery Lightning HP Cells
   const renderHpCells = (hp: number, max: number, side: 'A' | 'B') => {
     return (
-      <div className="flex items-center space-x-1.5">
+      <div className="flex items-center justify-between w-full gap-1">
         {Array.from({ length: max }).map((_, i) => {
           const isAlive = i < hp;
           const isA = side === 'A';
           return (
             <div
               key={i}
-              className={`w-6 h-7 rounded-lg border flex items-center justify-center transition-all duration-300 relative overflow-hidden ${
+              className={`flex-1 max-w-[24px] h-6 rounded-md border flex items-center justify-center transition-all duration-300 relative overflow-hidden ${
                 isAlive
                   ? isA
-                    ? 'bg-gradient-to-t from-cyan-950/80 to-cyan-800/80 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)] text-cyan-300'
-                    : 'bg-gradient-to-t from-rose-950/80 to-pink-800/80 border-pink-400 shadow-[0_0_12px_rgba(244,63,94,0.6)] text-pink-300'
+                    ? 'bg-gradient-to-t from-cyan-950/80 to-cyan-800/80 border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] text-cyan-300'
+                    : 'bg-gradient-to-t from-rose-950/80 to-pink-800/80 border-pink-400 shadow-[0_0_10px_rgba(244,63,94,0.5)] text-pink-300'
                   : 'bg-black/80 border-slate-800 text-slate-700 opacity-40'
               }`}
             >
               {isAlive ? (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 drop-shadow-[0_0_4px_currentColor]">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 drop-shadow-[0_0_4px_currentColor]">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 opacity-40">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-2.5 h-2.5 opacity-30">
                   <line x1="18" y1="6" x2="6" y2="18" />
                 </svg>
               )}
@@ -296,23 +296,25 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
       <div className="w-full z-10 grid grid-cols-2 gap-2.5 pb-2 border-b border-white/10">
         {/* Player A Card */}
         <div
-          className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-300 ${
+          className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-300 min-w-0 ${
             currentTurn === 'A' && roomState === 'GAME_ACTIVE'
               ? 'bg-cyan-950/40 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-[1.02]'
               : 'bg-black/40 border-white/10 opacity-70'
           }`}
         >
-          <div className="flex items-center justify-between w-full">
-            <span className="text-xs font-chakra font-black text-cyan-300 truncate">{playerAName}</span>
-            {userSide === 'A' && role === 'player' && (
-              <span className="text-[8px] bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 px-1 py-0.2 rounded font-mono font-bold">
-                {t('arena.you')}
-              </span>
-            )}
+          <div className="flex items-center justify-between w-full gap-1">
+            <div className="flex items-center space-x-1 min-w-0">
+              <span className="text-xs font-chakra font-black text-cyan-300 truncate">{playerAName}</span>
+              {userSide === 'A' && role === 'player' && (
+                <span className="text-[8px] bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 px-1 py-0.2 rounded font-mono font-bold shrink-0">
+                  {t('arena.you')}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-mono font-black text-cyan-300 shrink-0">{hpA}/{maxHp} HP</span>
           </div>
-          <div className="mt-1.5 flex items-center justify-between">
+          <div className="mt-1.5 w-full">
             {renderHpCells(hpA, maxHp, 'A')}
-            <span className="text-[10px] font-mono font-black text-cyan-300">{hpA}/{maxHp} HP</span>
           </div>
           {isHandcuffedA && (
             <span className="text-[8px] font-mono text-purple-300 bg-purple-950/80 border border-purple-500/50 px-1.5 py-0.5 rounded mt-1 text-center">
@@ -348,23 +350,25 @@ export const CyberShotgunArena: React.FC<CyberShotgunArenaProps> = ({
 
         {/* Player B Card */}
         <div
-          className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-300 ${
+          className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-300 min-w-0 ${
             currentTurn === 'B' && roomState === 'GAME_ACTIVE'
               ? 'bg-rose-950/40 border-pink-400 shadow-[0_0_20px_rgba(244,63,94,0.4)] scale-[1.02]'
               : 'bg-black/40 border-white/10 opacity-70'
           }`}
         >
-          <div className="flex items-center justify-between w-full">
-            <span className="text-xs font-chakra font-black text-pink-300 truncate">{playerBName}</span>
-            {userSide === 'B' && role === 'player' && (
-              <span className="text-[8px] bg-pink-500/20 border border-pink-400/50 text-pink-300 px-1 py-0.2 rounded font-mono font-bold">
-                {t('arena.you')}
-              </span>
-            )}
+          <div className="flex items-center justify-between w-full gap-1">
+            <div className="flex items-center space-x-1 min-w-0">
+              <span className="text-xs font-chakra font-black text-pink-300 truncate">{playerBName}</span>
+              {userSide === 'B' && role === 'player' && (
+                <span className="text-[8px] bg-pink-500/20 border border-pink-400/50 text-pink-300 px-1 py-0.2 rounded font-mono font-bold shrink-0">
+                  {t('arena.you')}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-mono font-black text-pink-300 shrink-0">{hpB}/{maxHp} HP</span>
           </div>
-          <div className="mt-1.5 flex items-center justify-between">
+          <div className="mt-1.5 w-full">
             {renderHpCells(hpB, maxHp, 'B')}
-            <span className="text-[10px] font-mono font-black text-pink-300">{hpB}/{maxHp} HP</span>
           </div>
           {isHandcuffedB && (
             <span className="text-[8px] font-mono text-purple-300 bg-purple-950/80 border border-purple-500/50 px-1.5 py-0.5 rounded mt-1 text-center">
