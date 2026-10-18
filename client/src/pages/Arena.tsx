@@ -1551,6 +1551,7 @@ export const Arena: React.FC<ArenaProps> = ({
               forfeitCountdown={socketData.forfeitCountdown}
               disconnectedOpponentName={userSide === 'A' ? playerB_Name : playerA_Name}
               isConnected={socketData.isConnected}
+              onReconnect={socketData.reconnect}
             />
           ) : (
             <RussianRouletteArena

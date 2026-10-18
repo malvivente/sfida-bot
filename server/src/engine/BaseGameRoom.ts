@@ -288,6 +288,9 @@ export abstract class BaseGameRoom {
       totalBetsX: this.totalBetsX.toString(),
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
+      winnerSide: this.winnerAddress
+        ? (this.isSameWallet(this.winnerAddress, this.playerA.walletAddress) ? 'A' : (this.playerB && this.isSameWallet(this.winnerAddress, this.playerB.walletAddress) ? 'B' : undefined))
+        : undefined,
       resolution: this.resolution,
       gameData: this.getGamePayload(),
       secondsLeft: this.bettingCountdownSeconds,
@@ -560,12 +563,17 @@ export abstract class BaseGameRoom {
     try {
       const { getTelegramBot } = await import('../bot/index.js');
       const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
-      const { renderCustomEmojis } = await import('../bot/emojis.js');
+      const { botT, resolveLanguage } = await import('../bot/i18n.js');
       const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
       const { dbService } = await import('../services/db.js');
 
       const bot = getTelegramBot();
       if (!bot) return;
+
+      const recipientAccount = targetPlayer.telegramId
+        ? dbService.findUser(targetPlayer.telegramId)
+        : (targetPlayer.walletAddress ? dbService.findUser(targetPlayer.walletAddress) : null);
+      const recipientLang = resolveLanguage(recipientAccount?.customLanguageCode || recipientAccount?.languageCode);
 
       const gameConfig = (GAMES_CONFIG as any)[this.gameType];
       const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
@@ -634,28 +642,22 @@ export abstract class BaseGameRoom {
 
       const senderName = rawSenderName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      const title = action === 'ready'
-        ? `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO PRONTO!</b>`
-        : `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO ENTRATO!</b>`;
-
-      const desc = action === 'ready'
-        ? `<b>${senderName}</b> ha premuto <b>PRONTO</b> per sfidarti a <b>${gameTitle}</b> (Stanza #${this.matchId})!\n\n`
-        : `<b>${senderName}</b> è entrato nella tua stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) ed è in attesa!\n\n`;
-
-      const text =
-        `${title}\n\n` +
-        desc +
-        `{{emoji.moneyBag}} <b>Posta in palio:</b> ${wagerGram} GRAM\n\n` +
-        `{{emoji.lightning}} <i>Entra subito nell'Arena per iniziare a giocare!</i>`;
+      const text = botT(recipientLang, action === 'ready' ? 'opponent_ready_msg' : 'opponent_joined_msg', {
+        senderName,
+        gameTitle,
+        matchId: this.matchId.toString(),
+        wager: wagerGram,
+      });
 
       const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-      const keyboard = new InlineKeyboard().webApp('{{emoji.swords}} ENTRA NEL DUELLO', `${webAppUrl}?startapp=duel_${this.matchId}`);
+      const btnLabel = botT(recipientLang, 'btn_enter_duel');
+      const keyboard = new InlineKeyboard().webApp(btnLabel, `${webAppUrl}?startapp=duel_${this.matchId}`);
 
-      await bot.api.sendMessage(Number(targetPlayer.telegramId), renderCustomEmojis(text), {
+      await bot.api.sendMessage(Number(targetPlayer.telegramId), text, {
         parse_mode: 'HTML',
         reply_markup: keyboard,
       });
-      console.log(`[BaseGameRoom] Sent '${action}' notification to tg:${targetPlayer.telegramId} for match #${this.matchId}`);
+      console.log(`[BaseGameRoom] Sent '${action}' notification to tg:${targetPlayer.telegramId} for match #${this.matchId} in lang:${recipientLang}`);
     } catch (err: any) {
       console.warn(`[BaseGameRoom] Could not send '${action}' notification to tg:${targetPlayer.telegramId}:`, err?.message || err);
     }
@@ -1347,6 +1349,9 @@ export abstract class BaseGameRoom {
       isPrivate: this.isPrivate,
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
+      winnerSide: this.winnerAddress
+        ? (this.isSameWallet(this.winnerAddress, this.playerA.walletAddress) ? 'A' : (this.playerB && this.isSameWallet(this.winnerAddress, this.playerB.walletAddress) ? 'B' : undefined))
+        : undefined,
       resolution: this.resolution,
       playerAName: this.playerA.username,
       playerBName: this.playerB ? this.playerB.username : undefined,

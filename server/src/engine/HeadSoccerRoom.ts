@@ -174,6 +174,7 @@ export class HeadSoccerRoom extends BaseGameRoom {
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     this.phase = 'KICKOFF_COUNTDOWN';
     this.countdownSec = seconds;
+    this.resetInputs();
 
     this.pA = this.createInitialPlayer('A', this.pA.superCharge, this.pA.superActive);
     this.pB = this.createInitialPlayer('B', this.pB.superCharge, this.pB.superActive);
@@ -192,6 +193,7 @@ export class HeadSoccerRoom extends BaseGameRoom {
         }
         this.phase = 'PLAYING';
         this.lastTickEpoch = Date.now();
+        this.resetInputs();
       }
     }, 850);
   }
@@ -376,9 +378,10 @@ export class HeadSoccerRoom extends BaseGameRoom {
     const dy = this.ball.y - footY;
     const dist = Math.hypot(dx, dy);
 
-    const maxDist = p.superActive ? 52 : 48;
+    const maxDist = p.superActive ? 58 : 48;
+    const bodyDist = Math.hypot(this.ball.x - p.x, this.ball.y - p.y);
 
-    if (dist <= maxDist) {
+    if (dist <= maxDist || (p.superActive && bodyDist <= 56)) {
       const now = Date.now();
       this.ball.lastTouch = side;
 
@@ -437,58 +440,63 @@ export class HeadSoccerRoom extends BaseGameRoom {
       this.ball.vy *= scale;
     }
 
-    this.ball.x += this.ball.vx;
-    this.ball.y += this.ball.vy;
+    const subSteps = speed > 13 || this.ball.isSuperShot ? 2 : 1;
+    const dtFraction = 1 / subSteps;
 
-    // Ceiling bounce
-    if (this.ball.y - BALL_RADIUS < 16) {
-      this.ball.y = 16 + BALL_RADIUS;
-      this.ball.vy = Math.abs(this.ball.vy) * BALL_WALL_BOUNCE;
-    }
+    for (let step = 0; step < subSteps; step++) {
+      this.ball.x += this.ball.vx * dtFraction;
+      this.ball.y += this.ball.vy * dtFraction;
 
-    // Ground bounce
-    if (this.ball.y >= BALL_GROUND_Y) {
-      this.ball.y = BALL_GROUND_Y;
-      if (Math.abs(this.ball.vy) > 1.6) {
-        this.ball.vy = -Math.abs(this.ball.vy) * BALL_BOUNCE;
+      // Ceiling bounce
+      if (this.ball.y - BALL_RADIUS < 16) {
+        this.ball.y = 16 + BALL_RADIUS;
+        this.ball.vy = Math.abs(this.ball.vy) * BALL_WALL_BOUNCE;
+      }
+
+      // Ground bounce
+      if (this.ball.y >= BALL_GROUND_Y) {
+        this.ball.y = BALL_GROUND_Y;
+        if (Math.abs(this.ball.vy) > 1.6) {
+          this.ball.vy = -Math.abs(this.ball.vy) * BALL_BOUNCE;
+        } else {
+          this.ball.vy = 0;
+        }
+        this.ball.vx *= Math.pow(BALL_GROUND_FRICTION, dtFraction);
+        if (Math.abs(this.ball.vx) < 8) {
+          this.ball.isSuperShot = false;
+        }
+      }
+
+      // Upper side walls above goal crossbar (Y < GOAL_TOP_Y)
+      if (this.ball.y < GOAL_TOP_Y) {
+        if (this.ball.x - BALL_RADIUS < GOAL_LINE_LEFT) {
+          this.ball.x = GOAL_LINE_LEFT + BALL_RADIUS;
+          this.ball.vx = Math.abs(this.ball.vx) * BALL_WALL_BOUNCE;
+          this.ball.isSuperShot = false;
+        } else if (this.ball.x + BALL_RADIUS > GOAL_LINE_RIGHT) {
+          this.ball.x = GOAL_LINE_RIGHT - BALL_RADIUS;
+          this.ball.vx = -Math.abs(this.ball.vx) * BALL_WALL_BOUNCE;
+          this.ball.isSuperShot = false;
+        }
       } else {
-        this.ball.vy = 0;
+        // Back of the net bounds (when inside goal mouth)
+        if (this.ball.x - BALL_RADIUS < 12) {
+          this.ball.x = 12 + BALL_RADIUS;
+          this.ball.vx = Math.abs(this.ball.vx) * 0.4;
+        } else if (this.ball.x + BALL_RADIUS > ARENA_W - 12) {
+          this.ball.x = ARENA_W - 12 - BALL_RADIUS;
+          this.ball.vx = -Math.abs(this.ball.vx) * 0.4;
+        }
       }
-      this.ball.vx *= BALL_GROUND_FRICTION;
-      if (Math.abs(this.ball.vx) < 8) {
-        this.ball.isSuperShot = false;
-      }
+
+      // Crossbar circular post collisions
+      this.collideCrossbar(GOAL_LINE_LEFT, GOAL_TOP_Y, now);
+      this.collideCrossbar(GOAL_LINE_RIGHT, GOAL_TOP_Y, now);
+
+      // Collide ball with Player A and Player B heads/bodies
+      this.collidePlayerBall('A', this.pA, now);
+      this.collidePlayerBall('B', this.pB, now);
     }
-
-    // Upper side walls above goal crossbar (Y < GOAL_TOP_Y)
-    if (this.ball.y < GOAL_TOP_Y) {
-      if (this.ball.x - BALL_RADIUS < GOAL_LINE_LEFT) {
-        this.ball.x = GOAL_LINE_LEFT + BALL_RADIUS;
-        this.ball.vx = Math.abs(this.ball.vx) * BALL_WALL_BOUNCE;
-        this.ball.isSuperShot = false;
-      } else if (this.ball.x + BALL_RADIUS > GOAL_LINE_RIGHT) {
-        this.ball.x = GOAL_LINE_RIGHT - BALL_RADIUS;
-        this.ball.vx = -Math.abs(this.ball.vx) * BALL_WALL_BOUNCE;
-        this.ball.isSuperShot = false;
-      }
-    } else {
-      // Back of the net bounds (when inside goal mouth)
-      if (this.ball.x - BALL_RADIUS < 12) {
-        this.ball.x = 12 + BALL_RADIUS;
-        this.ball.vx = Math.abs(this.ball.vx) * 0.4;
-      } else if (this.ball.x + BALL_RADIUS > ARENA_W - 12) {
-        this.ball.x = ARENA_W - 12 - BALL_RADIUS;
-        this.ball.vx = -Math.abs(this.ball.vx) * 0.4;
-      }
-    }
-
-    // Crossbar circular post collisions (left at (GOAL_LINE_LEFT, GOAL_TOP_Y), right at (GOAL_LINE_RIGHT, GOAL_TOP_Y))
-    this.collideCrossbar(GOAL_LINE_LEFT, GOAL_TOP_Y, now);
-    this.collideCrossbar(GOAL_LINE_RIGHT, GOAL_TOP_Y, now);
-
-    // Collide ball with Player A and Player B heads/bodies
-    this.collidePlayerBall('A', this.pA, now);
-    this.collidePlayerBall('B', this.pB, now);
   }
 
   private collideCrossbar(postX: number, postY: number, now: number) {
@@ -519,18 +527,46 @@ export class HeadSoccerRoom extends BaseGameRoom {
   }
 
   private collidePlayerBall(side: 'A' | 'B', p: HeadSoccerPlayerState, now: number) {
-    const dx = this.ball.x - p.x;
-    const dy = this.ball.y - p.y;
-    const dist = Math.hypot(dx, dy);
-    const minDist = PLAYER_RADIUS + BALL_RADIUS;
+    // Model character using dual-circle hitbox:
+    // 1. Head circle: centered at (p.x, p.y - 20) with radius 28 (covers forehead up to p.y - 48, right where head is drawn)
+    // 2. Body circle: centered at (p.x, p.y + 8) with radius 26 (covers torso & lower body down to feet)
+    const headX = p.x;
+    const headY = p.y - 20;
+    const headMinDist = 28 + BALL_RADIUS;
+    const hdx = this.ball.x - headX;
+    const hdy = this.ball.y - headY;
+    const hDist = Math.hypot(hdx, hdy);
+
+    const bodyX = p.x;
+    const bodyY = p.y + 8;
+    const bodyMinDist = 26 + BALL_RADIUS;
+    const bdx = this.ball.x - bodyX;
+    const bdy = this.ball.y - bodyY;
+    const bDist = Math.hypot(bdx, bdy);
+
+    const headPenetration = headMinDist - hDist;
+    const bodyPenetration = bodyMinDist - bDist;
+
+    if (headPenetration <= 0 && bodyPenetration <= 0) {
+      return;
+    }
+
+    // Resolve against the circle with the greater overlap
+    const isHead = headPenetration >= bodyPenetration;
+    const targetCenterX = isHead ? headX : bodyX;
+    const targetCenterY = isHead ? headY : bodyY;
+    const minDist = isHead ? headMinDist : bodyMinDist;
+    const dist = isHead ? hDist : bDist;
+    const dx = isHead ? hdx : bdx;
+    const dy = isHead ? hdy : bdy;
 
     if (dist < minDist && dist > 0.001) {
       const nx = dx / dist;
       const ny = dy / dist;
 
-      // Separate ball from player head
-      this.ball.x = p.x + nx * (minDist + 1);
-      this.ball.y = p.y + ny * (minDist + 1);
+      // Separate ball from player
+      this.ball.x = targetCenterX + nx * (minDist + 1);
+      this.ball.y = targetCenterY + ny * (minDist + 1);
 
       const dir = side === 'A' ? 1 : -1;
 
@@ -561,15 +597,15 @@ export class HeadSoccerRoom extends BaseGameRoom {
       const dot = relVx * nx + relVy * ny;
 
       if (dot < 0) {
-        const restitution = 1.12;
+        const restitution = isHead ? 1.18 : 1.08;
         this.ball.vx -= (1 + restitution) * dot * nx;
         this.ball.vy -= (1 + restitution) * dot * ny;
       }
 
-      // Add forward header pop if hitting with top/front of head while jumping
-      if (ny < -0.15) {
-        this.ball.vx += dir * 4.2 + p.vx * 0.45;
-        this.ball.vy = Math.min(this.ball.vy, -8.5 + p.vy * 0.3);
+      // Add forward header pop if hitting with head (especially top/front of head)
+      if (isHead && ny < 0.1) {
+        this.ball.vx += dir * 4.6 + p.vx * 0.5;
+        this.ball.vy = Math.min(this.ball.vy, -8.5 + p.vy * 0.35);
         this.lastEvent = {
           type: 'HEADER',
           side,
@@ -733,6 +769,7 @@ export class HeadSoccerRoom extends BaseGameRoom {
 
   public handleGameAction(wallet: string, data: any): void {
     if (this.state !== 'GAME_ACTIVE') return;
+    if (this.phase !== 'PLAYING') return;
     if (data.type !== 'HEADSOCCER_INPUT') return;
 
     const isA = wallet.toLowerCase() === this.playerA.walletAddress.toLowerCase();

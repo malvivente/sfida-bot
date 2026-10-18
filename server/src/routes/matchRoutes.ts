@@ -402,24 +402,25 @@ export async function matchRoutes(fastify: FastifyInstance) {
           if (targetUser && targetUser.telegramId) {
             const { getTelegramBot } = await import('../bot/index.js');
             const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
-            const { renderCustomEmojis } = await import('../bot/emojis.js');
+            const { botT, resolveLanguage } = await import('../bot/i18n.js');
             const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
             const bot = getTelegramBot();
             if (bot) {
+              const targetLang = resolveLanguage(targetUser.customLanguageCode || targetUser.languageCode);
               const gameConfig = (GAMES_CONFIG as any)[gameType];
               const gameTitle = gameConfig?.name || gameType.toUpperCase();
               const rawUser = (body.rawUsername || userAccount.username || '').trim().replace(/^@/, '');
               const creatorFirstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
               const creatorName = rawUser ? `@${rawUser}` : (creatorFirstName || 'Un duellante');
-              const text =
-                `{{emoji.swords}} <b>SFIDA ARENA • SFIDA DIRETTA!</b>\n\n` +
-                `<b>${creatorName}</b> ti ha lanciato una sfida diretta a <b>${gameTitle}</b>!\n\n` +
-                `{{emoji.moneyBag}} <b>Posta in palio:</b> ${wagerGram.toFixed(2)} GRAM\n` +
-                `{{emoji.clock}} <b>Scadenza:</b> 10 minuti\n\n` +
-                `{{emoji.lightning}} <i>Accetta il guanto di sfida per scendere nell'Arena!</i>`;
+              const text = botT(targetLang, 'direct_challenge_msg', {
+                creatorName,
+                gameTitle,
+                wager: wagerGram.toFixed(2),
+              });
               const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-              const keyboard = new InlineKeyboard().webApp('{{emoji.swords}} ACCETTA SFIDA', `${webAppUrl}?startapp=duel_${matchId}`);
-              await bot.api.sendMessage(Number(targetUser.telegramId), renderCustomEmojis(text), {
+              const btnLabel = botT(targetLang, 'btn_accept_challenge');
+              const keyboard = new InlineKeyboard().webApp(btnLabel, `${webAppUrl}?startapp=duel_${matchId}`);
+              await bot.api.sendMessage(Number(targetUser.telegramId), text, {
                 parse_mode: 'HTML',
                 reply_markup: keyboard,
               });
@@ -1136,19 +1137,22 @@ export async function matchRoutes(fastify: FastifyInstance) {
         try {
           const { getTelegramBot } = await import('../bot/index.js');
           const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
-          const { renderCustomEmojis } = await import('../bot/emojis.js');
+          const { botT, resolveLanguage } = await import('../bot/i18n.js');
           const bot = getTelegramBot();
           if (bot) {
-            const senderName = res.request!.fromUsername
-              ? `@${res.request!.fromUsername.replace(/^@/, '')}`
-              : (res.request!.fromDisplayName || 'Un duellante');
-            const text =
-              `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA DI AMICIZIA!</b>\n\n` +
-              `<b>${senderName}</b> ti ha inviato una richiesta di amicizia su Sfida Arena!\n\n` +
-              `{{emoji.lightning}} <i>Apri la sezione Amici nella Mini App per accettare o rifiutare.</i>`;
+            const targetUser = res.request!.toTelegramId ? dbService.findUser(res.request!.toTelegramId) : null;
+            const targetLang = resolveLanguage(targetUser?.customLanguageCode || targetUser?.languageCode);
+            const senderUser = res.request!.fromTelegramId ? dbService.findUser(res.request!.fromTelegramId) : null;
+            const rawSenderU = res.request!.fromUsername || senderUser?.username;
+            const senderFirstName = res.request!.fromDisplayName || senderUser?.firstName || (senderUser?.displayName ? senderUser.displayName.trim().split(/\s+/)[0] : undefined);
+            const senderName = rawSenderU
+              ? `@${rawSenderU.replace(/^@/, '')}`
+              : (senderFirstName || 'Un duellante');
+            const text = botT(targetLang, 'friend_request_msg', { senderName });
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('{{emoji.handshake}} GESTISCI AMICI', `${webAppUrl}?startapp=friends_requests`);
-            await bot.api.sendMessage(Number(res.request!.toTelegramId), renderCustomEmojis(text), {
+            const btnLabel = botT(targetLang, 'btn_manage_friends');
+            const keyboard = new InlineKeyboard().webApp(btnLabel, `${webAppUrl}?startapp=friends_requests`);
+            await bot.api.sendMessage(Number(res.request!.toTelegramId), text, {
               parse_mode: 'HTML',
               reply_markup: keyboard,
             });
@@ -1179,25 +1183,27 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: res.error || 'Failed to respond to request' });
     }
 
-    // If accepted, send Telegram notification to the sender
+    // If accepted, send Telegram notification to the sender in sender's configured language
     if (body.action === 'ACCEPT' && res.request) {
       (async () => {
         try {
           const { getTelegramBot } = await import('../bot/index.js');
-          const { renderCustomEmojis } = await import('../bot/emojis.js');
+          const { botT, resolveLanguage } = await import('../bot/i18n.js');
           const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
           const bot = getTelegramBot();
           const targetTg = res.request!.fromTelegramId;
           if (bot && targetTg) {
+            const targetUser = dbService.findUser(targetTg);
+            const targetLang = resolveLanguage(targetUser?.customLanguageCode || targetUser?.languageCode);
             const acceptor = dbService.findUser(userIdent);
-            const acceptorName = acceptor?.displayName || (acceptor?.username ? `@${acceptor.username.replace(/^@/, '')}` : 'Un amico');
-            const text =
-              `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA ACCETTATA!</b>\n\n` +
-              `<b>${acceptorName}</b> ha accettato la tua richiesta di amicizia!\n\n` +
-              `{{emoji.swords}} <i>Ora siete amici su Sfida Arena e potete sfidarvi direttamente o inviarvi mance!</i>`;
+            const rawAcceptorU = acceptor?.username;
+            const acceptorFirstName = acceptor?.firstName || (acceptor?.displayName ? acceptor.displayName.trim().split(/\s+/)[0] : undefined);
+            const acceptorName = rawAcceptorU ? `@${rawAcceptorU.replace(/^@/, '')}` : (acceptorFirstName || 'Un amico');
+            const text = botT(targetLang, 'friend_accepted_msg', { acceptorName });
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('{{emoji.swords}} APRI SFIDA ARENA', `${webAppUrl}?startapp=friends`);
-            await bot.api.sendMessage(Number(targetTg), renderCustomEmojis(text), {
+            const btnLabel = botT(targetLang, 'btn_open_arena');
+            const keyboard = new InlineKeyboard().webApp(btnLabel, `${webAppUrl}?startapp=friends`);
+            await bot.api.sendMessage(Number(targetTg), text, {
               parse_mode: 'HTML',
               reply_markup: keyboard,
             });
@@ -1254,21 +1260,26 @@ export async function matchRoutes(fastify: FastifyInstance) {
         try {
           const { getTelegramBot } = await import('../bot/index.js');
           const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
-          const { renderCustomEmojis } = await import('../bot/emojis.js');
+          const { botT, resolveLanguage } = await import('../bot/i18n.js');
           const bot = getTelegramBot();
           if (bot) {
-            const senderName = res.senderAccount!.username
-              ? `@${res.senderAccount!.username.replace(/^@/, '')}`
-              : (res.senderAccount!.displayName || 'Un duellante');
+            const recipientLang = resolveLanguage(res.recipientAccount!.customLanguageCode || res.recipientAccount!.languageCode);
+            const rawSenderU = res.senderAccount!.username;
+            const senderFirstName = res.senderAccount!.firstName || (res.senderAccount!.displayName ? res.senderAccount!.displayName.trim().split(/\s+/)[0] : undefined);
+            const senderName = rawSenderU
+              ? `@${rawSenderU.replace(/^@/, '')}`
+              : (senderFirstName || 'Un duellante');
             const amtStr = parseFloat(body.amountGram!).toFixed(2);
-            const text =
-              `{{emoji.moneyWithWings}} <b>SFIDA ARENA • HAI RICEVUTO UN TIP!</b>\n\n` +
-              `<b>${senderName}</b> ti ha inviato <b>${amtStr} GRAM</b>!\n` +
-              (body.note ? `💬 <i>"${body.note}"</i>\n` : '') +
-              `\n{{emoji.moneyBag}} <b>Nuovo saldo:</b> ${res.recipientAccount!.balanceGram} GRAM`;
+            const text = botT(recipientLang, 'tip_received_msg', {
+              senderName,
+              amount: amtStr,
+              noteText: body.note ? `\n💬 <i>"${body.note}"</i>` : '',
+              newBalance: res.recipientAccount!.balanceGram,
+            });
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('{{emoji.lightning}} APRI SFIDA ARENA', webAppUrl);
-            await bot.api.sendMessage(Number(res.recipientAccount!.telegramId), renderCustomEmojis(text), {
+            const btnLabel = botT(recipientLang, 'btn_open_arena');
+            const keyboard = new InlineKeyboard().webApp(btnLabel, webAppUrl);
+            await bot.api.sendMessage(Number(res.recipientAccount!.telegramId), text, {
               parse_mode: 'HTML',
               reply_markup: keyboard,
             });

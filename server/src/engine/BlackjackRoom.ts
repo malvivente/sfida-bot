@@ -130,9 +130,7 @@ export class BlackjackRoom extends BaseGameRoom {
     this.currentTurn = this.firstTurnPlayer;
     this.lastAction = undefined;
 
-    // Deal 2 face-up cards to each player
-    this.handA.push(this.deck.pop()!);
-    this.handB.push(this.deck.pop()!);
+    // Deal 1 face-up card to each player
     this.handA.push(this.deck.pop()!);
     this.handB.push(this.deck.pop()!);
 
@@ -234,8 +232,13 @@ export class BlackjackRoom extends BaseGameRoom {
       const myScore = side === 'A' ? this.scoreA : this.scoreB;
 
       if (myScore > 21) {
-        if (side === 'A') this.bustA = true;
-        else this.bustB = true;
+        if (side === 'A') {
+          this.bustA = true;
+          this.standA = true;
+        } else {
+          this.bustB = true;
+          this.standB = true;
+        }
 
         if (opponentStand || opponentBust) {
           this.currentTurn = 'FINISHED';
@@ -277,17 +280,17 @@ export class BlackjackRoom extends BaseGameRoom {
         }
       } else {
         // Score < 21
-        if (opponentStand) {
-          // Opponent has already stood: turn stays with current player
+        if (opponentStand || opponentBust) {
+          // Opponent has already stood or busted: turn stays with current player
           this.currentTurn = side;
           this.lastAction = {
             player: side,
             action: 'HIT',
             cardDrawn: drawn,
-            message: `🃏 ${playerName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${myScore}). ${opponentName} è fermo: Carta o Stai?`,
+            message: `🃏 ${playerName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${myScore}). ${opponentName} ha concluso: Carta o Stai?`,
           };
         } else {
-          // Opponent has not stood: alternate turn to opponent!
+          // Opponent has not finished: alternate turn to opponent!
           this.currentTurn = opponentSide;
           this.lastAction = {
             player: side,
@@ -320,6 +323,11 @@ export class BlackjackRoom extends BaseGameRoom {
       }
     }
 
+    const bothFinished = (this.standA || this.bustA) && (this.standB || this.bustB);
+    if (bothFinished) {
+      this.currentTurn = 'FINISHED';
+    }
+
     this.broadcast({
       type: 'BLACKJACK_UPDATE',
       lastAction: this.lastAction,
@@ -329,6 +337,7 @@ export class BlackjackRoom extends BaseGameRoom {
 
     // Check if game has concluded
     if (this.currentTurn === 'FINISHED') {
+      this.cleanupGameTimers();
       setTimeout(() => {
         this.evaluateShowdown();
       }, 1200);
@@ -426,9 +435,7 @@ export class BlackjackRoom extends BaseGameRoom {
     this.currentTurn = this.firstTurnPlayer;
     const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
-    // Deal 2 face-up cards to each player
-    this.handA.push(this.deck.pop()!);
-    this.handB.push(this.deck.pop()!);
+    // Deal 1 face-up card to each player
     this.handA.push(this.deck.pop()!);
     this.handB.push(this.deck.pop()!);
 

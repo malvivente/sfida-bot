@@ -350,15 +350,21 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             {/* Dynamic Center Matchup Banner / Bust Odds */}
             {roomState === 'GAME_ACTIVE' && (
               <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-cyber-border/60 text-center">
-                <div className="flex items-center space-x-2 text-xs font-chakra">
-                  <span className="text-slate-400">{t('blackjack.activeTurn')}</span>
-                  <span className="font-bold text-white uppercase">{activeTurnName}</span>
-                  <span className="text-slate-500">•</span>
-                  <span className="text-slate-400">{t('blackjack.bustOdds')}</span>
-                  <span className={`font-mono font-bold ${activeBustOdds >= 50 ? 'text-cyber-pink' : 'text-cyber-green'}`}>
-                    {activeBustOdds}%
-                  </span>
-                </div>
+                {currentTurn === 'FINISHED' || ((standA || bustA) && (standB || bustB)) ? (
+                  <div className="flex items-center space-x-2 text-xs font-chakra">
+                    <span className="font-bold text-cyber-cyan uppercase">{t('blackjack.showdown')}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 text-xs font-chakra">
+                    <span className="text-slate-400">{t('blackjack.activeTurn')}</span>
+                    <span className="font-bold text-white uppercase">{activeTurnName}</span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-400">{t('blackjack.bustOdds')}</span>
+                    <span className={`font-mono font-bold ${activeBustOdds >= 50 ? 'text-cyber-pink' : 'text-cyber-green'}`}>
+                      {activeBustOdds}%
+                    </span>
+                  </div>
+                )}
                 {lastAction && (
                   <span className="text-[11px] font-rajdhani text-cyber-cyan mt-0.5">
                     {lastAction.message}
@@ -738,7 +744,14 @@ export const BlackjackArena: React.FC<BlackjackArenaProps> = ({
             </span>
           </div>
         ) : roomState === 'GAME_ACTIVE' ? (
-          role === 'player' ? (
+          currentTurn === 'FINISHED' || ((standA || bustA) && (standB || bustB)) ? (
+            <div className="w-full py-3.5 rounded-xl bg-black/50 border border-cyber-cyan/40 text-center flex items-center justify-center space-x-2 animate-pulse">
+              <Loader2 className="w-4 h-4 animate-spin text-cyber-cyan" />
+              <span className="text-xs font-chakra font-bold text-cyber-cyan">
+                {t('blackjack.showdownInProgress')}
+              </span>
+            </div>
+          ) : role === 'player' ? (
             isPlayerTurn ? (
               <div className="w-full flex flex-col space-y-2">
                 <span className="text-[11px] font-orbitron font-bold text-cyber-cyan uppercase tracking-wider text-center animate-pulse">

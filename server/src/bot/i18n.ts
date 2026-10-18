@@ -161,6 +161,44 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `<i>Who wants to take on @{creator}? Tap below to play!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} Accept Challenge ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} Watch & Bet`,
+
+    direct_challenge_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • DIRECT CHALLENGE!</b>\n\n` +
+      `<b>{creatorName}</b> has challenged you to a duel in <b>{gameTitle}</b>!\n\n` +
+      `{{emoji.moneyBag}} <b>Wager:</b> {wager} GRAM\n` +
+      `{{emoji.clock}} <b>Expires:</b> 10 minutes\n\n` +
+      `{{emoji.lightning}} <i>Accept the challenge to enter the Arena!</i>`,
+    btn_accept_challenge: `{{emoji.swords}} Accept Challenge`,
+    opponent_ready_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • OPPONENT READY!</b>\n\n` +
+      `<b>{senderName}</b> is <b>READY</b> to duel you in <b>{gameTitle}</b> (Room #{matchId})!\n\n` +
+      `{{emoji.moneyBag}} <b>Wager:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>Enter the Arena now to start playing!</i>`,
+    opponent_joined_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • OPPONENT JOINED!</b>\n\n` +
+      `<b>{senderName}</b> joined your <b>{gameTitle}</b> room (Room #{matchId}) and is waiting for you!\n\n` +
+      `{{emoji.moneyBag}} <b>Wager:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>Enter the Arena now to start playing!</i>`,
+    btn_enter_duel: `{{emoji.swords}} ENTER DUEL`,
+    start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • MATCH INVITE</b>`,
+    start_invite_body:
+      `{{emoji.swords}} <b>SFIDA ARENA • MATCH INVITE</b>\n\n` +
+      `{{emoji.controller}} You have been invited to a duel in room <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>Tap below to enter and play:</i>`,
+    friend_request_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • FRIEND REQUEST!</b>\n\n` +
+      `<b>{senderName}</b> sent you a friend request on Sfida Arena!\n\n` +
+      `{{emoji.lightning}} <i>Open the Friends section in the Mini App to accept or decline.</i>`,
+    btn_manage_friends: `{{emoji.handshake}} MANAGE FRIENDS`,
+    friend_accepted_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • REQUEST ACCEPTED!</b>\n\n` +
+      `<b>{acceptorName}</b> accepted your friend request!\n\n` +
+      `{{emoji.swords}} <i>You are now friends on Sfida Arena and can duel each other or send tips!</i>`,
+    tip_received_msg:
+      `{{emoji.moneyWithWings}} <b>SFIDA ARENA • TIP RECEIVED!</b>\n\n` +
+      `<b>{senderName}</b> sent you <b>{amount} GRAM</b>!{noteText}\n\n` +
+      `{{emoji.moneyBag}} <b>New Balance:</b> {newBalance} GRAM`,
+    btn_open_arena: `{{emoji.lightning}} OPEN SFIDA ARENA`,
   },
 
   // -------------------------------------------------------------
@@ -298,6 +336,44 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `<i>Chi accetta la sfida di @{creator}? Premi qui sotto per giocare!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} Accetta Sfida ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} Guarda & Scommetti`,
+
+    direct_challenge_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • SFIDA DIRETTA!</b>\n\n` +
+      `<b>{creatorName}</b> ti ha lanciato una sfida diretta a <b>{gameTitle}</b>!\n\n` +
+      `{{emoji.moneyBag}} <b>Posta in palio:</b> {wager} GRAM\n` +
+      `{{emoji.clock}} <b>Scadenza:</b> 10 minuti\n\n` +
+      `{{emoji.lightning}} <i>Accetta il guanto di sfida per scendere nell'Arena!</i>`,
+    btn_accept_challenge: `{{emoji.swords}} ACCETTA SFIDA`,
+    opponent_ready_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO PRONTO!</b>\n\n` +
+      `<b>{senderName}</b> ha premuto <b>PRONTO</b> per sfidarti a <b>{gameTitle}</b> (Stanza #{matchId})!\n\n` +
+      `{{emoji.moneyBag}} <b>Posta in palio:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>Entra subito nell'Arena per iniziare a giocare!</i>`,
+    opponent_joined_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO ENTRATO!</b>\n\n` +
+      `<b>{senderName}</b> è entrato nella tua stanza di <b>{gameTitle}</b> (Stanza #{matchId}) ed è in attesa!\n\n` +
+      `{{emoji.moneyBag}} <b>Posta in palio:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>Entra subito nell'Arena per iniziare a giocare!</i>`,
+    btn_enter_duel: `{{emoji.swords}} ENTRA NELLA SFIDA`,
+    start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • INVITO A GIOCARE</b>`,
+    start_invite_body:
+      `{{emoji.swords}} <b>SFIDA ARENA • INVITO A GIOCARE</b>\n\n` +
+      `{{emoji.controller}} Sei stato invitato a una sfida nella stanza <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>Premi il pulsante qui sotto per entrare e giocare:</i>`,
+    friend_request_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA DI AMICIZIA!</b>\n\n` +
+      `<b>{senderName}</b> ti ha inviato una richiesta di amicizia su Sfida Arena!\n\n` +
+      `{{emoji.lightning}} <i>Apri la sezione Amici nella Mini App per accettare o rifiutare.</i>`,
+    btn_manage_friends: `{{emoji.handshake}} GESTISCI AMICI`,
+    friend_accepted_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA ACCETTATA!</b>\n\n` +
+      `<b>{acceptorName}</b> ha accettato la tua richiesta di amicizia!\n\n` +
+      `{{emoji.swords}} <i>Ora siete amici su Sfida Arena e potete sfidarvi direttamente o inviarvi mance!</i>`,
+    tip_received_msg:
+      `{{emoji.moneyWithWings}} <b>SFIDA ARENA • HAI RICEVUTO UN TIP!</b>\n\n` +
+      `<b>{senderName}</b> ti ha inviato <b>{amount} GRAM</b>!{noteText}\n\n` +
+      `{{emoji.moneyBag}} <b>Nuovo saldo:</b> {newBalance} GRAM`,
+    btn_open_arena: `{{emoji.lightning}} APRI SFIDA ARENA`,
   },
 
   // -------------------------------------------------------------
@@ -394,6 +470,44 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `<i>Кто примет вызов @{creator}? Нажмите ниже для битвы!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} Принять вызов ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} Смотреть и ставить`,
+
+    direct_challenge_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • ПРЯМОЙ ВЫЗОВ!</b>\n\n` +
+      `<b>{creatorName}</b> бросил вам прямой вызов в <b>{gameTitle}</b>!\n\n` +
+      `{{emoji.moneyBag}} <b>Ставка:</b> {wager} GRAM\n` +
+      `{{emoji.clock}} <b>Срок:</b> 10 минут\n\n` +
+      `{{emoji.lightning}} <i>Примите вызов, чтобы выйти на Арену!</i>`,
+    btn_accept_challenge: `{{emoji.swords}} ПРИНЯТЬ ВЫЗОВ`,
+    opponent_ready_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • СОПЕРНИК ГОТОВ!</b>\n\n` +
+      `<b>{senderName}</b> нажал <b>ГОТОВ</b> к дуэли в <b>{gameTitle}</b> (Комната #{matchId})!\n\n` +
+      `{{emoji.moneyBag}} <b>Ставка:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>Заходите на Арену, чтобы начать бой!</i>`,
+    opponent_joined_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • СОПЕРНИК ВОШЕЛ!</b>\n\n` +
+      `<b>{senderName}</b> вошел в вашу комнату <b>{gameTitle}</b> (Комната #{matchId}) и ожидает вас!\n\n` +
+      `{{emoji.moneyBag}} <b>Ставка:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>Заходите на Арену прямо сейчас!</i>`,
+    btn_enter_duel: `{{emoji.swords}} ВОЙТИ В ДУЭЛЬ`,
+    start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • ПРИГЛАШЕНИЕ В ИГРУ</b>`,
+    start_invite_body:
+      `{{emoji.swords}} <b>SFIDA ARENA • ПРИГЛАШЕНИЕ В ИГРУ</b>\n\n` +
+      `{{emoji.controller}} Вас пригласили на дуэль в комнату <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>Нажмите кнопку ниже, чтобы войти в игру:</i>`,
+    friend_request_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • ЗАПРОС В ДРУЗЬЯ!</b>\n\n` +
+      `<b>{senderName}</b> отправил вам запрос в друзья в Sfida Arena!\n\n` +
+      `{{emoji.lightning}} <i>Откройте раздел «Друзья» в приложении, чтобы принять или отклонить.</i>`,
+    btn_manage_friends: `{{emoji.handshake}} УПРАВЛЕНИЕ ДРУЗЬЯМИ`,
+    friend_accepted_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • ЗАПРОС ПРИНЯТ!</b>\n\n` +
+      `<b>{acceptorName}</b> принял ваш запрос в друзья!\n\n` +
+      `{{emoji.swords}} <i>Теперь вы друзья на Sfida Arena и можете бросать вызовы друг другу или отправлять чаевые!</i>`,
+    tip_received_msg:
+      `{{emoji.moneyWithWings}} <b>SFIDA ARENA • ВАМ ОТПРАВИЛИ ЧАЕВЫЕ!</b>\n\n` +
+      `<b>{senderName}</b> отправил вам <b>{amount} GRAM</b>!{noteText}\n\n` +
+      `{{emoji.moneyBag}} <b>Новый баланс:</b> {newBalance} GRAM`,
+    btn_open_arena: `{{emoji.lightning}} ОТКРЫТЬ SFIDA ARENA`,
   },
 
   // -------------------------------------------------------------
@@ -491,6 +605,44 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `<i>谁敢应战 @{creator}？点击下方迎战！</i>`,
     group_duel_accept_btn: `{{emoji.swords}} 接受挑战 ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} 观战并竞猜`,
+
+    direct_challenge_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • 直接对决挑战！</b>\n\n` +
+      `<b>{creatorName}</b> 邀请你在 <b>{gameTitle}</b> 进行 1v1 对决！\n\n` +
+      `{{emoji.moneyBag}} <b>赌注:</b> {wager} GRAM\n` +
+      `{{emoji.clock}} <b>过期时间:</b> 10 分钟\n\n` +
+      `{{emoji.lightning}} <i>点击下方接受挑战并进入竞技场！</i>`,
+    btn_accept_challenge: `{{emoji.swords}} 接受挑战`,
+    opponent_ready_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • 对手已准备！</b>\n\n` +
+      `<b>{senderName}</b> 已在 <b>{gameTitle}</b>（房间 #{matchId}）点击<b>准备</b>！\n\n` +
+      `{{emoji.moneyBag}} <b>赌注:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>立即进入竞技场开始比赛！</i>`,
+    opponent_joined_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • 对手已进入！</b>\n\n` +
+      `<b>{senderName}</b> 已进入你的 <b>{gameTitle}</b> 房间（房间 #{matchId}）正在等待！\n\n` +
+      `{{emoji.moneyBag}} <b>赌注:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>立即进入竞技场准备开战！</i>`,
+    btn_enter_duel: `{{emoji.swords}} 进入对决`,
+    start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • 游戏邀请</b>`,
+    start_invite_body:
+      `{{emoji.swords}} <b>SFIDA ARENA • 游戏邀请</b>\n\n` +
+      `{{emoji.controller}} 你受邀加入房间 <b>#{matchId}</b> 进行对决！\n\n` +
+      `{{emoji.lightning}} <i>点击下方按钮进入并开始游戏：</i>`,
+    friend_request_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • 好友申请！</b>\n\n` +
+      `<b>{senderName}</b> 在 Sfida Arena 向你发送了好友申请！\n\n` +
+      `{{emoji.lightning}} <i>打开小程序中的好友专区即可接受或拒绝。</i>`,
+    btn_manage_friends: `{{emoji.handshake}} 管理好友`,
+    friend_accepted_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • 申请已通过！</b>\n\n` +
+      `<b>{acceptorName}</b> 接受了你的好友申请！\n\n` +
+      `{{emoji.swords}} <i>你们现在是 Sfida Arena 的好友，可以直接发起对决或互相打赏！</i>`,
+    tip_received_msg:
+      `{{emoji.moneyWithWings}} <b>SFIDA ARENA • 收到打赏！</b>\n\n` +
+      `<b>{senderName}</b> 给你发送了 <b>{amount} GRAM</b>！{noteText}\n\n` +
+      `{{emoji.moneyBag}} <b>当前余额:</b> {newBalance} GRAM`,
+    btn_open_arena: `{{emoji.lightning}} 打开 SFIDA ARENA`,
   },
 
   // -------------------------------------------------------------
@@ -588,6 +740,44 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `<i>من يجرؤ على تحدي @{creator}؟ اضغط بالأسفل للنزال!</i>`,
     group_duel_accept_btn: `{{emoji.swords}} قبول التحدي ({wager} GRAM)`,
     group_duel_spectate_btn: `{{emoji.eye}} مشاهدة ومراهنة`,
+
+    direct_challenge_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • تحدي مباشر!</b>\n\n` +
+      `لقد تحداك <b>{creatorName}</b> في مبارزة بـ <b>{gameTitle}</b>!\n\n` +
+      `{{emoji.moneyBag}} <b>الرهان:</b> {wager} GRAM\n` +
+      `{{emoji.clock}} <b>الصلاحية:</b> 10 دقائق\n\n` +
+      `{{emoji.lightning}} <i>اقبل التحدي وادخل الساحة الآن!</i>`,
+    btn_accept_challenge: `{{emoji.swords}} قبول التحدي`,
+    opponent_ready_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • الخصم جاهز!</b>\n\n` +
+      `<b>{senderName}</b> ضغط على <b>جاهز</b> لمبارزتك في <b>{gameTitle}</b> (غرفة #{matchId})!\n\n` +
+      `{{emoji.moneyBag}} <b>الرهان:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>ادخل الساحة فورًا لبدء النزال!</i>`,
+    opponent_joined_msg:
+      `{{emoji.swords}} <b>SFIDA ARENA • انضمام الخصم!</b>\n\n` +
+      `<b>{senderName}</b> دخل غرفتك في <b>{gameTitle}</b> (غرفة #{matchId}) وهو بانتظارك!\n\n` +
+      `{{emoji.moneyBag}} <b>الرهان:</b> {wager} GRAM\n\n` +
+      `{{emoji.lightning}} <i>ادخل الساحة الآن للانضمام للنزال!</i>`,
+    btn_enter_duel: `{{emoji.swords}} دخول المبارزة`,
+    start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • دعوة للعب</b>`,
+    start_invite_body:
+      `{{emoji.swords}} <b>SFIDA ARENA • دعوة للعب</b>\n\n` +
+      `{{emoji.controller}} تمت دعوتك لمبارزة في الغرفة <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>اضغط بالأسفل للدخول وبدء اللعب:</i>`,
+    friend_request_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • طلب صداقة!</b>\n\n` +
+      `أرسل لك <b>{senderName}</b> طلب صداقة على Sfida Arena!\n\n` +
+      `{{emoji.lightning}} <i>افتح قسم الأصدقاء في التطبيق المصغر للقبول أو الرفض.</i>`,
+    btn_manage_friends: `{{emoji.handshake}} إدارة الأصدقاء`,
+    friend_accepted_msg:
+      `{{emoji.handshake}} <b>SFIDA ARENA • تم قبول الطلب!</b>\n\n` +
+      `قبل <b>{acceptorName}</b> طلب صداقتك!\n\n` +
+      `{{emoji.swords}} <i>أصبحتم الآن أصدقاء على Sfida Arena ويمكنكم المبارزة مباشرة أو إرسال الإكراميات!</i>`,
+    tip_received_msg:
+      `{{emoji.moneyWithWings}} <b>SFIDA ARENA • تلقيت إكرامية!</b>\n\n` +
+      `أرسل لك <b>{senderName}</b> مبلغ <b>{amount} GRAM</b>!{noteText}\n\n` +
+      `{{emoji.moneyBag}} <b>الرصيد الجديد:</b> {newBalance} GRAM`,
+    btn_open_arena: `{{emoji.lightning}} فتح SFIDA ARENA`,
   },
 };
 

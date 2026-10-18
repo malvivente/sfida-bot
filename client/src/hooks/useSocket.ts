@@ -116,6 +116,7 @@ export function useSocket({
   const [playerBExpiresAt, setPlayerBExpiresAt] = useState<number | null>(null);
   const [kickedInactivity, setKickedInactivity] = useState<string | null>(null);
   const [isRematch, setIsRematch] = useState<boolean>(false);
+  const reconnectRef = useRef<() => void>(() => {});
 
   // High-frequency tick listener system for zero-overhead canvas render loops
   const gameTickSubscribersRef = useRef<Set<(data: any) => void>>(new Set());
@@ -184,6 +185,7 @@ export function useSocket({
     let isDisposed = false;
     let reconnectTimeout: any = null;
     let pingTimer: any = null;
+    let lastMsgAt = Date.now();
 
     const connect = () => {
       if (isDisposed) return;
@@ -197,6 +199,7 @@ export function useSocket({
             try { ws.close(); } catch {}
             return;
           }
+          lastMsgAt = Date.now();
           setIsConnected(true);
           setFeedMessage('Connesso all\'Arena Cyber.');
         };
@@ -208,10 +211,14 @@ export function useSocket({
         };
 
         ws.onmessage = (event) => {
-      try {
-        const msg: WsMessage = JSON.parse(event.data);
+          lastMsgAt = Date.now();
+          try {
+            const msg: WsMessage = JSON.parse(event.data);
+            if ((msg as any).type === 'PONG') {
+              return;
+            }
 
-        switch (msg.type) {
+            switch (msg.type) {
           case 'INIT_STATE':
             if (msg.role) setSocketRole(msg.role as any);
             if (msg.state) setRoomState(msg.state);
@@ -700,14 +707,42 @@ export function useSocket({
       }
     };
 
+    reconnectRef.current = () => {
+      if (isDisposed) return;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch {}
+      }
+      setIsConnected(false);
+      setFeedMessage('Riconnessione forzata...');
+      connect();
+    };
+
     connect();
 
-    // Active ping heartbeat every 3 seconds for immediate drop detection
+    // Active ping heartbeat and dead-socket watchdog every 2 seconds for immediate drop detection
     pingTimer = setInterval(() => {
+      const now = Date.now();
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'PING' }));
+        // If we haven't received ANY message (game tick, room update, or pong) in > 4500ms, socket is half-open / dead
+        if (now - lastMsgAt > 4500) {
+          console.warn('[WebSocket] Inactivity watchdog: no message or PONG received for >4.5s. Reconnecting...');
+          setIsConnected(false);
+          try {
+            wsRef.current.close();
+          } catch {}
+          if (!isDisposed) {
+            connect();
+          }
+          return;
+        }
+        try {
+          wsRef.current.send(JSON.stringify({ type: 'PING' }));
+        } catch {}
       }
-    }, 3000);
+    }, 2000);
 
     const handleUnload = () => {
       try {
@@ -735,6 +770,10 @@ export function useSocket({
       } catch {}
     };
   }, [matchId, role, wallet, telegramId, username, serverUrl]);
+
+  const reconnect = useCallback(() => {
+    reconnectRef.current();
+  }, []);
 
   // Send action methods
   const sendReady = useCallback(() => {
@@ -930,6 +969,7 @@ export function useSocket({
     setKickedInactivity,
     isRematch,
     subscribeToGameTick,
+    reconnect,
   };
 }
 

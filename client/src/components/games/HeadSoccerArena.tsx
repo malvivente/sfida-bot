@@ -59,6 +59,7 @@ interface HeadSoccerArenaProps {
   forfeitCountdown?: number | null;
   disconnectedOpponentName?: string;
   isConnected?: boolean;
+  onReconnect?: () => void;
 }
 
 const ARENA_W = 800;
@@ -172,6 +173,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   forfeitCountdown,
   disconnectedOpponentName,
   isConnected = true,
+  onReconnect,
 }) => {
   const { t } = useI18n();
   const { triggerImpact, triggerNotification } = useHaptics();
@@ -240,6 +242,10 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (gameData) latestGameDataRef.current = gameData;
+  }, [gameData]);
 
   // Direct socket tick subscription: updates physics targets & triggers sfx/particles with ZERO React re-render overhead
   useEffect(() => {
@@ -937,30 +943,35 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   // Input handlers
   const handleMoveLeft = useCallback(
     (active: boolean) => {
-      if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+      const currentPhase = latestGameDataRef.current?.phase || gameData?.phase;
+      if (active && (role !== 'player' || roomState !== 'GAME_ACTIVE' || currentPhase !== 'PLAYING')) return;
+      if (!active && (role !== 'player' || roomState !== 'GAME_ACTIVE')) return;
       isLeftPressedRef.current = active;
       setLeftPressed(active);
       onInput({ left: active });
       if (active) triggerImpact('light');
     },
-    [onInput, role, roomState, triggerImpact]
+    [gameData?.phase, onInput, role, roomState, triggerImpact]
   );
 
   const handleMoveRight = useCallback(
     (active: boolean) => {
-      if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+      const currentPhase = latestGameDataRef.current?.phase || gameData?.phase;
+      if (active && (role !== 'player' || roomState !== 'GAME_ACTIVE' || currentPhase !== 'PLAYING')) return;
+      if (!active && (role !== 'player' || roomState !== 'GAME_ACTIVE')) return;
       isRightPressedRef.current = active;
       setRightPressed(active);
       onInput({ right: active });
       if (active) triggerImpact('light');
     },
-    [onInput, role, roomState, triggerImpact]
+    [gameData?.phase, onInput, role, roomState, triggerImpact]
   );
 
   // Seamless Slide-to-Switch movement calculation
   const updateMovementFromPointer = useCallback(
     (clientX: number, clientY: number) => {
-      if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+      const currentPhase = latestGameDataRef.current?.phase || gameData?.phase;
+      if (role !== 'player' || roomState !== 'GAME_ACTIVE' || currentPhase !== 'PLAYING') return;
       const container = dpadContainerRef.current;
       if (!container) return;
 
@@ -996,7 +1007,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
         }
       }
     },
-    [handleMoveLeft, handleMoveRight, role, roomState]
+    [gameData?.phase, handleMoveLeft, handleMoveRight, role, roomState]
   );
 
   const handlePointerDownDpad = useCallback(
@@ -1053,7 +1064,8 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   );
 
   const handleJump = useCallback(() => {
-    if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+    const currentPhase = latestGameDataRef.current?.phase || gameData?.phase;
+    if (role !== 'player' || roomState !== 'GAME_ACTIVE' || currentPhase !== 'PLAYING') return;
     const now = Date.now();
     if (now - lastJumpTsRef.current < 350) return; // Strict 350ms debounce against double-jumping
     lastJumpTsRef.current = now;
@@ -1069,22 +1081,24 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
     onInput({ jump: true });
     triggerImpact('light');
     setTimeout(() => setJumpPressed(false), 140);
-  }, [onInput, role, roomState, triggerImpact, userSide]);
+  }, [gameData?.phase, onInput, role, roomState, triggerImpact, userSide]);
 
   const handleKick = useCallback(() => {
-    if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+    const currentPhase = latestGameDataRef.current?.phase || gameData?.phase;
+    if (role !== 'player' || roomState !== 'GAME_ACTIVE' || currentPhase !== 'PLAYING') return;
     setKickPressed(true);
     onInput({ kick: true });
     triggerImpact('medium');
     setTimeout(() => setKickPressed(false), 150);
-  }, [onInput, role, roomState, triggerImpact]);
+  }, [gameData?.phase, onInput, role, roomState, triggerImpact]);
 
   const handleSuper = useCallback(() => {
-    if (role !== 'player' || roomState !== 'GAME_ACTIVE') return;
+    const currentPhase = latestGameDataRef.current?.phase || gameData?.phase;
+    if (role !== 'player' || roomState !== 'GAME_ACTIVE' || currentPhase !== 'PLAYING') return;
     // Toggles armed state for next kick
     onInput({ super: true });
     triggerImpact('heavy');
-  }, [onInput, role, roomState, triggerImpact]);
+  }, [gameData?.phase, onInput, role, roomState, triggerImpact]);
 
   // Desktop Keyboard support for players
   useEffect(() => {
@@ -1727,13 +1741,32 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
         </div>
       )}
 
-      {/* Floating Reconnecting Banner if Local Player Network Drops */}
+      {/* Centered Reconnecting Modal if Local Player Network Drops */}
       {role === 'player' && roomState === 'GAME_ACTIVE' && !isConnected && (
-        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-amber-500 text-slate-950 border-2 border-amber-300 shadow-[0_4px_25px_rgba(245,158,11,0.6)] flex items-center space-x-2.5 pointer-events-none animate-bounce">
-          <Loader2 className="w-4 h-4 animate-spin text-slate-950 shrink-0" />
-          <span className="text-xs font-orbitron font-black tracking-wide uppercase whitespace-nowrap">
-            {t('arena.reconnectingToMatch')}
-          </span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-sm rounded-3xl p-6 bg-gradient-to-b from-slate-900 via-amber-950/50 to-slate-950 border-2 border-amber-400/70 shadow-[0_0_50px_rgba(245,158,11,0.4)] flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mb-3">
+              <WifiOff className="w-8 h-8 text-amber-400 animate-pulse" />
+            </div>
+            <h3 className="text-base font-orbitron font-black text-amber-300 uppercase tracking-wider mb-1">
+              {t('arena.reconnectingTitle')}
+            </h3>
+            <p className="text-xs font-chakra text-slate-300 max-w-xs mb-4">
+              {t('arena.reconnectingDesc')}
+            </p>
+            <div className="w-full flex items-center justify-center py-2 mb-4">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+            </div>
+            {onReconnect && (
+              <button
+                onClick={onReconnect}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-orbitron font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center justify-center space-x-2"
+              >
+                <RotateCcw className="w-4 h-4 text-slate-950" />
+                <span>{t('arena.reconnectNow')}</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
