@@ -215,8 +215,8 @@ export function createTelegramBot(token?: string): Bot {
 
     if (parsed.matchId) {
       welcomeText = lang === 'it'
-        ? `⚔️ <b>SFIDA ARENA • INVITO A GIOCARE</b>\n\nSei stato invitato a una sfida nella stanza <b>#${parsed.matchId}</b>!\n\nPremi il pulsante qui sotto per entrare e giocare:`
-        : `⚔️ <b>SFIDA ARENA • MATCH INVITE</b>\n\nYou have been invited to a duel in room <b>#${parsed.matchId}</b>!\n\nTap below to enter and play:`;
+        ? `{{emoji.swords}} <b>SFIDA ARENA • INVITO A GIOCARE</b>\n\n{{emoji.controller}} Sei stato invitato a una sfida nella stanza <b>#${parsed.matchId}</b>!\n\n{{emoji.lightning}} <i>Premi il pulsante qui sotto per entrare e giocare:</i>`
+        : `{{emoji.swords}} <b>SFIDA ARENA • MATCH INVITE</b>\n\n{{emoji.controller}} You have been invited to a duel in room <b>#${parsed.matchId}</b>!\n\n{{emoji.lightning}} <i>Tap below to enter and play:</i>`;
     } else if (parsed.recruiterWallet) {
       const truncatedRecruiter = `${parsed.recruiterWallet.slice(0, 8)}...${parsed.recruiterWallet.slice(-6)}`;
       welcomeText += botT(lang, 'welcome_recruited', { recruiter: truncatedRecruiter });

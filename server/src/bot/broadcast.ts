@@ -1,6 +1,7 @@
 import { Context } from 'grammy';
 import { dbService } from '../services/db.js';
 import { botT } from './i18n.js';
+import { renderCustomEmojis } from './emojis.js';
 
 export const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID || '1052287650';
 
@@ -185,7 +186,7 @@ export async function handleBroadcastCommand(ctx: Context): Promise<void> {
   } catch (fatalErr: any) {
     console.error('[Broadcast] Fatal error in broadcast loop:', fatalErr);
     try {
-      await ctx.reply(`❌ Broadcast interrotto per errore: ${fatalErr?.message || fatalErr}`);
+      await ctx.reply(renderCustomEmojis(`{{emoji.cross}} Broadcast interrotto per errore: ${fatalErr?.message || fatalErr}`), { parse_mode: 'HTML' });
     } catch {}
   } finally {
     isBroadcasting = false;

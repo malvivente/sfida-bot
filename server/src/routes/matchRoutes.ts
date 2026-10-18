@@ -407,13 +407,13 @@ export async function matchRoutes(fastify: FastifyInstance) {
               const gameTitle = gameConfig?.name || gameType.toUpperCase();
               const creatorName = body.telegramUsername ? `@${body.telegramUsername.replace(/^@/, '')}` : 'Un duellante';
               const text =
-                `⚔️ <b>SFIDA ARENA • SFIDA DIRETTA!</b>\n\n` +
+                `{{emoji.swords}} <b>SFIDA ARENA • SFIDA DIRETTA!</b>\n\n` +
                 `<b>${creatorName}</b> ti ha lanciato una sfida diretta a <b>${gameTitle}</b>!\n\n` +
-                `💰 <b>Posta in palio:</b> ${wagerGram.toFixed(2)} GRAM\n` +
-                `⏱️ <b>Scadenza:</b> 10 minuti\n\n` +
-                `⚡ <i>Accetta il guanto di sfida per scendere nell'Arena!</i>`;
+                `{{emoji.moneyBag}} <b>Posta in palio:</b> ${wagerGram.toFixed(2)} GRAM\n` +
+                `{{emoji.clock}} <b>Scadenza:</b> 10 minuti\n\n` +
+                `{{emoji.lightning}} <i>Accetta il guanto di sfida per scendere nell'Arena!</i>`;
               const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-              const keyboard = new InlineKeyboard().webApp('⚔️ ACCETTA SFIDA', `${webAppUrl}?startapp=duel_${matchId}`);
+              const keyboard = new InlineKeyboard().webApp('{{emoji.swords}} ACCETTA SFIDA', `${webAppUrl}?startapp=duel_${matchId}`);
               await bot.api.sendMessage(Number(targetUser.telegramId), renderCustomEmojis(text), {
                 parse_mode: 'HTML',
                 reply_markup: keyboard,
@@ -1136,11 +1136,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
               ? `@${res.request!.fromUsername.replace(/^@/, '')}`
               : (res.request!.fromDisplayName || 'Un duellante');
             const text =
-              `🤝 <b>SFIDA ARENA • RICHIESTA DI AMICIZIA!</b>\n\n` +
+              `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA DI AMICIZIA!</b>\n\n` +
               `<b>${senderName}</b> ti ha inviato una richiesta di amicizia su Sfida Arena!\n\n` +
-              `⚡ <i>Apri la sezione Amici nella Mini App per accettare o rifiutare.</i>`;
+              `{{emoji.lightning}} <i>Apri la sezione Amici nella Mini App per accettare o rifiutare.</i>`;
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('🤝 GESTISCI AMICI', `${webAppUrl}?startapp=friends_requests`);
+            const keyboard = new InlineKeyboard().webApp('{{emoji.handshake}} GESTISCI AMICI', `${webAppUrl}?startapp=friends_requests`);
             await bot.api.sendMessage(Number(res.request!.toTelegramId), renderCustomEmojis(text), {
               parse_mode: 'HTML',
               reply_markup: keyboard,
@@ -1185,11 +1185,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
             const acceptor = dbService.findUser(userIdent);
             const acceptorName = acceptor?.displayName || (acceptor?.username ? `@${acceptor.username.replace(/^@/, '')}` : 'Un amico');
             const text =
-              `🤝 <b>SFIDA ARENA • RICHIESTA ACCETTATA!</b>\n\n` +
+              `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA ACCETTATA!</b>\n\n` +
               `<b>${acceptorName}</b> ha accettato la tua richiesta di amicizia!\n\n` +
-              `⚔️ <i>Ora siete amici su Sfida Arena e potete sfidarvi direttamente o inviarvi mance!</i>`;
+              `{{emoji.swords}} <i>Ora siete amici su Sfida Arena e potete sfidarvi direttamente o inviarvi mance!</i>`;
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('⚔️ APRI SFIDA ARENA', `${webAppUrl}?startapp=friends`);
+            const keyboard = new InlineKeyboard().webApp('{{emoji.swords}} APRI SFIDA ARENA', `${webAppUrl}?startapp=friends`);
             await bot.api.sendMessage(Number(targetTg), renderCustomEmojis(text), {
               parse_mode: 'HTML',
               reply_markup: keyboard,
@@ -1255,12 +1255,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
               : (res.senderAccount!.displayName || 'Un duellante');
             const amtStr = parseFloat(body.amountGram!).toFixed(2);
             const text =
-              `💸 <b>SFIDA ARENA • HAI RICEVUTO UN TIP!</b>\n\n` +
+              `{{emoji.moneyWithWings}} <b>SFIDA ARENA • HAI RICEVUTO UN TIP!</b>\n\n` +
               `<b>${senderName}</b> ti ha inviato <b>${amtStr} GRAM</b>!\n` +
               (body.note ? `💬 <i>"${body.note}"</i>\n` : '') +
-              `\n💰 <b>Nuovo saldo:</b> ${res.recipientAccount!.balanceGram} GRAM`;
+              `\n{{emoji.moneyBag}} <b>Nuovo saldo:</b> ${res.recipientAccount!.balanceGram} GRAM`;
             const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-            const keyboard = new InlineKeyboard().webApp('⚡ APRI SFIDA ARENA', webAppUrl);
+            const keyboard = new InlineKeyboard().webApp('{{emoji.lightning}} APRI SFIDA ARENA', webAppUrl);
             await bot.api.sendMessage(Number(res.recipientAccount!.telegramId), renderCustomEmojis(text), {
               parse_mode: 'HTML',
               reply_markup: keyboard,

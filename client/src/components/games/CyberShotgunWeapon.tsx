@@ -57,8 +57,27 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   const prevSawActiveRef = useRef<boolean>(isSawActive);
   const lastActionIdRef = useRef<string>('');
   const isSawCuttingRef = useRef<boolean>(false);
+  const isFiringRef = useRef<boolean>(false);
+
+  // Counters to force re-render/remount on repeated animations (e.g. repeated ejector or shots)
+  const [ejectionCount, setEjectionCount] = useState(0);
+  const [shotCount, setShotCount] = useState(0);
+
+  // Animation timer refs for reliable cancellation and rapid re-triggering
   const sawCutTimer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sawCutTimer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const ejectionTimer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ejectionTimer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ejectionTimer3Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const shotTimer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shotTimer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shotTimer3Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shotCompletionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const polarityTimer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const polarityTimer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearSawTimers = () => {
     if (sawCutTimer1Ref.current) clearTimeout(sawCutTimer1Ref.current);
@@ -67,16 +86,46 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     sawCutTimer2Ref.current = null;
   };
 
+  const clearEjectionTimers = () => {
+    if (ejectionTimer1Ref.current) clearTimeout(ejectionTimer1Ref.current);
+    if (ejectionTimer2Ref.current) clearTimeout(ejectionTimer2Ref.current);
+    if (ejectionTimer3Ref.current) clearTimeout(ejectionTimer3Ref.current);
+    ejectionTimer1Ref.current = null;
+    ejectionTimer2Ref.current = null;
+    ejectionTimer3Ref.current = null;
+  };
+
+  const clearShotTimers = () => {
+    if (shotTimer1Ref.current) clearTimeout(shotTimer1Ref.current);
+    if (shotTimer2Ref.current) clearTimeout(shotTimer2Ref.current);
+    if (shotTimer3Ref.current) clearTimeout(shotTimer3Ref.current);
+    if (shotCompletionTimerRef.current) clearTimeout(shotCompletionTimerRef.current);
+    shotTimer1Ref.current = null;
+    shotTimer2Ref.current = null;
+    shotTimer3Ref.current = null;
+    shotCompletionTimerRef.current = null;
+  };
+
+  const clearPolarityTimers = () => {
+    if (polarityTimer1Ref.current) clearTimeout(polarityTimer1Ref.current);
+    if (polarityTimer2Ref.current) clearTimeout(polarityTimer2Ref.current);
+    polarityTimer1Ref.current = null;
+    polarityTimer2Ref.current = null;
+  };
+
   useEffect(() => {
     return () => {
       clearSawTimers();
+      clearEjectionTimers();
+      clearShotTimers();
+      clearPolarityTimers();
     };
   }, []);
 
   // Synchronize barrel state if prop changes directly (e.g. initial load, shot consumed saw, or rematch reset)
   useEffect(() => {
     if (isSawActive) {
-      if (barrelState === 'long' && !isSawCuttingRef.current) {
+      if (barrelState === 'long' && !isSawCuttingRef.current && !isFiringRef.current) {
         if (!prevSawActiveRef.current) {
           triggerSawCutAnimation();
         } else {
@@ -84,29 +133,33 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
         }
       }
     } else {
-      // Saw is not active: clear any pending cutting timers and restore standard long barrel
+      // If a shot is currently firing, do NOT reset to long barrel prematurely!
+      // The complete shot cycle (shotCompletionTimerRef) will restore the barrel once the shot completes.
+      if (isFiringRef.current) {
+        prevSawActiveRef.current = isSawActive;
+        return;
+      }
+
+      // Saw is not active and not firing: clear cutting timers and restore standard long barrel
       clearSawTimers();
       isSawCuttingRef.current = false;
       setIsSawCutting(false);
       setSparks([]);
-
-      // If weapon is currently recoiling from the shot that consumed the saw, allow recoil to finish first
-      const resetDelay = isRecoilActive ? 450 : 0;
-      const t = setTimeout(() => {
-        setBarrelState('long');
-        setIsSeveredBarrelFalling(false);
-      }, resetDelay);
-
-      return () => clearTimeout(t);
+      setBarrelState('long');
+      setIsSeveredBarrelFalling(false);
     }
     prevSawActiveRef.current = isSawActive;
-  }, [isSawActive, isRecoilActive, barrelState]);
+  }, [isSawActive, barrelState]);
 
   // Handle Action-driven animations from server
   useEffect(() => {
     if (!lastAction) return;
 
-    const actionKey = `${lastAction.player}-${lastAction.type}-${lastAction.result}-${lastAction.message}`;
+    // Use unique action ID or timestamp to ensure consecutive repeated actions (e.g. ejector used twice) always trigger!
+    const actionKey =
+      lastAction.id ||
+      `${lastAction.player}-${lastAction.type}-${lastAction.result}-${(lastAction as any).timestamp || Date.now()}-${Math.random()}`;
+
     if (lastActionIdRef.current === actionKey) {
       return;
     }
@@ -129,15 +182,6 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
         // Blank shot: subtle recoil click and blank shell ejection
         triggerBlankShotAnimation();
       }
-
-      // Ensure barrel returns to normal standard long barrel after shot recoil settles
-      setTimeout(() => {
-        clearSawTimers();
-        isSawCuttingRef.current = false;
-        setIsSawCutting(false);
-        setBarrelState('long');
-        setIsSeveredBarrelFalling(false);
-      }, 480);
     }
     // --- ANIMATION 4: INVERT POLARITY ---
     else if (lastAction.result === 'CONVERTED') {
@@ -189,34 +233,45 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
 
   // ==========================================
   // ANIMATION 2: EMPTY EJECTION (Espulsione a vuoto)
+  // Fully repeatable even with multiple ejectors used consecutively
   // ==========================================
   const triggerEjectionAnimation = (shellType: 'LIVE' | 'BLANK' = 'LIVE') => {
+    clearEjectionTimers();
     setEjectedShellType(shellType);
+    setEjectionCount((c) => c + 1);
+
     // 1. Pump racks backward along X axis
+    setIsEjectingCartridge(false);
     setIsPumpRacking(true);
     triggerImpact?.('medium');
 
     // 2. Chamber opens and cartridge launches at peak rack
-    setTimeout(() => {
+    ejectionTimer1Ref.current = setTimeout(() => {
       setIsEjectingCartridge(true);
-    }, 150);
+    }, 120);
 
     // 3. Pump slides forward
-    setTimeout(() => {
+    ejectionTimer2Ref.current = setTimeout(() => {
       setIsPumpRacking(false);
     }, 450);
 
     // 4. Cartridge completes parabolic flight
-    setTimeout(() => {
+    ejectionTimer3Ref.current = setTimeout(() => {
       setIsEjectingCartridge(false);
     }, 950);
   };
 
   // ==========================================
   // ANIMATION 3: SHOT + RECOIL + MUZZLE FLASH
-  // Explosive plasma burst with ample visible room
+  // Explosive plasma burst with ample visible room.
+  // The shotgun remains in its current barrel state (short if sawed-off)
+  // for the entire shot cycle, and returns to long ONLY AFTER the shot finishes!
   // ==========================================
   const triggerShotAnimation = (isLive: boolean) => {
+    clearShotTimers();
+    setShotCount((c) => c + 1);
+    isFiringRef.current = true;
+
     // 1. Violent recoil kick along X axis
     setIsRecoilActive(true);
     // 2. Muzzle flash burst (prominent, high-energy plasma)
@@ -224,47 +279,66 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
     triggerImpact?.('heavy');
 
     // Muzzle flash visible for 380ms
-    setTimeout(() => {
+    shotTimer1Ref.current = setTimeout(() => {
       setIsMuzzleFlashActive(false);
     }, 380);
 
     // Recoil settles
-    setTimeout(() => {
+    shotTimer2Ref.current = setTimeout(() => {
       setIsRecoilActive(false);
     }, 450);
 
     // 3. Rack pump and eject spent cartridge after recoil peak
-    setTimeout(() => {
+    shotTimer3Ref.current = setTimeout(() => {
       triggerEjectionAnimation(isLive ? 'LIVE' : 'BLANK');
     }, 240);
+
+    // 4. ONLY AFTER completing the shot (recoil + pump rack + spent shell flight = ~1200ms),
+    // does the shotgun return to the standard long barrel!
+    shotCompletionTimerRef.current = setTimeout(() => {
+      isFiringRef.current = false;
+      setBarrelState('long');
+      setIsSeveredBarrelFalling(false);
+    }, 1200);
   };
 
   // Subtle blank shot
   const triggerBlankShotAnimation = () => {
+    clearShotTimers();
+    isFiringRef.current = true;
     setIsRecoilActive(true);
     triggerImpact?.('light');
-    setTimeout(() => {
+
+    shotTimer1Ref.current = setTimeout(() => {
       setIsRecoilActive(false);
     }, 220);
 
-    setTimeout(() => {
+    shotTimer2Ref.current = setTimeout(() => {
       triggerEjectionAnimation('BLANK');
     }, 150);
+
+    shotCompletionTimerRef.current = setTimeout(() => {
+      isFiringRef.current = false;
+      setBarrelState('long');
+      setIsSeveredBarrelFalling(false);
+    }, 1150);
   };
 
   // ==========================================
   // ANIMATION 4: INVERT POLARITY (Inversione Polarità)
+  // Repeatable for consecutive inverters
   // ==========================================
   const triggerPolarityInversionAnimation = () => {
+    clearPolarityTimers();
     setIsInvertingPolarity(true);
     setIsPolarityReversed((prev) => !prev);
     triggerImpact?.('light');
 
-    setTimeout(() => {
+    polarityTimer1Ref.current = setTimeout(() => {
       triggerImpact?.('medium');
     }, 450);
 
-    setTimeout(() => {
+    polarityTimer2Ref.current = setTimeout(() => {
       setIsInvertingPolarity(false);
     }, 1800);
   };
@@ -274,7 +348,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
   // Long barrel muzzle tip: 99.46% X, 31.53% Y
   // Short barrel muzzle tip: 82.15% X, 31.53% Y
   // Ejection port: 43.0% X, 38.0% Y
-  const isShortBarrel = barrelState === 'short' && (isSawActive || isRecoilActive);
+  const isShortBarrel = barrelState === 'short';
   const muzzleTipX = isShortBarrel ? '82.15%' : '99.46%';
   const muzzleTipY = '31.53%';
 
@@ -470,7 +544,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
           <AnimatePresence>
             {isMuzzleFlashActive && (
               <motion.div
-                key="muzzle-flash"
+                key={`muzzle-flash-${shotCount}`}
                 initial={{ scale: 0.3, opacity: 0 }}
                 animate={{
                   scale: [0.3, 1.35, 1.05, 0],
@@ -499,7 +573,7 @@ export const CyberShotgunWeapon: React.FC<CyberShotgunWeaponProps> = ({
           <AnimatePresence>
             {isEjectingCartridge && (
               <motion.div
-                key="ejected-cartridge"
+                key={`ejected-cartridge-${ejectionCount}`}
                 initial={{ x: 0, y: 0, rotate: 0, opacity: 1, scale: 0.8 }}
                 animate={{
                   x: [0, -18, -36, -52],

@@ -48,6 +48,9 @@ export const BOT_EMOJIS: Record<string, CustomEmojiConfig> = {
   hourglass: { id: '5339357992103983304', fallback: '⏳', description: 'Hourglass for pending action' },
   controller: { id: '5258508428212445001', fallback: '🎮', description: 'Game controller' },
   clock: { id: '5258258882022612173', fallback: '⏱', description: 'Timer for quick response' },
+  moneyWithWings: { id: '5316979275461573049', fallback: '💸', description: 'Money with wings for tips' },
+  blast: { id: '5289722755871162900', fallback: '💥', description: 'Blast explosion' },
+  bulb: { id: '5472092560522511055', fallback: '💡', description: 'Lightbulb guide' },
 };
 
 /**
@@ -64,10 +67,48 @@ export function tgEmoji(name: string): string {
 }
 
 /**
- * Replaces all occurrences of `{{emoji.<name>}}` in a string with the appropriate custom emoji or fallback.
+ * Replaces all occurrences of `{{emoji.<name>}}` as well as unescaped fallback unicode emojis
+ * with the appropriate Telegram custom emoji tag: `<tg-emoji emoji-id="...">FALLBACK</tg-emoji>`.
  */
 export function renderCustomEmojis(text: string): string {
-  return text.replace(/\{\{emoji\.([a-zA-Z0-9_]+)\}\}/g, (_, key) => {
+  if (!text) return '';
+
+  // 1. Replace explicit {{emoji.<name>}} placeholders
+  let rendered = text.replace(/\{\{emoji\.([a-zA-Z0-9_]+)\}\}/g, (_, key) => {
     return tgEmoji(key);
   });
+
+  // 2. Automatically replace bare unicode emojis that have a configured custom emoji ID
+  for (const config of Object.values(BOT_EMOJIS)) {
+    if (!config.id || !config.id.trim()) continue;
+
+    const emojiId = config.id.trim();
+    const fallback = config.fallback;
+    const customTag = `<tg-emoji emoji-id="${emojiId}">${fallback}</tg-emoji>`;
+
+    // Generate variants (with and without \uFE0F variation selector)
+    const variants = new Set<string>([fallback]);
+    if (fallback.includes('\uFE0F')) {
+      variants.add(fallback.replace(/\uFE0F/g, ''));
+    } else {
+      variants.add(fallback + '\uFE0F');
+    }
+
+    for (const variant of variants) {
+      if (!rendered.includes(variant)) continue;
+
+      // Split by <tg-emoji ...>...</tg-emoji> blocks so we ONLY replace inside plain text parts
+      const parts = rendered.split(/(<tg-emoji[^>]*>.*?<\/tg-emoji>)/gs);
+      rendered = parts
+        .map((part) => {
+          if (part.startsWith('<tg-emoji')) {
+            return part;
+          }
+          return part.split(variant).join(customTag);
+        })
+        .join('');
+    }
+  }
+
+  return rendered;
 }

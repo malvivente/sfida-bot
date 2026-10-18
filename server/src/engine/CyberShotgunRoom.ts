@@ -33,6 +33,7 @@ export class CyberShotgunRoom extends BaseGameRoom {
 
   public lastAction?: CyberShotgunState['lastAction'];
   public mancheNumber: number = 0;
+  private actionCounter: number = 0;
 
   private turnTimeout?: NodeJS.Timeout;
 
@@ -213,6 +214,8 @@ export class CyberShotgunRoom extends BaseGameRoom {
         resultType = 'EJECTED';
         resultMsg = `🍺 ${playerName} used the EJECTOR! Racked slide: ejected a ${ejected} shell without firing!`;
         this.lastAction = {
+          id: `${this.matchId}_${Date.now()}_${++this.actionCounter}`,
+          timestamp: Date.now(),
           player: actorSide,
           type: 'USE_ITEM',
           item: 'ejector',
@@ -254,6 +257,8 @@ export class CyberShotgunRoom extends BaseGameRoom {
 
     if (item !== 'ejector') {
       this.lastAction = {
+        id: `${this.matchId}_${Date.now()}_${++this.actionCounter}`,
+        timestamp: Date.now(),
         player: actorSide,
         type: 'USE_ITEM',
         item,
@@ -334,6 +339,8 @@ export class CyberShotgunRoom extends BaseGameRoom {
     }
 
     this.lastAction = {
+      id: `${this.matchId}_${Date.now()}_${++this.actionCounter}`,
+      timestamp: Date.now(),
       player: actorSide,
       type: 'SHOOT',
       target,

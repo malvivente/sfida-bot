@@ -378,6 +378,8 @@ export interface CyberShotgunState {
   itemsA: ShotgunItem[];
   itemsB: ShotgunItem[];
   lastAction?: {
+    id?: string;
+    timestamp?: number;
     player: 'A' | 'B';
     type: 'SHOOT' | 'USE_ITEM';
     target?: ShotgunTarget;

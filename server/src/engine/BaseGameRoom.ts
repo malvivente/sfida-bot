@@ -567,8 +567,8 @@ export abstract class BaseGameRoom {
       const senderName = senderPlayer.username ? `@${senderPlayer.username.replace(/^@/, '')}` : 'Un giocatore';
 
       const title = action === 'ready'
-        ? `⚔️ <b>SFIDA ARENA • AVVERSARIO PRONTO!</b>`
-        : `⚔️ <b>SFIDA ARENA • AVVERSARIO ENTRATO!</b>`;
+        ? `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO PRONTO!</b>`
+        : `{{emoji.swords}} <b>SFIDA ARENA • AVVERSARIO ENTRATO!</b>`;
 
       const desc = action === 'ready'
         ? `<b>${senderName}</b> ha premuto <b>PRONTO</b> per sfidarti a <b>${gameTitle}</b> (Stanza #${this.matchId})!\n\n`
@@ -577,11 +577,11 @@ export abstract class BaseGameRoom {
       const text =
         `${title}\n\n` +
         desc +
-        `💰 <b>Posta in palio:</b> ${wagerGram} GRAM\n\n` +
-        `⚡ <i>Entra subito nell'Arena per iniziare a giocare!</i>`;
+        `{{emoji.moneyBag}} <b>Posta in palio:</b> ${wagerGram} GRAM\n\n` +
+        `{{emoji.lightning}} <i>Entra subito nell'Arena per iniziare a giocare!</i>`;
 
       const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-      const keyboard = new InlineKeyboard().webApp('⚔️ ENTRA NEL DUELLO', `${webAppUrl}?startapp=duel_${this.matchId}`);
+      const keyboard = new InlineKeyboard().webApp('{{emoji.swords}} ENTRA NEL DUELLO', `${webAppUrl}?startapp=duel_${this.matchId}`);
 
       await bot.api.sendMessage(Number(targetPlayer.telegramId), renderCustomEmojis(text), {
         parse_mode: 'HTML',
@@ -1111,9 +1111,9 @@ export abstract class BaseGameRoom {
               const gameConfig = (GAMES_CONFIG as any)[this.gameType];
               const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
               const text =
-                `⏱️ <b>SFIDA ARENA • STANZA SCADUTA</b>\n\n` +
+                `{{emoji.clock}} <b>SFIDA ARENA • STANZA SCADUTA</b>\n\n` +
                 `Nessun avversario si è unito alla tua stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) entro il tempo limite di 10 minuti.\n\n` +
-                `💰 La tua puntata di <b>${refundTotal} GRAM</b> (inclusa fee) è stata rimborsata per intero sul tuo saldo.`;
+                `{{emoji.moneyBag}} La tua puntata di <b>${refundTotal} GRAM</b> (inclusa fee) è stata rimborsata per intero sul tuo saldo.`;
               await bot.api.sendMessage(Number(this.playerA.telegramId), renderCustomEmojis(text), { parse_mode: 'HTML' });
             }
           } catch (botErr) {
@@ -1187,9 +1187,9 @@ export abstract class BaseGameRoom {
           const gameConfig = (GAMES_CONFIG as any)[this.gameType];
           const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
           const text =
-            `⏱️ <b>SFIDA ARENA • TEMPO SCADUTO</b>\n\n` +
+            `{{emoji.clock}} <b>SFIDA ARENA • TEMPO SCADUTO</b>\n\n` +
             `Il creatore della stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) non ha avviato la partita entro il tempo limite.\n\n` +
-            `💰 Sei stato rimosso dalla stanza e la tua puntata di <b>${wagerGram} GRAM</b> è stata riaccreditata sul tuo saldo.`;
+            `{{emoji.moneyBag}} Sei stato rimosso dalla stanza e la tua puntata di <b>${wagerGram} GRAM</b> è stata riaccreditata sul tuo saldo.`;
           await bot.api.sendMessage(Number(bTgId), renderCustomEmojis(text), { parse_mode: 'HTML' });
         }
       } catch (botErr) {
@@ -1231,9 +1231,9 @@ export abstract class BaseGameRoom {
           const gameConfig = (GAMES_CONFIG as any)[this.gameType];
           const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
           const text =
-            `⏱️ <b>SFIDA ARENA • STANZA ANNULLATA</b>\n\n` +
+            `{{emoji.clock}} <b>SFIDA ARENA • STANZA ANNULLATA</b>\n\n` +
             `La stanza di <b>${gameTitle}</b> (Stanza #${this.matchId}) è stata chiusa per inattività.\n\n` +
-            `💰 La tua puntata di <b>${refundPlayerATotal} GRAM</b> è stata riaccreditata sul tuo saldo.`;
+            `{{emoji.moneyBag}} La tua puntata di <b>${refundPlayerATotal} GRAM</b> è stata riaccreditata sul tuo saldo.`;
           await bot.api.sendMessage(Number(this.playerA.telegramId), renderCustomEmojis(text), { parse_mode: 'HTML' });
         }
       } catch (botErr) {
