@@ -320,19 +320,37 @@ export function useSocket({
           case 'HEADSOCCER_GOAL':
           case 'HEADSOCCER_OVERTIME':
           case 'HEADSOCCER_FULLTIME':
-            setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : 'GAME_ACTIVE'));
-            if (msg.gameData) {
+          case 'GAME_STATE':
+          case 'POKER_SHOWDOWN':
+            setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : (msg.state || 'GAME_ACTIVE')));
+            if ((msg as any).payload) {
+              setGameData((msg as any).payload);
+            } else if (msg.gameData) {
               setGameData(msg.gameData);
-              gameTickSubscribersRef.current.forEach((cb) => {
-                try {
-                  cb(msg.gameData);
-                } catch {}
-              });
             }
             if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.message) setFeedMessage(msg.message);
             if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
+            break;
+
+          case 'POKER_HOLE_CARDS':
+            if ((msg as any).holeCards) {
+              setGameData((prev: any) => {
+                if (!prev || !prev.seats) return prev;
+                const updatedSeats = prev.seats.map((s: any) =>
+                  s.seatIndex === (msg as any).seatIndex ? { ...s, holeCards: (msg as any).holeCards } : s
+                );
+                return { ...prev, seats: updatedSeats };
+              });
+            }
+            break;
+
+          case 'POKER_CLOCK':
+            setGameData((prev: any) => {
+              if (!prev) return prev;
+              return { ...prev, activeSeat: (msg as any).seatIndex, turnTimeRemaining: (msg as any).secondsRemaining };
+            });
             break;
 
           case 'HEADSOCCER_TICK':
@@ -903,6 +921,15 @@ export function useSocket({
     }
   }, []);
 
+  const sendPokerAction = useCallback(
+    (action: 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in', amount?: number) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'POKER_ACTION', action, amount }));
+      }
+    },
+    []
+  );
+
   return {
     isConnected,
     roomState,
@@ -950,6 +977,7 @@ export function useSocket({
     sendConnect4Drop,
     sendCubeCountSubmit,
     sendHeadSoccerInput,
+    sendPokerAction,
     placeSpectatorBet,
     placedBet,
     betStatus,

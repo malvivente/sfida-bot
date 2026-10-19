@@ -136,6 +136,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
         oddsB: odds.oddsB,
         oddsX: (odds as any).oddsX,
         spectatorCount: r.spectators.size,
+        maxPlayers: (r as any).maxPlayers || 2,
+        currentPlayers: (r as any).getAllPlayerSessions ? (r as any).getAllPlayerSessions().length : (r.playerB ? 2 : 1),
       };
     });
 
@@ -254,6 +256,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       allowSpectators?: boolean;
       targetOpponentUsername?: string;
       targetOpponentId?: string;
+      maxPlayers?: number;
     };
 
     const effectivePlayerAddress = body.playerAAddress || (body.telegramUserId ? `tg_${body.telegramUserId}` : '');
@@ -360,6 +363,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         inviteCode,
         targetOpponentUsername: body.targetOpponentUsername,
         targetOpponentId: body.targetOpponentId,
+        maxPlayers: body.maxPlayers ? Number(body.maxPlayers) : undefined,
       },
       async (settledRoom, winner) => {
         console.log(`[API] Match #${settledRoom.matchId} settled with winner: ${winner}`);
@@ -471,28 +475,52 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Match not found' });
     }
 
-    // Idempotent join check: if this user is already Player B in this room, return success
-    if (room.playerB) {
-      const isAlreadyPlayerB =
-        room.isSameWallet(body.playerBAddress, room.playerB.walletAddress) ||
-        (body.telegramUserId && room.playerB.telegramId && String(body.telegramUserId) === String(room.playerB.telegramId)) ||
-        (body.rawUsername && room.playerB.username && cleanPlayerName(body.rawUsername).toLowerCase() === room.playerB.username.toLowerCase());
+    const isMultiPoker = room.gameType === 'poker' && ((room as any).maxPlayers || 2) > 2;
+    if (isMultiPoker) {
+      const allSessions: any[] = (room as any).getAllPlayerSessions();
+      const isAlreadySeated = allSessions.some(
+        (p: any) =>
+          room.isSameWallet(body.playerBAddress, p.walletAddress) ||
+          (body.telegramUserId && p.telegramId && String(body.telegramUserId) === String(p.telegramId)) ||
+          (body.rawUsername && p.username && cleanPlayerName(body.rawUsername).toLowerCase() === p.username.toLowerCase())
+      );
 
-      if (isAlreadyPlayerB) {
+      if (isAlreadySeated) {
         return reply.send({
           success: true,
-          message: 'Already joined match',
+          message: 'Already joined poker match',
           matchId: room.matchId.toString(),
           state: room.state,
-          playerB: {
-            wallet: room.playerB.walletAddress,
-            name: room.playerB.username,
-            score: room.playerB.score,
-            ready: room.playerB.ready,
-          },
         });
       }
-      return reply.status(400).send({ error: 'Match is no longer available to join' });
+
+      if (!(room as any).hasAvailableSeat()) {
+        return reply.status(400).send({ error: 'Poker table is full' });
+      }
+    } else {
+      // Idempotent join check: if this user is already Player B in this room, return success
+      if (room.playerB) {
+        const isAlreadyPlayerB =
+          room.isSameWallet(body.playerBAddress, room.playerB.walletAddress) ||
+          (body.telegramUserId && room.playerB.telegramId && String(body.telegramUserId) === String(room.playerB.telegramId)) ||
+          (body.rawUsername && room.playerB.username && cleanPlayerName(body.rawUsername).toLowerCase() === room.playerB.username.toLowerCase());
+
+        if (isAlreadyPlayerB) {
+          return reply.send({
+            success: true,
+            message: 'Already joined match',
+            matchId: room.matchId.toString(),
+            state: room.state,
+            playerB: {
+              wallet: room.playerB.walletAddress,
+              name: room.playerB.username,
+              score: room.playerB.score,
+              ready: room.playerB.ready,
+            },
+          });
+        }
+        return reply.status(400).send({ error: 'Match is no longer available to join' });
+      }
     }
 
     if (room.state !== 'LOBBY') {
@@ -589,41 +617,50 @@ export async function matchRoutes(fastify: FastifyInstance) {
     );
     await dbService.creditTreasury(joinFeeGram.toFixed(2), 'CREATION_FEE', id);
 
-    // Assign Player B and keep room in LOBBY until both ready up
-    room.playerB = {
-      walletAddress: body.playerBAddress,
-      telegramId: body.telegramUserId || '',
-      username: body.telegramUsername || 'Player B',
-      firstName: body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined),
-      photoUrl: body.photoUrl || userAccount.photoUrl || '',
-      connected: false,
-      ready: false,
-      score: 0,
-    };
-    room.config.playerBAddress = body.playerBAddress;
-    room.state = 'LOBBY';
-    room.cancelLobbyExpirationTimer();
-    room.startPlayerBExpirationTimer();
-    room.upgradeSpectatorToPlayer(body.playerBAddress, body.telegramUserId || '', body.telegramUsername || '');
-
-    if (body.telegramUserId && room.gameType) {
-      dbService.setLastPlayedGame(body.telegramUserId, room.gameType).catch((err) =>
-        console.error('[matchRoutes] Error setting lastPlayedGame on join:', err)
+    // Assign player to room
+    if (isMultiPoker && room.playerB) {
+      const ep = (room as any).addExtraPlayer(
+        body.playerBAddress,
+        body.telegramUserId || '',
+        body.telegramUsername || body.rawUsername || 'Player',
+        body.firstName || userAccount.firstName
       );
-    }
-
-    room.broadcast({
-      type: 'ROOM_UPDATE',
-      state: room.state,
-      playerB: {
-        wallet: room.playerB.walletAddress,
-        name: room.playerB.username,
+      room.upgradeSpectatorToPlayer(body.playerBAddress, body.telegramUserId || '', body.telegramUsername || '');
+      room.broadcast({
+        type: 'ROOM_UPDATE',
+        state: room.state,
+        message: `${ep?.username || 'Player'} has joined the Poker Table!`,
+      });
+    } else {
+      room.playerB = {
+        walletAddress: body.playerBAddress,
+        telegramId: body.telegramUserId || '',
+        username: body.telegramUsername || 'Player B',
+        firstName: body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined),
+        photoUrl: body.photoUrl || userAccount.photoUrl || '',
+        connected: false,
+        ready: false,
         score: 0,
-        telegramUserId: room.playerB.telegramId,
-        photoUrl: room.playerB.photoUrl,
-      },
-      message: `${room.playerB.username} has joined the Arena! Ready up to duel!`,
-    });
+      };
+      room.config.playerBAddress = body.playerBAddress;
+      room.state = 'LOBBY';
+      room.cancelLobbyExpirationTimer();
+      room.startPlayerBExpirationTimer();
+      room.upgradeSpectatorToPlayer(body.playerBAddress, body.telegramUserId || '', body.telegramUsername || '');
+
+      room.broadcast({
+        type: 'ROOM_UPDATE',
+        state: room.state,
+        playerB: {
+          wallet: room.playerB.walletAddress,
+          name: room.playerB.username,
+          score: 0,
+          telegramUserId: room.playerB.telegramId,
+          photoUrl: room.playerB.photoUrl,
+        },
+        message: `${room.playerB.username} has joined the Arena! Ready up to duel!`,
+      });
+    }
 
     // If Player A is away from lobby/miniapp, send Telegram notification
     if (room.playerA && room.playerB) {

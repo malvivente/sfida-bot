@@ -104,7 +104,7 @@ const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => 
 
 interface DuelLobbyProps {
   matches: MatchData[];
-  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean, targetOpponentUsername?: string, allowSpectators?: boolean) => Promise<boolean | void> | void;
+  onCreateMatch: (wagerGram: string, gameType: GameType, isPrivate?: boolean, targetOpponentUsername?: string, allowSpectators?: boolean, maxPlayers?: number) => Promise<boolean | void> | void;
   onJoinMatch: (match: MatchData, inviteCode?: string) => void;
   onSpectateMatch: (matchId: string) => void;
   onCancelMatch?: (match: MatchData) => void;
@@ -204,6 +204,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [previousView, setPreviousView] = useState<'hub' | 'play_hub'>('hub');
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [joiningMatchId, setJoiningMatchId] = useState<string | null>(null);
+  const [pokerMaxPlayers, setPokerMaxPlayers] = useState<number>(2);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -345,7 +346,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         selectedGameType,
         isPrivateRoom,
         targetOpponentInput.trim() || undefined,
-        isPrivateRoom ? allowSpectators : true
+        isPrivateRoom ? allowSpectators : true,
+        selectedGameType === 'poker' ? pokerMaxPlayers : undefined
       );
       if (result !== false) {
         setShowCreateModal(false);
@@ -1692,6 +1694,49 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   <div className="mt-2 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-2.5 py-1.5 font-sans flex items-center space-x-1.5">
                     <span>ℹ️</span>
                     <span>{t('lobby.splitPrivateJackpotNotice')}</span>
+                  </div>
+                )}
+
+                {/* Poker Max Players Selector */}
+                {selectedGameType === 'poker' && (
+                  <div className="mt-2 space-y-1.5 p-3 rounded-2xl bg-gradient-to-r from-amber-950/30 via-emerald-950/20 to-black/50 border border-amber-400/30">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-heading font-black text-amber-300 uppercase tracking-wider block">
+                        {t('poker.tableSizeLabel')}
+                      </label>
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                        {pokerMaxPlayers === 2 ? t('poker.headsUp') : `${pokerMaxPlayers} ${t('poker.players')}`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 pt-1">
+                      {[2, 3, 4, 5].map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => {
+                            triggerImpact('light');
+                            setPokerMaxPlayers(count);
+                          }}
+                          className={`py-2 px-1 rounded-xl text-center font-heading font-black text-xs transition-all border ${
+                            pokerMaxPlayers === count
+                              ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 border-white/40 shadow-sm'
+                              : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <div className="text-xs">{count}P</div>
+                          <div className="text-[8px] font-normal opacity-80">
+                            {count === 2 ? 'Heads-Up' : count === 3 ? '3-Max' : count === 4 ? '4-Max' : '5-Max'}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-slate-400 pt-0.5 leading-tight">
+                      {pokerMaxPlayers === 2
+                        ? t('poker.headsUpDesc')
+                        : pokerMaxPlayers === 3
+                        ? t('poker.threeMaxDesc')
+                        : t('poker.multiMaxDesc')}
+                    </p>
                   </div>
                 )}
               </div>

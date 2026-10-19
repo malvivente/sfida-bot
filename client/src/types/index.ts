@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -61,6 +61,8 @@ export interface MatchData {
   expiresAt?: number;
   targetOpponentUsername?: string;
   targetOpponentId?: string;
+  maxPlayers?: number;
+  currentPlayers?: number;
 }
 
 export interface FriendUser {
@@ -496,3 +498,93 @@ export interface HeadSoccerState {
   serverTs: number;
 }
 
+// --- Texas Hold'em Poker Types ---
+export interface PokerCard {
+  suit: '♠' | '♥' | '♦' | '♣';
+  value: string;
+  numericValue: number;
+}
+
+export type PokerStage =
+  | 'WAITING'
+  | 'PREFLOP'
+  | 'FLOP'
+  | 'TURN'
+  | 'RIVER'
+  | 'SHOWDOWN'
+  | 'HAND_OVER'
+  | 'TOURNAMENT_OVER';
+
+export type PokerActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in';
+
+export interface PokerPlayerSeat {
+  seatIndex: number;
+  walletAddress: string;
+  telegramId: string;
+  username: string;
+  displayName: string;
+  photoUrl?: string;
+  chips: number;
+  currentBet: number;
+  totalInvestedThisHand: number;
+  hasFolded: boolean;
+  isAllIn: boolean;
+  isConnected: boolean;
+  isReady: boolean;
+  isTurn: boolean;
+  role: 'BTN' | 'SB' | 'BB' | 'NORMAL';
+  holeCards?: PokerCard[];
+  hasHoleCards?: boolean;
+  lastAction?: {
+    type: 'FOLD' | 'CHECK' | 'CALL' | 'BET' | 'RAISE' | 'ALL_IN' | 'BLIND';
+    amount?: number;
+    message?: string;
+  };
+  handResult?: {
+    rankName: string;
+    score: number;
+    bestFiveCards: PokerCard[];
+  };
+  eliminated?: boolean;
+  payoutGram?: number;
+  finishRank?: number;
+}
+
+export interface PokerPot {
+  amount: number;
+  eligibleSeats: number[];
+}
+
+export interface PokerState {
+  stage: PokerStage;
+  maxPlayers: number;
+  seats: PokerPlayerSeat[];
+  communityCards: PokerCard[];
+  pot: number;
+  sidePots: PokerPot[];
+  currentBet: number;
+  minRaise: number;
+  buttonSeat: number;
+  smallBlindSeat: number;
+  bigBlindSeat: number;
+  activeSeat: number | null;
+  turnTimeLimit: number;
+  turnTimeRemaining: number;
+  handNumber: number;
+  blindLevel: number;
+  smallBlind: number;
+  bigBlind: number;
+  handWinners?: {
+    seatIndex: number;
+    username: string;
+    amount: number;
+    rankName?: string;
+    winningCards?: PokerCard[];
+  }[];
+  tournamentWinner?: {
+    seatIndex: number;
+    username: string;
+    walletAddress: string;
+    totalPrizeGram: number;
+  };
+}

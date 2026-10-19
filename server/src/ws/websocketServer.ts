@@ -213,6 +213,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
           case 'BRIDGE_PASS':
           case 'CHRONO_STOP':
           case 'SPLIT_STEAL_CHOICE':
+          case 'POKER_ACTION':
             room?.handleGameAction(senderWallet, data);
             break;
 

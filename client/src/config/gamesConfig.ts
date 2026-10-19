@@ -112,6 +112,17 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-emerald-500/50 hover:border-emerald-400',
     bgGradient: 'from-emerald-950/35 via-teal-950/20 to-black/80',
   },
+  poker: {
+    id: 'poker',
+    title: "Texas Hold'em",
+    badge: 'POKER 2-5 MAX',
+    tagline: 'Sit & Go 2-5 Giocatori · Bluff & All-In',
+    description: 'Texas Hold\'em Poker multiplayer da 2 a 5 giocatori. Due carte coperte, puntate Pre-Flop, Flop, Turn e River con action clock da 15s. Vinci il montepremi con la miglior combinazione a 5 carte!',
+    spectatorAppeal: 'Adrenalina pura su all-in e showdown a carte scoperte al tavolo cyber!',
+    accentColor: 'text-amber-400',
+    borderColor: 'border-amber-500/50 hover:border-amber-400',
+    bgGradient: 'from-amber-950/30 via-emerald-950/25 to-black/80',
+  },
 };
 
 

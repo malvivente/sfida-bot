@@ -8,6 +8,7 @@ import { CyberShotgunRoom } from './CyberShotgunRoom.js';
 import { Connect4Room } from './Connect4Room.js';
 import { CubeCountRoom } from './CubeCountRoom.js';
 import { HeadSoccerRoom } from './HeadSoccerRoom.js';
+import { PokerRoom } from './PokerRoom.js';
 
 export class RoomManager {
   private static instance: RoomManager;
@@ -84,6 +85,9 @@ export class RoomManager {
         break;
       case 'headsoccer':
         room = new HeadSoccerRoom(config, onSettledWrapped);
+        break;
+      case 'poker':
+        room = new PokerRoom(config, onSettledWrapped);
         break;
       case 'roulette':
       default:

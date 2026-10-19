@@ -260,6 +260,32 @@ export const GameIcon: React.FC<GameIconProps> = ({ type, className = 'w-5 h-5',
         </svg>
       );
 
+    case 'poker':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+          style={style}
+        >
+          <rect x="3" y="3" width="13" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+          <path
+            d="M9.5 12 C8.2 10 7 8.5 9.5 6.5 C12 8.5 10.8 10 9.5 12 Z"
+            fill="currentColor"
+            fillOpacity="0.4"
+          />
+          <path d="M9.5 11.5 V14 M8 14 H11" stroke="currentColor" strokeWidth="1.5" />
+          <ellipse cx="17.5" cy="8" rx="4.5" ry="2" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity="0.2" />
+          <path d="M13 8 V11 C13 12.1 15 13 17.5 13 C20 13 22 12.1 22 11 V8" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M13 11 V14 C13 15.1 15 16 17.5 16 C20 16 22 15.1 22 14 V11" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M13 14 V17 C13 18.1 15 19 17.5 19 C20 19 22 18.1 22 17 V14" stroke="currentColor" strokeWidth="1.6" />
+        </svg>
+      );
+
     default:
       // Default: Crossed Swords
       return (

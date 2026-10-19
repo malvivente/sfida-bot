@@ -22,6 +22,7 @@ export interface RoomConfig {
   inviteCode?: string;
   targetOpponentUsername?: string;
   targetOpponentId?: string;
+  maxPlayers?: number;
   createdAt?: number;
 }
 

@@ -85,6 +85,13 @@ const GAME_CONFIGS: Record<GameType, GameStyleConfig> = {
     accentText: 'text-emerald-400',
     badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   },
+  poker: {
+    gradient: 'from-amber-600 via-emerald-800 to-slate-950',
+    border: 'border-amber-500/40',
+    glow: 'shadow-[0_0_30px_rgba(245,158,11,0.25)]',
+    accentText: 'text-amber-400',
+    badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  },
 };
 
 export const GameRulesModal: React.FC<GameRulesModalProps> = ({

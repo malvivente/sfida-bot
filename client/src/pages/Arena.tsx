@@ -10,6 +10,7 @@ import { CyberShotgunArena } from '../components/games/CyberShotgunArena.js';
 import { Connect4Arena } from '../components/games/Connect4Arena.js';
 import { CubeCountArena } from '../components/games/CubeCountArena.js';
 import { HeadSoccerArena } from '../components/games/HeadSoccerArena.js';
+import { PokerArena } from '../components/games/PokerArena.js';
 import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
@@ -340,7 +341,8 @@ export const Arena: React.FC<ArenaProps> = ({
     gameType: GameType = 'roulette',
     isPrivate?: boolean,
     targetOpponentUsername?: string,
-    allowSpectators?: boolean
+    allowSpectators?: boolean,
+    maxPlayers?: number
   ): Promise<boolean> => {
     setCreateError(null);
 
@@ -378,6 +380,7 @@ export const Arena: React.FC<ArenaProps> = ({
           allowSpectators: effectiveAllowSpectators,
           groupChatId,
           targetOpponentUsername: targetOpponentUsername?.trim() || undefined,
+          maxPlayers,
         }),
       });
 
@@ -1588,6 +1591,42 @@ export const Arena: React.FC<ArenaProps> = ({
               disconnectedOpponentName={userSide === 'A' ? playerB_Name : playerA_Name}
               isConnected={socketData.isConnected}
               onReconnect={socketData.reconnect}
+            />
+          ) : effectiveGameType === 'poker' ? (
+            <PokerArena
+              gameData={socketData.gameData as any}
+              role={effectiveRole}
+              isPlayerTurn={isPlayerTurn}
+              onAction={socketData.sendPokerAction}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              userAddress={userAddress}
+              userId={userId ? String(userId) : undefined}
+              userBalanceGram={availableBalanceGram}
+              onOpenDeposit={(missing) => {
+                if (missing) setDepositAmount(missing);
+                setShowDepositModal(true);
+              }}
+              socketError={socketData.socketError}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
+              forfeitCountdown={socketData.forfeitCountdown}
             />
           ) : (
             <RussianRouletteArena

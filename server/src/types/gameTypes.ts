@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -284,3 +284,4 @@ export interface HeadSoccerState {
   serverTs: number;
 }
 
+export * from '../engine/poker/pokerTypes.js';
