@@ -24,6 +24,7 @@ import {
 import {
   handleBalanceCommand,
   handleTipCommand,
+  handlePromoCommand,
 } from './userCommands.js';
 import {
   handleMaintenanceCommand,
@@ -336,6 +337,11 @@ export function createTelegramBot(token?: string): Bot {
   // User Tip / Transfer Command (/tip, /mancia)
   bot.command(['tip', 'mancia'], async (ctx) => {
     await handleTipCommand(ctx);
+  });
+
+  // User Promo Code Redemption Command (/promo, /riscatta, /promocode)
+  bot.command(['promo', 'riscatta', 'promocode'], async (ctx) => {
+    await handlePromoCommand(ctx);
   });
 
   // In-Chat Group Duel Commands (/duel, /sfida, /challenge)

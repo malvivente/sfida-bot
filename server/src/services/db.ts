@@ -110,7 +110,7 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
@@ -206,6 +206,40 @@ export interface SystemSettings {
   updatedAt: number;
 }
 
+export interface PromoCode {
+  id: string;
+  code: string;
+  creatorTelegramId?: string;
+  creatorWallet?: string;
+  creatorUsername?: string;
+  creatorDisplayName?: string;
+  gramPerClaim: string;
+  maxClaims: number;
+  claimedCount: number;
+  totalEscrowGram: string;
+  remainingEscrowGram: string;
+  expiresAt?: number;
+  requiresPremium: boolean;
+  requiredChatId?: string;
+  requiredChatUsername?: string;
+  requiredChatTitle?: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'EXHAUSTED';
+  createdAt: number;
+  refundedAt?: number;
+}
+
+export interface PromoCodeRedemption {
+  id: string;
+  promoCodeId: string;
+  code: string;
+  userTelegramId?: string;
+  userWallet?: string;
+  username?: string;
+  displayName?: string;
+  gramAwarded: string;
+  redeemedAt: number;
+}
+
 export class DatabaseService {
   private static instance: DatabaseService;
   private matches: Map<string, StoredMatch> = new Map();
@@ -219,6 +253,8 @@ export class DatabaseService {
   private groupAffiliates: Map<string, GroupAffiliate> = new Map();
   private friendships: Map<string, FriendshipRecord> = new Map();
   private friendRequests: Map<string, FriendRequestRecord> = new Map();
+  private promoCodes: Map<string, PromoCode> = new Map();
+  private promoRedemptions: PromoCodeRedemption[] = [];
   private transactions: BalanceTransaction[] = [];
   private treasury: TreasuryData;
   private jackpot: JackpotData;
@@ -231,6 +267,8 @@ export class DatabaseService {
   private groupsFilePath: string;
   private friendsFilePath: string;
   private friendRequestsFilePath: string;
+  private promoCodesFilePath: string;
+  private promoRedemptionsFilePath: string;
   private systemFilePath: string;
   private systemSettings: SystemSettings;
   private initialized: boolean = false;
@@ -245,6 +283,8 @@ export class DatabaseService {
     this.groupsFilePath = path.join(this.dataDir, 'groups.json');
     this.friendsFilePath = path.join(this.dataDir, 'friends.json');
     this.friendRequestsFilePath = path.join(this.dataDir, 'friend_requests.json');
+    this.promoCodesFilePath = path.join(this.dataDir, 'promocodes.json');
+    this.promoRedemptionsFilePath = path.join(this.dataDir, 'promocode_redemptions.json');
     this.systemFilePath = path.join(this.dataDir, 'system.json');
 
     const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
@@ -450,9 +490,50 @@ export class DatabaseService {
         this.persistSystemSettings();
       }
 
+      if (fs.existsSync(this.promoCodesFilePath)) {
+        try {
+          const rawCodes = fs.readFileSync(this.promoCodesFilePath, 'utf-8');
+          const codeList: PromoCode[] = JSON.parse(rawCodes);
+          this.promoCodes.clear();
+          for (const c of codeList) {
+            this.promoCodes.set(c.code.toUpperCase(), c);
+          }
+          console.log(`[DatabaseService] Loaded ${this.promoCodes.size} promo codes.`);
+        } catch (e) {
+          console.warn('[DatabaseService] Error loading promocodes.json:', e);
+        }
+      } else {
+        this.persistPromoCodes();
+      }
+
+      if (fs.existsSync(this.promoRedemptionsFilePath)) {
+        try {
+          const rawReds = fs.readFileSync(this.promoRedemptionsFilePath, 'utf-8');
+          this.promoRedemptions = JSON.parse(rawReds);
+          console.log(`[DatabaseService] Loaded ${this.promoRedemptions.length} promo redemptions.`);
+        } catch (e) {
+          console.warn('[DatabaseService] Error loading promocode_redemptions.json:', e);
+        }
+      } else {
+        this.persistPromoCodes();
+      }
+
       this.initialized = true;
     } catch (err) {
       console.warn('[DatabaseService] Warning loading database file:', err);
+    }
+  }
+
+  public persistPromoCodes() {
+    try {
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+      const promoList = Array.from(this.promoCodes.values());
+      fs.writeFileSync(this.promoCodesFilePath, JSON.stringify(promoList, null, 2), 'utf-8');
+      fs.writeFileSync(this.promoRedemptionsFilePath, JSON.stringify(this.promoRedemptions, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[DatabaseService] Failed to persist promo codes to file:', err);
     }
   }
 
@@ -494,6 +575,7 @@ export class DatabaseService {
       fs.writeFileSync(this.friendRequestsFilePath, JSON.stringify(reqList, null, 2), 'utf-8');
 
       this.persistSystemSettings();
+      this.persistPromoCodes();
     } catch (err) {
       console.error('[DatabaseService] Failed to persist data to file:', err);
     }
@@ -1088,7 +1170,7 @@ export class DatabaseService {
   public async creditUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND',
+    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND',
     details?: string,
     telegramId?: string
   ): Promise<UserAccount> {
@@ -1128,7 +1210,7 @@ export class DatabaseService {
   public async debitUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE',
+    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'PROMO_CREATE',
     details?: string,
     telegramId?: string
   ): Promise<{ success: boolean; account?: UserAccount; error?: string }> {
@@ -2270,6 +2352,266 @@ export class DatabaseService {
     const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
     const set = new Set([defaultAdmin, ...this.systemSettings.adminTelegramIds]);
     return Array.from(set);
+  }
+
+  /**
+   * Safe comparison of two TON wallet addresses.
+   */
+  public isSameWallet(a?: string, b?: string): boolean {
+    if (!a || !b) return false;
+    return this.normalizeAddress(a) === this.normalizeAddress(b);
+  }
+
+  /**
+   * Refreshes the status of a promo code based on expiration and claim counts,
+   * automatically refunding unspent escrow back to creator if expired.
+   */
+  public async refreshPromoCodeStatus(promo: PromoCode): Promise<PromoCode> {
+    if (promo.status === 'ACTIVE') {
+      if (promo.claimedCount >= promo.maxClaims) {
+        promo.status = 'EXHAUSTED';
+        promo.remainingEscrowGram = '0.00';
+        this.persistPromoCodes();
+      } else if (promo.expiresAt && Date.now() > promo.expiresAt) {
+        promo.status = 'EXPIRED';
+        const remaining = parseFloat(promo.remainingEscrowGram || '0');
+        if (remaining > 0 && !promo.refundedAt) {
+          promo.refundedAt = Date.now();
+          promo.remainingEscrowGram = '0.00';
+          const refundTarget = promo.creatorWallet || (promo.creatorTelegramId ? `tg_${promo.creatorTelegramId}` : '');
+          if (refundTarget) {
+            try {
+              await this.creditUserBalance(
+                refundTarget,
+                remaining.toFixed(2),
+                'REFUND',
+                `Rimborso Promo Code scaduto #${promo.code}`,
+                promo.creatorTelegramId
+              );
+            } catch (refErr) {
+              console.warn(`[DatabaseService] Failed to refund expired promo code #${promo.code}:`, refErr);
+            }
+          }
+        }
+        this.persistPromoCodes();
+      }
+    }
+    return promo;
+  }
+
+  /**
+   * Creates a new promotional code funded from the creator's balance.
+   */
+  public async createPromoCode(params: {
+    creatorTelegramId?: string | number;
+    creatorWallet?: string;
+    creatorUsername?: string;
+    creatorDisplayName?: string;
+    gramPerClaim: string | number;
+    maxClaims: number;
+    expiryHours?: number;
+    requiresPremium?: boolean;
+    requiredChatId?: string;
+    requiredChatUsername?: string;
+    requiredChatTitle?: string;
+  }): Promise<{ success: boolean; promoCode?: PromoCode; error?: string }> {
+    const maxClaims = Math.max(1, Math.floor(Number(params.maxClaims) || 1));
+    const gramPerClaimNum = parseFloat(String(params.gramPerClaim || '0'));
+    if (isNaN(gramPerClaimNum) || gramPerClaimNum <= 0) {
+      return { success: false, error: 'INVALID_AMOUNT' };
+    }
+
+    const totalCostNum = gramPerClaimNum * maxClaims;
+    const totalCostStr = totalCostNum.toFixed(2);
+    const gramPerClaimStr = gramPerClaimNum.toFixed(2);
+
+    const cleanTgId = params.creatorTelegramId ? String(params.creatorTelegramId).trim() : undefined;
+    const cleanWallet = params.creatorWallet ? this.toFriendlyAddress(params.creatorWallet) || params.creatorWallet.trim() : undefined;
+
+    if (!cleanTgId && !cleanWallet) {
+      return { success: false, error: 'CREATOR_REQUIRED' };
+    }
+
+    // Lookup creator account and verify balance
+    const creator = await this.getUserAccount(cleanWallet, cleanTgId, params.creatorUsername, params.creatorDisplayName);
+    const curBal = parseFloat(creator.balanceGram || creator.balanceTon || '0');
+
+    if (curBal < totalCostNum) {
+      return { success: false, error: 'INSUFFICIENT_BALANCE' };
+    }
+
+    // Debit balance from creator
+    const debitRes = await this.debitUserBalance(
+      creator.walletAddress || `tg_${cleanTgId}`,
+      totalCostStr,
+      'PROMO_CREATE',
+      `Creazione Promo Code (${maxClaims}x ${gramPerClaimStr} GRAM)`,
+      cleanTgId
+    );
+
+    if (!debitRes.success) {
+      return { success: false, error: debitRes.error || 'DEBIT_FAILED' };
+    }
+
+    // Generate unique code: SFIDA-XXXX-XXXX (using unambiguous chars)
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = '';
+    let attempts = 0;
+    while (!code || this.promoCodes.has(code)) {
+      attempts++;
+      let chunk1 = '';
+      let chunk2 = '';
+      for (let i = 0; i < 4; i++) {
+        chunk1 += chars.charAt(Math.floor(Math.random() * chars.length));
+        chunk2 += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      code = `SFIDA-${chunk1}-${chunk2}`;
+      if (attempts > 50) {
+        code = `SFIDA-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        break;
+      }
+    }
+
+    const expiresAt = params.expiryHours && params.expiryHours > 0
+      ? Date.now() + Math.round(params.expiryHours * 3600 * 1000)
+      : undefined;
+
+    const promoCode: PromoCode = {
+      id: `promo_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      code,
+      creatorTelegramId: cleanTgId,
+      creatorWallet: creator.walletAddress || cleanWallet,
+      creatorUsername: creator.username || params.creatorUsername,
+      creatorDisplayName: creator.displayName || params.creatorDisplayName,
+      gramPerClaim: gramPerClaimStr,
+      maxClaims,
+      claimedCount: 0,
+      totalEscrowGram: totalCostStr,
+      remainingEscrowGram: totalCostStr,
+      expiresAt,
+      requiresPremium: !!params.requiresPremium,
+      requiredChatId: params.requiredChatId ? String(params.requiredChatId).trim() : undefined,
+      requiredChatUsername: params.requiredChatUsername ? params.requiredChatUsername.replace(/^@/, '').trim() : undefined,
+      requiredChatTitle: params.requiredChatTitle ? params.requiredChatTitle.trim() : undefined,
+      status: 'ACTIVE',
+      createdAt: Date.now(),
+    };
+
+    this.promoCodes.set(code.toUpperCase(), promoCode);
+    this.persistPromoCodes();
+    console.log(`[DatabaseService] Created PromoCode ${code} for ${creator.displayName} (${totalCostStr} GRAM in escrow, ${maxClaims} claims)`);
+    return { success: true, promoCode };
+  }
+
+  /**
+   * Retrieves a promo code by code string and refreshes its status.
+   */
+  public async getPromoCode(code: string): Promise<PromoCode | null> {
+    if (!code) return null;
+    const clean = code.trim().toUpperCase();
+    const promo = this.promoCodes.get(clean);
+    if (!promo) return null;
+    await this.refreshPromoCodeStatus(promo);
+    return promo;
+  }
+
+  /**
+   * Retrieves all promo codes created by a specific user.
+   */
+  public async getPromoCodesByCreator(creatorTelegramId?: string | number, creatorWallet?: string): Promise<PromoCode[]> {
+    const cleanTg = creatorTelegramId ? String(creatorTelegramId).trim() : undefined;
+    const normWallet = creatorWallet ? this.normalizeAddress(creatorWallet) : undefined;
+
+    const results: PromoCode[] = [];
+    for (const p of this.promoCodes.values()) {
+      let isOwner = false;
+      if (cleanTg && p.creatorTelegramId && String(p.creatorTelegramId).trim() === cleanTg) {
+        isOwner = true;
+      }
+      if (!isOwner && normWallet && p.creatorWallet && this.normalizeAddress(p.creatorWallet) === normWallet) {
+        isOwner = true;
+      }
+      if (isOwner) {
+        await this.refreshPromoCodeStatus(p);
+        results.push(p);
+      }
+    }
+
+    return results.sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  /**
+   * Checks whether a user has already redeemed a promo code.
+   */
+  public hasUserRedeemedPromo(promoCodeId: string, telegramId?: string | number, walletAddress?: string): boolean {
+    const cleanTg = telegramId ? String(telegramId).trim() : undefined;
+    const normWallet = walletAddress ? this.normalizeAddress(walletAddress) : undefined;
+
+    return this.promoRedemptions.some((r) => {
+      if (r.promoCodeId !== promoCodeId) return false;
+      if (cleanTg && r.userTelegramId && String(r.userTelegramId).trim() === cleanTg) return true;
+      if (normWallet && r.userWallet && this.normalizeAddress(r.userWallet) === normWallet) return true;
+      return false;
+    });
+  }
+
+  /**
+   * Records a redemption, decrements escrow, increments claimed count, and credits the user.
+   */
+  public async recordPromoRedemption(params: {
+    promoCode: PromoCode;
+    userTelegramId?: string | number;
+    userWallet?: string;
+    username?: string;
+    displayName?: string;
+  }): Promise<{ success: boolean; gramAwarded?: string; promoCode?: PromoCode; error?: string }> {
+    const promo = params.promoCode;
+    await this.refreshPromoCodeStatus(promo);
+
+    if (promo.status !== 'ACTIVE' || promo.claimedCount >= promo.maxClaims) {
+      return { success: false, error: promo.status === 'EXPIRED' ? 'EXPIRED' : 'EXHAUSTED' };
+    }
+
+    const awardStr = promo.gramPerClaim;
+    const awardNum = parseFloat(awardStr) || 0;
+    promo.claimedCount += 1;
+    const curRemaining = Math.max(0, parseFloat(promo.remainingEscrowGram || '0') - awardNum);
+    promo.remainingEscrowGram = curRemaining.toFixed(2);
+
+    if (promo.claimedCount >= promo.maxClaims) {
+      promo.status = 'EXHAUSTED';
+    }
+
+    const cleanTg = params.userTelegramId ? String(params.userTelegramId).trim() : undefined;
+    const redemption: PromoCodeRedemption = {
+      id: `pcr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      promoCodeId: promo.id,
+      code: promo.code,
+      userTelegramId: cleanTg,
+      userWallet: params.userWallet,
+      username: params.username,
+      displayName: params.displayName,
+      gramAwarded: awardStr,
+      redeemedAt: Date.now(),
+    };
+
+    this.promoRedemptions.push(redemption);
+
+    // Credit user's balance
+    const creditTarget = params.userWallet || (cleanTg ? `tg_${cleanTg}` : '');
+    if (creditTarget) {
+      await this.creditUserBalance(
+        creditTarget,
+        awardStr,
+        'MATCH_WIN',
+        `Riscatto Promo Code ${promo.code}`,
+        cleanTg
+      );
+    }
+
+    this.persistPromoCodes();
+    console.log(`[DatabaseService] PromoCode ${promo.code} redeemed by ${params.displayName || cleanTg || params.userWallet} (+${awardStr} GRAM)`);
+    return { success: true, gramAwarded: awardStr, promoCode: promo };
   }
 }
 

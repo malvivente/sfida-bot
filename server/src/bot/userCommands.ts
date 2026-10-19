@@ -270,3 +270,169 @@ function keyboardOrUrl(keyboard: InlineKeyboard, text: string, url: string, isWe
     keyboard.url(text, url);
   }
 }
+
+/**
+ * Handles /promo and /riscatta commands.
+ * Allows redeeming promotional codes directly in chat.
+ * Syntax: `/promo <CODE>` or `/riscatta <CODE>`
+ */
+export async function handlePromoCommand(ctx: Context): Promise<void> {
+  const user = ctx.from;
+  if (!user) return;
+
+  const customLang = await dbService.getUserLanguage(user.id);
+  const lang: BotLanguage = resolveLanguage(customLang || user.language_code);
+  const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+  const isPrivateChat = ctx.chat?.type === 'private';
+  const botUsername = ctx.me?.username || process.env.TELEGRAM_BOT_USERNAME || 'sfida_bot';
+
+  // Ensure user is registered
+  await dbService.registerBotUser({
+    telegramId: user.id,
+    username: user.username,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    languageCode: user.language_code,
+  });
+
+  const fullText = ctx.message?.text?.trim() || '';
+  const tokens = fullText.split(/\s+/).slice(1);
+  const code = tokens[0]?.trim().toUpperCase();
+
+  if (!code) {
+    const usage =
+      `🎁 <b>SFIDA ARENA • ${lang === 'it' ? 'RISCATTO CODICE PROMO' : 'REDEEM PROMO CODE'}</b>\n\n` +
+      `<i>${lang === 'it' ? 'Inserisci il codice promo che desideri riscattare:' : 'Enter the promo code you wish to redeem:'}</i>\n` +
+      `<code>/promo SFIDA-XXXX-XXXX</code>`;
+
+    await ctx.reply(renderCustomEmojis(usage), { parse_mode: 'HTML' });
+    return;
+  }
+
+  const promo = await dbService.getPromoCode(code);
+  if (!promo) {
+    await ctx.reply(
+      renderCustomEmojis(
+        `❌ <b>${lang === 'it' ? 'Codice Non Valido' : 'Invalid Code'}</b>\n\n` +
+        `${lang === 'it' ? 'Il codice promo inserito non esiste o è errato.' : 'The entered promo code does not exist or is incorrect.'}`
+      ),
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  if (promo.status === 'EXPIRED') {
+    await ctx.reply(
+      renderCustomEmojis(
+        `⏳ <b>${lang === 'it' ? 'Codice Scaduto' : 'Expired Code'}</b>\n\n` +
+        `${lang === 'it' ? 'Questo codice promozionale è scaduto e non è più valido.' : 'This promo code has expired and is no longer valid.'}`
+      ),
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  if (promo.status === 'EXHAUSTED' || promo.claimedCount >= promo.maxClaims) {
+    await ctx.reply(
+      renderCustomEmojis(
+        `⚪ <b>${lang === 'it' ? 'Codice Esaurito' : 'Exhausted Code'}</b>\n\n` +
+        `${lang === 'it' ? 'Questo codice promozionale ha raggiunto il numero massimo di utilizzi.' : 'This promo code has reached its maximum number of redemptions.'}`
+      ),
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  // Self claim prevention
+  if (promo.creatorTelegramId && String(promo.creatorTelegramId) === String(user.id)) {
+    await ctx.reply(
+      renderCustomEmojis(
+        `⚠️ <b>${lang === 'it' ? 'Azione Non Consentita' : 'Action Not Allowed'}</b>\n\n` +
+        `${lang === 'it' ? 'Non puoi riscattare un codice promo creato da te.' : 'You cannot redeem a promo code created by yourself.'}`
+      ),
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  // Already claimed
+  if (dbService.hasUserRedeemedPromo(promo.id, user.id)) {
+    await ctx.reply(
+      renderCustomEmojis(
+        `⚠️ <b>${lang === 'it' ? 'Già Riscattato' : 'Already Redeemed'}</b>\n\n` +
+        `${lang === 'it' ? 'Hai già riscattato questo codice promozionale.' : 'You have already redeemed this promo code.'}`
+      ),
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  // Telegram Premium requirement
+  if (promo.requiresPremium && !user.is_premium) {
+    await ctx.reply(
+      renderCustomEmojis(
+        `⭐ <b>${lang === 'it' ? 'Telegram Premium Richiesto' : 'Telegram Premium Required'}</b>\n\n` +
+        `${lang === 'it' ? 'Questo codice promozionale è riservato agli utenti Telegram Premium.' : 'This promo code is exclusively reserved for Telegram Premium subscribers.'}`
+      ),
+      { parse_mode: 'HTML' }
+    );
+    return;
+  }
+
+  // Group requirement
+  if (promo.requiredChatId) {
+    const { isTelegramChatMember } = await import('./index.js');
+    const inGroup = await isTelegramChatMember(promo.requiredChatId, user.id);
+    if (!inGroup) {
+      const gLabel = promo.requiredChatTitle || (promo.requiredChatUsername ? `@${promo.requiredChatUsername}` : 'nel gruppo designato');
+      await ctx.reply(
+        renderCustomEmojis(
+          `👥 <b>${lang === 'it' ? 'Membro del Gruppo Richiesto' : 'Group Member Required'}</b>\n\n` +
+          `${lang === 'it' ? `Devi essere iscritto al gruppo <b>${gLabel}</b> per riscattare questo codice.` : `You must be a member of <b>${gLabel}</b> to redeem this code.`}`
+        ),
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
+  }
+
+  // Record redemption
+  const res = await dbService.recordPromoRedemption({
+    promoCode: promo,
+    userTelegramId: user.id,
+    username: user.username,
+    displayName: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username || 'Duelist',
+  });
+
+  if (!res.success) {
+    await ctx.reply(`❌ ${res.error}`);
+    return;
+  }
+
+  const updatedAccount = await dbService.getUserAccount(undefined, String(user.id));
+  const newBal = updatedAccount.balanceGram || updatedAccount.balanceTon || '0.00';
+
+  const successText =
+    `🎉 <b>SFIDA ARENA • ${lang === 'it' ? 'CODICE RISCATTATO!' : 'PROMO CODE REDEEMED!'}</b>\n\n` +
+    `{{emoji.coin}} <b>${lang === 'it' ? 'Hai ricevuto' : 'You received'}:</b> <b>+${res.gramAwarded} GRAM</b>\n` +
+    `{{emoji.moneyBag}} <b>${lang === 'it' ? 'Nuovo saldo disponibile' : 'New available balance'}:</b> <b>${newBal} GRAM</b>\n\n` +
+    `<i>${lang === 'it' ? 'Usa il tuo saldo per sfidare altri giocatori o scommettere live!' : 'Use your balance to duel other players or bet live on matches!'}</i>`;
+
+  const keyboard = new InlineKeyboard();
+  if (isPrivateChat) {
+    keyboard.webApp(
+      lang === 'it' ? '{{emoji.swords}} ENTRA NELL\'ARENA' : '{{emoji.swords}} ENTER ARENA',
+      webAppUrl
+    );
+  } else {
+    keyboard.url(
+      lang === 'it' ? '{{emoji.swords}} ENTRA NELL\'ARENA' : '{{emoji.swords}} ENTER ARENA',
+      `https://t.me/${botUsername}?startapp=duels`
+    );
+  }
+
+  await ctx.reply(renderCustomEmojis(successText), {
+    parse_mode: 'HTML',
+    reply_markup: keyboard,
+  });
+}

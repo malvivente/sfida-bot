@@ -474,7 +474,12 @@ export const App: React.FC = () => {
         )}
 
         {/* Tab 3: REFERRALS & GROUPS */}
-        {activeTab === 'referrals' && <ReferralDashboard />}
+        {activeTab === 'referrals' && (
+          <ReferralDashboard
+            userBalanceGram={userBalanceGram}
+            onBalanceUpdated={setUserBalanceGram}
+          />
+        )}
 
         {/* Tab 4: LEADERBOARD */}
         {activeTab === 'leaderboard' && (
