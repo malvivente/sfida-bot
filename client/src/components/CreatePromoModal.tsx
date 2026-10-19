@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   DollarSign,
@@ -6,6 +7,10 @@ import {
   Clock,
   Crown,
   Users,
+  Radio,
+  Plus,
+  Trash2,
+  RefreshCw,
   Copy,
   Check,
   Share2,
@@ -20,6 +25,18 @@ import { useTelegram } from '../hooks/useTelegram.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useI18n } from '../i18n/index.js';
 import { shareToTelegram } from '../utils/telegram.js';
+
+export interface AddedChatTarget {
+  id: string;
+  rawInput: string;
+  chatId?: string;
+  title?: string;
+  username?: string;
+  chatType?: 'channel' | 'group';
+  valid: boolean | null;
+  loading: boolean;
+  error?: string;
+}
 
 interface CreatePromoModalProps {
   isOpen: boolean;
@@ -39,6 +56,17 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
+  // Lock body scroll when modal is open to prevent background scrolling/shifting
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // Economic Parameters
   const [maxClaims, setMaxClaims] = useState<number>(10);
   const [gramPerClaim, setGramPerClaim] = useState<string>('0.50');
@@ -49,21 +77,12 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
   const [hasExpiry, setHasExpiry] = useState<boolean>(false);
   const [expiryHours, setExpiryHours] = useState<number>(24);
   const [requiresPremium, setRequiresPremium] = useState<boolean>(false);
-  const [requiresGroup, setRequiresGroup] = useState<boolean>(false);
-  const [groupInput, setGroupInput] = useState<string>('');
 
-  // Group Validation State
-  const [groupStatus, setGroupStatus] = useState<{
-    loading: boolean;
-    valid: boolean | null;
-    title?: string;
-    username?: string;
-    chatId?: string;
-    error?: string;
-  }>({
-    loading: false,
-    valid: null,
-  });
+  // Multi-Chat (Channels and Groups)
+  const [hasRequiredChats, setHasRequiredChats] = useState<boolean>(false);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [addedChats, setAddedChats] = useState<AddedChatTarget[]>([]);
+  const [chatInputError, setChatInputError] = useState<string | null>(null);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -71,55 +90,13 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
   const [createdPromo, setCreatedPromo] = useState<any | null>(null);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
-  // Debounced group validation
-  useEffect(() => {
-    if (!requiresGroup || !groupInput.trim()) {
-      setGroupStatus({ loading: false, valid: null });
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setGroupStatus({ loading: true, valid: null });
-      try {
-        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
-        const res = await fetch(`${serverUrl}/api/promocodes/validate-group?target=${encodeURIComponent(groupInput.trim())}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.inGroup) {
-            setGroupStatus({
-              loading: false,
-              valid: true,
-              title: data.chatTitle,
-              username: data.chatUsername,
-              chatId: data.chatId,
-            });
-          } else {
-            setGroupStatus({
-              loading: false,
-              valid: false,
-              title: data.chatTitle,
-              username: data.chatUsername,
-              chatId: data.chatId,
-              error: data.message || 'BOT_NOT_MEMBER',
-            });
-          }
-        } else {
-          setGroupStatus({ loading: false, valid: false, error: 'CHAT_NOT_FOUND' });
-        }
-      } catch {
-        setGroupStatus({ loading: false, valid: false, error: 'NETWORK_ERROR' });
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [groupInput, requiresGroup]);
-
   // Reset modal state on open
   useEffect(() => {
     if (isOpen) {
       setCreatedPromo(null);
       setCopiedCode(false);
       setSubmitError(null);
+      setChatInputError(null);
     }
   }, [isOpen]);
 
@@ -135,15 +112,128 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
   const currentBal = parseFloat(userBalanceGram || '0');
   const isInsufficient = currentBal < parseFloat(totalCost);
 
+  // Validate a specific chat target with backend
+  const validateChatTarget = async (item: AddedChatTarget) => {
+    try {
+      const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+      const res = await fetch(`${serverUrl}/api/promocodes/validate-group?target=${encodeURIComponent(item.rawInput)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.inGroup) {
+          setAddedChats((prev) =>
+            prev.map((c) =>
+              c.id === item.id
+                ? {
+                    ...c,
+                    loading: false,
+                    valid: true,
+                    chatId: data.chatId,
+                    title: data.chatTitle,
+                    username: data.chatUsername,
+                    chatType: data.chatType || 'channel',
+                    error: undefined,
+                  }
+                : c
+            )
+          );
+        } else {
+          setAddedChats((prev) =>
+            prev.map((c) =>
+              c.id === item.id
+                ? {
+                    ...c,
+                    loading: false,
+                    valid: false,
+                    chatId: data.chatId,
+                    title: data.chatTitle,
+                    username: data.chatUsername,
+                    chatType: data.chatType || 'channel',
+                    error: data.error || 'BOT_NOT_MEMBER',
+                  }
+                : c
+            )
+          );
+        }
+      } else {
+        setAddedChats((prev) =>
+          prev.map((c) =>
+            c.id === item.id
+              ? { ...c, loading: false, valid: false, error: 'CHAT_NOT_FOUND' }
+              : c
+          )
+        );
+      }
+    } catch {
+      setAddedChats((prev) =>
+        prev.map((c) =>
+          c.id === item.id
+            ? { ...c, loading: false, valid: false, error: 'NETWORK_ERROR' }
+            : c
+        )
+      );
+    }
+  };
+
+  // Add a new chat target (channel or group)
+  const handleAddChat = () => {
+    const clean = chatInput.trim();
+    if (!clean) return;
+
+    // Check duplicate
+    const normalized = clean.toLowerCase().replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '');
+    const alreadyExists = addedChats.some((c) => {
+      const existNorm = c.rawInput.toLowerCase().replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '');
+      return existNorm === normalized;
+    });
+
+    if (alreadyExists) {
+      triggerImpact('heavy');
+      setChatInputError(t('promo.chatAlreadyAdded'));
+      return;
+    }
+
+    triggerImpact('light');
+    setChatInputError(null);
+    const newTarget: AddedChatTarget = {
+      id: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      rawInput: clean,
+      valid: null,
+      loading: true,
+    };
+
+    setAddedChats((prev) => [...prev, newTarget]);
+    setChatInput('');
+    validateChatTarget(newTarget);
+  };
+
+  const handleRemoveChat = (id: string) => {
+    triggerImpact('light');
+    setAddedChats((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleRetryChat = (item: AddedChatTarget) => {
+    triggerImpact('light');
+    setAddedChats((prev) =>
+      prev.map((c) => (c.id === item.id ? { ...c, loading: true, valid: null, error: undefined } : c))
+    );
+    validateChatTarget({ ...item, loading: true });
+  };
+
+  // Check if any chat has failed or is still loading
+  const hasUnverifiedChats =
+    hasRequiredChats &&
+    (addedChats.length === 0 ||
+      addedChats.some((c) => c.loading || c.valid !== true));
+
   const handleCreate = async () => {
     if (isInsufficient) {
       triggerImpact('heavy');
       return;
     }
 
-    if (requiresGroup && groupStatus.valid === false) {
+    if (hasRequiredChats && hasUnverifiedChats) {
       triggerImpact('heavy');
-      setSubmitError(t('promo.botNotInGroupAlert'));
+      setSubmitError(t('promo.unverifiedChatsAlert'));
       return;
     }
 
@@ -164,10 +254,13 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
         requiresPremium,
       };
 
-      if (requiresGroup && groupStatus.valid) {
-        payload.requiredChatId = groupStatus.chatId || groupInput.trim();
-        payload.requiredChatTitle = groupStatus.title;
-        payload.requiredChatUsername = groupStatus.username;
+      if (hasRequiredChats && addedChats.length > 0) {
+        payload.requiredChats = addedChats.map((c) => ({
+          chatId: c.chatId || c.rawInput,
+          chatTitle: c.title,
+          chatUsername: c.username,
+          chatType: c.chatType || 'channel',
+        }));
       }
 
       const res = await fetch(`${serverUrl}/api/promocodes/create`, {
@@ -211,22 +304,24 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
 
   const handleSharePromo = (code: string, gram: string) => {
     triggerImpact('medium');
-    const text = `🎁 Ho creato un Codice Promo da ${gram} GRAM su Sfida Arena! Usa il codice "${code}" per riscattarlo subito! ⚔️`;
+    const text = t('promo.shareMessage', { code, gram });
     shareToTelegram('', text);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-hidden animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm max-h-[88vh] rounded-3xl bg-gradient-to-b from-[#0a2016] via-[#061810] to-[#030d08] border border-emerald-500/40 shadow-2xl flex flex-col overflow-hidden my-auto">
+  // Render modal into document.body using React Portal
+  // This guarantees 100% full-viewport coverage at (0,0) without being trapped in any page container or unblurred top headers!
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 select-none overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-sm max-h-[76dvh] sm:max-h-[76vh] rounded-3xl bg-gradient-to-b from-[#0a2016] via-[#061810] to-[#030d08] border border-emerald-500/40 shadow-2xl flex flex-col overflow-hidden my-auto">
         
-        {/* Glow ambient effects */}
-        <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-36 h-36 rounded-full bg-teal-500/15 blur-3xl pointer-events-none" />
+        {/* Glow ambient background accents */}
+        <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-teal-500/15 blur-3xl pointer-events-none" />
 
-        {/* Close button */}
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 p-1.5 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 z-20"
+          className="absolute top-3 right-3 p-1.5 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 z-20"
         >
           <X className="w-4 h-4" />
         </button>
@@ -234,29 +329,29 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
         {/* State 1: Creation Form */}
         {!createdPromo ? (
           <>
-            {/* Scrollable Container with Zero Horizontal Overflow */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 scrollbar-thin">
-              
-              {/* Header */}
-              <div className="flex items-center space-x-2.5 pt-0.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-md shrink-0">
-                  <DollarSign className="w-4 h-4 text-emerald-300" />
-                </div>
-                <div className="pr-6 min-w-0">
-                  <div className="flex items-center space-x-1">
-                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-heading font-black text-[9px] uppercase tracking-wider">
-                      PROMO & AIRDROP
-                    </span>
-                    <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse shrink-0" />
-                  </div>
-                  <h3 className="text-sm font-heading font-black text-white leading-tight mt-0.5 truncate">
-                    {t('promo.createModalTitle')}
-                  </h3>
-                </div>
+            {/* Header: fixed inside card */}
+            <div className="p-3.5 pb-2.5 border-b border-white/10 flex items-center space-x-2.5 shrink-0 bg-black/30">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-md shrink-0">
+                <DollarSign className="w-4 h-4 text-emerald-300" />
               </div>
+              <div className="pr-6 min-w-0">
+                <div className="flex items-center space-x-1">
+                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-heading font-black text-[9px] uppercase tracking-wider">
+                    {t('promo.badgePromoAirdrop')}
+                  </span>
+                  <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse shrink-0" />
+                </div>
+                <h3 className="text-sm font-heading font-black text-white leading-tight mt-0.5 truncate">
+                  {t('promo.createModalTitle')}
+                </h3>
+              </div>
+            </div>
 
-              {/* Available balance indicator */}
-              <div className="bg-black/40 border border-emerald-500/20 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+            {/* Scrollable Container with Smooth Vertical Scrollbar */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 space-y-2.5 scrollbar-thin">
+              
+              {/* Available balance row */}
+              <div className="bg-black/40 border border-emerald-500/20 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs">
                 <span className="text-slate-400 font-medium text-[11px]">{t('promo.availableBalance')}</span>
                 <div className="flex items-center space-x-1 text-white font-heading font-black text-xs">
                   <span>{userBalanceGram}</span>
@@ -286,7 +381,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                         setMaxClaims(num);
                         setCustomClaims('');
                       }}
-                      className={`py-1.5 rounded-lg text-xs font-heading font-bold border transition-all active:scale-95 ${
+                      className={`py-1 rounded-lg text-xs font-heading font-bold border transition-all active:scale-95 ${
                         !customClaims && maxClaims === num
                           ? 'bg-emerald-500/35 border-emerald-400 text-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
                           : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
@@ -309,7 +404,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                     placeholder={t('promo.customClaimsPlaceholder')}
                     value={customClaims}
                     onChange={(e) => setCustomClaims(e.target.value)}
-                    className="flex-1 min-w-0 bg-black/40 border border-white/15 focus:border-emerald-400 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 font-heading font-bold focus:outline-none"
+                    className="flex-1 min-w-0 bg-black/40 border border-white/15 focus:border-emerald-400 rounded-lg px-2.5 py-0.5 text-xs text-white placeholder-slate-500 font-heading font-bold focus:outline-none"
                   />
                 </div>
               </div>
@@ -336,7 +431,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                         setGramPerClaim(g);
                         setCustomGram('');
                       }}
-                      className={`py-1.5 rounded-lg text-xs font-heading font-bold border transition-all active:scale-95 ${
+                      className={`py-1 rounded-lg text-xs font-heading font-bold border transition-all active:scale-95 ${
                         !customGram && gramPerClaim === g
                           ? 'bg-emerald-500/35 border-emerald-400 text-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
                           : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
@@ -360,14 +455,14 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                       placeholder={t('promo.customGramPlaceholder')}
                       value={customGram}
                       onChange={(e) => setCustomGram(e.target.value)}
-                      className="w-full bg-black/40 border border-white/15 focus:border-emerald-400 rounded-lg pl-2.5 pr-6 py-1 text-xs text-white placeholder-slate-500 font-heading font-bold focus:outline-none"
+                      className="w-full bg-black/40 border border-white/15 focus:border-emerald-400 rounded-lg pl-2 pr-6 py-0.5 text-xs text-white placeholder-slate-500 font-heading font-bold focus:outline-none"
                     />
                     <GramIcon className="w-3 h-3 text-amber-300 absolute right-2 pointer-events-none" />
                   </div>
                 </div>
               </div>
 
-              {/* Total Cost & Escrow Breakdown */}
+              {/* Total Cost Box */}
               <div className={`p-2.5 rounded-xl border transition-all ${
                 isInsufficient
                   ? 'bg-red-500/10 border-red-500/30'
@@ -396,7 +491,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
               </div>
 
               {/* Requirements & Constraints Header */}
-              <div className="space-y-1.5 pt-1 border-t border-white/10">
+              <div className="space-y-2 pt-1 border-t border-white/10">
                 <span className="text-[10px] font-heading font-black text-slate-400 uppercase tracking-wider block">
                   {t('promo.requirementsTitle')}
                 </span>
@@ -482,88 +577,174 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                   </button>
                 </div>
 
-                {/* Requirement 3: Telegram Group ("Gruppo X") */}
-                <div className="bg-black/30 border border-white/10 rounded-xl p-2.5 space-y-1.5">
+                {/* Requirement 3: Multi-Chat (Channels and Groups) */}
+                <div className="bg-black/30 border border-white/10 rounded-xl p-2.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 pr-2">
-                      <Users className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                       <div>
-                        <span className="text-xs font-heading font-bold text-white block">{t('promo.reqGroup')}</span>
-                        <span className="text-[9px] text-slate-400 block">{t('promo.reqGroupDesc')}</span>
+                        <span className="text-xs font-heading font-bold text-white block">
+                          {t('promo.reqChannelsAndGroups')}
+                        </span>
+                        <span className="text-[9px] text-slate-400 block leading-tight">
+                          {t('promo.reqChannelsAndGroupsDesc')}
+                        </span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
                         triggerImpact('light');
-                        setRequiresGroup(!requiresGroup);
+                        setHasRequiredChats(!hasRequiredChats);
                       }}
                       className={`w-9 h-4.5 rounded-full transition-colors relative shrink-0 ${
-                        requiresGroup ? 'bg-cyan-500' : 'bg-white/20'
+                        hasRequiredChats ? 'bg-cyan-500' : 'bg-white/20'
                       }`}
                     >
                       <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                        requiresGroup ? 'translate-x-4.5' : 'translate-x-0.5'
+                        hasRequiredChats ? 'translate-x-4.5' : 'translate-x-0.5'
                       }`} />
                     </button>
                   </div>
 
-                  {requiresGroup && (
-                    <div className="pt-1 space-y-1.5 animate-in fade-in duration-150">
-                      <input
-                        type="text"
-                        value={groupInput}
-                        onChange={(e) => setGroupInput(e.target.value)}
-                        placeholder={t('promo.groupInputPlaceholder')}
-                        className="w-full bg-black/50 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                      />
+                  {hasRequiredChats && (
+                    <div className="pt-1 space-y-2 animate-in fade-in duration-150">
+                      {/* Input + Add button */}
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="text"
+                          value={chatInput}
+                          onChange={(e) => {
+                            setChatInput(e.target.value);
+                            if (chatInputError) setChatInputError(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddChat();
+                            }
+                          }}
+                          placeholder={t('promo.addChatPlaceholder')}
+                          className="flex-1 min-w-0 bg-black/50 border border-white/15 focus:border-cyan-400 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddChat}
+                          disabled={!chatInput.trim()}
+                          className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:bg-white/10 text-slate-950 disabled:text-slate-500 font-heading font-black text-xs transition-all active:scale-95 flex items-center space-x-1 shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{t('promo.addChatBtn')}</span>
+                        </button>
+                      </div>
 
-                      {/* Group Validation Status */}
-                      {groupStatus.loading && (
-                        <div className="flex items-center space-x-1.5 text-xs text-cyan-300">
-                          <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-                          <span className="text-[11px]">{t('promo.botCheckingGroup')}</span>
-                        </div>
+                      {chatInputError && (
+                        <p className="text-[10px] text-red-400 font-medium">
+                          {chatInputError}
+                        </p>
                       )}
 
-                      {groupStatus.valid === true && (
-                        <div className="bg-emerald-500/15 border border-emerald-400/40 rounded-lg p-2 flex items-start space-x-1.5 text-[11px] text-emerald-200">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-heading font-bold block">{t('promo.botInGroup')}</span>
-                            <span className="text-white font-medium">{groupStatus.title} {groupStatus.username ? `(@${groupStatus.username})` : ''}</span>
-                          </div>
-                        </div>
-                      )}
+                      {/* List of added channels / groups */}
+                      {addedChats.length > 0 ? (
+                        <div className="space-y-1.5 pt-0.5">
+                          {addedChats.map((c) => (
+                            <div
+                              key={c.id}
+                              className={`p-2 rounded-xl border transition-all text-xs flex flex-col space-y-1 ${
+                                c.loading
+                                  ? 'bg-black/40 border-white/10 text-slate-300'
+                                  : c.valid === true
+                                  ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                                  : 'bg-red-950/30 border-red-500/40 text-red-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-1.5 min-w-0 pr-1">
+                                  {c.chatType === 'channel' ? (
+                                    <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                                  ) : (
+                                    <Users className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                                  )}
+                                  <span className="font-heading font-bold text-white truncate text-[11px]">
+                                    {c.title || c.username || c.rawInput}
+                                  </span>
+                                  {c.username && (
+                                    <span className="text-[10px] text-slate-400 font-mono truncate">
+                                      (@{c.username})
+                                    </span>
+                                  )}
+                                </div>
 
-                      {groupStatus.valid === false && (
-                        <div className="bg-red-500/15 border border-red-500/40 rounded-lg p-2 flex items-start space-x-1.5 text-[11px] text-red-200">
-                          <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
-                          <span className="leading-snug">
-                            {t('promo.botNotInGroupAlert')}
-                          </span>
+                                <div className="flex items-center space-x-1.5 shrink-0">
+                                  {c.loading ? (
+                                    <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                                  ) : c.valid === true ? (
+                                    <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-heading font-black">
+                                      ✓ {t('promo.botVerified')}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRetryChat(c)}
+                                      title={t('promo.retryVerify')}
+                                      className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300"
+                                    >
+                                      <RefreshCw className="w-3 h-3" />
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveChat(c.id)}
+                                    title={t('promo.removeChat')}
+                                    className="p-1 rounded bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-300 transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Alert details if validation failed */}
+                              {c.valid === false && (
+                                <div className="text-[10px] text-red-300/90 leading-tight flex items-start space-x-1 pt-0.5">
+                                  <ShieldAlert className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
+                                  <span>
+                                    {c.error === 'BOT_NOT_ADMIN_CHANNEL'
+                                      ? t('promo.botNotAdminChannelAlert')
+                                      : c.error === 'BOT_NOT_MEMBER'
+                                      ? t('promo.botNotInGroupAlert')
+                                      : t('promo.botNotFoundAlert')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-500 italic">
+                          {t('promo.noChatsAdded')}
+                        </p>
                       )}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Error Message */}
+              {/* Submit Error */}
               {submitError && (
-                <div className="p-2.5 rounded-xl bg-red-500/20 border border-red-500/40 text-xs text-red-200 font-medium">
+                <div className="p-2 rounded-xl bg-red-500/20 border border-red-500/40 text-xs text-red-200 font-medium">
                   {submitError}
                 </div>
               )}
             </div>
 
-            {/* Fixed Bottom Action Container (No Stretched Modal) */}
-            <div className="p-3 bg-black/50 border-t border-white/10 shrink-0">
+            {/* Bottom Fixed Action Container */}
+            <div className="p-3 bg-black/60 border-t border-white/10 shrink-0">
               <button
                 onClick={handleCreate}
-                disabled={isSubmitting || isInsufficient || (requiresGroup && groupStatus.valid === false)}
-                className={`w-full py-3 px-4 rounded-2xl font-heading font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2 shadow-xl ${
-                  isInsufficient
+                disabled={isSubmitting || isInsufficient || hasUnverifiedChats}
+                className={`w-full py-2.5 px-4 rounded-2xl font-heading font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2 shadow-xl ${
+                  isInsufficient || hasUnverifiedChats
                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-80'
                     : 'bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-slate-950 hover:brightness-110 active:scale-[0.98] shadow-emerald-950/40'
                 }`}
@@ -583,17 +764,17 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
             </div>
           </>
         ) : (
-          /* State 2: Success Screen with Created Code */
-          <div className="text-center space-y-3.5 p-5 pt-3 animate-in zoom-in-95 duration-200">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-xl mx-auto">
-              <Check className="w-7 h-7 text-emerald-400" />
+          /* State 2: Success Confirmation Screen */
+          <div className="text-center space-y-3 p-4 pt-3 animate-in zoom-in-95 duration-200 flex-1 overflow-y-auto">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-xl mx-auto">
+              <Check className="w-6 h-6 text-emerald-400" />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <h3 className="text-base font-heading font-black text-white tracking-wide">
                 {t('promo.successTitle')}
               </h3>
-              <p className="text-xs text-slate-400 max-w-[260px] mx-auto">
+              <p className="text-xs text-slate-400 max-w-[260px] mx-auto leading-tight">
                 {t('promo.successSubtitle')}
               </p>
             </div>
@@ -601,7 +782,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
             {/* Promo Code Box - Tap to Copy */}
             <div
               onClick={() => copyPromoCode(createdPromo.code)}
-              className="bg-black/60 border-2 border-emerald-400/50 hover:border-emerald-400 rounded-2xl p-3.5 cursor-pointer transition-all active:scale-95 group relative shadow-lg"
+              className="bg-black/60 border-2 border-emerald-400/50 hover:border-emerald-400 rounded-2xl p-3 cursor-pointer transition-all active:scale-95 group relative shadow-lg"
             >
               <span className="text-[10px] font-heading font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">
                 {t('promo.promoCodeLabel')}
@@ -637,7 +818,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
             </div>
 
             {/* Share and Close buttons */}
-            <div className="space-y-2 pt-0.5">
+            <div className="space-y-1.5 pt-0.5">
               <button
                 onClick={() => handleSharePromo(createdPromo.code, createdPromo.gramPerClaim)}
                 className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-slate-950 font-heading font-black rounded-xl shadow-xl active:scale-[0.98] hover:brightness-105 transition-all flex items-center justify-center space-x-2 text-xs uppercase tracking-wider"
@@ -656,6 +837,7 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

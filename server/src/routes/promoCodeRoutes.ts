@@ -36,6 +36,7 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
         chatId: String(cleanTarget),
         chatTitle: isNum ? `Gruppo ${cleanTarget}` : String(cleanTarget).replace(/^@/, ''),
         chatUsername: isNum ? undefined : String(cleanTarget).replace(/^@/, ''),
+        chatType: 'channel',
       });
     }
 
@@ -44,9 +45,10 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
       const botInfo = bot.botInfo || (await bot.api.getMe());
       const botMember = await bot.api.getChatMember(chat.id, botInfo.id);
 
-      const isMember =
-        ['creator', 'administrator', 'member'].includes(botMember.status) ||
-        (botMember.status === 'restricted' && (botMember as any).is_member);
+      const isChannel = chat.type === 'channel';
+      const isMember = isChannel
+        ? ['creator', 'administrator'].includes(botMember.status)
+        : (['creator', 'administrator', 'member'].includes(botMember.status) || (botMember.status === 'restricted' && (botMember as any).is_member));
 
       if (isMember) {
         return reply.send({
@@ -54,6 +56,7 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
           chatId: String(chat.id),
           chatTitle: (chat as any).title || (chat as any).username || String(chat.id),
           chatUsername: (chat as any).username || undefined,
+          chatType: isChannel ? 'channel' : 'group',
         });
       } else {
         return reply.send({
@@ -61,15 +64,18 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
           chatId: String(chat.id),
           chatTitle: (chat as any).title || String(chat.id),
           chatUsername: (chat as any).username || undefined,
-          error: 'BOT_NOT_MEMBER',
-          message: 'Il bot non è presente nel gruppo specificato. Aggiungi il bot al gruppo per convalidare il riscatto.',
+          chatType: isChannel ? 'channel' : 'group',
+          error: isChannel ? 'BOT_NOT_ADMIN_CHANNEL' : 'BOT_NOT_MEMBER',
+          message: isChannel
+            ? 'Il bot non è amministratore nel canale specificato. Aggiungi il bot come amministratore per consentire la verifica degli iscritti.'
+            : 'Il bot non è presente nel gruppo specificato. Aggiungi il bot al gruppo per convalidare il riscatto.',
         });
       }
     } catch (err: any) {
       return reply.send({
         inGroup: false,
         error: 'CHAT_NOT_FOUND',
-        message: 'Gruppo o canale non trovato, oppure il bot non è presente.',
+        message: 'Canale o gruppo non trovato, oppure il bot non è presente.',
       });
     }
   });
@@ -90,6 +96,12 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
       requiredChatId?: string;
       requiredChatUsername?: string;
       requiredChatTitle?: string;
+      requiredChats?: Array<{
+        chatId: string;
+        chatUsername?: string;
+        chatTitle?: string;
+        chatType?: 'group' | 'supergroup' | 'channel';
+      }>;
     };
 
     if (!body || !body.gramPerClaim || !body.maxClaims) {
@@ -109,6 +121,7 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
         requiredChatId: body.requiredChatId,
         requiredChatUsername: body.requiredChatUsername,
         requiredChatTitle: body.requiredChatTitle,
+        requiredChats: body.requiredChats,
       });
 
       if (!result.success) {
@@ -225,8 +238,19 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Check Telegram Group membership requirement
-      if (promo.requiredChatId) {
+      // Check Telegram Group / Channel membership requirements (multi-chat)
+      const requiredChats = promo.requiredChats && promo.requiredChats.length > 0
+        ? promo.requiredChats
+        : (promo.requiredChatId
+            ? [{
+                chatId: promo.requiredChatId,
+                chatUsername: promo.requiredChatUsername,
+                chatTitle: promo.requiredChatTitle,
+                chatType: 'group' as const,
+              }]
+            : []);
+
+      if (requiredChats.length > 0) {
         if (!cleanTg) {
           return reply.status(400).send({
             success: false,
@@ -234,14 +258,18 @@ export async function promoCodeRoutes(fastify: FastifyInstance) {
             message: 'Per riscattare questo codice è necessario accedere tramite Telegram.',
           });
         }
-        const inGroup = await isTelegramChatMember(promo.requiredChatId, cleanTg);
-        if (!inGroup) {
-          const groupLabel = promo.requiredChatTitle || (promo.requiredChatUsername ? `@${promo.requiredChatUsername}` : 'nel gruppo designato');
-          return reply.status(400).send({
-            success: false,
-            error: 'NOT_IN_GROUP',
-            message: `Devi essere membro di ${groupLabel} per poter riscattare questo codice.`,
-          });
+        for (const reqChat of requiredChats) {
+          const inChat = await isTelegramChatMember(reqChat.chatId, cleanTg);
+          if (!inChat) {
+            const chatLabel = reqChat.chatTitle || (reqChat.chatUsername ? `@${reqChat.chatUsername}` : `chat ${reqChat.chatId}`);
+            const chatTypeName = reqChat.chatType === 'channel' ? 'al canale' : 'al gruppo';
+            return reply.status(400).send({
+              success: false,
+              error: 'NOT_IN_GROUP',
+              missingChat: reqChat,
+              message: `Devi essere iscritto ${chatTypeName} ${chatLabel} per poter riscattare questo codice.`,
+            });
+          }
         }
       }
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import QRCodeStyling from 'qr-code-styling';
 import { X, Copy, Check, Share2, Sparkles, QrCode } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -122,9 +123,21 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
     shareToTelegram(refLink, text);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#181c2b] via-[#121522] to-[#0d101a] border border-cyan-500/30 p-5 shadow-2xl flex flex-col items-center space-y-4">
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+      <div className="relative w-full max-w-sm max-h-[82dvh] sm:max-h-[82vh] overflow-y-auto rounded-3xl bg-gradient-to-b from-[#181c2b] via-[#121522] to-[#0d101a] border border-cyan-500/30 p-5 shadow-2xl flex flex-col items-center space-y-4 my-auto scrollbar-thin">
         {/* Glow ambient effect */}
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-purple-500/15 blur-3xl pointer-events-none" />
@@ -209,6 +222,7 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
           <span>{t('affiliates.shareTelegramBtn')}</span>
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

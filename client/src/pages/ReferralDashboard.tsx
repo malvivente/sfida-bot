@@ -19,6 +19,7 @@ import {
   Gift,
   Clock,
   Crown,
+  Radio,
 } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
@@ -30,6 +31,13 @@ import { APP_CONFIG } from '../config/appConfig.js';
 import { ReferralQrModal } from '../components/ReferralQrModal.js';
 import { CreatePromoModal } from '../components/CreatePromoModal.js';
 import { RedeemPromoModal } from '../components/RedeemPromoModal.js';
+
+interface PromoRequiredChat {
+  chatId: string;
+  chatUsername?: string;
+  chatTitle?: string;
+  chatType?: 'channel' | 'group';
+}
 
 interface PromoCodeItem {
   id: string;
@@ -48,6 +56,7 @@ interface PromoCodeItem {
   requiredChatId?: string;
   requiredChatUsername?: string;
   requiredChatTitle?: string;
+  requiredChats?: PromoRequiredChat[];
   status: 'ACTIVE' | 'EXPIRED' | 'EXHAUSTED';
   createdAt: number;
   refundedAt?: number;
@@ -519,14 +528,31 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({
                         <span>{t('promo.badgePremiumShort')}</span>
                       </span>
                     )}
-                    {(promo.requiredChatTitle || promo.requiredChatUsername || promo.requiredChatId) && (
+                    {/* Requirements: Telegram Channels and Groups */}
+                    {promo.requiredChats && promo.requiredChats.length > 0 ? (
+                      promo.requiredChats.map((c, idx) => (
+                        <span
+                          key={c.chatId || idx}
+                          className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 font-heading font-bold flex items-center space-x-1"
+                        >
+                          {c.chatType === 'channel' ? (
+                            <Radio className="w-3 h-3 text-cyan-400 shrink-0" />
+                          ) : (
+                            <Users className="w-3 h-3 text-cyan-400 shrink-0" />
+                          )}
+                          <span className="truncate max-w-[120px]">
+                            {c.chatUsername ? `@${c.chatUsername}` : (c.chatTitle || (c.chatType === 'channel' ? t('promo.badgeChannel') : t('promo.badgeGroup')))}
+                          </span>
+                        </span>
+                      ))
+                    ) : (promo.requiredChatTitle || promo.requiredChatUsername || promo.requiredChatId) ? (
                       <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 font-heading font-bold flex items-center space-x-1">
                         <Users className="w-3 h-3" />
                         <span className="truncate max-w-[120px]">
                           {promo.requiredChatUsername ? `@${promo.requiredChatUsername}` : (promo.requiredChatTitle || t('promo.badgeGroup'))}
                         </span>
                       </span>
-                    )}
+                    ) : null}
                     {promo.expiresAt && (
                       <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-emerald-200/90 font-medium flex items-center space-x-1">
                         <Clock className="w-3 h-3" />

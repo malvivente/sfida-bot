@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDownLeft, X, Loader2, CheckCircle2, AlertCircle, Wallet } from 'lucide-react';
 import { GramIcon } from './GramIcon.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
@@ -31,6 +32,16 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const [depositAmount, setDepositAmount] = useState(defaultAmount);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -164,10 +175,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   const QUICK_AMOUNTS = ['1.0', '5.0', '10.0', '25.0'];
 
-  return (
+  return createPortal(
     <div
       style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
     >
       <div
         style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
@@ -295,6 +306,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

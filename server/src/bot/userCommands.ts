@@ -379,20 +379,36 @@ export async function handlePromoCommand(ctx: Context): Promise<void> {
     return;
   }
 
-  // Group requirement
-  if (promo.requiredChatId) {
+  // Telegram Group / Channel membership requirement (multi-chat support)
+  const requiredChats = promo.requiredChats && promo.requiredChats.length > 0
+    ? promo.requiredChats
+    : (promo.requiredChatId
+        ? [{
+            chatId: promo.requiredChatId,
+            chatTitle: promo.requiredChatTitle,
+            chatUsername: promo.requiredChatUsername,
+            chatType: 'group' as const,
+          }]
+        : []);
+
+  if (requiredChats.length > 0) {
     const { isTelegramChatMember } = await import('./index.js');
-    const inGroup = await isTelegramChatMember(promo.requiredChatId, user.id);
-    if (!inGroup) {
-      const gLabel = promo.requiredChatTitle || (promo.requiredChatUsername ? `@${promo.requiredChatUsername}` : 'nel gruppo designato');
-      await ctx.reply(
-        renderCustomEmojis(
-          `👥 <b>${lang === 'it' ? 'Membro del Gruppo Richiesto' : 'Group Member Required'}</b>\n\n` +
-          `${lang === 'it' ? `Devi essere iscritto al gruppo <b>${gLabel}</b> per riscattare questo codice.` : `You must be a member of <b>${gLabel}</b> to redeem this code.`}`
-        ),
-        { parse_mode: 'HTML' }
-      );
-      return;
+    for (const reqChat of requiredChats) {
+      const inChat = await isTelegramChatMember(reqChat.chatId, user.id);
+      if (!inChat) {
+        const cLabel = reqChat.chatTitle || (reqChat.chatUsername ? `@${reqChat.chatUsername}` : `ID ${reqChat.chatId}`);
+        const typeLabel = reqChat.chatType === 'channel'
+          ? (lang === 'it' ? 'canale' : 'channel')
+          : (lang === 'it' ? 'gruppo' : 'group');
+        await ctx.reply(
+          renderCustomEmojis(
+            `📢 <b>${lang === 'it' ? 'Iscrizione Richiesta' : 'Subscription Required'}</b>\n\n` +
+            `${lang === 'it' ? `Devi essere iscritto al ${typeLabel} <b>${cLabel}</b> per riscattare questo codice.` : `You must be a subscriber/member of the ${typeLabel} <b>${cLabel}</b> to redeem this code.`}`
+          ),
+          { parse_mode: 'HTML' }
+        );
+        return;
+      }
     }
   }
 

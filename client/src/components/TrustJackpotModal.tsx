@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Trophy, Sparkles, X, Shield, ArrowRight, Flame, Lock, Users, Zap, CheckCircle2 } from 'lucide-react';
 import { GramIcon } from './GramIcon.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -22,6 +23,16 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
   const { t } = useI18n();
   const { isFullscreen, topInset } = useTelegramViewport();
 
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
@@ -30,10 +41,10 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
   const currentJackpotNum = parseFloat(jackpotGram || '5.00');
   const isActive = currentJackpotNum >= 5.0;
 
-  return (
+  return createPortal(
     <div
       style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200"
     >
       <div
         style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
@@ -215,6 +226,7 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -206,6 +206,13 @@ export interface SystemSettings {
   updatedAt: number;
 }
 
+export interface PromoRequiredChat {
+  chatId: string;
+  chatUsername?: string;
+  chatTitle?: string;
+  chatType?: 'group' | 'supergroup' | 'channel';
+}
+
 export interface PromoCode {
   id: string;
   code: string;
@@ -223,6 +230,7 @@ export interface PromoCode {
   requiredChatId?: string;
   requiredChatUsername?: string;
   requiredChatTitle?: string;
+  requiredChats?: PromoRequiredChat[];
   status: 'ACTIVE' | 'EXPIRED' | 'EXHAUSTED';
   createdAt: number;
   refundedAt?: number;
@@ -2414,6 +2422,7 @@ export class DatabaseService {
     requiredChatId?: string;
     requiredChatUsername?: string;
     requiredChatTitle?: string;
+    requiredChats?: PromoRequiredChat[];
   }): Promise<{ success: boolean; promoCode?: PromoCode; error?: string }> {
     const maxClaims = Math.max(1, Math.floor(Number(params.maxClaims) || 1));
     const gramPerClaimNum = parseFloat(String(params.gramPerClaim || '0'));
@@ -2476,6 +2485,20 @@ export class DatabaseService {
       ? Date.now() + Math.round(params.expiryHours * 3600 * 1000)
       : undefined;
 
+    // Handle required chats list
+    const requiredChats = params.requiredChats && params.requiredChats.length > 0
+      ? params.requiredChats
+      : (params.requiredChatId
+          ? [{
+              chatId: String(params.requiredChatId).trim(),
+              chatUsername: params.requiredChatUsername ? params.requiredChatUsername.replace(/^@/, '').trim() : undefined,
+              chatTitle: params.requiredChatTitle ? params.requiredChatTitle.trim() : undefined,
+              chatType: 'group' as const,
+            }]
+          : undefined);
+
+    const primaryChat = requiredChats && requiredChats.length > 0 ? requiredChats[0] : undefined;
+
     const promoCode: PromoCode = {
       id: `promo_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       code,
@@ -2490,9 +2513,10 @@ export class DatabaseService {
       remainingEscrowGram: totalCostStr,
       expiresAt,
       requiresPremium: !!params.requiresPremium,
-      requiredChatId: params.requiredChatId ? String(params.requiredChatId).trim() : undefined,
-      requiredChatUsername: params.requiredChatUsername ? params.requiredChatUsername.replace(/^@/, '').trim() : undefined,
-      requiredChatTitle: params.requiredChatTitle ? params.requiredChatTitle.trim() : undefined,
+      requiredChatId: primaryChat ? primaryChat.chatId : (params.requiredChatId ? String(params.requiredChatId).trim() : undefined),
+      requiredChatUsername: primaryChat?.chatUsername || (params.requiredChatUsername ? params.requiredChatUsername.replace(/^@/, '').trim() : undefined),
+      requiredChatTitle: primaryChat?.chatTitle || (params.requiredChatTitle ? params.requiredChatTitle.trim() : undefined),
+      requiredChats,
       status: 'ACTIVE',
       createdAt: Date.now(),
     };

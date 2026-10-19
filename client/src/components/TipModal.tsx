@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Coins, Send, X, AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { GramIcon } from './GramIcon.js';
 import { UserAvatar } from './UserAvatar.js';
@@ -122,9 +123,21 @@ export const TipModal: React.FC<TipModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#121422] border border-white/15 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden font-sans">
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
+      <div className="bg-[#121422] border border-white/15 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden font-sans max-h-[82dvh] sm:max-h-[82vh] overflow-y-auto my-auto scrollbar-thin">
         {/* Glow accent */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -288,6 +301,7 @@ export const TipModal: React.FC<TipModalProps> = ({
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Users, UserPlus, Swords, Coins, Check, X, Trash2, Search, Loader2, Sparkles, UserCheck, ArrowLeft, ChevronRight } from 'lucide-react';
 import { FriendUser, FriendRequestItem, GameType } from '../types/index.js';
 import { UserAvatar } from './UserAvatar.js';
@@ -174,9 +175,21 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
     );
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#121422] border border-white/15 w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col relative overflow-hidden font-sans">
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
+      <div className="bg-[#121422] border border-white/15 w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4 max-h-[82dvh] sm:max-h-[82vh] flex flex-col relative overflow-hidden font-sans my-auto">
         {/* Glow accent */}
         <div className="absolute top-0 right-0 w-36 h-36 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -598,6 +611,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

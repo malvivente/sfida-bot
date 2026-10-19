@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ShieldCheck, TrendingUp, Users, X, FileText, CheckCircle2 } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
@@ -16,15 +17,25 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
   const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<'fairplay' | 'fees' | 'affiliates'>('fairplay');
 
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const topOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 16;
   const bottomOffset = isFullscreen ? 24 : 16;
 
-  return (
+  return createPortal(
     <div
       style={{ paddingTop: `${topOffset}px`, paddingBottom: `${bottomOffset}px` }}
-      className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/85 backdrop-blur-md z-[9999] flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
     >
       <div
         style={{ maxHeight: `calc(100dvh - ${topOffset + bottomOffset}px)` }}
@@ -197,6 +208,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Gift,
@@ -33,6 +34,17 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rewardWon, setRewardWon] = useState<{ gram: string; newBalance?: string } | null>(null);
+
+  // Lock body scroll when modal is open to prevent background scrolling/shifting
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -122,9 +134,11 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-hidden animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#181c2b] via-[#121522] to-[#0d101a] border border-cyan-500/30 p-5 shadow-2xl flex flex-col space-y-4 overflow-hidden my-auto">
+  // Render modal into document.body using React Portal
+  // This guarantees 100% full-viewport coverage at (0,0) without being trapped in any page container or unblurred top headers!
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 select-none overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-sm max-h-[76dvh] sm:max-h-[76vh] rounded-3xl bg-gradient-to-b from-[#181c2b] via-[#121522] to-[#0d101a] border border-cyan-500/30 p-5 shadow-2xl flex flex-col space-y-4 overflow-y-auto my-auto scrollbar-thin">
         
         {/* Glow ambient effects */}
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" />
@@ -153,7 +167,7 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
               </p>
             </div>
 
-            {/* Input field (Paste button removed as requested; users can tap & paste directly) */}
+            {/* Input field */}
             <div className="space-y-2">
               <input
                 type="text"
@@ -234,6 +248,7 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
