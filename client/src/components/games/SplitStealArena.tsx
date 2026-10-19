@@ -109,10 +109,14 @@ export const SplitStealArena: React.FC<SplitStealArenaProps> = ({
   const hasChosenA = gameData?.hasChosenA ?? false;
   const hasChosenB = gameData?.hasChosenB ?? false;
   const outcome = gameData?.outcome;
-  const isUserStealWinner = role === 'player'
-    ? (isWinner !== undefined ? isWinner : ((outcome === 'P1_STEAL' && userSide === 'A') || (outcome === 'P2_STEAL' && userSide === 'B')))
-    : false;
-  const isUserStealLoser = role === 'player' && ((outcome === 'P1_STEAL' || outcome === 'P2_STEAL') && !isUserStealWinner);
+  const isUserStealWinner = role === 'player' && Boolean(
+    (outcome === 'P1_STEAL' && userSide === 'A') ||
+    (outcome === 'P2_STEAL' && userSide === 'B')
+  );
+  const isUserStealLoser = role === 'player' && Boolean(
+    (outcome === 'P1_STEAL' && userSide === 'B') ||
+    (outcome === 'P2_STEAL' && userSide === 'A')
+  );
   const stealWinnerName = outcome === 'P1_STEAL' ? playerAName : playerBName;
   const [liveJackpotFallback, setLiveJackpotFallback] = useState<number | null>(null);
 

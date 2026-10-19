@@ -326,6 +326,7 @@ export class SplitStealRoom extends BaseGameRoom {
       winnerAddress = this.playerA.walletAddress;
       winnerName = this.playerA.username;
       winningSpectatorSide = 'A';
+      this.winnerAddress = winnerAddress;
 
       // Credit winner with full pot
       await dbService.creditUserBalance(
@@ -394,6 +395,7 @@ export class SplitStealRoom extends BaseGameRoom {
       winnerAddress = this.playerB?.walletAddress || '';
       winnerName = this.playerB?.username || 'Player B';
       winningSpectatorSide = 'B';
+      this.winnerAddress = winnerAddress;
 
       // Credit winner with full pot
       await dbService.creditUserBalance(
@@ -832,6 +834,7 @@ export class SplitStealRoom extends BaseGameRoom {
       choiceA: this.choiceA,
       choiceB: this.choiceB,
       outcome: this.outcome,
+      winnerSide: winningSpectatorSide,
       jackpotGram: this.jackpotGram,
       jackpotStatus: this.jackpotStatus,
       bonusAwardedGram: this.bonusAwardedGram,
@@ -844,6 +847,7 @@ export class SplitStealRoom extends BaseGameRoom {
       type: 'MATCH_SETTLED',
       winnerAddress,
       winnerName,
+      winnerSide: winningSpectatorSide,
       resolution: this.resolution,
       scoreA: pA === 'STEAL' ? 1 : 0,
       scoreB: pB === 'STEAL' ? 1 : 0,
