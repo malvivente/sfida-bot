@@ -16,6 +16,19 @@ export class PotManager {
 
     if (investments.length === 0) return [];
 
+    const totalPot = investments.reduce((sum, v) => sum + v, 0);
+
+    // If no active player is All-In, there are no side pots (all non-folded players contest the full pot)
+    const hasAllIn = seats.some((s) => s.isAllIn && s.totalInvestedThisHand > 0);
+    if (!hasAllIn) {
+      return [
+        {
+          amount: totalPot,
+          eligibleSeats: seats.filter((s) => !s.hasFolded).map((s) => s.seatIndex),
+        },
+      ];
+    }
+
     const uniqueThresholds = Array.from(new Set(investments)).sort((a, b) => a - b);
     const pots: PokerPot[] = [];
     let previousThreshold = 0;
@@ -27,12 +40,22 @@ export class PotManager {
       const contributors = seats.filter((s) => s.totalInvestedThisHand >= threshold);
       const tierAmount = contributors.length * tierDelta;
 
+      // In Texas Hold'em: if only 1 contributor reached this tier, it's an uncalled bet.
+      // Uncalled chips cannot form a pot; they are returned to the bettor.
+      if (contributors.length === 1) {
+        const uncalledSeat = contributors[0];
+        uncalledSeat.chips += tierAmount;
+        uncalledSeat.totalInvestedThisHand -= tierAmount;
+        previousThreshold = threshold;
+        continue;
+      }
+
       // Eligible players are those who contributed to this tier and did NOT fold
       const eligibleSeats = contributors
         .filter((s) => !s.hasFolded)
         .map((s) => s.seatIndex);
 
-      if (tierAmount > 0) {
+      if (tierAmount > 0 && eligibleSeats.length > 0) {
         pots.push({
           amount: tierAmount,
           eligibleSeats,

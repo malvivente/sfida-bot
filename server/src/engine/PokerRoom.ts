@@ -54,6 +54,20 @@ export class PokerRoom extends BaseGameRoom {
   public turnTimeRemaining: number = ACTION_TIMEOUT_SECONDS;
   private actionTimer?: NodeJS.Timeout;
   private actionInterval?: NodeJS.Timeout;
+  private streetTimer?: NodeJS.Timeout;
+  private finishHandTimer?: NodeJS.Timeout;
+
+  private clearAllTimers() {
+    this.clearActionTimers();
+    if (this.streetTimer) {
+      clearTimeout(this.streetTimer);
+      this.streetTimer = undefined;
+    }
+    if (this.finishHandTimer) {
+      clearTimeout(this.finishHandTimer);
+      this.finishHandTimer = undefined;
+    }
+  }
 
   public handWinners?: {
     seatIndex: number;
@@ -180,6 +194,9 @@ export class PokerRoom extends BaseGameRoom {
     ) {
       this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName);
       this.syncSeatConnection(0, this.playerA, ws);
+      if (this.state === 'GAME_ACTIVE' && this.activeSeat !== null && !this.actionTimer) {
+        this.startActionTimer();
+      }
       return true;
     }
 
@@ -191,6 +208,9 @@ export class PokerRoom extends BaseGameRoom {
     ) {
       this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
       this.syncSeatConnection(1, this.playerB, ws);
+      if (this.state === 'GAME_ACTIVE' && this.activeSeat !== null && !this.actionTimer) {
+        this.startActionTimer();
+      }
       return true;
     }
 
@@ -347,7 +367,7 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   private startNewHand() {
-    this.clearActionTimers();
+    this.clearAllTimers();
 
     const activePlayers = this.getActiveSeatedPlayers();
     if (activePlayers.length <= 1) {
@@ -591,9 +611,18 @@ export class PokerRoom extends BaseGameRoom {
 
       case 'bet':
       case 'raise': {
+        const otherActive = this.seats.filter(
+          (s) => s.seatIndex !== seatIndex && !s.eliminated && !s.hasFolded
+        );
+        const maxOpponentReach =
+          otherActive.length > 0
+            ? Math.max(...otherActive.map((s) => s.currentBet + s.chips))
+            : seat.currentBet + seat.chips;
+
         const requested = Number(rawAmount) || this.minRaise;
-        const targetBet = Math.min(seat.currentBet + seat.chips, Math.max(this.minRaise, requested));
-        const added = targetBet - seat.currentBet;
+        const boundedRequested = Math.min(seat.currentBet + seat.chips, Math.max(this.minRaise, requested));
+        const targetBet = Math.min(boundedRequested, maxOpponentReach);
+        const added = Math.min(seat.chips, targetBet - seat.currentBet);
 
         seat.chips -= added;
         seat.currentBet = targetBet;
@@ -620,23 +649,39 @@ export class PokerRoom extends BaseGameRoom {
       }
 
       case 'all_in': {
-        const allInTotal = seat.currentBet + seat.chips;
-        const added = seat.chips;
-        seat.chips = 0;
-        seat.isAllIn = true;
-        seat.currentBet = allInTotal;
+        const otherActive = this.seats.filter(
+          (s) => s.seatIndex !== seatIndex && !s.eliminated && !s.hasFolded
+        );
+        const maxOpponentReach =
+          otherActive.length > 0
+            ? Math.max(...otherActive.map((s) => s.currentBet + s.chips))
+            : seat.currentBet + seat.chips;
+
+        const effectiveTarget = Math.min(seat.currentBet + seat.chips, maxOpponentReach);
+        const added = Math.min(seat.chips, effectiveTarget - seat.currentBet);
+
+        seat.chips -= added;
+        seat.currentBet = effectiveTarget;
         seat.totalInvestedThisHand += added;
         this.pot += added;
 
-        if (allInTotal > this.currentBet) {
-          const raiseDelta = allInTotal - this.currentBet;
-          this.minRaise = allInTotal + Math.max(this.bigBlind, raiseDelta);
-          this.currentBet = allInTotal;
+        if (seat.chips === 0) {
+          seat.isAllIn = true;
+        }
+
+        if (effectiveTarget > this.currentBet) {
+          const raiseDelta = effectiveTarget - this.currentBet;
+          this.minRaise = effectiveTarget + Math.max(this.bigBlind, raiseDelta);
+          this.currentBet = effectiveTarget;
           this.lastBettorSeat = seatIndex;
           this.playersActedThisRound.clear();
         }
 
-        seat.lastAction = { type: 'ALL_IN', amount: allInTotal, message: `All-In ${allInTotal}` };
+        seat.lastAction = {
+          type: 'ALL_IN',
+          amount: effectiveTarget,
+          message: seat.chips === 0 ? `All-In ${effectiveTarget}` : `Raise ${effectiveTarget}`,
+        };
         this.playersActedThisRound.add(seatIndex);
         break;
       }
@@ -722,7 +767,9 @@ export class PokerRoom extends BaseGameRoom {
 
     // If fewer than 2 players can still take action (e.g. all-in), auto-run to next street after a suspense delay
     if (actionable.length < 2) {
-      setTimeout(() => {
+      if (this.streetTimer) clearTimeout(this.streetTimer);
+      this.streetTimer = setTimeout(() => {
+        this.streetTimer = undefined;
         this.advanceStreet();
       }, 1600);
       return;
@@ -736,6 +783,10 @@ export class PokerRoom extends BaseGameRoom {
   private handleShowdown() {
     this.stage = 'SHOWDOWN';
     this.clearActionTimers();
+    this.activeSeat = null;
+    for (const s of this.seats) {
+      s.isTurn = false;
+    }
 
     const contenders = this.seats.filter((s) => !s.eliminated && !s.hasFolded);
 
@@ -768,7 +819,9 @@ export class PokerRoom extends BaseGameRoom {
     this.broadcastShowdown();
 
     // Celebration pause before hand wrap-up / elimination
-    setTimeout(() => {
+    if (this.finishHandTimer) clearTimeout(this.finishHandTimer);
+    this.finishHandTimer = setTimeout(() => {
+      this.finishHandTimer = undefined;
       this.finishHand();
     }, 4500);
   }
@@ -776,6 +829,10 @@ export class PokerRoom extends BaseGameRoom {
   private handleSingleWinner(winnerSeat: PokerPlayerSeat) {
     this.stage = 'HAND_OVER';
     this.clearActionTimers();
+    this.activeSeat = null;
+    for (const s of this.seats) {
+      s.isTurn = false;
+    }
 
     winnerSeat.chips += this.pot;
     this.handWinners = [
@@ -788,12 +845,15 @@ export class PokerRoom extends BaseGameRoom {
 
     this.broadcastState();
 
-    setTimeout(() => {
+    if (this.finishHandTimer) clearTimeout(this.finishHandTimer);
+    this.finishHandTimer = setTimeout(() => {
+      this.finishHandTimer = undefined;
       this.finishHand();
     }, 2500);
   }
 
   private finishHand() {
+    if (this.state !== 'GAME_ACTIVE') return;
     // Check for busted players
     for (const seat of this.seats) {
       if (!seat.eliminated && seat.chips <= 0) {
@@ -982,19 +1042,35 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   public override handleDisconnect(wallet: string, ws: WebSocket, telegramId?: string) {
-    super.handleDisconnect(wallet, ws, telegramId);
-
     const seatIdx = this.seats.findIndex((s) => this.isSameWallet(s.walletAddress, wallet));
     if (seatIdx !== -1) {
       this.seats[seatIdx].isConnected = false;
-      // If it's this player's turn when disconnected, trigger check/fold
-      if (this.activeSeat === seatIdx && this.state === 'GAME_ACTIVE') {
-        this.handleActionTimeout();
+    }
+
+    if (this.state === 'GAME_ACTIVE') {
+      if (this.maxPlayers === 2) {
+        // In 2-player Heads-Up: strictly activate the 15-second forfeit countdown grace period
+        // Pause active turn timers while waiting for reconnection
+        this.clearActionTimers();
+        super.handleDisconnect(wallet, ws, telegramId);
+        return;
+      } else {
+        // Multi-player tournament: check if only 1 connected contender remains
+        const activeConnected = this.seats.filter((s) => !s.eliminated && s.isConnected);
+        if (activeConnected.length <= 1) {
+          this.clearActionTimers();
+          super.handleDisconnect(wallet, ws, telegramId);
+          return;
+        }
+
+        // Multiple players still active: let turn timer run its normal course then auto-check/fold
       }
+    } else {
+      super.handleDisconnect(wallet, ws, telegramId);
     }
   }
 
   public cleanupGameTimers(): void {
-    this.clearActionTimers();
+    this.clearAllTimers();
   }
 }

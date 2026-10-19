@@ -13,6 +13,7 @@ import {
   Check,
   X,
   ChevronUp,
+  WifiOff,
 } from 'lucide-react';
 import {
   PokerState,
@@ -149,6 +150,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
   hasPlayerB,
   onJoinAsPlayer,
   onInviteChallenger,
+  forfeitCountdown,
 }) => {
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
@@ -196,9 +198,16 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
   }, [gameData, heroSeat]);
 
   const maxLegalRaise = useMemo(() => {
-    if (!heroSeat) return 0;
-    return heroSeat.currentBet + heroSeat.chips;
-  }, [heroSeat]);
+    if (!heroSeat || !gameData) return 0;
+    const otherSeats = (gameData.seats || []).filter(
+      (s) => s.seatIndex !== heroSeat.seatIndex && !s.eliminated && !s.hasFolded
+    );
+    const maxOpponentReach =
+      otherSeats.length > 0
+        ? Math.max(...otherSeats.map((s) => s.currentBet + s.chips))
+        : heroSeat.currentBet + heroSeat.chips;
+    return Math.min(heroSeat.currentBet + heroSeat.chips, maxOpponentReach);
+  }, [heroSeat, gameData]);
 
   // Sync custom raise slider when it's hero turn
   useEffect(() => {
@@ -544,8 +553,8 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                 </div>
               </div>
 
-              {/* Side Pots if active */}
-              {gameData.sidePots && gameData.sidePots.length > 1 && (
+              {/* Side Pots only when someone is All-In */}
+              {gameData.sidePots && gameData.sidePots.length > 1 && gameData.seats.some((s) => s.isAllIn) && (
                 <div className="flex space-x-1.5 text-[9px] text-amber-200/80 font-mono">
                   {gameData.sidePots.slice(1).map((sp, idx) => (
                     <span key={idx} className="px-1.5 py-0.2 rounded bg-black/50 border border-white/10">
@@ -590,17 +599,21 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     exit={{ scale: 0.8, opacity: 0 }}
                     className="p-2 rounded-2xl bg-gradient-to-r from-amber-500 via-emerald-600 to-amber-500 text-slate-950 border border-white/40 shadow-xl text-center max-w-[280px]"
                   >
-                    <div className="text-[10px] font-heading font-black uppercase tracking-wider">
-                      🏆 {gameData.handWinners[0].username} VINCE!
-                    </div>
-                    {gameData.handWinners[0].rankName && (
-                      <div className="text-xs font-heading font-black">
-                        {gameData.handWinners[0].rankName}
+                    {gameData.handWinners.map((hw, idx) => (
+                      <div key={idx} className={idx > 0 ? "pt-1 border-t border-slate-900/20" : ""}>
+                        <div className="text-[10px] font-heading font-black uppercase tracking-wider">
+                          🏆 {hw.username} VINCE!
+                        </div>
+                        {hw.rankName && (
+                          <div className="text-xs font-heading font-black">
+                            {hw.rankName}
+                          </div>
+                        )}
+                        <div className="text-[10px] font-mono font-bold">
+                          +{hw.amount.toLocaleString()} chips
+                        </div>
                       </div>
-                    )}
-                    <div className="text-[10px] font-mono font-bold">
-                      +{gameData.handWinners[0].amount.toLocaleString()} chips
-                    </div>
+                    ))}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -771,7 +784,11 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-center text-xs text-slate-400 flex items-center justify-center space-x-2">
                 <Clock className="w-3.5 h-3.5 text-slate-500 animate-spin" />
                 <span>
-                  {heroSeat?.hasFolded
+                  {gameData.stage === 'SHOWDOWN'
+                    ? "Showdown! Assegnazione del piatto in corso..."
+                    : gameData.stage === 'HAND_OVER'
+                    ? "Mano conclusa! Preparazione della prossima mano..."
+                    : heroSeat?.hasFolded
                     ? "Hai foldato questa mano. In attesa della prossima mano..."
                     : heroSeat?.isAllIn
                     ? "Sei in All-In! Attendiamo lo Showdown..."
@@ -821,6 +838,36 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* In-Game Disconnect & Forfeit Countdown Popup */}
+      {role === 'player' && roomState === 'GAME_ACTIVE' && typeof forfeitCountdown === 'number' && forfeitCountdown > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-500/70 shadow-[0_0_40px_rgba(245,158,11,0.35)] flex flex-col items-center text-center space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center animate-pulse">
+              <WifiOff className="w-7 h-7 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-heading font-black text-amber-400 tracking-wider uppercase">
+                {t('arena.opponentDisconnectedTitle')}
+              </h3>
+              <p className="text-xs text-slate-300 pt-1">
+                {t('arena.opponentDisconnectedDesc')}
+              </p>
+            </div>
+            <div className="w-full py-3 px-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex flex-col items-center justify-center">
+              <span className="text-[10px] font-heading font-bold text-amber-300 uppercase tracking-widest mb-0.5">
+                {t('arena.forfeitCountdownNotice')}
+              </span>
+              <span className="text-4xl font-mono font-black text-white tracking-widest animate-pulse">
+                00:{forfeitCountdown < 10 ? `0${forfeitCountdown}` : forfeitCountdown}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              {t('arena.forfeitRuleInfo')}
+            </p>
+          </div>
         </div>
       )}
     </div>
