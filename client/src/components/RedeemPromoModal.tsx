@@ -3,7 +3,6 @@ import {
   X,
   Gift,
   Sparkles,
-  Clipboard,
   Check,
   AlertTriangle,
   Loader2,
@@ -37,15 +36,26 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handlePaste = async () => {
-    try {
-      triggerImpact('light');
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        setCode(text.trim().toUpperCase());
-      }
-    } catch {
-      // Clipboard permissions denied fallback
+  const resolveErrorMessage = (errCode: string, serverMessage?: string): string => {
+    switch (errCode) {
+      case 'NOT_FOUND':
+        return t('promo.errNotFound');
+      case 'EXPIRED':
+        return t('promo.errExpired');
+      case 'EXHAUSTED':
+        return t('promo.errExhausted');
+      case 'SELF_REDEEM':
+        return t('promo.errSelfRedeem');
+      case 'ALREADY_REDEEMED':
+        return t('promo.errAlreadyRedeemed');
+      case 'PREMIUM_REQUIRED':
+        return t('promo.errPremiumRequired');
+      case 'TELEGRAM_REQUIRED':
+        return t('promo.errTelegramRequired');
+      case 'NOT_IN_GROUP':
+        return serverMessage || t('promo.errNotInGroup');
+      default:
+        return serverMessage || t('promo.errGeneric');
     }
   };
 
@@ -81,7 +91,7 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || data.error || 'Impossibile riscattare il codice');
+        throw new Error(resolveErrorMessage(data.error, data.message));
       }
 
       triggerImpact('heavy');
@@ -98,7 +108,7 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
         onSuccess(data.gramAwarded, data.newBalance);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Errore imprevisto durante il riscatto');
+      setErrorMsg(err.message || t('promo.errGeneric'));
       triggerImpact('heavy');
     } finally {
       setIsSubmitting(false);
@@ -113,8 +123,8 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#181c2b] via-[#121522] to-[#0d101a] border border-cyan-500/30 p-5 shadow-2xl flex flex-col space-y-4">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#181c2b] via-[#121522] to-[#0d101a] border border-cyan-500/30 p-5 shadow-2xl flex flex-col space-y-4 overflow-hidden my-auto">
         
         {/* Glow ambient effects */}
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" />
@@ -143,25 +153,15 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
               </p>
             </div>
 
-            {/* Input field with Paste Button */}
+            {/* Input field (Paste button removed as requested; users can tap & paste directly) */}
             <div className="space-y-2">
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder={t('promo.codeInputPlaceholder')}
-                  className="w-full bg-black/50 border border-white/20 focus:border-cyan-400 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 font-mono font-bold uppercase tracking-wider focus:outline-none pr-24"
-                />
-                <button
-                  type="button"
-                  onClick={handlePaste}
-                  className="absolute right-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-slate-300 font-heading font-bold text-xs flex items-center space-x-1 active:scale-95 transition-all"
-                >
-                  <Clipboard className="w-3.5 h-3.5" />
-                  <span>{t('promo.pasteBtn')}</span>
-                </button>
-              </div>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder={t('promo.codeInputPlaceholder')}
+                className="w-full bg-black/50 border border-white/20 focus:border-cyan-400 rounded-2xl px-4 py-3 text-center text-sm text-white placeholder-slate-500 font-mono font-bold uppercase tracking-wider focus:outline-none"
+              />
 
               {/* Error Message */}
               {errorMsg && (
@@ -185,7 +185,7 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                  <span>VERIFICA IN CORSO...</span>
+                  <span>{t('promo.verifyingStatus')}</span>
                 </>
               ) : (
                 <>
@@ -214,7 +214,7 @@ export const RedeemPromoModal: React.FC<RedeemPromoModalProps> = ({
             {/* Award Banner */}
             <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
               <span className="text-[10px] font-heading font-bold text-emerald-300 uppercase tracking-widest block mb-1">
-                PREMIO RISCATTATO
+                {t('promo.rewardRedeemedLabel')}
               </span>
               <div className="text-3xl font-heading font-black text-white flex items-center justify-center space-x-1.5">
                 <span>+{rewardWon.gram}</span>

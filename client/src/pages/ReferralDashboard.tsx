@@ -479,7 +479,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({
                       isCopied ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400 text-emerald-200 text-[10px] font-heading font-bold flex items-center space-x-1 animate-pulse">
                           <Check className="w-3 h-3" />
-                          <span>COPIATO!</span>
+                          <span>{t('promo.copiedLabel')}</span>
                         </span>
                       ) : (
                         <span className="p-1 rounded-lg bg-white/10 text-emerald-300 group-hover:bg-emerald-400/20 transition-colors">
@@ -516,14 +516,14 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({
                     {promo.requiresPremium && (
                       <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 font-heading font-bold flex items-center space-x-1">
                         <Crown className="w-3 h-3" />
-                        <span>PREMIUM</span>
+                        <span>{t('promo.badgePremiumShort')}</span>
                       </span>
                     )}
                     {(promo.requiredChatTitle || promo.requiredChatUsername || promo.requiredChatId) && (
                       <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 font-heading font-bold flex items-center space-x-1">
                         <Users className="w-3 h-3" />
                         <span className="truncate max-w-[120px]">
-                          {promo.requiredChatUsername ? `@${promo.requiredChatUsername}` : (promo.requiredChatTitle || 'Gruppo')}
+                          {promo.requiredChatUsername ? `@${promo.requiredChatUsername}` : (promo.requiredChatTitle || t('promo.badgeGroup'))}
                         </span>
                       </span>
                     )}
