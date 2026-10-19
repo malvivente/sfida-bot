@@ -772,6 +772,7 @@ export const translations: Translations = {
   'promo.botNotInGroupAlert': { it: 'Il bot non è presente nel gruppo. Aggiungilo per convalidare il riscatto.', en: 'Bot is not in the group. Add it to validate redemptions.' },
   'promo.botNotFoundAlert': { it: 'Canale o gruppo non trovato o non accessibile dal bot.', en: 'Channel or group not found or inaccessible by the bot.' },
   'promo.chatAlreadyAdded': { it: 'Questa chat è già presente nella lista.', en: 'This chat is already in the list.' },
+  'promo.noChatsAdded': { it: 'Nessuna chat aggiunta. Inserisci almeno un canale o gruppo.', en: 'No chats added. Enter at least one channel or group.' },
   'promo.retryVerify': { it: 'Riprova', en: 'Retry' },
   'promo.removeChat': { it: 'Rimuovi', en: 'Remove' },
   'promo.unverifiedChatsAlert': { it: 'Ci sono chat non ancora verificate. Riprova la verifica o rimuovile per procedere.', en: 'There are unverified chats. Retry verification or remove them to proceed.' },

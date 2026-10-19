@@ -509,12 +509,12 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                         triggerImpact('light');
                         setHasExpiry(!hasExpiry);
                       }}
-                      className={`w-9 h-4.5 rounded-full transition-colors relative ${
+                      className={`w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
                         hasExpiry ? 'bg-emerald-500' : 'bg-white/20'
                       }`}
                     >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                        hasExpiry ? 'translate-x-4.5' : 'translate-x-0.5'
+                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        hasExpiry ? 'translate-x-4' : 'translate-x-0'
                       }`} />
                     </button>
                   </div>
@@ -567,12 +567,12 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                       triggerImpact('light');
                       setRequiresPremium(!requiresPremium);
                     }}
-                    className={`w-9 h-4.5 rounded-full transition-colors relative shrink-0 ${
+                    className={`w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
                       requiresPremium ? 'bg-amber-500' : 'bg-white/20'
                     }`}
                   >
-                    <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                      requiresPremium ? 'translate-x-4.5' : 'translate-x-0.5'
+                    <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                      requiresPremium ? 'translate-x-4' : 'translate-x-0'
                     }`} />
                   </button>
                 </div>
@@ -597,12 +597,12 @@ export const CreatePromoModal: React.FC<CreatePromoModalProps> = ({
                         triggerImpact('light');
                         setHasRequiredChats(!hasRequiredChats);
                       }}
-                      className={`w-9 h-4.5 rounded-full transition-colors relative shrink-0 ${
+                      className={`w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5 shrink-0 ${
                         hasRequiredChats ? 'bg-cyan-500' : 'bg-white/20'
                       }`}
                     >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                        hasRequiredChats ? 'translate-x-4.5' : 'translate-x-0.5'
+                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        hasRequiredChats ? 'translate-x-4' : 'translate-x-0'
                       }`} />
                     </button>
                   </div>
