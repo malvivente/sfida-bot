@@ -13,10 +13,11 @@ import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
 import { DepositModal } from '../components/DepositModal.js';
+import { CoinTossOverlay } from '../components/CoinTossOverlay.js';
 import { useSocket } from '../hooks/useSocket.js';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
-import { MatchData, UserBalance, FeeConfig, GameType } from '../types/index.js';
+import { MatchData, UserBalance, FeeConfig, GameType, CoinTossData } from '../types/index.js';
 import { Address } from '@ton/ton';
 import { areAddressesEqual } from '../utils/ton.js';
 import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2, Swords, X, Target } from 'lucide-react';
@@ -90,6 +91,7 @@ export const Arena: React.FC<ArenaProps> = ({
   const [isCancelling, setIsCancelling] = useState(false);
   const isJoiningMatchRef = useRef(false);
   const deepMatchesJoinedRef = useRef<Set<string>>(new Set());
+  const [seenCoinTossKey, setSeenCoinTossKey] = useState<string | null>(null);
 
   // In-bot balance & fee configuration
   const [userBalance, setUserBalance] = useState<UserBalance | null>(() => {
@@ -845,6 +847,29 @@ export const Arena: React.FC<ArenaProps> = ({
           : playerB_Name
       ) : (isUserWinner ? (userSide === 'A' ? playerA_Name : playerB_Name) : undefined)
     )
+  );
+
+  const isTurnBasedGame = (
+    effectiveGameType === 'roulette' ||
+    effectiveGameType === 'shotgun' ||
+    effectiveGameType === 'connect4' ||
+    effectiveGameType === 'blackjack' ||
+    effectiveGameType === 'bridge'
+  );
+
+  const rawCoinToss = socketData.gameData?.coinToss as CoinTossData | undefined;
+  const currentTossKey = rawCoinToss?.timestamp
+    ? `${activeMatchId}_${rawCoinToss.timestamp}`
+    : (socketData.roomState === 'GAME_ACTIVE' && isTurnBasedGame && rawCoinToss ? `${activeMatchId}_active` : null);
+
+  const isTossStale = rawCoinToss?.timestamp ? (Date.now() - rawCoinToss.timestamp > 12000) : false;
+  const shouldShowCoinToss = Boolean(
+    isTurnBasedGame &&
+    (socketData.roomState === 'GAME_ACTIVE' || socketData.roomState === 'ROUND_START') &&
+    currentTossKey &&
+    seenCoinTossKey !== currentTossKey &&
+    rawCoinToss &&
+    !isTossStale
   );
 
   const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
@@ -1829,6 +1854,20 @@ export const Arena: React.FC<ArenaProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Coin Toss Overlay for Turn-Based Games */}
+      {shouldShowCoinToss && rawCoinToss && (
+        <CoinTossOverlay
+          coinToss={rawCoinToss}
+          playerAName={playerA_Name}
+          playerBName={playerB_Name}
+          userSide={userSide}
+          role={effectiveRole}
+          onComplete={() => {
+            if (currentTossKey) setSeenCoinTossKey(currentTossKey);
+          }}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { Connect4State, Connect4Cell } from '../types/gameTypes.js';
+import { Connect4State, Connect4Cell, CoinTossData } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
 
 const ROWS = 6;
@@ -106,6 +106,8 @@ export class Connect4Room extends BaseGameRoom {
     super(config, 'connect4', onSettled);
   }
 
+  public coinToss?: CoinTossData;
+
   public getGamePayload(): Connect4State {
     return {
       board: this.board.map((row) => [...row]),
@@ -114,6 +116,7 @@ export class Connect4Room extends BaseGameRoom {
       lastMove: this.lastMove,
       winningLine: this.winningLine,
       isDraw: this.isDraw,
+      coinToss: this.coinToss,
     };
   }
 
@@ -129,6 +132,15 @@ export class Connect4Room extends BaseGameRoom {
     this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
     const activePlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
+    this.coinToss = {
+      playerASide: 'HEADS',
+      playerBSide: 'TAILS',
+      winningFace: this.currentTurn === 'A' ? 'HEADS' : 'TAILS',
+      starterSide: this.currentTurn,
+      starterName: activePlayerName,
+      timestamp: Date.now(),
+    };
+
     this.broadcast({
       type: 'CONNECT4_START',
       message: `🔴🔵 Forza 4 Board Ready! ${activePlayerName} has the first move. Align 4 to win!`,
@@ -142,6 +154,7 @@ export class Connect4Room extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
+    const extraDelay = this.movesCount === 0 ? 3200 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[Connect4] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-dropping into valid column.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
@@ -156,7 +169,7 @@ export class Connect4Room extends BaseGameRoom {
         const randomCol = availableCols[Math.floor(Math.random() * availableCols.length)];
         this.handleDrop(activeWallet, randomCol);
       }
-    }, GAMES_CONFIG.connect4.turnTimeoutSeconds * 1000);
+    }, GAMES_CONFIG.connect4.turnTimeoutSeconds * 1000 + extraDelay);
   }
 
   public handleGameAction(wallet: string, data: any) {

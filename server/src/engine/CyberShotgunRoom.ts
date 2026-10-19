@@ -1,5 +1,5 @@
 import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { CyberShotgunState, ShotgunItem, ShellType, ShotgunTarget } from '../types/gameTypes.js';
+import { CyberShotgunState, ShotgunItem, ShellType, ShotgunTarget, CoinTossData } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
 
 const AVAILABLE_ITEMS: ShotgunItem[] = ['saw', 'ejector', 'handcuffs', 'inverter'];
@@ -33,6 +33,7 @@ export class CyberShotgunRoom extends BaseGameRoom {
 
   public lastAction?: CyberShotgunState['lastAction'];
   public mancheNumber: number = 0;
+  public coinToss?: CoinTossData;
   private actionCounter: number = 0;
 
   private turnTimeout?: NodeJS.Timeout;
@@ -63,6 +64,7 @@ export class CyberShotgunRoom extends BaseGameRoom {
       itemsB: [...this.itemsB],
       lastAction: this.lastAction,
       mancheNumber: this.mancheNumber,
+      coinToss: this.coinToss,
     };
   }
 
@@ -82,11 +84,20 @@ export class CyberShotgunRoom extends BaseGameRoom {
 
     // Random coin toss for first turn
     this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
+    const activePlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+
+    this.coinToss = {
+      playerASide: 'HEADS',
+      playerBSide: 'TAILS',
+      winningFace: this.currentTurn === 'A' ? 'HEADS' : 'TAILS',
+      starterSide: this.currentTurn,
+      starterName: activePlayerName,
+      timestamp: Date.now(),
+    };
 
     // Load initial magazine
     this.loadNewMagazine();
 
-    const activePlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
     const live = this.shells.filter((s) => s === 'LIVE').length;
     const blank = this.shells.filter((s) => s === 'BLANK').length;
 
@@ -140,11 +151,12 @@ export class CyberShotgunRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
+    const extraDelay = this.mancheNumber === 1 && !this.lastAction ? 3200 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[CyberShotgun] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-shooting opponent.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
       this.handleShoot(activeWallet, 'opponent');
-    }, GAMES_CONFIG.shotgun.turnTimeoutSeconds * 1000);
+    }, GAMES_CONFIG.shotgun.turnTimeoutSeconds * 1000 + extraDelay);
   }
 
   public handleGameAction(wallet: string, data: any) {

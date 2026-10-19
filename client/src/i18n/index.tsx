@@ -441,6 +441,18 @@ export const translations: Translations = {
   'arena.acceptAndEnter': { it: 'Accetta', en: 'Accept' },
   'arena.declineInvite': { it: 'Rifiuta', en: 'Decline' },
 
+  // Coin Toss Overlay Translations
+  'coinToss.title': { it: 'LANCIO DELLA MONETA', en: 'COIN TOSS' },
+  'coinToss.subtitle': { it: 'Sorteggio della prima mossa', en: 'Toss for the first move' },
+  'coinToss.heads': { it: 'TESTA', en: 'HEADS' },
+  'coinToss.tails': { it: 'CROCE', en: 'TAILS' },
+  'coinToss.youAre': { it: 'TU SEI', en: 'YOU ARE' },
+  'coinToss.headsWon': { it: 'È USCITA TESTA!', en: 'HEADS WON!' },
+  'coinToss.tailsWon': { it: 'È USCITA CROCE!', en: 'TAILS WON!' },
+  'coinToss.youStart': { it: 'HAI VINTO IL SORTEGGIO! Tocca a te iniziare!', en: 'YOU WON THE TOSS! You make the first move!' },
+  'coinToss.opponentStarts': { it: '{name} ha vinto il sorteggio e inizia per primo!', en: '{name} won the toss and moves first!' },
+  'coinToss.spectatorStarts': { it: '{name} ha vinto il sorteggio e gioca per primo.', en: '{name} won the toss and plays first.' },
+
   // Cyber Shotgun Arena Translations
   'shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },
   'shotgun.liveShells': { it: 'Vere', en: 'Live' },

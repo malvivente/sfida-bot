@@ -1,5 +1,5 @@
 import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { GlassBridgeState, BridgeTileChoice } from '../types/gameTypes.js';
+import { GlassBridgeState, BridgeTileChoice, CoinTossData } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
 
 export class GlassBridgeRoom extends BaseGameRoom {
@@ -13,6 +13,7 @@ export class GlassBridgeRoom extends BaseGameRoom {
   public passesRemainingB: number = 1;
   public revealedSteps: Record<number, BridgeTileChoice> = {};
   public lastOutcome?: GlassBridgeState['lastOutcome'];
+  public coinToss?: CoinTossData;
 
   private turnTimeout?: NodeJS.Timeout;
 
@@ -43,6 +44,7 @@ export class GlassBridgeRoom extends BaseGameRoom {
       passesRemainingB: this.passesRemainingB,
       revealedSteps: this.revealedSteps,
       lastOutcome: this.lastOutcome,
+      coinToss: this.coinToss,
     };
   }
 
@@ -62,6 +64,15 @@ export class GlassBridgeRoom extends BaseGameRoom {
 
     const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
 
+    this.coinToss = {
+      playerASide: 'HEADS',
+      playerBSide: 'TAILS',
+      winningFace: this.currentTurn === 'A' ? 'HEADS' : 'TAILS',
+      starterSide: this.currentTurn,
+      starterName: firstPlayerName,
+      timestamp: Date.now(),
+    };
+
     this.broadcast({
       type: 'BRIDGE_START',
       message: `🪙 Coin Toss: ${firstPlayerName} takes the first leap across the Glass Bridge!`,
@@ -75,11 +86,12 @@ export class GlassBridgeRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
+    const extraDelay = this.currentStepA === 0 && this.currentStepB === 0 ? 3200 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[GlassBridge] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-step LEFT.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
       this.handleBridgeStep(activeWallet, 'LEFT');
-    }, GAMES_CONFIG.bridge.turnTimeoutSeconds * 1000);
+    }, GAMES_CONFIG.bridge.turnTimeoutSeconds * 1000 + extraDelay);
   }
 
   public handleGameAction(wallet: string, data: any) {

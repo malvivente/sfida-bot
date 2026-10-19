@@ -1,5 +1,5 @@
 import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { RouletteState, RouletteTarget } from '../types/gameTypes.js';
+import { RouletteState, RouletteTarget, CoinTossData } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
 
 export class RussianRouletteRoom extends BaseGameRoom {
@@ -9,6 +9,7 @@ export class RussianRouletteRoom extends BaseGameRoom {
   public offensiveShotsA: number = 1;
   public offensiveShotsB: number = 1;
   public lastOutcome?: RouletteState['lastOutcome'];
+  public coinToss?: CoinTossData;
 
   private turnTimeout?: NodeJS.Timeout;
 
@@ -29,6 +30,7 @@ export class RussianRouletteRoom extends BaseGameRoom {
       offensiveShotsB: this.offensiveShotsB,
       lethalOddsPercent: lethalOdds,
       lastOutcome: this.lastOutcome,
+      coinToss: this.coinToss,
     };
   }
 
@@ -39,9 +41,18 @@ export class RussianRouletteRoom extends BaseGameRoom {
     this.offensiveShotsB = 1;
     this.lastOutcome = undefined;
 
-    // First turn assigned randomly (or Player A)
+    // First turn assigned randomly via coin toss
     this.currentTurn = Math.random() > 0.5 ? 'A' : 'B';
     const activePlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+
+    this.coinToss = {
+      playerASide: 'HEADS',
+      playerBSide: 'TAILS',
+      winningFace: this.currentTurn === 'A' ? 'HEADS' : 'TAILS',
+      starterSide: this.currentTurn,
+      starterName: activePlayerName,
+      timestamp: Date.now(),
+    };
 
     this.broadcast({
       type: 'ROULETTE_START',
@@ -56,6 +67,7 @@ export class RussianRouletteRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
+    const extraDelay = this.chambersRemaining === this.totalChambers ? 3200 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[RussianRoulette] Match #${this.matchId}: Player ${this.currentTurn} turn timed out. Auto-shooting self.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');

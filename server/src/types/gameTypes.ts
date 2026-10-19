@@ -11,6 +11,16 @@ export type RoomState =
   | 'FORFEITED'
   | 'CANCELLED';
 
+// --- Coin Toss Types (For Turn-Based Games) ---
+export interface CoinTossData {
+  playerASide: 'HEADS';
+  playerBSide: 'TAILS';
+  winningFace: 'HEADS' | 'TAILS';
+  starterSide: 'A' | 'B';
+  starterName: string;
+  timestamp: number;
+}
+
 // --- Russian Roulette Types ---
 export type RouletteTarget = 'self' | 'opponent';
 
@@ -27,6 +37,7 @@ export interface RouletteState {
     result: 'BLANK' | 'BANG';
     message: string;
   };
+  coinToss?: CoinTossData;
 }
 
 // --- Blackjack Face-Up Types ---
@@ -57,6 +68,7 @@ export interface BlackjackState {
     cardDrawn?: Card;
     message: string;
   };
+  coinToss?: CoinTossData;
 }
 
 // --- Glass Bridge Types ---
@@ -87,6 +99,7 @@ export interface GlassBridgeState {
     livesRemaining: number;
     message: string;
   };
+  coinToss?: CoinTossData;
 }
 
 // --- Chrono Blind Types ---
@@ -179,6 +192,7 @@ export interface CyberShotgunState {
     message: string;
   };
   mancheNumber: number;
+  coinToss?: CoinTossData;
 }
 
 // --- Connect 4 (Forza 4) Types ---
@@ -196,6 +210,7 @@ export interface Connect4State {
   winningLine?: [number, number][]; // Coordinates of winning 4 chips
   isDraw?: boolean;
   message?: string;
+  coinToss?: CoinTossData;
 }
 
 // --- Cube Count (Survival IQ) Types ---

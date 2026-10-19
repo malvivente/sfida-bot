@@ -1,5 +1,5 @@
 import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { Card, BlackjackState } from '../types/gameTypes.js';
+import { Card, BlackjackState, CoinTossData } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
 
 export class BlackjackRoom extends BaseGameRoom {
@@ -17,6 +17,7 @@ export class BlackjackRoom extends BaseGameRoom {
   public isDeathMatch: boolean = false;
   public deathMatchRound: number = 0;
   public lastAction?: BlackjackState['lastAction'];
+  public coinToss?: CoinTossData;
 
   private turnTimeout?: NodeJS.Timeout;
 
@@ -113,6 +114,7 @@ export class BlackjackRoom extends BaseGameRoom {
       isDeathMatch: this.isDeathMatch,
       deathMatchRound: this.deathMatchRound,
       lastAction: this.lastAction,
+      coinToss: this.coinToss,
     };
   }
 
@@ -129,6 +131,17 @@ export class BlackjackRoom extends BaseGameRoom {
     this.firstTurnPlayer = Math.random() < 0.5 ? 'A' : 'B';
     this.currentTurn = this.firstTurnPlayer;
     this.lastAction = undefined;
+
+    const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+
+    this.coinToss = {
+      playerASide: 'HEADS',
+      playerBSide: 'TAILS',
+      winningFace: this.firstTurnPlayer === 'A' ? 'HEADS' : 'TAILS',
+      starterSide: this.firstTurnPlayer,
+      starterName: firstPlayerName,
+      timestamp: Date.now(),
+    };
 
     // Deal 1 face-up card to each player
     this.handA.push(this.deck.pop()!);
@@ -164,8 +177,6 @@ export class BlackjackRoom extends BaseGameRoom {
       };
     }
 
-    const firstPlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
-
     this.broadcast({
       type: 'BLACKJACK_START',
       message: `🪙 Coin Toss: ${firstPlayerName} gioca per primo! ${this.playerA.username}: ${this.scoreA} | ${this.playerB?.username || 'Player B'}: ${this.scoreB}.`,
@@ -185,12 +196,13 @@ export class BlackjackRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
+    const extraDelay = this.handA.length === 1 && this.handB.length === 1 && !this.standA && !this.standB ? 3200 : 0;
     this.turnTimeout = setTimeout(() => {
       // Auto-stand on timeout
       console.log(`[Blackjack] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-stand.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
       this.handleBlackjackAction(activeWallet, 'STAND');
-    }, GAMES_CONFIG.blackjack.turnTimeoutSeconds * 1000);
+    }, GAMES_CONFIG.blackjack.turnTimeoutSeconds * 1000 + extraDelay);
   }
 
   public handleGameAction(wallet: string, data: any) {
