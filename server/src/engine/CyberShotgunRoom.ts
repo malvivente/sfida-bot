@@ -151,7 +151,7 @@ export class CyberShotgunRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
-    const extraDelay = this.mancheNumber === 1 && !this.lastAction ? 3200 : 0;
+    const extraDelay = this.mancheNumber === 1 && !this.lastAction ? 4000 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[CyberShotgun] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-shooting opponent.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');

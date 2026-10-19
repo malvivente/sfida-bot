@@ -291,11 +291,13 @@ export function useSocket({
             if ((msg as any).isRematch !== undefined) setIsRematch(Boolean((msg as any).isRematch));
             break;
 
+          case 'ROULETTE_START':
           case 'ROULETTE_UPDATE':
           case 'BLACKJACK_START':
           case 'BLACKJACK_UPDATE':
           case 'BLACKJACK_TIE':
           case 'BLACKJACK_ROUND_START':
+          case 'BRIDGE_START':
           case 'BRIDGE_UPDATE':
           case 'CHRONO_ROUND_START':
           case 'CHRONO_UPDATE':

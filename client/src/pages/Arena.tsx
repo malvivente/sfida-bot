@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { QuickdrawCanvas } from '../components/QuickdrawCanvas.js';
 import { RussianRouletteArena } from '../components/games/RussianRouletteArena.js';
 import { BlackjackArena } from '../components/games/BlackjackArena.js';
@@ -91,7 +92,8 @@ export const Arena: React.FC<ArenaProps> = ({
   const [isCancelling, setIsCancelling] = useState(false);
   const isJoiningMatchRef = useRef(false);
   const deepMatchesJoinedRef = useRef<Set<string>>(new Set());
-  const [seenCoinTossKey, setSeenCoinTossKey] = useState<string | null>(null);
+  const seenTossKeysRef = useRef<Set<string>>(new Set());
+  const [activeCoinToss, setActiveCoinToss] = useState<CoinTossData | null>(null);
 
   // In-bot balance & fee configuration
   const [userBalance, setUserBalance] = useState<UserBalance | null>(() => {
@@ -857,20 +859,29 @@ export const Arena: React.FC<ArenaProps> = ({
     effectiveGameType === 'bridge'
   );
 
-  const rawCoinToss = socketData.gameData?.coinToss as CoinTossData | undefined;
-  const currentTossKey = rawCoinToss?.timestamp
-    ? `${activeMatchId}_${rawCoinToss.timestamp}`
-    : (socketData.roomState === 'GAME_ACTIVE' && isTurnBasedGame && rawCoinToss ? `${activeMatchId}_active` : null);
+  // Trigger Coin Toss once per match/round when a turn-based game starts
+  useEffect(() => {
+    if (!isTurnBasedGame) return;
+    if (socketData.roomState !== 'GAME_ACTIVE' && socketData.roomState !== 'ROUND_START') return;
+    const rawCoinToss = socketData.gameData?.coinToss as CoinTossData | undefined;
+    if (!rawCoinToss || !rawCoinToss.timestamp) return;
 
-  const isTossStale = rawCoinToss?.timestamp ? (Date.now() - rawCoinToss.timestamp > 12000) : false;
-  const shouldShowCoinToss = Boolean(
-    isTurnBasedGame &&
-    (socketData.roomState === 'GAME_ACTIVE' || socketData.roomState === 'ROUND_START') &&
-    currentTossKey &&
-    seenCoinTossKey !== currentTossKey &&
-    rawCoinToss &&
-    !isTossStale
-  );
+    const tossKey = `${activeMatchId || 'match'}_${rawCoinToss.timestamp}`;
+    if (seenTossKeysRef.current.has(tossKey)) return;
+
+    // Immediately mark as seen so it can NEVER re-trigger for this match
+    seenTossKeysRef.current.add(tossKey);
+
+    // Stale guard: if toss was generated > 10 seconds ago (e.g. reconnecting to an ongoing duel), don't show
+    if (Date.now() - rawCoinToss.timestamp > 10000) return;
+
+    setActiveCoinToss(rawCoinToss);
+  }, [
+    isTurnBasedGame,
+    socketData.roomState,
+    socketData.gameData?.coinToss,
+    activeMatchId,
+  ]);
 
   const isPrivateMatch = Boolean(currentActiveMatch?.isPrivate || (socketData as any)?.isPrivate);
   const effectiveInviteCode = initialInviteCode || currentActiveMatch?.inviteCode || (activeMatchId ? (() => {
@@ -1857,18 +1868,20 @@ export const Arena: React.FC<ArenaProps> = ({
       )}
 
       {/* Coin Toss Overlay for Turn-Based Games */}
-      {shouldShowCoinToss && rawCoinToss && (
-        <CoinTossOverlay
-          coinToss={rawCoinToss}
-          playerAName={playerA_Name}
-          playerBName={playerB_Name}
-          userSide={userSide}
-          role={effectiveRole}
-          onComplete={() => {
-            if (currentTossKey) setSeenCoinTossKey(currentTossKey);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {activeCoinToss && (
+          <CoinTossOverlay
+            coinToss={activeCoinToss}
+            playerAName={playerA_Name}
+            playerBName={playerB_Name}
+            userSide={userSide}
+            role={effectiveRole}
+            onComplete={() => {
+              setActiveCoinToss(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

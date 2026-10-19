@@ -86,7 +86,7 @@ export class GlassBridgeRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
-    const extraDelay = this.currentStepA === 0 && this.currentStepB === 0 ? 3200 : 0;
+    const extraDelay = this.currentStepA === 0 && this.currentStepB === 0 ? 4000 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[GlassBridge] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-step LEFT.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');

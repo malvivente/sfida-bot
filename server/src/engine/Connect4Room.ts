@@ -154,7 +154,7 @@ export class Connect4Room extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
-    const extraDelay = this.movesCount === 0 ? 3200 : 0;
+    const extraDelay = this.movesCount === 0 ? 4000 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[Connect4] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-dropping into valid column.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');

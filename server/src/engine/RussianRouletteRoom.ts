@@ -67,12 +67,12 @@ export class RussianRouletteRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
-    const extraDelay = this.chambersRemaining === this.totalChambers ? 3200 : 0;
+    const extraDelay = this.chambersRemaining === this.totalChambers ? 4000 : 0;
     this.turnTimeout = setTimeout(() => {
       console.log(`[RussianRoulette] Match #${this.matchId}: Player ${this.currentTurn} turn timed out. Auto-shooting self.`);
       const activeWallet = this.currentTurn === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
       this.handleRouletteShoot(activeWallet, 'self');
-    }, GAMES_CONFIG.roulette.turnTimeoutSeconds * 1000);
+    }, GAMES_CONFIG.roulette.turnTimeoutSeconds * 1000 + extraDelay);
   }
 
   public handleGameAction(wallet: string, data: any) {

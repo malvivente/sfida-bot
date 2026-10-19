@@ -196,7 +196,7 @@ export class BlackjackRoom extends BaseGameRoom {
   private startTurnTimer() {
     if (this.turnTimeout) clearTimeout(this.turnTimeout);
 
-    const extraDelay = this.handA.length === 1 && this.handB.length === 1 && !this.standA && !this.standB ? 3200 : 0;
+    const extraDelay = this.handA.length === 1 && this.handB.length === 1 && !this.standA && !this.standB ? 4000 : 0;
     this.turnTimeout = setTimeout(() => {
       // Auto-stand on timeout
       console.log(`[Blackjack] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-stand.`);

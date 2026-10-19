@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Swords, Sparkles, Trophy, CheckCircle2 } from 'lucide-react';
 import { CoinTossData } from '../types/index.js';
 import { useI18n } from '../i18n/index.js';
@@ -25,9 +25,13 @@ export const CoinTossOverlay: React.FC<CoinTossOverlayProps> = ({
   const { t } = useI18n();
   const { triggerImpact } = useHaptics();
 
-  // Animation phases: 'toss' -> 'landed' -> 'fadeout'
-  const [phase, setPhase] = useState<'toss' | 'landed' | 'fadeout'>('toss');
+  // Animation phases: 'toss' -> 'landed'
+  const [phase, setPhase] = useState<'toss' | 'landed'>('toss');
   const impactFiredRef = useRef<boolean>(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const triggerImpactRef = useRef(triggerImpact);
+  triggerImpactRef.current = triggerImpact;
 
   const winningFace = coinToss.winningFace || (coinToss.starterSide === 'A' ? 'HEADS' : 'TAILS');
   const isHeadsWinner = winningFace === 'HEADS';
@@ -39,59 +43,51 @@ export const CoinTossOverlay: React.FC<CoinTossOverlayProps> = ({
 
   useEffect(() => {
     // Initial light vibration at toss launch
-    triggerImpact('medium');
+    triggerImpactRef.current('medium');
 
-    // Land after 2.3 seconds
+    // Land after 1.9 seconds
     const landTimer = setTimeout(() => {
       if (!impactFiredRef.current) {
         impactFiredRef.current = true;
-        triggerImpact('heavy');
+        triggerImpactRef.current('heavy');
       }
       setPhase('landed');
-    }, 2300);
+    }, 1900);
 
-    // Fade out after 3.7 seconds
-    const fadeTimer = setTimeout(() => {
-      setPhase('fadeout');
-    }, 3700);
-
-    // Complete after 4.1 seconds
+    // Auto complete after 3.4 seconds total
     const doneTimer = setTimeout(() => {
-      onComplete?.();
-    }, 4100);
+      onCompleteRef.current?.();
+    }, 3400);
 
     return () => {
       clearTimeout(landTimer);
-      clearTimeout(fadeTimer);
       clearTimeout(doneTimer);
     };
-  }, [onComplete, triggerImpact]);
+  }, []);
 
   const handleSkip = () => {
     if (phase === 'toss') {
       // Fast forward to landed
       if (!impactFiredRef.current) {
         impactFiredRef.current = true;
-        triggerImpact('heavy');
+        triggerImpactRef.current('heavy');
       }
       setPhase('landed');
     } else {
       // Instantly finish
-      onComplete?.();
+      onCompleteRef.current?.();
     }
   };
 
   return (
-    <AnimatePresence>
-      {phase !== 'fadeout' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.05 }}
-          transition={{ duration: 0.35 }}
-          onClick={handleSkip}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-md select-none overflow-hidden"
-        >
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      onClick={handleSkip}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-md select-none overflow-hidden"
+    >
           {/* Background Ambient Glow */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-amber-500/15 blur-3xl" />
@@ -288,17 +284,15 @@ export const CoinTossOverlay: React.FC<CoinTossOverlayProps> = ({
               </motion.div>
             ) : (
               <div className="flex items-center space-x-2 text-xs font-chakra font-medium text-slate-400 animate-pulse">
-                <span>In volo...</span>
+                <span>{t('coinToss.inFlight')}</span>
               </div>
             )}
           </div>
 
           {/* Skip Hint */}
           <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-4 opacity-75">
-            Tocca per continuare
+            {t('coinToss.tapToContinue')}
           </span>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </motion.div>
   );
 };
