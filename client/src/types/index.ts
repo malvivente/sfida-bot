@@ -542,6 +542,7 @@ export interface PokerPlayerSeat {
   };
   handResult?: {
     rankName: string;
+    rankNameEn?: string;
     score: number;
     bestFiveCards: PokerCard[];
   };
@@ -579,6 +580,7 @@ export interface PokerState {
     username: string;
     amount: number;
     rankName?: string;
+    rankNameEn?: string;
     winningCards?: PokerCard[];
   }[];
   tournamentWinner?: {

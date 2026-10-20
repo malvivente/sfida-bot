@@ -389,6 +389,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.playerA.username = body.telegramUsername || 'Player A';
     room.playerA.firstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
     room.playerA.photoUrl = body.photoUrl || userAccount.photoUrl || '';
+    (room as any).syncSeatsFromSessions?.();
     room.targetOpponentUsername = body.targetOpponentUsername;
     room.targetOpponentId = body.targetOpponentId;
 
@@ -642,6 +643,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         ready: false,
         score: 0,
       };
+      (room as any).syncSeatsFromSessions?.();
       room.config.playerBAddress = body.playerBAddress;
       room.state = 'LOBBY';
       room.cancelLobbyExpirationTimer();

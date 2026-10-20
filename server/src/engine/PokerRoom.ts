@@ -118,16 +118,43 @@ export class PokerRoom extends BaseGameRoom {
       });
     }
 
-    // Assign Player A to Seat 0
-    this.seats[0].walletAddress = this.playerA.walletAddress;
-    this.seats[0].username = this.playerA.username;
-    this.seats[0].displayName = this.playerA.displayName || this.playerA.username;
+    // Sync seats from sessions
+    this.syncSeatsFromSessions();
+  }
 
-    // Assign Player B to Seat 1 if preset
-    if (this.playerB) {
+  public syncSeatsFromSessions() {
+    if (this.seats[0]) {
+      this.seats[0].walletAddress = this.playerA.walletAddress;
+      this.seats[0].telegramId = this.playerA.telegramId || '';
+      this.seats[0].username = this.playerA.username;
+      this.seats[0].displayName = this.playerA.displayName || this.playerA.username;
+      this.seats[0].isReady = Boolean(this.playerA.ready);
+      this.seats[0].isConnected = Boolean(this.playerA.connected);
+      this.seats[0].photoUrl = this.playerA.photoUrl;
+    }
+
+    if (this.playerB && this.seats[1]) {
       this.seats[1].walletAddress = this.playerB.walletAddress;
+      this.seats[1].telegramId = this.playerB.telegramId || '';
       this.seats[1].username = this.playerB.username;
       this.seats[1].displayName = this.playerB.displayName || this.playerB.username;
+      this.seats[1].isReady = Boolean(this.playerB.ready);
+      this.seats[1].isConnected = Boolean(this.playerB.connected);
+      this.seats[1].photoUrl = this.playerB.photoUrl;
+    }
+
+    for (let i = 0; i < this.extraPlayers.length; i++) {
+      const ep = this.extraPlayers[i];
+      const seatIdx = 2 + i;
+      if (this.seats[seatIdx]) {
+        this.seats[seatIdx].walletAddress = ep.walletAddress;
+        this.seats[seatIdx].telegramId = ep.telegramId || '';
+        this.seats[seatIdx].username = ep.username;
+        this.seats[seatIdx].displayName = ep.displayName || ep.username;
+        this.seats[seatIdx].isReady = Boolean(ep.ready);
+        this.seats[seatIdx].isConnected = Boolean(ep.connected);
+        this.seats[seatIdx].photoUrl = ep.photoUrl;
+      }
     }
   }
 
@@ -288,6 +315,8 @@ export class PokerRoom extends BaseGameRoom {
         break;
       }
     }
+
+    this.syncSeatsFromSessions();
 
     this.broadcast({
       type: 'PLAYER_READY',
@@ -796,6 +825,7 @@ export class PokerRoom extends BaseGameRoom {
       const evaluation = evaluatePokerHand(allSeven);
       seat.handResult = {
         rankName: evaluation.rankName,
+        rankNameEn: evaluation.rankNameEn,
         score: evaluation.score,
         bestFiveCards: evaluation.bestFiveCards,
       };
@@ -812,6 +842,7 @@ export class PokerRoom extends BaseGameRoom {
         username: seat.username,
         amount: award.amount,
         rankName: seat.handResult?.rankName,
+        rankNameEn: seat.handResult?.rankNameEn,
         winningCards: seat.handResult?.bestFiveCards,
       };
     });
@@ -945,6 +976,8 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   public getGamePayload(recipientSeatIndex?: number): PokerState {
+    this.syncSeatsFromSessions();
+
     // Sanitize hole cards: only include private hole cards for the recipient
     // (At SHOWDOWN, all contenders' hole cards are visible)
     const sanitizedSeats = this.seats.map((s) => {

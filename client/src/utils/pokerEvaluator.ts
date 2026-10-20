@@ -19,6 +19,7 @@ export interface HandEvaluation {
   rankName: string;
   rankNameEn: string;
   bestFiveCards: PokerCard[];
+  contributingCards: PokerCard[];
 }
 
 const RANK_NAMES_IT: Record<number, string> = {
@@ -42,6 +43,38 @@ const SINGLE_RANK_IT: Record<number, string> = {
   13: 'Re',
   12: 'Donna',
   11: 'Fante',
+  10: '10',
+  9: '9',
+  8: '8',
+  7: '7',
+  6: '6',
+  5: '5',
+  4: '4',
+  3: '3',
+  2: '2',
+};
+
+const RANK_NAMES_EN: Record<number, string> = {
+  14: 'Aces',
+  13: 'Kings',
+  12: 'Queens',
+  11: 'Jacks',
+  10: '10s',
+  9: '9s',
+  8: '8s',
+  7: '7s',
+  6: '6s',
+  5: '5s',
+  4: '4s',
+  3: '3s',
+  2: '2s',
+};
+
+const SINGLE_RANK_EN: Record<number, string> = {
+  14: 'Ace',
+  13: 'King',
+  12: 'Queen',
+  11: 'Jack',
   10: '10',
   9: '9',
   8: '8',
@@ -125,14 +158,16 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
         rankName: 'Scala Reale',
         rankNameEn: 'Royal Flush',
         bestFiveCards: sorted,
+        contributingCards: sorted,
       };
     }
     return {
       rank: HandRank.STRAIGHT_FLUSH,
       score: calcScore(HandRank.STRAIGHT_FLUSH, [straightHigh, 0, 0, 0, 0]),
       rankName: `Scala Colore al ${SINGLE_RANK_IT[straightHigh]}`,
-      rankNameEn: `Straight Flush, ${SINGLE_RANK_IT[straightHigh]} High`,
+      rankNameEn: `Straight Flush, ${SINGLE_RANK_EN[straightHigh]} High`,
       bestFiveCards: sorted,
+      contributingCards: sorted,
     };
   }
 
@@ -143,8 +178,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.FOUR_OF_A_KIND,
       score: calcScore(HandRank.FOUR_OF_A_KIND, [quadRank, kicker, 0, 0, 0]),
       rankName: `Poker di ${RANK_NAMES_IT[quadRank]}`,
-      rankNameEn: `Four of a Kind, ${RANK_NAMES_IT[quadRank]}`,
+      rankNameEn: `Four of a Kind, ${RANK_NAMES_EN[quadRank]}`,
       bestFiveCards: sorted,
+      contributingCards: sorted.filter((c) => c.numericValue === quadRank),
     };
   }
 
@@ -155,8 +191,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.FULL_HOUSE,
       score: calcScore(HandRank.FULL_HOUSE, [tripRank, pairRank, 0, 0, 0]),
       rankName: `Full di ${RANK_NAMES_IT[tripRank]} e ${RANK_NAMES_IT[pairRank]}`,
-      rankNameEn: `Full House, ${RANK_NAMES_IT[tripRank]} full of ${RANK_NAMES_IT[pairRank]}`,
+      rankNameEn: `Full House, ${RANK_NAMES_EN[tripRank]} full of ${RANK_NAMES_EN[pairRank]}`,
       bestFiveCards: sorted,
+      contributingCards: sorted.filter((c) => c.numericValue === tripRank || c.numericValue === pairRank),
     };
   }
 
@@ -165,8 +202,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.FLUSH,
       score: calcScore(HandRank.FLUSH, ranks),
       rankName: `Colore al ${SINGLE_RANK_IT[ranks[0]]}`,
-      rankNameEn: `Flush, ${SINGLE_RANK_IT[ranks[0]]} High`,
+      rankNameEn: `Flush, ${SINGLE_RANK_EN[ranks[0]]} High`,
       bestFiveCards: sorted,
+      contributingCards: sorted.filter((c) => c.suit === suits[0]),
     };
   }
 
@@ -175,8 +213,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.STRAIGHT,
       score: calcScore(HandRank.STRAIGHT, [straightHigh, 0, 0, 0, 0]),
       rankName: `Scala al ${SINGLE_RANK_IT[straightHigh]}`,
-      rankNameEn: `Straight, ${SINGLE_RANK_IT[straightHigh]} High`,
+      rankNameEn: `Straight, ${SINGLE_RANK_EN[straightHigh]} High`,
       bestFiveCards: sorted,
+      contributingCards: sorted,
     };
   }
 
@@ -187,8 +226,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.THREE_OF_A_KIND,
       score: calcScore(HandRank.THREE_OF_A_KIND, [tripRank, kickers[0], kickers[1], 0, 0]),
       rankName: `Tris di ${RANK_NAMES_IT[tripRank]}`,
-      rankNameEn: `Three of a Kind, ${RANK_NAMES_IT[tripRank]}`,
+      rankNameEn: `Three of a Kind, ${RANK_NAMES_EN[tripRank]}`,
       bestFiveCards: sorted,
+      contributingCards: sorted.filter((c) => c.numericValue === tripRank),
     };
   }
 
@@ -200,8 +240,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.TWO_PAIR,
       score: calcScore(HandRank.TWO_PAIR, [highPair, lowPair, kicker, 0, 0]),
       rankName: `Doppia Coppia di ${RANK_NAMES_IT[highPair]} e ${RANK_NAMES_IT[lowPair]}`,
-      rankNameEn: `Two Pair, ${RANK_NAMES_IT[highPair]} and ${RANK_NAMES_IT[lowPair]}`,
+      rankNameEn: `Two Pair, ${RANK_NAMES_EN[highPair]} and ${RANK_NAMES_EN[lowPair]}`,
       bestFiveCards: sorted,
+      contributingCards: sorted.filter((c) => c.numericValue === highPair || c.numericValue === lowPair),
     };
   }
 
@@ -212,8 +253,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
       rank: HandRank.ONE_PAIR,
       score: calcScore(HandRank.ONE_PAIR, [pairRank, kickers[0], kickers[1], kickers[2], 0]),
       rankName: `Coppia di ${RANK_NAMES_IT[pairRank]}`,
-      rankNameEn: `Pair of ${RANK_NAMES_IT[pairRank]}`,
+      rankNameEn: `Pair of ${RANK_NAMES_EN[pairRank]}`,
       bestFiveCards: sorted,
+      contributingCards: sorted.filter((c) => c.numericValue === pairRank),
     };
   }
 
@@ -221,8 +263,9 @@ function evaluate5Cards(cards: PokerCard[]): HandEvaluation {
     rank: HandRank.HIGH_CARD,
     score: calcScore(HandRank.HIGH_CARD, ranks),
     rankName: `${SINGLE_RANK_IT[ranks[0]]} Carta Alta`,
-    rankNameEn: `${SINGLE_RANK_IT[ranks[0]]} High`,
+    rankNameEn: `${SINGLE_RANK_EN[ranks[0]]} High`,
     bestFiveCards: sorted,
+    contributingCards: [sorted[0]],
   };
 }
 
@@ -234,17 +277,20 @@ export function evaluatePokerHandClient(allCards: PokerCard[]): HandEvaluation |
           rank: HandRank.ONE_PAIR,
           score: allCards[0].numericValue,
           rankName: `Coppia di ${RANK_NAMES_IT[allCards[0].numericValue]}`,
-          rankNameEn: `Pocket ${RANK_NAMES_IT[allCards[0].numericValue]}`,
+          rankNameEn: `Pocket ${RANK_NAMES_EN[allCards[0].numericValue]}`,
           bestFiveCards: allCards,
+          contributingCards: allCards,
         };
       }
       const high = Math.max(allCards[0].numericValue, allCards[1].numericValue);
+      const highCard = allCards.find((c) => c.numericValue === high) || allCards[0];
       return {
         rank: HandRank.HIGH_CARD,
         score: high,
         rankName: `${SINGLE_RANK_IT[high]} Carta Alta`,
-        rankNameEn: `${SINGLE_RANK_IT[high]} High`,
+        rankNameEn: `${SINGLE_RANK_EN[high]} High`,
         bestFiveCards: allCards,
+        contributingCards: [highCard],
       };
     }
     return null;

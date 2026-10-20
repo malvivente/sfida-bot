@@ -55,29 +55,51 @@ interface PokerArenaProps {
   forfeitCountdown?: number | null;
 }
 
-const renderSuitIcon = (suit: string) => {
-  switch (suit) {
-    case '♥':
-      return <span className="text-rose-500 font-black">♥</span>;
-    case '♦':
-      return <span className="text-rose-500 font-black">♦</span>;
-    case '♣':
-      return <span className="text-emerald-400 font-black">♣</span>;
-    case '♠':
-    default:
-      return <span className="text-cyan-400 font-black">♠</span>;
-  }
+const suitStyles: Record<
+  PokerCard['suit'],
+  { text: string; border: string; glow: string; iconClass: string }
+> = {
+  '♠': {
+    text: 'text-cyan-400',
+    border: 'border-cyan-400/70',
+    glow: 'shadow-[0_0_10px_rgba(6,182,212,0.3)]',
+    iconClass: 'text-cyan-400',
+  },
+  '♥': {
+    text: 'text-rose-500',
+    border: 'border-rose-500/70',
+    glow: 'shadow-[0_0_10px_rgba(244,63,94,0.3)]',
+    iconClass: 'text-rose-500',
+  },
+  '♦': {
+    text: 'text-amber-400',
+    border: 'border-amber-400/70',
+    glow: 'shadow-[0_0_10px_rgba(251,191,36,0.3)]',
+    iconClass: 'text-amber-400',
+  },
+  '♣': {
+    text: 'text-emerald-400',
+    border: 'border-emerald-400/70',
+    glow: 'shadow-[0_0_10px_rgba(16,185,129,0.3)]',
+    iconClass: 'text-emerald-400',
+  },
 };
 
 const PlayingCardView: React.FC<{
   card?: PokerCard;
   isFaceDown?: boolean;
   isWinning?: boolean;
+  isConnecting?: boolean;
   size?: 'sm' | 'md' | 'lg';
   delay?: number;
-}> = ({ card, isFaceDown = false, isWinning = false, size = 'md', delay = 0 }) => {
-  const isRed = card?.suit === '♥' || card?.suit === '♦';
-
+}> = ({
+  card,
+  isFaceDown = false,
+  isWinning = false,
+  isConnecting = false,
+  size = 'md',
+  delay = 0,
+}) => {
   const sizeClasses = {
     sm: 'w-8 h-12 text-[10px] rounded-lg',
     md: 'w-11 h-16 sm:w-12 sm:h-18 text-xs rounded-xl',
@@ -101,6 +123,8 @@ const PlayingCardView: React.FC<{
     );
   }
 
+  const style = suitStyles[card.suit] || suitStyles['♠'];
+
   return (
     <motion.div
       initial={{ scale: 0.8, y: -10, opacity: 0 }}
@@ -108,20 +132,20 @@ const PlayingCardView: React.FC<{
       transition={{ delay, duration: 0.25 }}
       className={`${sizeClasses} bg-gradient-to-br from-slate-900 to-black border-2 flex flex-col justify-between p-1 select-none relative shadow-lg ${
         isWinning
-          ? 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.6)] ring-2 ring-amber-400/50'
-          : isRed
-          ? 'border-rose-500/70 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
-          : 'border-cyan-400/70 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+          ? 'border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.8)] ring-2 ring-amber-400/80 z-10'
+          : isConnecting
+          ? 'border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.7)] ring-2 ring-emerald-400/80 animate-pulse z-10'
+          : `${style.border} ${style.glow}`
       }`}
     >
-      <div className={`font-mono font-black leading-none flex justify-between ${isRed ? 'text-rose-400' : 'text-cyan-400'}`}>
+      <div className={`font-mono font-black leading-none flex justify-between ${style.text}`}>
         <span>{card.value}</span>
         <span className="text-[9px]">{card.suit}</span>
       </div>
-      <div className="text-center text-sm sm:text-base my-auto leading-none">
-        {renderSuitIcon(card.suit)}
+      <div className={`text-center text-sm sm:text-base my-auto leading-none ${style.iconClass}`}>
+        <span className="font-black">{card.suit}</span>
       </div>
-      <div className={`font-mono font-black leading-none flex justify-between rotate-180 ${isRed ? 'text-rose-400' : 'text-cyan-400'}`}>
+      <div className={`font-mono font-black leading-none flex justify-between rotate-180 ${style.text}`}>
         <span>{card.value}</span>
         <span className="text-[9px]">{card.suit}</span>
       </div>
@@ -142,18 +166,15 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
   roomState,
   wagerTon,
   isCreator,
-  onCancelMatch,
   onReturnToLobby,
   userAddress,
   userId,
-  socketError,
   hasPlayerB,
-  onJoinAsPlayer,
   onInviteChallenger,
   forfeitCountdown,
 }) => {
   const { triggerImpact } = useHaptics();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const [showRaiseSlider, setShowRaiseSlider] = useState(false);
   const [customRaiseAmount, setCustomRaiseAmount] = useState<number>(0);
@@ -222,6 +243,16 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
     const cards = [...heroSeat.holeCards, ...(gameData?.communityCards || [])];
     return evaluatePokerHandClient(cards);
   }, [heroSeat?.holeCards, gameData?.communityCards]);
+
+  // Connecting cards set for intuitive visual highlight (pairs, straights, flushes etc.)
+  const connectingCardKeys = useMemo(() => {
+    const set = new Set<string>();
+    if (!heroHandEval || heroSeat?.hasFolded) return set;
+    for (const c of heroHandEval.contributingCards || []) {
+      set.add(`${c.suit}_${c.value}`);
+    }
+    return set;
+  }, [heroHandEval, heroSeat?.hasFolded]);
 
   // Reorder seats so hero is always anchored at bottom center!
   const orderedSeats = useMemo(() => {
@@ -311,7 +342,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               </span>
             </div>
             <div className="text-[10px] text-slate-400 font-mono">
-              Bui: {gameData?.smallBlind || 10}/{gameData?.bigBlind || 20} · Mano #{gameData?.handNumber || 1}
+              {t('poker.blinds')}: {gameData?.smallBlind || 10}/{gameData?.bigBlind || 20} · {t('poker.hand')} #{gameData?.handNumber || 1}
             </div>
           </div>
         </div>
@@ -335,12 +366,14 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
           <div>
             <h3 className="text-lg font-heading font-black text-white">
-              {gameData?.maxPlayers === 2 ? "HEADS-UP TEXAS HOLD'EM" : `TAVOLO ${gameData?.maxPlayers || 5}-MAX`}
+              {gameData?.maxPlayers === 2
+                ? t('poker.lobbyTitleHeadsUp')
+                : t('poker.lobbyTitleMulti', { count: gameData?.maxPlayers || 5 })}
             </h3>
             <p className="text-xs text-slate-400 pt-0.5">
               {gameData?.maxPlayers === 2
-                ? "Sfida diretta 1v1. Il vincitore prende tutto il montepremi."
-                : `Torneo Sit & Go da ${gameData?.maxPlayers || 5} giocatori. Stack iniziale 1.000 chips.`}
+                ? t('poker.headsUpDesc')
+                : t('poker.multiMaxDesc')}
             </p>
           </div>
 
@@ -353,44 +386,71 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               {(gameData?.seats || [
                 { seatIndex: 0, username: playerAName, isReady: playerAReady, walletAddress: 'playerA' },
                 { seatIndex: 1, username: playerBName, isReady: playerBReady, walletAddress: hasPlayerB ? 'playerB' : '' },
-              ]).map((seat, idx) => (
-                <div
-                  key={idx}
-                  className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold text-white">
-                      {seat.username?.[0]?.toUpperCase() || `P${idx + 1}`}
-                    </div>
-                    <span className="font-heading font-bold text-white truncate max-w-[150px]">
-                      {seat.username || `Posto ${idx + 1} (In attesa...)`}
-                    </span>
-                  </div>
-                  <div>
-                    {seat.walletAddress || idx === 0 || (idx === 1 && hasPlayerB) ? (
-                      seat.isReady ? (
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                          ✓ {t('lobby.ready')}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
-                          {t('lobby.waitingReady')}
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-slate-500 text-[10px] italic">
-                        {t('poker.seatOpen')}
+              ]).map((seat, idx) => {
+                let displayName = seat.username;
+                let isReadyState = Boolean(seat.isReady);
+                let isOccupied = Boolean(seat.walletAddress);
+
+                if (idx === 0) {
+                  if (!displayName || displayName === 'Player A' || displayName === 'Seat 1') {
+                    displayName = playerAName || 'Player 1';
+                  }
+                  isReadyState = Boolean(seat.isReady || playerAReady);
+                  isOccupied = true;
+                } else if (idx === 1) {
+                  if (hasPlayerB) {
+                    if (!displayName || displayName === 'Player B' || displayName === 'Seat 2') {
+                      displayName = playerBName || 'Player 2';
+                    }
+                    isReadyState = Boolean(seat.isReady || playerBReady);
+                    isOccupied = true;
+                  }
+                }
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold text-white">
+                        {displayName?.[0]?.toUpperCase() || `P${idx + 1}`}
+                      </div>
+                      <span className="font-heading font-bold text-white truncate max-w-[150px]">
+                        {isOccupied ? displayName : `${t('poker.seatOpen')} ${idx + 1}`}
                       </span>
-                    )}
+                    </div>
+                    <div>
+                      {isOccupied ? (
+                        isReadyState ? (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                            ✓ {t('lobby.ready')}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                            {t('lobby.waitingReady')}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-slate-500 text-[10px] italic">
+                          {t('poker.seatOpen')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="pt-2 space-y-2">
-            {!isReady ? (
+            {!hasPlayerB ? (
+              <div className="w-full py-3 rounded-2xl bg-slate-800/60 border border-white/10 text-slate-400 font-heading font-bold text-xs flex items-center justify-center space-x-2">
+                <Clock className="w-4 h-4 animate-spin text-slate-400" />
+                <span>{t('arena.waitingForOpponentBtn')}</span>
+              </div>
+            ) : !isReady ? (
               <button
                 type="button"
                 onClick={() => {
@@ -419,19 +479,6 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               >
                 <Users className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{t('lobby.inviteFriend')}</span>
-              </button>
-            )}
-
-            {isCreator && onCancelMatch && (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerImpact('light');
-                  onCancelMatch();
-                }}
-                className="text-[11px] text-slate-400 hover:text-red-400 transition-colors pt-1 block mx-auto"
-              >
-                {t('lobby.cancelMatchBtn')}
               </button>
             )}
           </div>
@@ -584,33 +631,38 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                       card={card}
                       size="md"
                       isWinning={winningCardsSet.has(`${card.suit}_${card.value}`)}
+                      isConnecting={connectingCardKeys.has(`${card.suit}_${card.value}`)}
                       delay={idx * 0.05}
                     />
                   );
                 })}
               </div>
 
-              {/* Showdown / Hand Winner Banner */}
+              {/* Showdown / Hand Winner Banner (Redesigned modern cyber-card) */}
               <AnimatePresence>
                 {gameData.handWinners && gameData.handWinners.length > 0 && (
                   <motion.div
-                    initial={{ scale: 0.8, opacity: 0, y: 10 }}
+                    initial={{ scale: 0.85, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    className="p-2 rounded-2xl bg-gradient-to-r from-amber-500 via-emerald-600 to-amber-500 text-slate-950 border border-white/40 shadow-xl text-center max-w-[280px]"
+                    exit={{ scale: 0.85, opacity: 0, y: -8 }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                    className="p-3 rounded-2xl bg-slate-950/95 border border-amber-400/60 shadow-[0_0_35px_rgba(251,191,36,0.35)] text-center max-w-[280px] backdrop-blur-xl space-y-1.5 z-20 my-1"
                   >
                     {gameData.handWinners.map((hw, idx) => (
-                      <div key={idx} className={idx > 0 ? "pt-1 border-t border-slate-900/20" : ""}>
-                        <div className="text-[10px] font-heading font-black uppercase tracking-wider">
-                          🏆 {hw.username} VINCE!
+                      <div key={idx} className={idx > 0 ? "pt-2 border-t border-white/10" : "space-y-1"}>
+                        <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-heading font-black text-[11px] uppercase tracking-wider">
+                          <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>{hw.username} {t('poker.wins')}</span>
                         </div>
                         {hw.rankName && (
-                          <div className="text-xs font-heading font-black">
-                            {hw.rankName}
+                          <div className="text-xs font-heading font-black text-cyan-300 tracking-wide">
+                            {language === 'en' ? (hw.rankNameEn || hw.rankName) : hw.rankName}
                           </div>
                         )}
-                        <div className="text-[10px] font-mono font-bold">
-                          +{hw.amount.toLocaleString()} chips
+                        <div>
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-mono font-black">
+                            +{hw.amount.toLocaleString()} {t('poker.chips')}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -622,10 +674,10 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
             {/* BOTTOM: Hero Player Station */}
             {heroSeat && (
               <div className="w-full flex flex-col items-center z-10 pb-1">
-                {/* Live Hand Evaluation Badge */}
+                {/* Live Hand Evaluation Badge - detached with clean top margin */}
                 {heroHandEval && !heroSeat.hasFolded && (
-                  <div className="mb-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/30 to-cyan-500/20 border border-cyan-400/50 text-[10px] font-heading font-black text-cyan-300 shadow">
-                    ✨ {heroHandEval.rankName}
+                  <div className="mt-3.5 mb-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/30 to-cyan-500/20 border border-cyan-400/50 text-[10px] font-heading font-black text-cyan-300 shadow">
+                    ✨ {language === 'en' ? (heroHandEval.rankNameEn || heroHandEval.rankName) : heroHandEval.rankName}
                   </div>
                 )}
 
@@ -638,6 +690,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                         card={c}
                         size="md"
                         isWinning={winningCardsSet.has(`${c.suit}_${c.value}`)}
+                        isConnecting={connectingCardKeys.has(`${c.suit}_${c.value}`)}
                         delay={i * 0.1}
                       />
                     ))}
@@ -647,7 +700,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                   <div className="flex flex-col items-start">
                     <div className="flex items-center space-x-1.5">
                       <span className="text-xs font-heading font-black text-white">
-                        {heroSeat.username} (Tu)
+                        {heroSeat.username} ({t('poker.you')})
                       </span>
                       {heroSeat.role !== 'NORMAL' && (
                         <span className="text-[8px] font-heading font-black px-1.5 rounded-full bg-amber-400 text-slate-950">
@@ -678,7 +731,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                 <div className="flex items-center justify-between text-xs px-1">
                   <div className="flex items-center space-x-1.5 text-amber-300 font-heading font-black">
                     <Clock className="w-3.5 h-3.5 animate-spin" />
-                    <span>È IL TUO TURNO</span>
+                    <span>{t('poker.yourTurn')}</span>
                   </div>
                   <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">
                     ⏱ {gameData?.turnTimeRemaining}s
@@ -689,7 +742,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                 {showRaiseSlider && (
                   <div className="p-3 bg-black/70 border border-amber-400/30 rounded-2xl space-y-2 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-slate-400">Importo rilancio:</span>
+                      <span className="text-slate-400">{t('poker.raiseAmount')}</span>
                       <span className="text-amber-300 font-bold text-sm">
                         {customRaiseAmount.toLocaleString()} 🪙
                       </span>
@@ -731,7 +784,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                       onClick={() => handleActionClick('raise', customRaiseAmount)}
                       className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95"
                     >
-                      CONFERMA RILANCIO ({customRaiseAmount.toLocaleString()} 🪙)
+                      {t('poker.confirmRaise')} ({customRaiseAmount.toLocaleString()} 🪙)
                     </button>
                   </div>
                 )}
@@ -745,7 +798,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     className="py-3 px-2 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center"
                   >
                     <span>FOLD</span>
-                    <span className="text-[9px] font-normal opacity-70">Passa</span>
+                    <span className="text-[9px] font-normal opacity-70">{t('poker.foldDesc')}</span>
                   </button>
 
                   {/* CHECK or CALL */}
@@ -756,7 +809,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                   >
                     <span>{toCall === 0 ? 'CHECK' : 'CALL'}</span>
                     <span className="text-[9px] font-mono font-bold">
-                      {toCall === 0 ? 'Gratis' : `${toCall.toLocaleString()} 🪙`}
+                      {toCall === 0 ? t('poker.free') : `${toCall.toLocaleString()} 🪙`}
                     </span>
                   </button>
 
@@ -785,14 +838,18 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                 <Clock className="w-3.5 h-3.5 text-slate-500 animate-spin" />
                 <span>
                   {gameData.stage === 'SHOWDOWN'
-                    ? "Showdown! Assegnazione del piatto in corso..."
+                    ? t('poker.statusShowdown')
                     : gameData.stage === 'HAND_OVER'
-                    ? "Mano conclusa! Preparazione della prossima mano..."
+                    ? t('poker.statusHandOver')
                     : heroSeat?.hasFolded
-                    ? "Hai foldato questa mano. In attesa della prossima mano..."
+                    ? t('poker.statusHeroFolded')
                     : heroSeat?.isAllIn
-                    ? "Sei in All-In! Attendiamo lo Showdown..."
-                    : `In attesa dell'azione di ${gameData.seats[gameData.activeSeat || 0]?.username || 'avversario'}...`}
+                    ? t('poker.statusHeroAllIn')
+                    : t('poker.statusWaitingFor', {
+                        name:
+                          gameData.seats[gameData.activeSeat || 0]?.username ||
+                          t('arena.waitingForOpponent'),
+                      })}
                 </span>
               </div>
             )}
@@ -808,16 +865,16 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
                 <div>
                   <h3 className="text-xl font-heading font-black text-white">
-                    TORNEO CONCLUSO!
+                    {t('poker.tournamentOver')}
                   </h3>
                   <p className="text-xs text-amber-300 font-heading font-bold pt-1">
-                    🏆 CAMPIONE: {gameData.tournamentWinner?.username}
+                    🏆 {t('poker.champion')}: {gameData.tournamentWinner?.username}
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
                   <div className="text-[10px] uppercase font-mono tracking-wider">
-                    PREMIO 1° POSTO
+                    {t('poker.firstPlacePrize')}
                   </div>
                   <div className="text-xl font-mono font-black text-amber-400 flex items-center justify-center space-x-1 pt-0.5">
                     <GramIcon className="w-5 h-5" />
@@ -833,7 +890,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                   }}
                   className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all"
                 >
-                  TORNA ALLA LOBBY
+                  {t('poker.returnToLobby')}
                 </button>
               </div>
             </div>
