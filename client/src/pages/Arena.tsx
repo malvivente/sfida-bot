@@ -1610,12 +1610,20 @@ export const Arena: React.FC<ArenaProps> = ({
               isCreator={isCurrentCreator}
               onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
               isWinner={isUserWinner}
+              winnerName={effectiveWinnerName}
               onReturnToLobby={() => {
                 setActiveMatchId(null);
                 setPayoutClaimed(false);
                 fetchUserBalance();
               }}
-              userAddress={userAddress}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
+              userAddress={effectivePlayerAddress || userAddress}
               userId={userId ? String(userId) : undefined}
               userBalanceGram={availableBalanceGram}
               onOpenDeposit={(missing) => {

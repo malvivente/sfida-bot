@@ -318,8 +318,13 @@ export class PokerRoom extends BaseGameRoom {
 
     this.syncSeatsFromSessions();
 
+    this.broadcastRoomState();
+    this.broadcastState();
+
     this.broadcast({
       type: 'PLAYER_READY',
+      playerA: { ready: this.playerA.ready },
+      playerB: this.playerB ? { ready: this.playerB.ready } : null,
       seats: this.seats.map((s) => ({ seatIndex: s.seatIndex, ready: s.isReady, username: s.username })),
     });
 

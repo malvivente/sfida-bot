@@ -334,6 +334,26 @@ export function useSocket({
             if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
             break;
 
+          case 'PLAYER_READY':
+            if ((msg as any).playerA?.ready !== undefined) {
+              setPlayerAReady(Boolean((msg as any).playerA.ready));
+            }
+            if ((msg as any).playerB?.ready !== undefined) {
+              setPlayerBReady(Boolean((msg as any).playerB.ready));
+            }
+            if ((msg as any).seats) {
+              setGameData((prev: any) => {
+                if (!prev) return prev;
+                const prevSeats = prev.seats || [];
+                const updatedSeats = prevSeats.map((s: any, idx: number) => {
+                  const match = (msg as any).seats.find((us: any) => us.seatIndex === s.seatIndex || us.seatIndex === idx);
+                  return match ? { ...s, isReady: Boolean(match.ready) } : s;
+                });
+                return { ...prev, seats: updatedSeats };
+              });
+            }
+            break;
+
           case 'POKER_HOLE_CARDS':
             if ((msg as any).holeCards) {
               setGameData((prev: any) => {

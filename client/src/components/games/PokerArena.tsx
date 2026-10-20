@@ -14,6 +14,8 @@ import {
   X,
   ChevronUp,
   WifiOff,
+  ArrowDownLeft,
+  Loader2,
 } from 'lucide-react';
 import {
   PokerState,
@@ -43,7 +45,15 @@ interface PokerArenaProps {
   isCreator: boolean;
   onCancelMatch?: () => void;
   isWinner?: boolean;
+  winnerName?: string;
   onReturnToLobby?: () => void;
+  rematchOffer?: any;
+  onRequestRematch?: () => void;
+  onAcceptRematch?: () => void;
+  onDeclineRematch?: () => void;
+  isRematchProposer?: boolean;
+  opponentConnected?: boolean;
+  userSide?: 'A' | 'B';
   userAddress?: string;
   userId?: string;
   userBalanceGram?: string;
@@ -166,9 +176,21 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
   roomState,
   wagerTon,
   isCreator,
+  isWinner = false,
+  winnerName,
   onReturnToLobby,
+  rematchOffer,
+  onRequestRematch,
+  onAcceptRematch,
+  onDeclineRematch,
+  isRematchProposer = false,
+  opponentConnected = true,
+  userSide,
   userAddress,
   userId,
+  userBalanceGram,
+  onOpenDeposit,
+  socketError,
   hasPlayerB,
   onInviteChallenger,
   forfeitCountdown,
@@ -179,24 +201,57 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
   const [showRaiseSlider, setShowRaiseSlider] = useState(false);
   const [customRaiseAmount, setCustomRaiseAmount] = useState<number>(0);
 
+  // Match lifecycle states
+  const isMatchSettled =
+    roomState === 'MATCH_SETTLED' ||
+    roomState === 'FORFEITED' ||
+    gameData?.stage === 'TOURNAMENT_OVER';
+
+  const isLobby =
+    !isMatchSettled &&
+    (roomState === 'LOBBY' ||
+      roomState === 'WAITING_FOR_DEPLOY' ||
+      !gameData ||
+      gameData.stage === 'WAITING');
+
+  const isMatchActive = !isLobby;
+
+  // Rematch calculations
+  const rematchWager = rematchOffer
+    ? parseFloat(rematchOffer.newWagerTon || '0')
+    : parseFloat(wagerTon || '0') * 2;
+  const currentBal = parseFloat(userBalanceGram || '0');
+  const hasEnoughForRematch = currentBal >= rematchWager;
+  const missingForRematch = Math.max(0, rematchWager - currentBal).toFixed(2);
+
   // Identify hero's seat index
   const heroSeatIndex = useMemo(() => {
-    if (!gameData || !gameData.seats) return -1;
+    if (!gameData || !gameData.seats) {
+      if (userSide === 'A') return 0;
+      if (userSide === 'B') return 1;
+      return -1;
+    }
     const cleanAddr = userAddress?.toLowerCase();
     const cleanId = userId ? String(userId) : '';
 
-    return gameData.seats.findIndex((s) => {
+    const found = gameData.seats.findIndex((s) => {
       if (cleanAddr && s.walletAddress && s.walletAddress.toLowerCase() === cleanAddr) return true;
       if (cleanId && s.telegramId && String(s.telegramId) === cleanId) return true;
       return false;
     });
-  }, [gameData, userAddress, userId]);
+
+    if (found !== -1) return found;
+    if (userSide === 'A') return 0;
+    if (userSide === 'B') return 1;
+    return -1;
+  }, [gameData, userAddress, userId, userSide]);
 
   const heroSeat: PokerPlayerSeat | undefined =
     heroSeatIndex !== -1 && gameData?.seats ? gameData.seats[heroSeatIndex] : undefined;
 
   const isHeroTurn = Boolean(
-    gameData &&
+    !isMatchSettled &&
+      gameData &&
       gameData.activeSeat !== null &&
       gameData.activeSeat === heroSeatIndex &&
       heroSeat &&
@@ -318,11 +373,47 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
     return set;
   }, [gameData?.handWinners]);
 
-  // Is game actively running?
-  const isMatchActive =
-    roomState === 'GAME_ACTIVE' &&
-    gameData &&
-    gameData.stage !== 'WAITING';
+  // Seated players in lobby with multi-source ready sync
+  const displaySeats = useMemo(() => {
+    const rawSeats = gameData?.seats || [
+      { seatIndex: 0, username: playerAName, isReady: playerAReady, walletAddress: 'playerA' },
+      { seatIndex: 1, username: playerBName, isReady: playerBReady, walletAddress: hasPlayerB ? 'playerB' : '' },
+    ];
+
+    return rawSeats.map((seat, idx) => {
+      let displayName = seat.username;
+      let isOccupied = Boolean(seat.walletAddress);
+
+      if (idx === 0) {
+        if (!displayName || displayName === 'Player A' || displayName === 'Seat 1') {
+          displayName = playerAName || 'Player 1';
+        }
+        isOccupied = true;
+      } else if (idx === 1) {
+        if (hasPlayerB) {
+          if (!displayName || displayName === 'Player B' || displayName === 'Seat 2') {
+            displayName = playerBName || 'Player 2';
+          }
+          isOccupied = true;
+        }
+      }
+
+      const isThisUserSeat = (idx === 0 && userSide === 'A') || (idx === 1 && userSide === 'B');
+      const isReadyState = Boolean(
+        seat.isReady ||
+        (idx === 0 && playerAReady) ||
+        (idx === 1 && playerBReady) ||
+        (isThisUserSeat && isReady)
+      );
+
+      return {
+        ...seat,
+        displayName,
+        isReadyState,
+        isOccupied,
+      };
+    });
+  }, [gameData?.seats, playerAName, playerBName, playerAReady, playerBReady, hasPlayerB, userSide, isReady]);
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center select-none font-sans relative pb-6">
@@ -335,7 +426,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="text-xs font-heading font-black text-white">
-                {gameData?.maxPlayers === 2 ? "Heads-Up" : `${gameData?.maxPlayers || 5}-Max`} Poker
+                {gameData?.maxPlayers === 2 ? 'Heads-Up' : `${gameData?.maxPlayers || 5}-Max`} Poker
               </span>
               <span className="text-[9px] font-heading font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
                 SIT & GO
@@ -355,8 +446,8 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
         </div>
       </div>
 
-      {/* LOBBY / WAITING SCREEN */}
-      {!isMatchActive && (
+      {/* LOBBY / WAITING SCREEN (Only before the match starts, NEVER when settled!) */}
+      {isLobby && (
         <div className="w-full p-4 rounded-3xl bg-black/60 border border-white/10 backdrop-blur-xl space-y-4 my-2 text-center animate-in fade-in duration-200">
           <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-amber-500 via-emerald-600 to-indigo-700 p-0.5 flex items-center justify-center shadow-lg">
             <div className="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center">
@@ -380,66 +471,42 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
           {/* Seated Players List in Lobby */}
           <div className="space-y-1.5 pt-1">
             <div className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider text-left px-1">
-              {t('poker.seatedPlayers')} ({gameData?.seats?.filter((s) => s.walletAddress).length || (hasPlayerB ? 2 : 1)}/{gameData?.maxPlayers || 2})
+              {t('poker.seatedPlayers')} ({displaySeats.filter((s) => s.isOccupied).length}/{gameData?.maxPlayers || 2})
             </div>
             <div className="space-y-1">
-              {(gameData?.seats || [
-                { seatIndex: 0, username: playerAName, isReady: playerAReady, walletAddress: 'playerA' },
-                { seatIndex: 1, username: playerBName, isReady: playerBReady, walletAddress: hasPlayerB ? 'playerB' : '' },
-              ]).map((seat, idx) => {
-                let displayName = seat.username;
-                let isReadyState = Boolean(seat.isReady);
-                let isOccupied = Boolean(seat.walletAddress);
-
-                if (idx === 0) {
-                  if (!displayName || displayName === 'Player A' || displayName === 'Seat 1') {
-                    displayName = playerAName || 'Player 1';
-                  }
-                  isReadyState = Boolean(seat.isReady || playerAReady);
-                  isOccupied = true;
-                } else if (idx === 1) {
-                  if (hasPlayerB) {
-                    if (!displayName || displayName === 'Player B' || displayName === 'Seat 2') {
-                      displayName = playerBName || 'Player 2';
-                    }
-                    isReadyState = Boolean(seat.isReady || playerBReady);
-                    isOccupied = true;
-                  }
-                }
-
-                return (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold text-white">
-                        {displayName?.[0]?.toUpperCase() || `P${idx + 1}`}
-                      </div>
-                      <span className="font-heading font-bold text-white truncate max-w-[150px]">
-                        {isOccupied ? displayName : `${t('poker.seatOpen')} ${idx + 1}`}
-                      </span>
+              {displaySeats.map((seat, idx) => (
+                <div
+                  key={idx}
+                  className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold text-white">
+                      {seat.displayName?.[0]?.toUpperCase() || `P${idx + 1}`}
                     </div>
-                    <div>
-                      {isOccupied ? (
-                        isReadyState ? (
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                            ✓ {t('lobby.ready')}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
-                            {t('lobby.waitingReady')}
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-slate-500 text-[10px] italic">
-                          {t('poker.seatOpen')}
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-heading font-bold text-white truncate max-w-[150px]">
+                      {seat.isOccupied ? seat.displayName : `${t('poker.seatOpen')} ${idx + 1}`}
+                    </span>
                   </div>
-                );
-              })}
+                  <div>
+                    {seat.isOccupied ? (
+                      seat.isReadyState ? (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold flex items-center space-x-1">
+                          <span>✓</span>
+                          <span>{t('lobby.ready')}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                          {t('lobby.waitingReady')}
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-500 text-[10px] italic">
+                        {t('poker.seatOpen')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -485,8 +552,8 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
         </div>
       )}
 
-      {/* ACTIVE POKER TABLE */}
-      {isMatchActive && (
+      {/* ACTIVE POKER TABLE (Visible during active hand AND when match settled with results overlay) */}
+      {isMatchActive && gameData && (
         <div className="w-full relative flex flex-col items-center">
           {/* Cyber Poker Table Oval */}
           <div className="w-full min-h-[360px] sm:min-h-[400px] rounded-[60px] sm:rounded-[80px] bg-gradient-to-b from-emerald-950 via-slate-950 to-emerald-950 border-[6px] border-slate-900 shadow-[0_0_35px_rgba(16,185,129,0.25)] relative overflow-hidden flex flex-col items-center justify-between p-3 my-1">
@@ -499,7 +566,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               {orderedSeats
                 .filter((s) => s.visualPos !== 0)
                 .map((seat) => {
-                  const isCurrentTurn = gameData.activeSeat === seat.seatIndex;
+                  const isCurrentTurn = !isMatchSettled && gameData.activeSeat === seat.seatIndex;
                   return (
                     <div
                       key={seat.seatIndex}
@@ -557,7 +624,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
                       {/* Opponent Cards (Revealed at showdown or card backs) */}
                       <div className="flex space-x-0.5 mt-0.5">
-                        {gameData.stage === 'SHOWDOWN' && seat.holeCards ? (
+                        {(gameData.stage === 'SHOWDOWN' || isMatchSettled) && seat.holeCards ? (
                           seat.holeCards.map((c, i) => (
                             <PlayingCardView
                               key={i}
@@ -640,7 +707,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
               {/* Showdown / Hand Winner Banner (Redesigned modern cyber-card) */}
               <AnimatePresence>
-                {gameData.handWinners && gameData.handWinners.length > 0 && (
+                {!isMatchSettled && gameData.handWinners && gameData.handWinners.length > 0 && (
                   <motion.div
                     initial={{ scale: 0.85, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -649,7 +716,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     className="p-3 rounded-2xl bg-slate-950/95 border border-amber-400/60 shadow-[0_0_35px_rgba(251,191,36,0.35)] text-center max-w-[280px] backdrop-blur-xl space-y-1.5 z-20 my-1"
                   >
                     {gameData.handWinners.map((hw, idx) => (
-                      <div key={idx} className={idx > 0 ? "pt-2 border-t border-white/10" : "space-y-1"}>
+                      <div key={idx} className={idx > 0 ? 'pt-2 border-t border-white/10' : 'space-y-1'}>
                         <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-heading font-black text-[11px] uppercase tracking-wider">
                           <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           <span>{hw.username} {t('poker.wins')}</span>
@@ -723,142 +790,144 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
             )}
           </div>
 
-          {/* ACTION BAR CONTROLS (Active when it's Hero's turn) */}
-          <div className="w-full mt-2">
-            {isHeroTurn ? (
-              <div className="space-y-2 p-3 bg-black/60 border border-white/10 rounded-3xl backdrop-blur-xl animate-in slide-in-from-bottom-3 duration-200">
-                {/* Turn Alert Header */}
-                <div className="flex items-center justify-between text-xs px-1">
-                  <div className="flex items-center space-x-1.5 text-amber-300 font-heading font-black">
-                    <Clock className="w-3.5 h-3.5 animate-spin" />
-                    <span>{t('poker.yourTurn')}</span>
+          {/* ACTION BAR CONTROLS (Active only during active match and Hero's turn) */}
+          {!isMatchSettled && (
+            <div className="w-full mt-2">
+              {isHeroTurn ? (
+                <div className="space-y-2 p-3 bg-black/60 border border-white/10 rounded-3xl backdrop-blur-xl animate-in slide-in-from-bottom-3 duration-200">
+                  {/* Turn Alert Header */}
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <div className="flex items-center space-x-1.5 text-amber-300 font-heading font-black">
+                      <Clock className="w-3.5 h-3.5 animate-spin" />
+                      <span>{t('poker.yourTurn')}</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">
+                      ⏱ {gameData?.turnTimeRemaining}s
+                    </span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">
-                    ⏱ {gameData?.turnTimeRemaining}s
-                  </span>
-                </div>
 
-                {/* Custom Raise Panel / Slider */}
-                {showRaiseSlider && (
-                  <div className="p-3 bg-black/70 border border-amber-400/30 rounded-2xl space-y-2 animate-in fade-in duration-150">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-slate-400">{t('poker.raiseAmount')}</span>
-                      <span className="text-amber-300 font-bold text-sm">
-                        {customRaiseAmount.toLocaleString()} 🪙
-                      </span>
+                  {/* Custom Raise Panel / Slider */}
+                  {showRaiseSlider && (
+                    <div className="p-3 bg-black/70 border border-amber-400/30 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-slate-400">{t('poker.raiseAmount')}</span>
+                        <span className="text-amber-300 font-bold text-sm">
+                          {customRaiseAmount.toLocaleString()} 🪙
+                        </span>
+                      </div>
+
+                      {/* Presets */}
+                      <div className="grid grid-cols-5 gap-1">
+                        {[
+                          { label: 'Min', val: 'min' as const },
+                          { label: '2.5x', val: '2.5x' as const },
+                          { label: '1/2 Pot', val: 'half_pot' as const },
+                          { label: 'Pot', val: 'pot' as const },
+                          { label: 'All-In', val: 'all_in' as const },
+                        ].map((p) => (
+                          <button
+                            key={p.val}
+                            type="button"
+                            onClick={() => handlePreset(p.val)}
+                            className="py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-mono text-[10px] font-bold transition-all active:scale-95"
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Slider */}
+                      <input
+                        type="range"
+                        min={minLegalRaise}
+                        max={maxLegalRaise}
+                        step={gameData.bigBlind}
+                        value={customRaiseAmount}
+                        onChange={(e) => setCustomRaiseAmount(Number(e.target.value))}
+                        className="w-full accent-amber-400 h-2 bg-slate-800 rounded-lg cursor-pointer"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleActionClick('raise', customRaiseAmount)}
+                        className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95"
+                      >
+                        {t('poker.confirmRaise')} ({customRaiseAmount.toLocaleString()} 🪙)
+                      </button>
                     </div>
+                  )}
 
-                    {/* Presets */}
-                    <div className="grid grid-cols-5 gap-1">
-                      {[
-                        { label: 'Min', val: 'min' as const },
-                        { label: '2.5x', val: '2.5x' as const },
-                        { label: '1/2 Pot', val: 'half_pot' as const },
-                        { label: 'Pot', val: 'pot' as const },
-                        { label: 'All-In', val: 'all_in' as const },
-                      ].map((p) => (
-                        <button
-                          key={p.val}
-                          type="button"
-                          onClick={() => handlePreset(p.val)}
-                          className="py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-mono text-[10px] font-bold transition-all active:scale-95"
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Slider */}
-                    <input
-                      type="range"
-                      min={minLegalRaise}
-                      max={maxLegalRaise}
-                      step={gameData.bigBlind}
-                      value={customRaiseAmount}
-                      onChange={(e) => setCustomRaiseAmount(Number(e.target.value))}
-                      className="w-full accent-amber-400 h-2 bg-slate-800 rounded-lg cursor-pointer"
-                    />
-
+                  {/* Primary Action Buttons: FOLD | CHECK/CALL | RAISE */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* FOLD */}
                     <button
                       type="button"
-                      onClick={() => handleActionClick('raise', customRaiseAmount)}
-                      className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95"
+                      onClick={() => handleActionClick('fold')}
+                      className="py-3 px-2 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center"
                     >
-                      {t('poker.confirmRaise')} ({customRaiseAmount.toLocaleString()} 🪙)
+                      <span>FOLD</span>
+                      <span className="text-[9px] font-normal opacity-70">{t('poker.foldDesc')}</span>
+                    </button>
+
+                    {/* CHECK or CALL */}
+                    <button
+                      type="button"
+                      onClick={() => handleActionClick(toCall === 0 ? 'check' : 'call')}
+                      className="py-3 px-2 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center"
+                    >
+                      <span>{toCall === 0 ? 'CHECK' : 'CALL'}</span>
+                      <span className="text-[9px] font-mono font-bold">
+                        {toCall === 0 ? t('poker.free') : `${toCall.toLocaleString()} 🪙`}
+                      </span>
+                    </button>
+
+                    {/* RAISE */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        setShowRaiseSlider(!showRaiseSlider);
+                      }}
+                      className={`py-3 px-2 rounded-2xl font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center border ${
+                        showRaiseSlider
+                          ? 'bg-amber-400 text-slate-950 border-white'
+                          : 'bg-gradient-to-br from-amber-500 to-yellow-600 text-slate-950 border-amber-300/40'
+                      }`}
+                    >
+                      <span>{gameData.currentBet === 0 ? 'BET' : 'RAISE'}</span>
+                      <span className="text-[9px] font-mono font-bold">
+                        {minLegalRaise.toLocaleString()} 🪙 +
+                      </span>
                     </button>
                   </div>
-                )}
-
-                {/* Primary Action Buttons: FOLD | CHECK/CALL | RAISE */}
-                <div className="grid grid-cols-3 gap-2">
-                  {/* FOLD */}
-                  <button
-                    type="button"
-                    onClick={() => handleActionClick('fold')}
-                    className="py-3 px-2 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center"
-                  >
-                    <span>FOLD</span>
-                    <span className="text-[9px] font-normal opacity-70">{t('poker.foldDesc')}</span>
-                  </button>
-
-                  {/* CHECK or CALL */}
-                  <button
-                    type="button"
-                    onClick={() => handleActionClick(toCall === 0 ? 'check' : 'call')}
-                    className="py-3 px-2 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center"
-                  >
-                    <span>{toCall === 0 ? 'CHECK' : 'CALL'}</span>
-                    <span className="text-[9px] font-mono font-bold">
-                      {toCall === 0 ? t('poker.free') : `${toCall.toLocaleString()} 🪙`}
-                    </span>
-                  </button>
-
-                  {/* RAISE */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerImpact('light');
-                      setShowRaiseSlider(!showRaiseSlider);
-                    }}
-                    className={`py-3 px-2 rounded-2xl font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex flex-col items-center justify-center border ${
-                      showRaiseSlider
-                        ? 'bg-amber-400 text-slate-950 border-white'
-                        : 'bg-gradient-to-br from-amber-500 to-yellow-600 text-slate-950 border-amber-300/40'
-                    }`}
-                  >
-                    <span>{gameData.currentBet === 0 ? 'BET' : 'RAISE'}</span>
-                    <span className="text-[9px] font-mono font-bold">
-                      {minLegalRaise.toLocaleString()} 🪙 +
-                    </span>
-                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-center text-xs text-slate-400 flex items-center justify-center space-x-2">
-                <Clock className="w-3.5 h-3.5 text-slate-500 animate-spin" />
-                <span>
-                  {gameData.stage === 'SHOWDOWN'
-                    ? t('poker.statusShowdown')
-                    : gameData.stage === 'HAND_OVER'
-                    ? t('poker.statusHandOver')
-                    : heroSeat?.hasFolded
-                    ? t('poker.statusHeroFolded')
-                    : heroSeat?.isAllIn
-                    ? t('poker.statusHeroAllIn')
-                    : t('poker.statusWaitingFor', {
-                        name:
-                          gameData.seats[gameData.activeSeat || 0]?.username ||
-                          t('arena.waitingForOpponent'),
-                      })}
-                </span>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-center text-xs text-slate-400 flex items-center justify-center space-x-2">
+                  <Clock className="w-3.5 h-3.5 text-slate-500 animate-spin" />
+                  <span>
+                    {gameData.stage === 'SHOWDOWN'
+                      ? t('poker.statusShowdown')
+                      : gameData.stage === 'HAND_OVER'
+                      ? t('poker.statusHandOver')
+                      : heroSeat?.hasFolded
+                      ? t('poker.statusHeroFolded')
+                      : heroSeat?.isAllIn
+                      ? t('poker.statusHeroAllIn')
+                      : t('poker.statusWaitingFor', {
+                          name:
+                            gameData.seats[gameData.activeSeat || 0]?.username ||
+                            t('arena.waitingForOpponent'),
+                        })}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Tournament Settlement / Winner Overlay */}
-          {gameData.stage === 'TOURNAMENT_OVER' && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-              <div className="w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 to-black border-2 border-amber-400 shadow-[0_0_50px_rgba(251,191,36,0.3)] text-center space-y-4">
+          {/* Tournament Settlement / Winner / Rematch Overlay */}
+          {isMatchSettled && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300">
+              <div className="w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-400 shadow-[0_0_50px_rgba(251,191,36,0.3)] text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-slate-950 shadow-xl">
                   <Trophy className="w-9 h-9" />
                 </div>
@@ -868,7 +937,16 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     {t('poker.tournamentOver')}
                   </h3>
                   <p className="text-xs text-amber-300 font-heading font-bold pt-1">
-                    🏆 {t('poker.champion')}: {gameData.tournamentWinner?.username}
+                    🏆 {t('poker.champion')}:{' '}
+                    {gameData?.tournamentWinner?.username ||
+                      winnerName ||
+                      (isWinner
+                        ? userSide === 'A'
+                          ? playerAName
+                          : playerBName
+                        : userSide === 'A'
+                        ? playerBName
+                        : playerAName)}
                   </p>
                 </div>
 
@@ -878,9 +956,131 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                   </div>
                   <div className="text-xl font-mono font-black text-amber-400 flex items-center justify-center space-x-1 pt-0.5">
                     <GramIcon className="w-5 h-5" />
-                    <span>{gameData.tournamentWinner?.totalPrizeGram.toFixed(2)} GRAM</span>
+                    <span>
+                      {(
+                        gameData?.tournamentWinner?.totalPrizeGram ||
+                        Number(wagerTon) * (gameData?.maxPlayers || 2) * 0.92
+                      ).toFixed(2)}{' '}
+                      GRAM
+                    </span>
                   </div>
+                  {isWinner && (
+                    <div className="text-[10px] text-emerald-400 font-mono font-bold pt-1">
+                      ✓ Premio accreditato automaticamente sul saldo!
+                    </div>
+                  )}
                 </div>
+
+                {/* Rematch Section (for players in Heads-Up) */}
+                {role === 'player' && (
+                  <div className="space-y-2 pt-1">
+                    {/* Offer sent by this player */}
+                    {rematchOffer && isRematchProposer && (
+                      <div className="w-full p-2.5 rounded-xl bg-pink-500/20 border border-pink-500/60 flex flex-col space-y-1.5 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-heading font-bold text-white flex items-center space-x-1.5">
+                            <Clock className="w-3.5 h-3.5 animate-spin text-pink-400" />
+                            <span>{t('arena.rematchOfferSent')}</span>
+                          </span>
+                          <span className="text-xs font-mono font-bold text-cyan-300">
+                            {rematchOffer.newWagerTon} GRAM
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-300">
+                          {t('arena.waitingForOpponentRematch')}
+                        </span>
+                        {onDeclineRematch && (
+                          <button
+                            type="button"
+                            onClick={onDeclineRematch}
+                            className="w-full py-1.5 rounded-lg bg-black/60 border border-slate-600 text-xs text-slate-300 hover:text-white"
+                          >
+                            {t('arena.decline')}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Offer received from opponent */}
+                    {rematchOffer && !isRematchProposer && (
+                      <div className="w-full p-2.5 rounded-xl bg-pink-500/25 border border-pink-500 flex flex-col space-y-2 text-left animate-pulse">
+                        <span className="text-xs font-heading font-bold text-white">
+                          {t('arena.rematchChallengeReceived')}
+                        </span>
+                        <span className="text-[11px] text-slate-200">
+                          {rematchOffer.proposerName}: {rematchOffer.newWagerTon} GRAM
+                        </span>
+                        {!hasEnoughForRematch ? (
+                          <div className="flex flex-col space-y-1.5 pt-1">
+                            <div className="p-2 rounded-lg bg-black/70 border border-pink-500/50 text-[10px] text-pink-300 flex items-center justify-between">
+                              <span>Saldo: {currentBal.toFixed(2)} GRAM</span>
+                              <span className="font-bold">Mancano: {missingForRematch} GRAM</span>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                type="button"
+                                onClick={onDeclineRematch}
+                                className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300"
+                              >
+                                {t('arena.decline')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onOpenDeposit?.(missingForRematch)}
+                                className="flex-1 py-1.5 rounded-lg bg-cyan-400 text-slate-950 text-xs font-bold font-heading flex items-center justify-center space-x-1 hover:brightness-110 active:scale-95"
+                              >
+                                <span>{t('arena.depositForRematch')}</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex space-x-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={onDeclineRematch}
+                              className="flex-1 py-1.5 rounded-lg bg-black border border-slate-600 text-xs text-slate-300"
+                            >
+                              {t('arena.decline')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={onAcceptRematch}
+                              className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-pink-500 to-rose-600 text-white text-xs font-bold font-heading shadow hover:brightness-110 active:scale-95"
+                            >
+                              {t('arena.accept2x')}
+                            </button>
+                          </div>
+                        )}
+                        {socketError && (
+                          <div className="p-1.5 rounded-lg bg-pink-500/20 border border-pink-500/60 text-[10px] text-pink-300 text-center">
+                            {socketError}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Request Rematch button (when no active offer) */}
+                    {!rematchOffer && onRequestRematch && (
+                      !opponentConnected ? (
+                        <div className="w-full py-2.5 rounded-xl bg-black/40 border border-slate-800 text-slate-500 text-xs font-heading font-bold text-center">
+                          {t('arena.opponentLeft')}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerImpact('medium');
+                            onRequestRematch();
+                          }}
+                          className="w-full py-2.5 rounded-xl font-heading font-extrabold text-xs uppercase bg-gradient-to-r from-pink-500 to-cyan-400 text-white shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-1.5"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          <span>{t('arena.rematch2x')}</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -888,7 +1088,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     triggerImpact('medium');
                     onReturnToLobby?.();
                   }}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                  className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-heading font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
                 >
                   {t('poker.returnToLobby')}
                 </button>
