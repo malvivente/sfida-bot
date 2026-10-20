@@ -109,7 +109,7 @@ export function useSocket({
   const [betStatus, setBetStatus] = useState<'idle' | 'placing' | 'confirmed' | 'error'>('idle');
   const [betError, setBetError] = useState<string | null>(null);
   const [spectatorOutcome, setSpectatorOutcome] = useState<SpectatorOutcome | null>(null);
-  const [socketRole, setSocketRole] = useState<'PLAYER_A' | 'PLAYER_B' | 'SPECTATOR' | null>(null);
+  const [socketRole, setSocketRole] = useState<string | null>(null);
   const [socketPlayerA, setSocketPlayerA] = useState<SocketPlayerInfo | null>(null);
   const [socketPlayerB, setSocketPlayerB] = useState<SocketPlayerInfo | null>(null);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
@@ -238,7 +238,7 @@ export function useSocket({
             if (msg.playerBName) setPlayerBName(msg.playerBName);
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             if (msg.gameType) setGameType(msg.gameType);
-            if (msg.gameData) setGameData(msg.gameData);
+            if (msg.gameData || (msg as any).payload) setGameData(msg.gameData || (msg as any).payload);
             if (msg.playerA) {
               setSocketPlayerA(msg.playerA);
               if (msg.playerA.name) setPlayerAName(msg.playerA.name);
@@ -268,7 +268,7 @@ export function useSocket({
             if (msg.playerBName) setPlayerBName(msg.playerBName);
             if (msg.wagerTon) setActiveWagerTon(msg.wagerTon);
             if (msg.gameType) setGameType(msg.gameType);
-            if (msg.gameData) setGameData(msg.gameData);
+            if (msg.gameData || (msg as any).payload) setGameData(msg.gameData || (msg as any).payload);
             if (msg.playerA) {
               setSocketPlayerA((prev) => ({ ...prev, ...msg.playerA }));
               if (msg.playerA.name) setPlayerAName(msg.playerA.name);
@@ -369,7 +369,12 @@ export function useSocket({
           case 'POKER_CLOCK':
             setGameData((prev: any) => {
               if (!prev) return prev;
-              return { ...prev, activeSeat: (msg as any).seatIndex, turnTimeRemaining: (msg as any).secondsRemaining };
+              return {
+                ...prev,
+                activeSeat: (msg as any).seatIndex,
+                turnTimeRemaining: (msg as any).secondsRemaining,
+                turnTimeLimit: (msg as any).turnTimeLimit !== undefined ? (msg as any).turnTimeLimit : prev.turnTimeLimit,
+              };
             });
             break;
 

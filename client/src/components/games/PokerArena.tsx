@@ -398,7 +398,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
         }
       }
 
-      const isThisUserSeat = (idx === 0 && userSide === 'A') || (idx === 1 && userSide === 'B');
+      const isThisUserSeat = heroSeatIndex !== -1 ? idx === heroSeatIndex : ((idx === 0 && userSide === 'A') || (idx === 1 && userSide === 'B'));
       const isReadyState = Boolean(
         seat.isReady ||
         (idx === 0 && playerAReady) ||
@@ -413,7 +413,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
         isOccupied,
       };
     });
-  }, [gameData?.seats, playerAName, playerBName, playerAReady, playerBReady, hasPlayerB, userSide, isReady]);
+  }, [gameData?.seats, playerAName, playerBName, playerAReady, playerBReady, hasPlayerB, userSide, isReady, heroSeatIndex]);
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center select-none font-sans relative pb-6">
@@ -512,42 +512,57 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
           {/* Action Buttons */}
           <div className="pt-2 space-y-2">
-            {!hasPlayerB ? (
-              <div className="w-full py-3 rounded-2xl bg-slate-800/60 border border-white/10 text-slate-400 font-heading font-bold text-xs flex items-center justify-center space-x-2">
-                <Clock className="w-4 h-4 animate-spin text-slate-400" />
-                <span>{t('arena.waitingForOpponentBtn')}</span>
-              </div>
-            ) : !isReady ? (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerImpact('medium');
-                  onReady?.();
-                }}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all"
-              >
-                ✓ {t('lobby.readyButton')}
-              </button>
-            ) : (
-              <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-heading font-bold text-xs flex items-center justify-center space-x-2">
-                <span>✓</span>
-                <span>{t('lobby.readyStatusWaiting')}</span>
-              </div>
-            )}
+            {(() => {
+              const maxTablePlayers = gameData?.maxPlayers || 2;
+              const occupiedCount = displaySeats.filter((s) => s.isOccupied).length;
+              const hasEnoughPlayersToReady = maxTablePlayers === 2 ? hasPlayerB : occupiedCount >= maxTablePlayers;
+              const canShowInviteButton = occupiedCount < maxTablePlayers && Boolean(onInviteChallenger);
 
-            {onInviteChallenger && (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerImpact('light');
-                  onInviteChallenger();
-                }}
-                className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-heading font-bold text-xs transition-all active:scale-95 flex items-center justify-center space-x-1.5"
-              >
-                <Users className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{t('lobby.inviteFriend')}</span>
-              </button>
-            )}
+              return (
+                <>
+                  {!hasEnoughPlayersToReady ? (
+                    <div className="w-full py-3 rounded-2xl bg-slate-800/60 border border-white/10 text-slate-400 font-heading font-bold text-xs flex items-center justify-center space-x-2">
+                      <Clock className="w-4 h-4 animate-spin text-slate-400" />
+                      <span>
+                        {maxTablePlayers === 2
+                          ? t('arena.waitingForOpponentBtn')
+                          : t('poker.waitingOtherPlayers', { count: occupiedCount, max: maxTablePlayers })}
+                      </span>
+                    </div>
+                  ) : !isReady ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('medium');
+                        onReady?.();
+                      }}
+                      className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      ✓ {t('lobby.readyButton')}
+                    </button>
+                  ) : (
+                    <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-heading font-bold text-xs flex items-center justify-center space-x-2">
+                      <span>✓</span>
+                      <span>{t('lobby.readyStatusWaiting')}</span>
+                    </div>
+                  )}
+
+                  {canShowInviteButton && onInviteChallenger && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        onInviteChallenger();
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-purple-600/30 hover:from-purple-600/40 hover:to-indigo-600/40 border border-purple-500/40 text-purple-200 font-heading font-bold text-xs transition-all active:scale-95 flex items-center justify-center space-x-1.5 shadow"
+                    >
+                      <Users className="w-3.5 h-3.5 text-purple-400" />
+                      <span>{t('poker.shareTableInvite')}</span>
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -576,9 +591,19 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     >
                       {/* Avatar with Turn Ring */}
                       <div className="relative">
+                        {/* Disconnect indicator badge with countdown */}
+                        {(!seat.isConnected || (seat.disconnectCountdown !== undefined && seat.disconnectCountdown > 0)) && (
+                          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-red-950/95 border border-red-500/80 text-red-300 font-mono font-bold text-[8px] flex items-center space-x-0.5 shadow-lg z-20 whitespace-nowrap animate-pulse">
+                            <WifiOff className="w-2.5 h-2.5 text-red-400 shrink-0" />
+                            <span>{seat.disconnectCountdown !== undefined ? `${seat.disconnectCountdown}s` : 'DISC'}</span>
+                          </div>
+                        )}
+
                         <div
                           className={`w-11 h-11 rounded-full p-0.5 border-2 flex items-center justify-center transition-all shadow-md ${
-                            isCurrentTurn
+                            !seat.isConnected
+                              ? 'border-red-500/70 opacity-60'
+                              : isCurrentTurn
                               ? 'border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)] animate-pulse'
                               : seat.isAllIn
                               ? 'border-red-500'
@@ -783,6 +808,12 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                       <span className="text-[9px] text-slate-300 font-heading">
                         {heroSeat.lastAction.message}
                       </span>
+                    )}
+                    {(!heroSeat.isConnected || (heroSeat.disconnectCountdown !== undefined && heroSeat.disconnectCountdown > 0)) && (
+                      <div className="mt-0.5 px-1.5 py-0.2 rounded-full bg-red-950/95 border border-red-500/80 text-red-300 font-mono font-bold text-[8px] flex items-center space-x-1 animate-pulse">
+                        <WifiOff className="w-2.5 h-2.5 text-red-400" />
+                        <span>{heroSeat.disconnectCountdown !== undefined ? `${heroSeat.disconnectCountdown}s` : t('poker.disconnectedBadge')}</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1098,8 +1129,8 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
         </div>
       )}
 
-      {/* In-Game Disconnect & Forfeit Countdown Popup */}
-      {role === 'player' && roomState === 'GAME_ACTIVE' && typeof forfeitCountdown === 'number' && forfeitCountdown > 0 && (
+      {/* In-Game Disconnect & Forfeit Countdown Popup (Heads-Up only; in 3+ tables non-intrusive avatar badges are shown) */}
+      {role === 'player' && (gameData?.maxPlayers || 2) === 2 && roomState === 'GAME_ACTIVE' && typeof forfeitCountdown === 'number' && forfeitCountdown > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-500/70 shadow-[0_0_40px_rgba(245,158,11,0.35)] flex flex-col items-center text-center space-y-3">
             <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center animate-pulse">

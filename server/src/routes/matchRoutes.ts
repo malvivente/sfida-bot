@@ -173,9 +173,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
     return reply.send({
       matchId: room.matchId.toString(),
       gameType: room.gameType || 'roulette',
+      maxPlayers: (room as any).maxPlayers,
+      currentPlayers: room.gameType === 'poker' ? (room as any).getAllPlayerSessions().length : (room.playerB ? 2 : 1),
       escrowAddress,
       state: room.state,
       isPrivate: room.isPrivate || false,
+      inviteCode: room.inviteCode,
       allowSpectators: room.allowSpectators !== undefined ? room.allowSpectators : true,
       groupChatId: room.config.groupChatId,
       winnerAddress: room.winnerAddress,
@@ -399,36 +402,43 @@ export async function matchRoutes(fastify: FastifyInstance) {
       );
     }
 
-    // If direct challenge target is specified, notify target via Telegram bot
+    // If direct challenge target is specified, notify target(s) via Telegram bot
     if (body.targetOpponentUsername || body.targetOpponentId) {
       (async () => {
         try {
-          const targetUser = dbService.findUser(body.targetOpponentId || body.targetOpponentUsername || '');
-          if (targetUser && targetUser.telegramId) {
-            const { getTelegramBot } = await import('../bot/index.js');
-            const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
-            const { botT, resolveLanguage } = await import('../bot/i18n.js');
-            const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
-            const bot = getTelegramBot();
-            if (bot) {
-              const targetLang = resolveLanguage(targetUser.customLanguageCode || targetUser.languageCode);
-              const gameConfig = (GAMES_CONFIG as any)[gameType];
-              const gameTitle = gameConfig?.name || gameType.toUpperCase();
-              const rawUser = (body.rawUsername || userAccount.username || '').trim().replace(/^@/, '');
-              const creatorFirstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
-              const creatorName = rawUser ? `@${rawUser}` : (creatorFirstName || 'Un duellante');
-              const text = botT(targetLang, 'direct_challenge_msg', {
-                creatorName,
-                gameTitle,
-                wager: wagerGram.toFixed(2),
-              });
-              const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-              const btnLabel = botT(targetLang, 'btn_accept_challenge');
-              const keyboard = new InlineKeyboard().webApp(btnLabel, `${webAppUrl}?startapp=duel_${matchId}`);
-              await bot.api.sendMessage(Number(targetUser.telegramId), text, {
-                parse_mode: 'HTML',
-                reply_markup: keyboard,
-              });
+          const rawTargets = body.targetOpponentUsername
+            ? body.targetOpponentUsername.split(/[,\s]+/).map((u) => u.trim()).filter(Boolean)
+            : (body.targetOpponentId ? [body.targetOpponentId] : []);
+
+          const { getTelegramBot } = await import('../bot/index.js');
+          const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+          const { botT, resolveLanguage } = await import('../bot/i18n.js');
+          const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+          const bot = getTelegramBot();
+          if (bot) {
+            for (const targetKey of rawTargets) {
+              const targetUser = dbService.findUser(targetKey);
+              if (targetUser && targetUser.telegramId) {
+                const targetLang = resolveLanguage(targetUser.customLanguageCode || targetUser.languageCode);
+                const gameConfig = (GAMES_CONFIG as any)[gameType];
+                const gameTitle = gameConfig?.name || gameType.toUpperCase();
+                const rawUser = (body.rawUsername || userAccount.username || '').trim().replace(/^@/, '');
+                const creatorFirstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
+                const creatorName = rawUser ? `@${rawUser}` : (creatorFirstName || 'Un duellante');
+                const text = botT(targetLang, 'direct_challenge_msg', {
+                  creatorName,
+                  gameTitle,
+                  wager: wagerGram.toFixed(2),
+                });
+                const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+                const btnLabel = botT(targetLang, 'btn_accept_challenge');
+                const duelUrl = `${webAppUrl}?startapp=duel_${matchId}${inviteCode ? `_${inviteCode}` : ''}`;
+                const keyboard = new InlineKeyboard().webApp(btnLabel, duelUrl);
+                await bot.api.sendMessage(Number(targetUser.telegramId), text, {
+                  parse_mode: 'HTML',
+                  reply_markup: keyboard,
+                });
+              }
             }
           }
         } catch (targetNotifyErr) {
@@ -531,20 +541,33 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'You cannot duel against yourself' });
     }
 
-    // Direct challenge check: if room has targetOpponentUsername or targetOpponentId, enforce only target can join
+    // Direct challenge check: if room has targetOpponentUsername or targetOpponentId
     let isTargetUser = false;
     if (room.targetOpponentUsername || room.targetOpponentId) {
-      const cleanTargetUser = room.targetOpponentUsername?.replace(/^@/, '').toLowerCase().trim();
       const cleanJoinUser = body.telegramUsername?.replace(/^@/, '').toLowerCase().trim();
       const cleanRawUser = body.rawUsername?.replace(/^@/, '').toLowerCase().trim();
       const isTargetId = Boolean(room.targetOpponentId && body.telegramUserId && String(room.targetOpponentId) === String(body.telegramUserId));
-      const isTargetUsername = Boolean(cleanTargetUser && (cleanTargetUser === cleanJoinUser || cleanTargetUser === cleanRawUser));
+      
+      const targetUsernames = room.targetOpponentUsername
+        ? room.targetOpponentUsername.split(/[,\s]+/).map((u) => u.replace(/^@/, '').toLowerCase().trim()).filter(Boolean)
+        : [];
+      const isTargetUsername = Boolean(
+        (cleanJoinUser && targetUsernames.includes(cleanJoinUser)) ||
+        (cleanRawUser && targetUsernames.includes(cleanRawUser))
+      );
       isTargetUser = Boolean(isTargetId || isTargetUsername);
 
-      if (!isTargetUser) {
+      const hasValidInviteCode = Boolean(
+        body.inviteCode &&
+        room.inviteCode &&
+        body.inviteCode.trim().toUpperCase() === room.inviteCode.trim().toUpperCase()
+      );
+
+      // In multi-player poker or if possessing valid inviteCode, allow joining even if direct targets were set
+      if (!isTargetUser && !(isMultiPoker && hasValidInviteCode)) {
         return reply.status(403).send({
           error: 'DIRECT_DUEL_RESTRICTED',
-          message: `Questa sfida è privata e riservata a @${room.targetOpponentUsername || 'un utente specifico'}.`,
+          message: `Questa sfida è privata e riservata a ${room.targetOpponentUsername || 'un utente specifico'}.`,
         });
       }
     }
@@ -624,12 +647,17 @@ export async function matchRoutes(fastify: FastifyInstance) {
         body.playerBAddress,
         body.telegramUserId || '',
         body.telegramUsername || body.rawUsername || 'Player',
-        body.firstName || userAccount.firstName
+        body.firstName || userAccount.firstName,
+        body.photoUrl || userAccount.photoUrl || ''
       );
+      (room as any).syncSeatsFromSessions?.();
       room.upgradeSpectatorToPlayer(body.playerBAddress, body.telegramUserId || '', body.telegramUsername || '');
+      (room as any).broadcastRoomState?.();
+      (room as any).broadcastState?.();
       room.broadcast({
         type: 'ROOM_UPDATE',
         state: room.state,
+        gameData: (room as any).getGamePayload?.(),
         message: `${ep?.username || 'Player'} has joined the Poker Table!`,
       });
     } else {

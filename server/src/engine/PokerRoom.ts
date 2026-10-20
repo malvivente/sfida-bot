@@ -14,7 +14,7 @@ import { dbService } from '../services/db.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
 
 const STARTING_CHIPS = 1000;
-const ACTION_TIMEOUT_SECONDS = 15;
+const ACTION_TIMEOUT_SECONDS = 30;
 
 const BLIND_LEVELS = [
   { sb: 10, bb: 20 },
@@ -51,11 +51,13 @@ export class PokerRoom extends BaseGameRoom {
   public smallBlind: number = 10;
   public bigBlind: number = 20;
 
+  public turnTimeLimit: number = ACTION_TIMEOUT_SECONDS;
   public turnTimeRemaining: number = ACTION_TIMEOUT_SECONDS;
   private actionTimer?: NodeJS.Timeout;
   private actionInterval?: NodeJS.Timeout;
   private streetTimer?: NodeJS.Timeout;
   private finishHandTimer?: NodeJS.Timeout;
+  private seatDisconnectTimers: Map<number, NodeJS.Timeout> = new Map();
 
   private clearAllTimers() {
     this.clearActionTimers();
@@ -67,6 +69,10 @@ export class PokerRoom extends BaseGameRoom {
       clearTimeout(this.finishHandTimer);
       this.finishHandTimer = undefined;
     }
+    for (const timer of this.seatDisconnectTimers.values()) {
+      clearInterval(timer);
+    }
+    this.seatDisconnectTimers.clear();
   }
 
   public handWinners?: {
@@ -179,7 +185,8 @@ export class PokerRoom extends BaseGameRoom {
     walletAddress: string,
     telegramId: string,
     username: string,
-    firstName?: string
+    firstName?: string,
+    photoUrl?: string
   ): PlayerSession | null {
     if (this.isTableFull()) return null;
 
@@ -190,6 +197,7 @@ export class PokerRoom extends BaseGameRoom {
       username: cleanPlayerName(username),
       firstName: firstName?.trim(),
       displayName: firstName?.trim() || cleanPlayerName(username),
+      photoUrl,
       connected: false,
       ready: false,
       score: 0,
@@ -202,8 +210,10 @@ export class PokerRoom extends BaseGameRoom {
       this.seats[seatIdx].telegramId = telegramId;
       this.seats[seatIdx].username = session.username;
       this.seats[seatIdx].displayName = session.displayName || session.username;
+      this.seats[seatIdx].photoUrl = photoUrl;
     }
 
+    this.syncSeatsFromSessions();
     return session;
   }
 
@@ -273,15 +283,19 @@ export class PokerRoom extends BaseGameRoom {
         if (firstName) ep.firstName = firstName.trim();
         this.syncSeatConnection(2 + i, ep, ws);
 
+        const payload = this.getGamePayload(2 + i);
         this.sendTo(ws, {
           type: 'INIT_STATE',
           matchId: this.matchId.toString(),
           gameType: 'poker',
           role: `PLAYER_${2 + i}`,
           state: this.state,
-          payload: this.getGamePayload(),
+          payload,
+          gameData: payload,
         });
         this.sendHoleCardsTo(2 + i);
+        this.broadcastRoomState();
+        this.broadcastState();
         return true;
       }
     }
@@ -296,7 +310,13 @@ export class PokerRoom extends BaseGameRoom {
       this.seats[seatIdx].username = session.username;
       this.seats[seatIdx].displayName = session.displayName || session.username;
       this.seats[seatIdx].isConnected = true;
+      this.seats[seatIdx].disconnectCountdown = undefined;
       this.seats[seatIdx].photoUrl = session.photoUrl;
+
+      if (this.seatDisconnectTimers.has(seatIdx)) {
+        clearInterval(this.seatDisconnectTimers.get(seatIdx)!);
+        this.seatDisconnectTimers.delete(seatIdx);
+      }
     }
   }
 
@@ -553,7 +573,24 @@ export class PokerRoom extends BaseGameRoom {
       this.seats[i].isTurn = i === this.activeSeat;
     }
 
-    this.turnTimeRemaining = ACTION_TIMEOUT_SECONDS;
+    const activePlayerSeat = this.seats[this.activeSeat];
+    if (!activePlayerSeat) return;
+
+    // If player is disconnected and their disconnect grace period has expired, auto check/fold immediately
+    if (!activePlayerSeat.isConnected && activePlayerSeat.disconnectCountdown === 0) {
+      this.actionTimer = setTimeout(() => {
+        this.handleActionTimeout();
+      }, 500);
+      this.broadcastState();
+      return;
+    }
+
+    // Dynamic AFK timer calculation:
+    // Base 30s. Decreases on consecutive AFK timeouts: 30s -> 15s -> 5s min.
+    const afkCount = activePlayerSeat.consecutiveTimeouts || 0;
+    const dynamicLimit = Math.max(5, afkCount === 0 ? 30 : afkCount === 1 ? 15 : 5);
+    this.turnTimeLimit = dynamicLimit;
+    this.turnTimeRemaining = dynamicLimit;
 
     // Interval to countdown every second
     this.actionInterval = setInterval(() => {
@@ -562,13 +599,14 @@ export class PokerRoom extends BaseGameRoom {
         type: 'POKER_CLOCK',
         seatIndex: this.activeSeat,
         secondsRemaining: this.turnTimeRemaining,
+        turnTimeLimit: this.turnTimeLimit,
       });
     }, 1000);
 
     // Timeout trigger on expiry
     this.actionTimer = setTimeout(() => {
       this.handleActionTimeout();
-    }, ACTION_TIMEOUT_SECONDS * 1000);
+    }, dynamicLimit * 1000);
 
     this.broadcastState();
   }
@@ -587,6 +625,10 @@ export class PokerRoom extends BaseGameRoom {
   private handleActionTimeout() {
     if (this.activeSeat === null) return;
     const seat = this.seats[this.activeSeat];
+    if (!seat || seat.hasFolded || seat.isAllIn) return;
+
+    // Increment consecutive AFK timeouts
+    seat.consecutiveTimeouts = (seat.consecutiveTimeouts || 0) + 1;
 
     // If player can check, perform check; otherwise fold
     if (seat.currentBet === this.currentBet) {
@@ -601,6 +643,11 @@ export class PokerRoom extends BaseGameRoom {
       const seatIndex = this.seats.findIndex((s) => this.isSameWallet(s.walletAddress, wallet));
       if (seatIndex === -1 || seatIndex !== this.activeSeat) {
         return;
+      }
+      const seat = this.seats[seatIndex];
+      if (seat) {
+        // Reset AFK counter on active user action
+        seat.consecutiveTimeouts = 0;
       }
       this.executeAction(seatIndex, data.action, data.amount);
     }
@@ -1009,7 +1056,7 @@ export class PokerRoom extends BaseGameRoom {
       smallBlindSeat: this.smallBlindSeat,
       bigBlindSeat: this.bigBlindSeat,
       activeSeat: this.activeSeat,
-      turnTimeLimit: ACTION_TIMEOUT_SECONDS,
+      turnTimeLimit: this.turnTimeLimit,
       turnTimeRemaining: this.turnTimeRemaining,
       handNumber: this.handNumber,
       blindLevel: this.blindLevel,
@@ -1093,19 +1140,81 @@ export class PokerRoom extends BaseGameRoom {
         super.handleDisconnect(wallet, ws, telegramId);
         return;
       } else {
-        // Multi-player tournament: check if only 1 connected contender remains
-        const activeConnected = this.seats.filter((s) => !s.eliminated && s.isConnected);
-        if (activeConnected.length <= 1) {
-          this.clearActionTimers();
-          super.handleDisconnect(wallet, ws, telegramId);
+        // Multi-player tournament: check if only 1 contender remains not eliminated
+        const activeRemaining = this.seats.filter((s) => !s.eliminated);
+        if (activeRemaining.length <= 1) {
+          this.clearAllTimers();
+          this.handleTournamentEnd();
           return;
         }
 
-        // Multiple players still active: let turn timer run its normal course then auto-check/fold
+        // Multi-player: do NOT trigger BaseGameRoom forfeit popup!
+        // Start 30-second seat-level disconnect countdown badge
+        if (seatIdx !== -1 && !this.seats[seatIdx].eliminated) {
+          const seat = this.seats[seatIdx];
+          seat.disconnectCountdown = 30;
+          this.broadcastRoomState();
+          this.broadcastState();
+
+          if (this.seatDisconnectTimers.has(seatIdx)) {
+            clearInterval(this.seatDisconnectTimers.get(seatIdx)!);
+          }
+
+          const interval = setInterval(() => {
+            if (seat.isConnected) {
+              clearInterval(interval);
+              this.seatDisconnectTimers.delete(seatIdx);
+              seat.disconnectCountdown = undefined;
+              this.broadcastState();
+              return;
+            }
+
+            if (seat.disconnectCountdown && seat.disconnectCountdown > 0) {
+              seat.disconnectCountdown -= 1;
+              this.broadcastState();
+            } else {
+              // Timer expired: keep disconnectCountdown = 0, so future turns auto-fold immediately
+              clearInterval(interval);
+              this.seatDisconnectTimers.delete(seatIdx);
+              seat.disconnectCountdown = 0;
+              if (this.activeSeat === seatIdx) {
+                this.handleActionTimeout();
+              }
+              this.broadcastState();
+            }
+          }, 1000);
+
+          this.seatDisconnectTimers.set(seatIdx, interval);
+        }
+
+        // If it was their turn when disconnecting and grace period already expired, auto-fold
+        if (this.activeSeat === seatIdx && seatIdx !== -1 && this.seats[seatIdx].disconnectCountdown === 0) {
+          this.handleActionTimeout();
+        }
       }
     } else {
       super.handleDisconnect(wallet, ws, telegramId);
     }
+  }
+
+  public override async triggerForfeit(winnerAddress: string, forfeiterName: string = '') {
+    if (this.maxPlayers > 2) {
+      // In 3+ player tournaments, a single player's forfeit cannot award the tournament to another player
+      // Mark forfeiter as eliminated and continue tournament
+      const forfeiterSeat = this.seats.find((s) => (forfeiterName && s.username === forfeiterName) || (winnerAddress && !this.isSameWallet(s.walletAddress, winnerAddress)));
+      if (forfeiterSeat) {
+        forfeiterSeat.eliminated = true;
+        forfeiterSeat.chips = 0;
+      }
+      const remaining = this.getActiveSeatedPlayers();
+      if (remaining.length <= 1) {
+        await this.handleTournamentEnd();
+      } else {
+        this.startNewHand();
+      }
+      return;
+    }
+    await super.triggerForfeit(winnerAddress, forfeiterName);
   }
 
   public cleanupGameTimers(): void {

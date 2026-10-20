@@ -549,6 +549,8 @@ export interface PokerPlayerSeat {
   eliminated?: boolean;
   payoutGram?: number;
   finishRank?: number;
+  consecutiveTimeouts?: number;
+  disconnectCountdown?: number;
 }
 
 export interface PokerPot {

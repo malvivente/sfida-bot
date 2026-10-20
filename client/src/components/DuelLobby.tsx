@@ -1745,7 +1745,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
-                    {t('lobby.directChallengeLabel')}
+                    {selectedGameType === 'poker' && pokerMaxPlayers > 2
+                      ? t('poker.directChallengeLabelMulti', { count: pokerMaxPlayers - 1 })
+                      : t('lobby.directChallengeLabel')}
                   </label>
                   {friendsList.length > 0 && (
                     <button
@@ -1765,19 +1767,43 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     <div className="flex flex-wrap gap-1">
                       {friendsList.map((f, idx) => {
                         const friendName = f.displayName || f.name || f.username || t('lobby.friendFallback');
+                        const targetTag = f.username ? (f.username.startsWith('@') ? f.username : `@${f.username}`) : friendName;
+                        const isMultiPoker = selectedGameType === 'poker' && pokerMaxPlayers > 2;
+                        const currentTokens = targetOpponentInput
+                          .split(/[,\s]+/)
+                          .map((u) => u.trim())
+                          .filter(Boolean);
+                        const isSelected = currentTokens.some((t) => t.toLowerCase() === targetTag.toLowerCase());
+
                         return (
                           <button
                             key={f.telegramId || f.id || idx}
                             type="button"
                             onClick={() => {
                               triggerImpact('light');
-                              setTargetOpponentInput(f.username ? `@${f.username}` : friendName);
-                              setIsPrivateRoom(true);
-                              setShowFriendPicker(false);
+                              if (isMultiPoker) {
+                                let updated: string[];
+                                if (isSelected) {
+                                  updated = currentTokens.filter((t) => t.toLowerCase() !== targetTag.toLowerCase());
+                                } else {
+                                  if (currentTokens.length >= pokerMaxPlayers - 1) return;
+                                  updated = [...currentTokens, targetTag];
+                                }
+                                setTargetOpponentInput(updated.join(', '));
+                                setIsPrivateRoom(true);
+                              } else {
+                                setTargetOpponentInput(targetTag);
+                                setIsPrivateRoom(true);
+                                setShowFriendPicker(false);
+                              }
                             }}
-                            className="px-2 py-1 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-200 text-xs font-sans hover:bg-purple-500/30 transition-all flex items-center space-x-1"
+                            className={`px-2 py-1 rounded-xl text-xs font-sans transition-all flex items-center space-x-1 ${
+                              isSelected
+                                ? 'bg-purple-500/40 border border-purple-400 text-white font-bold'
+                                : 'bg-purple-500/15 border border-purple-500/30 text-purple-200 hover:bg-purple-500/30'
+                            }`}
                           >
-                            <span>👤</span>
+                            <span>{isSelected ? '✓' : '👤'}</span>
                             <span>{friendName}</span>
                             {f.username && <span className="text-[10px] text-slate-400">(@{f.username})</span>}
                           </button>
@@ -1798,7 +1824,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         setIsPrivateRoom(true);
                       }
                     }}
-                    placeholder={t('lobby.opponentPlaceholder')}
+                    placeholder={
+                      selectedGameType === 'poker' && pokerMaxPlayers > 2
+                        ? '@amico1, @amico2...'
+                        : t('lobby.opponentPlaceholder')
+                    }
                     className="w-full bg-[#151823] border border-white/10 rounded-2xl pl-9 pr-8 py-2 text-xs font-sans text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all font-medium"
                   />
                   {targetOpponentInput && (
@@ -1814,7 +1844,13 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 {targetOpponentInput.trim() && (
                   <p className="text-[10px] text-amber-300 font-sans flex items-center space-x-1">
                     <span>🎯</span>
-                    <span>{t('lobby.directDuelNotice', { target: targetOpponentInput.startsWith('@') ? targetOpponentInput : `@${targetOpponentInput}` })}</span>
+                    <span>{t('lobby.directDuelNotice', { target: targetOpponentInput })}</span>
+                  </p>
+                )}
+                {selectedGameType === 'poker' && pokerMaxPlayers > 2 && (
+                  <p className="text-[10px] text-purple-300 font-sans flex items-center space-x-1">
+                    <span>💡</span>
+                    <span>{t('poker.multiInviteTip', { count: pokerMaxPlayers })}</span>
                   </p>
                 )}
               </div>
