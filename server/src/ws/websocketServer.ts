@@ -20,6 +20,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       username?: string;
       firstName?: string;
       first_name?: string;
+      photoUrl?: string;
     };
 
     const matchId = query.matchId;
@@ -42,9 +43,10 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     const username = query.username || (role === 'player' ? 'Guerriero' : 'Spettatore');
     const telegramId = query.telegramId || '';
     const firstName = query.firstName || query.first_name || '';
+    const photoUrl = query.photoUrl ? decodeURIComponent(query.photoUrl) : '';
 
     if (role === 'player') {
-      const attached = room.attachPlayer(wallet, telegramId, username, ws, firstName);
+      const attached = room.attachPlayer(wallet, telegramId, username, ws, firstName, photoUrl);
       if (attached) {
         console.log(`[WS] Player ${username} (${wallet}) connected to Match #${matchId}`);
       } else {

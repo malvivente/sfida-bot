@@ -40,12 +40,13 @@ export class PotManager {
       const contributors = seats.filter((s) => s.totalInvestedThisHand >= threshold);
       const tierAmount = contributors.length * tierDelta;
 
-      // In Texas Hold'em: if only 1 contributor reached this tier, it's an uncalled bet.
-      // Uncalled chips cannot form a pot; they are returned to the bettor.
+      // If only 1 contributor reached this tier, it is an uncalled portion.
+      // We assign it to that single contributor so it is returned to them at showdown without mutating stacks mid-hand.
       if (contributors.length === 1) {
-        const uncalledSeat = contributors[0];
-        uncalledSeat.chips += tierAmount;
-        uncalledSeat.totalInvestedThisHand -= tierAmount;
+        pots.push({
+          amount: tierAmount,
+          eligibleSeats: [contributors[0].seatIndex],
+        });
         previousThreshold = threshold;
         continue;
       }

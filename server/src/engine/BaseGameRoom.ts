@@ -12,6 +12,9 @@ export interface RoomConfig {
   wagerAmountNano: bigint;
   playerAAddress: string;
   playerBAddress?: string;
+  playerAName?: string;
+  telegramUserId?: string;
+  photoUrl?: string;
   recruiterA?: string;
   groupAdminAddress?: string;
   groupChatId?: string;
@@ -131,11 +134,12 @@ export abstract class BaseGameRoom {
 
     this.playerA = {
       walletAddress: config.playerAAddress,
-      telegramId: '',
-      username: 'Player A',
+      telegramId: config.telegramUserId ? String(config.telegramUserId) : '',
+      username: config.playerAName || 'Player A',
       connected: false,
       ready: false,
       score: 0,
+      photoUrl: (config as any).photoUrl,
     };
 
     if (config.playerBAddress) {
@@ -183,12 +187,12 @@ export abstract class BaseGameRoom {
   }
 
   // Bind WebSocket to Player A or B
-  public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket, firstName?: string): boolean {
+  public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket, firstName?: string, photoUrl?: string): boolean {
     if (
       this.isSameWallet(wallet, this.playerA.walletAddress) ||
       (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
     ) {
-      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName);
+      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName, photoUrl);
       return true;
     }
 
@@ -197,7 +201,7 @@ export abstract class BaseGameRoom {
       (this.isSameWallet(wallet, this.playerB.walletAddress) ||
         (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
     ) {
-      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
       return true;
     }
 
@@ -208,12 +212,14 @@ export abstract class BaseGameRoom {
         telegramId,
         username: cleanPlayerName(username),
         firstName: firstName?.trim(),
+        displayName: firstName?.trim() || cleanPlayerName(username),
+        photoUrl,
         ws,
         connected: true,
         ready: false,
         score: 0,
       };
-      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
       return true;
     }
 
@@ -226,12 +232,14 @@ export abstract class BaseGameRoom {
     username: string,
     ws: WebSocket,
     side: 'A' | 'B',
-    firstName?: string
+    firstName?: string,
+    photoUrl?: string
   ) {
     player.ws = ws;
     if (telegramId) player.telegramId = telegramId;
     if (username) player.username = cleanPlayerName(username);
     if (firstName && !player.firstName) player.firstName = firstName.trim();
+    if (photoUrl && !player.photoUrl) player.photoUrl = photoUrl;
     player.connected = true;
     if (side === 'B') {
       this.cancelLobbyExpirationTimer();

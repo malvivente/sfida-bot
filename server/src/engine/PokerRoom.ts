@@ -222,14 +222,19 @@ export class PokerRoom extends BaseGameRoom {
     telegramId: string,
     username: string,
     ws: WebSocket,
-    firstName?: string
+    firstName?: string,
+    photoUrl?: string
   ): boolean {
     // 1. Check Player A
     if (
       this.isSameWallet(wallet, this.playerA.walletAddress) ||
       (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
     ) {
-      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName);
+      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName, photoUrl);
+      if (photoUrl) {
+        this.playerA.photoUrl = photoUrl;
+        if (this.seats[0]) this.seats[0].photoUrl = photoUrl;
+      }
       this.syncSeatConnection(0, this.playerA, ws);
       if (this.state === 'GAME_ACTIVE' && this.activeSeat !== null && !this.actionTimer) {
         this.startActionTimer();
@@ -243,7 +248,11 @@ export class PokerRoom extends BaseGameRoom {
       (this.isSameWallet(wallet, this.playerB.walletAddress) ||
         (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
     ) {
-      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
+      if (photoUrl) {
+        this.playerB.photoUrl = photoUrl;
+        if (this.seats[1]) this.seats[1].photoUrl = photoUrl;
+      }
       this.syncSeatConnection(1, this.playerB, ws);
       if (this.state === 'GAME_ACTIVE' && this.activeSeat !== null && !this.actionTimer) {
         this.startActionTimer();
@@ -259,12 +268,14 @@ export class PokerRoom extends BaseGameRoom {
         username: cleanPlayerName(username),
         firstName: firstName?.trim(),
         displayName: firstName?.trim() || cleanPlayerName(username),
+        photoUrl,
         ws,
         connected: true,
         ready: false,
         score: 0,
       };
-      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName);
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
+      if (this.seats[1] && photoUrl) this.seats[1].photoUrl = photoUrl;
       this.syncSeatConnection(1, this.playerB, ws);
       return true;
     }
@@ -281,6 +292,8 @@ export class PokerRoom extends BaseGameRoom {
         if (telegramId) ep.telegramId = telegramId;
         if (username) ep.username = cleanPlayerName(username);
         if (firstName) ep.firstName = firstName.trim();
+        if (photoUrl) ep.photoUrl = photoUrl;
+        if (this.seats[2 + i] && photoUrl) this.seats[2 + i].photoUrl = photoUrl;
         this.syncSeatConnection(2 + i, ep, ws);
 
         const payload = this.getGamePayload(2 + i);
@@ -692,17 +705,9 @@ export class PokerRoom extends BaseGameRoom {
 
       case 'bet':
       case 'raise': {
-        const otherActive = this.seats.filter(
-          (s) => s.seatIndex !== seatIndex && !s.eliminated && !s.hasFolded
-        );
-        const maxOpponentReach =
-          otherActive.length > 0
-            ? Math.max(...otherActive.map((s) => s.currentBet + s.chips))
-            : seat.currentBet + seat.chips;
-
+        const maxStack = seat.currentBet + seat.chips;
         const requested = Number(rawAmount) || this.minRaise;
-        const boundedRequested = Math.min(seat.currentBet + seat.chips, Math.max(this.minRaise, requested));
-        const targetBet = Math.min(boundedRequested, maxOpponentReach);
+        const targetBet = Math.min(maxStack, Math.max(this.minRaise, requested));
         const added = Math.min(seat.chips, targetBet - seat.currentBet);
 
         seat.chips -= added;
@@ -719,49 +724,41 @@ export class PokerRoom extends BaseGameRoom {
           this.playersActedThisRound.clear();
         }
 
-        if (seat.chips === 0) seat.isAllIn = true;
+        if (seat.chips === 0) {
+          seat.isAllIn = true;
+        }
+
         seat.lastAction = {
-          type: action === 'bet' ? 'BET' : 'RAISE',
+          type: seat.isAllIn ? 'ALL_IN' : action === 'bet' ? 'BET' : 'RAISE',
           amount: targetBet,
-          message: `${action === 'bet' ? 'Bet' : 'Raise'} ${targetBet}`,
+          message: seat.isAllIn ? `All-In ${targetBet}` : `${action === 'bet' ? 'Bet' : 'Raise'} ${targetBet}`,
         };
         this.playersActedThisRound.add(seatIndex);
         break;
       }
 
       case 'all_in': {
-        const otherActive = this.seats.filter(
-          (s) => s.seatIndex !== seatIndex && !s.eliminated && !s.hasFolded
-        );
-        const maxOpponentReach =
-          otherActive.length > 0
-            ? Math.max(...otherActive.map((s) => s.currentBet + s.chips))
-            : seat.currentBet + seat.chips;
+        const added = seat.chips;
+        const targetBet = seat.currentBet + added;
 
-        const effectiveTarget = Math.min(seat.currentBet + seat.chips, maxOpponentReach);
-        const added = Math.min(seat.chips, effectiveTarget - seat.currentBet);
-
-        seat.chips -= added;
-        seat.currentBet = effectiveTarget;
+        seat.chips = 0;
+        seat.currentBet = targetBet;
         seat.totalInvestedThisHand += added;
         this.pot += added;
+        seat.isAllIn = true;
 
-        if (seat.chips === 0) {
-          seat.isAllIn = true;
-        }
-
-        if (effectiveTarget > this.currentBet) {
-          const raiseDelta = effectiveTarget - this.currentBet;
-          this.minRaise = effectiveTarget + Math.max(this.bigBlind, raiseDelta);
-          this.currentBet = effectiveTarget;
+        if (targetBet > this.currentBet) {
+          const raiseDelta = targetBet - this.currentBet;
+          this.minRaise = targetBet + Math.max(this.bigBlind, raiseDelta);
+          this.currentBet = targetBet;
           this.lastBettorSeat = seatIndex;
           this.playersActedThisRound.clear();
         }
 
         seat.lastAction = {
           type: 'ALL_IN',
-          amount: effectiveTarget,
-          message: seat.chips === 0 ? `All-In ${effectiveTarget}` : `Raise ${effectiveTarget}`,
+          amount: targetBet,
+          message: `All-In ${targetBet}`,
         };
         this.playersActedThisRound.add(seatIndex);
         break;
@@ -1016,7 +1013,47 @@ export class PokerRoom extends BaseGameRoom {
     this.winnerAddress = champ.walletAddress;
     this.winnerName = champ.username;
 
+    // Save settled match into database so it appears in recent wins and match records
+    try {
+      await dbService.saveMatch({
+        matchId: this.matchId.toString(),
+        escrowAddress: this.escrowAddress,
+        wagerAmountNano: this.config.wagerAmountNano.toString(),
+        wagerTon: wagerGram.toFixed(2),
+        wagerGram: wagerGram.toFixed(2),
+        payoutTon: firstPrize.toFixed(2),
+        payoutGram: firstPrize.toFixed(2),
+        playerAAddress: this.playerA.walletAddress,
+        playerAName: this.playerA.username,
+        playerATelegramId: this.playerA.telegramId,
+        playerBAddress: this.playerB?.walletAddress,
+        playerBName: this.playerB?.username,
+        playerBTelegramId: this.playerB?.telegramId,
+        winnerAddress: champ.walletAddress,
+        winnerName: champ.username,
+        winnerTelegramId: champ.telegramId,
+        scoreA: 0,
+        scoreB: 0,
+        gameType: 'poker',
+        settledAt: Date.now(),
+        createdAt: Number(this.matchId) || Date.now(),
+      });
+    } catch (err) {
+      console.error('[PokerRoom] Error saving settled match to DB:', err);
+    }
+
     this.broadcastState();
+
+    this.broadcast({
+      type: 'MATCH_SETTLED',
+      winnerAddress: champ.walletAddress,
+      winnerName: champ.username,
+      winnerSide: this.isSameWallet(champ.walletAddress, this.playerA.walletAddress) ? 'A' : 'B',
+      payoutTon: firstPrize.toFixed(2),
+      payoutGram: firstPrize.toFixed(2),
+      message: `🏆 ${champ.username} ha vinto il torneo di Poker!`,
+      gameData: this.getGamePayload(),
+    });
 
     if (this.onMatchSettledCallback) {
       try {

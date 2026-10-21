@@ -244,6 +244,7 @@ export const Arena: React.FC<ArenaProps> = ({
     telegramId: userId,
     username: cleanPlayerName(displayName || (userAddress ? `Player_${userAddress.slice(-4)}` : (userId ? `Player_${String(userId).slice(-4)}` : 'Warrior'))),
     firstName: firstName || (displayName ? displayName.split(' ')[0] : ''),
+    photoUrl: photoUrl || '',
     serverUrl,
   });
 

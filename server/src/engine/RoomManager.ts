@@ -41,12 +41,17 @@ export class RoomManager {
 
       if (winner && r.winnerName && !r.winnerName.includes('Nessun Vincitore') && !r.winnerName.includes('Pace')) {
         const wagerNum = Number(r.config.wagerAmountNano) / 1e9;
-        const totalPot = wagerNum * 2;
-        let finalPayout = r.gameType === 'split' ? totalPot : totalPot * 0.96;
-        if (r.gameType === 'split' && (r as any).bonusAwardedGram) {
-          finalPayout += Number((r as any).bonusAwardedGram) || 0;
+        let finalPayout = wagerNum * 2 * 0.96;
+        if (r.gameType === 'split') {
+          finalPayout = wagerNum * 2;
+          if ((r as any).bonusAwardedGram) {
+            finalPayout += Number((r as any).bonusAwardedGram) || 0;
+          }
+        } else if (r.gameType === 'poker') {
+          const maxP = Number((r as any).maxPlayers) || 2;
+          finalPayout = (r as any).tournamentWinner?.totalPrizeGram || (wagerNum * maxP * 0.92);
         }
-        const payout = finalPayout.toFixed(2);
+        const payout = Number(finalPayout).toFixed(2);
         this.broadcastGlobal({
           type: 'GLOBAL_WIN',
           data: {
