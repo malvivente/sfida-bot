@@ -928,22 +928,22 @@ export const translations: Translations = {
 
   // Texas Hold'em Poker Rules
   'gameRules.poker.title': { it: "TEXAS HOLD'EM", en: "TEXAS HOLD'EM" },
-  'gameRules.poker.badge': { it: 'SIT & GO 2-5 MAX • NO LIMIT', en: 'SIT & GO 2-5 MAX • NO LIMIT' },
+  'gameRules.poker.badge': { it: 'SIT & GO 2-4 MAX • NO LIMIT', en: 'SIT & GO 2-4 MAX • NO LIMIT' },
   'gameRules.poker.goal': { it: 'Elimina gli avversari al tavolo conquistando tutte le fiches attraverso puntate, bluff e la miglior combinazione a 5 carte.', en: 'Eliminate rivals and accumulate all chips through strategic bets, bluffs, and the strongest 5-card hand.' },
   'gameRules.poker.r1': { it: '2 carte coperte a ciascun giocatore. Turni di puntata: Pre-Flop, Flop (3 carte comuni), Turn (1 carta) e River (1 carta).', en: '2 private hole cards per player. Betting streets: Pre-Flop, Flop (3 community cards), Turn (1 card), and River (1 card).' },
-  'gameRules.poker.r2': { it: 'Action Clock di 15 secondi per turno. Azioni consentite: Fold (passa), Check (parola), Call (chiama), Bet/Raise (punta o rilancia), All-In.', en: '15-second action clock per turn. Allowed moves: Fold, Check, Call, Bet/Raise, All-In.' },
+  'gameRules.poker.r2': { it: 'Action Clock di 30 secondi per turno. Azioni consentite: Fold (passa), Check (parola), Call (chiama), Bet/Raise (punta o rilancia), All-In.', en: '30-second action clock per turn. Allowed moves: Fold, Check, Call, Bet/Raise, All-In.' },
   'gameRules.poker.r3': { it: 'Showdown: vince la miglior mano a 5 carte combinando le 2 carte personali con le 5 carte comuni. Gestione automatica dei side-pot.', en: 'Showdown: best 5-card combination wins, evaluated from your 2 private cards + 5 community cards. Automatic side-pot resolution.' },
-  'gameRules.poker.win': { it: 'Sit & Go a eliminazione: in 2 o 3 giocatori il 1° vince il 100% del montepremi. In 4 o 5 giocatori il 1° vince il 70% e il 2° vince il 30%.', en: 'Elimination Sit & Go: with 2-3 players 1st takes 100%. With 4-5 players 1st takes 70% and 2nd takes 30%.' },
+  'gameRules.poker.win': { it: 'Sit & Go a eliminazione: in 2 o 3 giocatori il 1° vince il 100% del montepremi. In 4 giocatori il 1° vince il 70% e il 2° vince il 30%.', en: 'Elimination Sit & Go: with 2-3 players 1st takes 100%. With 4 players 1st takes 70% and 2nd takes 30%.' },
 
   // PlayHub & Poker strings
-  'playHub.badgePoker': { it: 'POKER 2-5 MAX', en: 'POKER 2-5 MAX' },
-  'playHub.pokerDesc': { it: 'Texas Hold\'em Poker Sit & Go da 2 a 5 giocatori. Bluff, All-In e montepremi garantito.', en: 'Texas Hold\'em Poker Sit & Go 2-5 players. Bluff, All-In, and guaranteed prize pool.' },
+  'playHub.badgePoker': { it: 'POKER 2-4 MAX', en: 'POKER 2-4 MAX' },
+  'playHub.pokerDesc': { it: 'Texas Hold\'em Poker Sit & Go da 2 a 4 giocatori. Bluff, All-In e montepremi garantito.', en: 'Texas Hold\'em Poker Sit & Go 2-4 players. Bluff, All-In, and guaranteed prize pool.' },
   'poker.tableSizeLabel': { it: 'DIMENSIONE TAVOLO', en: 'TABLE SIZE' },
   'poker.headsUp': { it: 'Heads-Up (1v1)', en: 'Heads-Up (1v1)' },
   'poker.players': { it: 'Giocatori', en: 'Players' },
   'poker.headsUpDesc': { it: 'Sfida diretta 1v1 tra 2 duellanti. Chi vince prende l\'intero montepremi.', en: 'Direct 1v1 duel between 2 players. Winner takes the entire prize pool.' },
   'poker.threeMaxDesc': { it: 'Tavolo Sit & Go rapido a 3 giocatori. Winner-Takes-All (100% al 1°).', en: 'Fast 3-player Sit & Go table. Winner-Takes-All (100% to 1st).' },
-  'poker.multiMaxDesc': { it: 'Torneo Sit & Go a eliminazione. Payout: 1° classificato 70%, 2° classificato 30%.', en: 'Elimination Sit & Go tournament. Payout: 1st place 70%, 2nd place 30%.' },
+  'poker.multiMaxDesc': { it: 'Tavolo 4-Max a eliminazione. Payout: 1° classificato 70%, 2° classificato 30%.', en: '4-Max elimination Sit & Go. Payout: 1st place 70%, 2nd place 30%.' },
   'poker.seatedPlayers': { it: 'Giocatori Seduti', en: 'Seated Players' },
   'poker.seatOpen': { it: 'Posto libero', en: 'Seat open' },
   'poker.blinds': { it: 'Bui', en: 'Blinds' },

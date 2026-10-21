@@ -1708,8 +1708,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         {pokerMaxPlayers === 2 ? t('poker.headsUp') : `${pokerMaxPlayers} ${t('poker.players')}`}
                       </span>
                     </div>
-                    <div className="grid grid-cols-4 gap-1.5 pt-1">
-                      {[2, 3, 4, 5].map((count) => (
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      {[2, 3, 4].map((count) => (
                         <button
                           key={count}
                           type="button"
@@ -1725,7 +1725,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         >
                           <div className="text-xs">{count}P</div>
                           <div className="text-[8px] font-normal opacity-80">
-                            {count === 2 ? 'Heads-Up' : count === 3 ? '3-Max' : count === 4 ? '4-Max' : '5-Max'}
+                            {count === 2 ? 'Heads-Up' : count === 3 ? '3-Max' : '4-Max'}
                           </div>
                         </button>
                       ))}

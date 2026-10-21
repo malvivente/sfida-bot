@@ -28,7 +28,7 @@ const BLIND_LEVELS = [
 ];
 
 export class PokerRoom extends BaseGameRoom {
-  public maxPlayers: number = 2; // 2 (Heads-Up) to 5 (5-Max)
+  public maxPlayers: number = 2; // 2 (Heads-Up) to 4 (4-Max)
   public extraPlayers: PlayerSession[] = [];
   public seats: PokerPlayerSeat[] = [];
 
@@ -99,7 +99,7 @@ export class PokerRoom extends BaseGameRoom {
     onSettled?: (room: BaseGameRoom, winner: string) => Promise<void>
   ) {
     super(config, 'poker', onSettled);
-    this.maxPlayers = Math.min(5, Math.max(2, Number((config as any).maxPlayers) || 2));
+    this.maxPlayers = Math.min(4, Math.max(2, Number((config as any).maxPlayers) || 2));
     this.initializeSeats();
   }
 
