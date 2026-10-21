@@ -63,11 +63,11 @@ export const GAMES_CONFIG = {
   },
   poker: {
     name: "Texas Hold'em Poker",
-    description: "2-5 Players Cyber Sit & Go. Hole cards, betting rounds (Pre-flop, Flop, Turn, River), and 15s action clock.",
+    description: "2-4 Players Cyber Sit & Go. Hole cards, betting rounds (Pre-flop, Flop, Turn, River), and 30s action clock.",
     minPlayers: 2,
-    maxPlayers: 5,
+    maxPlayers: 4,
     startingChips: 1000,
-    turnTimeoutSeconds: 15,
+    turnTimeoutSeconds: 30,
   },
 } as const;
 

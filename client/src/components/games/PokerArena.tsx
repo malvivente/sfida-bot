@@ -95,6 +95,32 @@ const suitStyles: Record<
   },
 };
 
+const CardBackView: React.FC<{
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  rotation?: number;
+  className?: string;
+}> = ({ size = 'sm', rotation = 0, className = '' }) => {
+  const sizeClasses = {
+    xs: 'w-7 h-10 rounded-md',
+    sm: 'w-8 h-12 text-[10px] rounded-lg',
+    md: 'w-11 h-16 sm:w-12 sm:h-18 text-xs rounded-xl',
+    lg: 'w-14 h-20 sm:w-16 sm:h-22 text-sm rounded-xl',
+  }[size];
+
+  return (
+    <div
+      style={{ transform: rotation ? `rotate(${rotation}deg)` : undefined }}
+      className={`${sizeClasses} bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 border border-purple-500/50 shadow-md select-none relative overflow-hidden flex items-center justify-center shrink-0 ${className}`}
+    >
+      <div className="absolute inset-0.5 border border-purple-400/25 rounded-md flex items-center justify-center bg-black/40">
+        <div className="w-3.5 h-3.5 rounded-full border border-purple-400/40 flex items-center justify-center">
+          <span className="text-[7px] text-purple-300 font-mono font-bold">♠</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PlayingCardView: React.FC<{
   card?: PokerCard;
   isFaceDown?: boolean;
@@ -113,7 +139,7 @@ const PlayingCardView: React.FC<{
   const sizeClasses = {
     sm: 'w-8 h-12 text-[10px] rounded-lg',
     md: 'w-11 h-16 sm:w-12 sm:h-18 text-xs rounded-xl',
-    lg: 'w-14 h-20 sm:w-16 sm:h-24 text-sm rounded-xl',
+    lg: 'w-14 h-20 sm:w-16 sm:h-22 text-sm rounded-xl',
   }[size];
 
   if (isFaceDown || !card) {
@@ -148,18 +174,170 @@ const PlayingCardView: React.FC<{
           : `${style.border} ${style.glow}`
       }`}
     >
-      <div className={`font-mono font-black leading-none flex justify-between ${style.text}`}>
+      <div className={`font-mono font-black leading-none flex justify-between ${style.text} ${size === 'sm' ? 'text-[9px]' : ''}`}>
         <span>{card.value}</span>
-        <span className="text-[9px]">{card.suit}</span>
+        <span className={size === 'sm' ? 'text-[8px]' : 'text-[9px]'}>{card.suit}</span>
       </div>
-      <div className={`text-center text-sm sm:text-base my-auto leading-none ${style.iconClass}`}>
+      <div className={`text-center my-auto leading-none ${style.iconClass} ${size === 'sm' ? 'text-xs' : 'text-sm sm:text-base'}`}>
         <span className="font-black">{card.suit}</span>
       </div>
-      <div className={`font-mono font-black leading-none flex justify-between rotate-180 ${style.text}`}>
+      <div className={`font-mono font-black leading-none flex justify-between rotate-180 ${style.text} ${size === 'sm' ? 'text-[9px]' : ''}`}>
         <span>{card.value}</span>
-        <span className="text-[9px]">{card.suit}</span>
+        <span className={size === 'sm' ? 'text-[8px]' : 'text-[9px]'}>{card.suit}</span>
       </div>
     </motion.div>
+  );
+};
+
+type TableSide = 'bottom' | 'top' | 'left' | 'right';
+
+const getSeatSide = (visualPos: number, totalSeats: number): TableSide => {
+  if (visualPos === 0) return 'bottom';
+  if (totalSeats <= 2) {
+    return 'top';
+  }
+  if (totalSeats === 3) {
+    return visualPos === 1 ? 'left' : 'right';
+  }
+  // 4 seats
+  if (visualPos === 1) return 'left';
+  if (visualPos === 2) return 'top';
+  return 'right';
+};
+
+const OpponentSeatView: React.FC<{
+  seat: PokerPlayerSeat & { visualPos: number };
+  side: 'top' | 'left' | 'right';
+  isCurrentTurn: boolean;
+  turnTimeRemaining?: number;
+  stage?: string;
+  isMatchSettled: boolean;
+  winningCardsSet: Set<string>;
+}> = ({
+  seat,
+  side,
+  isCurrentTurn,
+  turnTimeRemaining,
+  stage,
+  isMatchSettled,
+  winningCardsSet,
+}) => {
+  const isShowdown = (stage === 'SHOWDOWN' || isMatchSettled) && Boolean(seat.holeCards && seat.holeCards.length > 0);
+  const isFolded = seat.hasFolded;
+
+  const positionClasses = {
+    top: 'absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center z-20',
+    left: 'absolute left-2.5 top-[38%] -translate-y-1/2 flex flex-col items-center z-20',
+    right: 'absolute right-2.5 top-[38%] -translate-y-1/2 flex flex-col items-center z-20',
+  }[side];
+
+  // Tucked card position: attached to the border so card back is clipped and half-visible
+  const tuckedCardPosition = {
+    top: 'absolute -top-5 left-1/2 -translate-x-1/2 flex -space-x-3 pointer-events-none z-10',
+    left: 'absolute -left-4.5 top-1/2 -translate-y-1/2 flex flex-col -space-y-5 pointer-events-none z-10',
+    right: 'absolute -right-4.5 top-1/2 -translate-y-1/2 flex flex-col -space-y-5 pointer-events-none z-10',
+  }[side];
+
+  return (
+    <div className={`${positionClasses} transition-opacity duration-200 ${isFolded ? 'opacity-40 grayscale' : ''}`}>
+      {/* Tucked Card Backs (only when active in hand and not yet showdown) */}
+      {!isShowdown && !isFolded && seat.hasHoleCards && (
+        <div className={tuckedCardPosition}>
+          <CardBackView size="sm" rotation={side === 'left' ? -6 : side === 'right' ? 6 : -4} />
+          <CardBackView size="sm" rotation={side === 'left' ? 4 : side === 'right' ? -4 : 4} />
+        </div>
+      )}
+
+      {/* Avatar Container with Turn Ring & Disconnect Badge */}
+      <div className="relative">
+        {/* Disconnect indicator */}
+        {(!seat.isConnected || (seat.disconnectCountdown !== undefined && seat.disconnectCountdown > 0)) && (
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-red-950/95 border border-red-500/80 text-red-300 font-mono font-bold text-[8px] flex items-center space-x-0.5 shadow-lg z-30 whitespace-nowrap animate-pulse">
+            <WifiOff className="w-2.5 h-2.5 text-red-400 shrink-0" />
+            <span>{seat.disconnectCountdown !== undefined ? `${seat.disconnectCountdown}s` : 'DISC'}</span>
+          </div>
+        )}
+
+        {/* Avatar Circle */}
+        <div
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full p-0.5 border-2 flex items-center justify-center transition-all shadow-md ${
+            !seat.isConnected
+              ? 'border-red-500/70 opacity-60'
+              : isCurrentTurn
+              ? 'border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.85)] ring-2 ring-amber-400/50 animate-pulse'
+              : seat.isAllIn
+              ? 'border-red-500'
+              : 'border-white/20'
+          } bg-slate-900`}
+        >
+          <span className="font-heading font-black text-xs text-white">
+            {seat.username?.[0]?.toUpperCase() || `P${seat.seatIndex + 1}`}
+          </span>
+        </div>
+
+        {/* Role Badge (BTN, SB, BB) */}
+        {seat.role !== 'NORMAL' && (
+          <span
+            className={`absolute -top-1 -right-1 text-[8px] font-heading font-black px-1 rounded-full ${
+              seat.role === 'BTN'
+                ? 'bg-amber-400 text-slate-950 shadow'
+                : seat.role === 'SB'
+                ? 'bg-cyan-400 text-slate-950'
+                : 'bg-purple-500 text-white'
+            }`}
+          >
+            {seat.role}
+          </span>
+        )}
+
+        {/* Turn Countdown Timer */}
+        {isCurrentTurn && typeof turnTimeRemaining === 'number' && (
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-mono font-black text-[8px] shadow">
+            {turnTimeRemaining}s
+          </div>
+        )}
+      </div>
+
+      {/* Opponent Name & Chips */}
+      <span className="text-[10px] font-heading font-bold text-white max-w-[65px] truncate mt-1 text-center">
+        {seat.username}
+      </span>
+      <div className="flex items-center space-x-0.5 text-[9px] font-mono text-amber-300 font-bold">
+        <span>🪙</span>
+        <span>{seat.chips.toLocaleString()}</span>
+      </div>
+
+      {/* Revealed Cards at Showdown - pulled forward into table */}
+      {isShowdown && seat.holeCards && (
+        <motion.div
+          initial={{
+            scale: 0.7,
+            opacity: 0,
+            x: side === 'left' ? -20 : side === 'right' ? 20 : 0,
+            y: side === 'top' ? -20 : 0,
+          }}
+          animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 280 }}
+          className="flex space-x-0.5 mt-1 z-30"
+        >
+          {seat.holeCards.map((c, i) => (
+            <PlayingCardView
+              key={i}
+              card={c}
+              size="sm"
+              isWinning={winningCardsSet.has(`${c.suit}_${c.value}`)}
+            />
+          ))}
+        </motion.div>
+      )}
+
+      {/* Last Action Message */}
+      {seat.lastAction && (
+        <div className="mt-0.5 px-1.5 py-0.2 rounded-full bg-black/80 border border-white/20 text-[8px] font-heading font-black text-white shadow-sm max-w-[70px] truncate text-center">
+          {seat.lastAction.message}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -323,6 +501,20 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
     }
     return list;
   }, [gameData?.seats, heroSeatIndex]);
+
+  const seatsCount = gameData?.seats?.length || (gameData?.maxPlayers || 2);
+  const topSeat = useMemo(
+    () => orderedSeats.find((s) => s.visualPos !== 0 && getSeatSide(s.visualPos, seatsCount) === 'top'),
+    [orderedSeats, seatsCount]
+  );
+  const leftSeat = useMemo(
+    () => orderedSeats.find((s) => s.visualPos !== 0 && getSeatSide(s.visualPos, seatsCount) === 'left'),
+    [orderedSeats, seatsCount]
+  );
+  const rightSeat = useMemo(
+    () => orderedSeats.find((s) => s.visualPos !== 0 && getSeatSide(s.visualPos, seatsCount) === 'right'),
+    [orderedSeats, seatsCount]
+  );
 
   // Quick Bet presets
   const handlePreset = (fraction: 'min' | '2.5x' | 'half_pot' | 'pot' | 'all_in') => {
@@ -571,119 +763,57 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
       {isMatchActive && gameData && (
         <div className="w-full relative flex flex-col items-center">
           {/* Cyber Poker Table Oval */}
-          <div className="w-full min-h-[360px] sm:min-h-[400px] rounded-[60px] sm:rounded-[80px] bg-gradient-to-b from-emerald-950 via-slate-950 to-emerald-950 border-[6px] border-slate-900 shadow-[0_0_35px_rgba(16,185,129,0.25)] relative overflow-hidden flex flex-col items-center justify-between p-3 my-1">
+          <div className="w-full h-[490px] sm:h-[530px] rounded-[52px] sm:rounded-[64px] bg-gradient-to-b from-emerald-950 via-slate-950 to-emerald-950 border-[6px] border-slate-900 shadow-[0_0_35px_rgba(16,185,129,0.25)] relative overflow-hidden flex flex-col justify-between p-2 select-none my-1">
             {/* Table Neon Rail Inner Glow */}
-            <div className="absolute inset-2 rounded-[52px] sm:rounded-[72px] border-2 border-emerald-500/30 pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15),transparent_70%)] pointer-events-none" />
+            <div className="absolute inset-2 rounded-[44px] sm:rounded-[56px] border-2 border-emerald-500/25 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.14),transparent_70%)] pointer-events-none" />
 
-            {/* TOP SEATS (Opponents) */}
-            <div className="w-full flex justify-around items-start z-10 pt-1">
-              {orderedSeats
-                .filter((s) => s.visualPos !== 0)
-                .map((seat) => {
-                  const isCurrentTurn = !isMatchSettled && gameData.activeSeat === seat.seatIndex;
-                  return (
-                    <div
-                      key={seat.seatIndex}
-                      className={`flex flex-col items-center transition-all ${
-                        seat.hasFolded ? 'opacity-40 grayscale' : ''
-                      }`}
-                    >
-                      {/* Avatar with Turn Ring */}
-                      <div className="relative">
-                        {/* Disconnect indicator badge with countdown */}
-                        {(!seat.isConnected || (seat.disconnectCountdown !== undefined && seat.disconnectCountdown > 0)) && (
-                          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-red-950/95 border border-red-500/80 text-red-300 font-mono font-bold text-[8px] flex items-center space-x-0.5 shadow-lg z-20 whitespace-nowrap animate-pulse">
-                            <WifiOff className="w-2.5 h-2.5 text-red-400 shrink-0" />
-                            <span>{seat.disconnectCountdown !== undefined ? `${seat.disconnectCountdown}s` : 'DISC'}</span>
-                          </div>
-                        )}
+            {/* TOP SEAT */}
+            {topSeat && (
+              <OpponentSeatView
+                seat={topSeat}
+                side="top"
+                isCurrentTurn={!isMatchSettled && gameData.activeSeat === topSeat.seatIndex}
+                turnTimeRemaining={gameData.turnTimeRemaining}
+                stage={gameData.stage}
+                isMatchSettled={isMatchSettled}
+                winningCardsSet={winningCardsSet}
+              />
+            )}
 
-                        <div
-                          className={`w-11 h-11 rounded-full p-0.5 border-2 flex items-center justify-center transition-all shadow-md ${
-                            !seat.isConnected
-                              ? 'border-red-500/70 opacity-60'
-                              : isCurrentTurn
-                              ? 'border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)] animate-pulse'
-                              : seat.isAllIn
-                              ? 'border-red-500'
-                              : 'border-white/20'
-                          } bg-slate-900`}
-                        >
-                          <span className="font-heading font-black text-xs text-white">
-                            {seat.username?.[0]?.toUpperCase() || `P${seat.seatIndex + 1}`}
-                          </span>
-                        </div>
+            {/* LEFT SEAT */}
+            {leftSeat && (
+              <OpponentSeatView
+                seat={leftSeat}
+                side="left"
+                isCurrentTurn={!isMatchSettled && gameData.activeSeat === leftSeat.seatIndex}
+                turnTimeRemaining={gameData.turnTimeRemaining}
+                stage={gameData.stage}
+                isMatchSettled={isMatchSettled}
+                winningCardsSet={winningCardsSet}
+              />
+            )}
 
-                        {/* Dealer / Blind Badge */}
-                        {seat.role !== 'NORMAL' && (
-                          <span
-                            className={`absolute -top-1 -right-1 text-[8px] font-heading font-black px-1 rounded-full ${
-                              seat.role === 'BTN'
-                                ? 'bg-amber-400 text-slate-950 shadow'
-                                : seat.role === 'SB'
-                                ? 'bg-cyan-400 text-slate-950'
-                                : 'bg-purple-500 text-white'
-                            }`}
-                          >
-                            {seat.role}
-                          </span>
-                        )}
+            {/* RIGHT SEAT */}
+            {rightSeat && (
+              <OpponentSeatView
+                seat={rightSeat}
+                side="right"
+                isCurrentTurn={!isMatchSettled && gameData.activeSeat === rightSeat.seatIndex}
+                turnTimeRemaining={gameData.turnTimeRemaining}
+                stage={gameData.stage}
+                isMatchSettled={isMatchSettled}
+                winningCardsSet={winningCardsSet}
+              />
+            )}
 
-                        {/* Action Clock Countdown Bar */}
-                        {isCurrentTurn && (
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-mono font-black text-[8px] shadow">
-                            {gameData.turnTimeRemaining}s
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Opponent Info */}
-                      <span className="text-[10px] font-heading font-bold text-white max-w-[70px] truncate mt-1">
-                        {seat.username}
-                      </span>
-                      <div className="flex items-center space-x-0.5 text-[9px] font-mono text-amber-300 font-bold">
-                        <span>🪙</span>
-                        <span>{seat.chips.toLocaleString()}</span>
-                      </div>
-
-                      {/* Opponent Cards (Revealed at showdown or card backs) */}
-                      <div className="flex space-x-0.5 mt-0.5">
-                        {(gameData.stage === 'SHOWDOWN' || isMatchSettled) && seat.holeCards ? (
-                          seat.holeCards.map((c, i) => (
-                            <PlayingCardView
-                              key={i}
-                              card={c}
-                              size="sm"
-                              isWinning={winningCardsSet.has(`${c.suit}_${c.value}`)}
-                            />
-                          ))
-                        ) : seat.hasHoleCards ? (
-                          <>
-                            <PlayingCardView isFaceDown size="sm" />
-                            <PlayingCardView isFaceDown size="sm" />
-                          </>
-                        ) : null}
-                      </div>
-
-                      {/* Last Action / Current Bet */}
-                      {seat.lastAction && (
-                        <div className="mt-0.5 px-1.5 py-0.2 rounded-full bg-black/70 border border-white/20 text-[8px] font-heading font-black text-white">
-                          {seat.lastAction.message}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-
-            {/* CENTER TABLE: Pots & Community Cards */}
-            <div className="flex flex-col items-center justify-center my-auto z-10 space-y-2">
+            {/* CENTER TABLE: Pot & 5 Community Cards & Winner Banner */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-4">
               {/* Pot Display */}
-              <div className="flex items-center space-x-2 px-3 py-1 rounded-2xl bg-black/70 border border-amber-400/40 shadow-lg backdrop-blur-md">
+              <div className="flex items-center space-x-2 px-3 py-1 rounded-2xl bg-black/80 border border-amber-400/50 shadow-lg backdrop-blur-md mb-2 pointer-events-auto">
                 <Coins className="w-4 h-4 text-amber-400 shrink-0" />
                 <div className="text-center">
-                  <span className="text-[9px] font-heading font-bold text-amber-300 uppercase tracking-wider block leading-none">
+                  <span className="text-[8px] font-heading font-black text-amber-300 uppercase tracking-widest block leading-none">
                     POT
                   </span>
                   <span className="text-sm font-mono font-black text-white leading-none">
@@ -694,9 +824,9 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
               {/* Side Pots only when someone is All-In */}
               {gameData.sidePots && gameData.sidePots.length > 1 && gameData.seats.some((s) => s.isAllIn) && (
-                <div className="flex space-x-1.5 text-[9px] text-amber-200/80 font-mono">
+                <div className="flex space-x-1.5 text-[9px] text-amber-200/80 font-mono mb-1.5 pointer-events-auto">
                   {gameData.sidePots.slice(1).map((sp, idx) => (
-                    <span key={idx} className="px-1.5 py-0.2 rounded bg-black/50 border border-white/10">
+                    <span key={idx} className="px-1.5 py-0.2 rounded bg-black/60 border border-white/10">
                       Side #{idx + 1}: {sp.amount}
                     </span>
                   ))}
@@ -704,14 +834,14 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
               )}
 
               {/* 5 Community Cards */}
-              <div className="flex items-center space-x-1 sm:space-x-1.5 pt-1">
+              <div className="flex items-center justify-center space-x-1 sm:space-x-1.5 pointer-events-auto">
                 {[0, 1, 2, 3, 4].map((idx) => {
                   const card = gameData.communityCards[idx];
                   if (!card) {
                     return (
                       <div
                         key={idx}
-                        className="w-11 h-16 sm:w-12 sm:h-18 rounded-xl border-2 border-dashed border-white/15 bg-black/20 flex items-center justify-center text-[10px] text-slate-600 font-mono"
+                        className="w-11 h-16 sm:w-12 sm:h-18 rounded-xl border-2 border-dashed border-white/15 bg-black/30 flex items-center justify-center text-[9px] text-slate-500 font-mono font-bold"
                       >
                         {idx < 3 ? 'FLOP' : idx === 3 ? 'TURN' : 'RIVER'}
                       </div>
@@ -738,21 +868,21 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.85, opacity: 0, y: -8 }}
                     transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                    className="p-3 rounded-2xl bg-slate-950/95 border border-amber-400/60 shadow-[0_0_35px_rgba(251,191,36,0.35)] text-center max-w-[280px] backdrop-blur-xl space-y-1.5 z-20 my-1"
+                    className="mt-2 p-2.5 rounded-2xl bg-slate-950/95 border border-amber-400/70 shadow-[0_0_35px_rgba(251,191,36,0.4)] text-center max-w-[260px] backdrop-blur-xl space-y-1 z-30 pointer-events-auto"
                   >
                     {gameData.handWinners.map((hw, idx) => (
-                      <div key={idx} className={idx > 0 ? 'pt-2 border-t border-white/10' : 'space-y-1'}>
-                        <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-heading font-black text-[11px] uppercase tracking-wider">
-                          <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <div key={idx} className={idx > 0 ? 'pt-1.5 border-t border-white/10' : 'space-y-0.5'}>
+                        <div className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-heading font-black text-[10px] uppercase tracking-wider">
+                          <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
                           <span>{hw.username} {t('poker.wins')}</span>
                         </div>
                         {hw.rankName && (
-                          <div className="text-xs font-heading font-black text-cyan-300 tracking-wide">
+                          <div className="text-[11px] font-heading font-black text-cyan-300 tracking-wide">
                             {language === 'en' ? (hw.rankNameEn || hw.rankName) : hw.rankName}
                           </div>
                         )}
                         <div>
-                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-mono font-black">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.2 rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[11px] font-mono font-black">
                             +{hw.amount.toLocaleString()} {t('poker.chips')}
                           </span>
                         </div>
@@ -765,22 +895,22 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
 
             {/* BOTTOM: Hero Player Station */}
             {heroSeat && (
-              <div className="w-full flex flex-col items-center z-10 pb-1">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center z-20 w-full max-w-[340px]">
                 {/* Live Hand Evaluation Badge - detached with clean top margin */}
                 {heroHandEval && !heroSeat.hasFolded && (
-                  <div className="mt-3.5 mb-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/30 to-cyan-500/20 border border-cyan-400/50 text-[10px] font-heading font-black text-cyan-300 shadow">
+                  <div className="mb-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/30 to-cyan-500/20 border border-cyan-400/50 text-[10px] font-heading font-black text-cyan-300 shadow">
                     ✨ {language === 'en' ? (heroHandEval.rankNameEn || heroHandEval.rankName) : heroHandEval.rankName}
                   </div>
                 )}
 
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center space-x-3 w-full">
                   {/* Hero Hole Cards */}
-                  <div className="flex space-x-1">
+                  <div className="flex space-x-1.5">
                     {heroSeat.holeCards?.map((c, i) => (
                       <PlayingCardView
                         key={i}
                         card={c}
-                        size="md"
+                        size="lg"
                         isWinning={winningCardsSet.has(`${c.suit}_${c.value}`)}
                         isConnecting={connectingCardKeys.has(`${c.suit}_${c.value}`)}
                         delay={i * 0.1}
@@ -789,7 +919,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                   </div>
 
                   {/* Hero Status */}
-                  <div className="flex flex-col items-start">
+                  <div className="flex flex-col items-start bg-black/60 border border-white/10 rounded-2xl px-3 py-2 backdrop-blur-md">
                     <div className="flex items-center space-x-1.5">
                       <span className="text-xs font-heading font-black text-white">
                         {heroSeat.username} ({t('poker.you')})
@@ -805,7 +935,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                       <span>{heroSeat.chips.toLocaleString()}</span>
                     </div>
                     {heroSeat.lastAction && (
-                      <span className="text-[9px] text-slate-300 font-heading">
+                      <span className="text-[9px] text-slate-300 font-heading font-semibold">
                         {heroSeat.lastAction.message}
                       </span>
                     )}
