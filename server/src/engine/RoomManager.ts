@@ -49,7 +49,7 @@ export class RoomManager {
           }
         } else if (r.gameType === 'poker') {
           const maxP = Number((r as any).maxPlayers) || 2;
-          finalPayout = (r as any).tournamentWinner?.totalPrizeGram || (wagerNum * maxP * 0.92);
+          finalPayout = (r as any).tournamentWinner?.totalPrizeGram || (wagerNum * maxP);
         }
         const payout = Number(finalPayout).toFixed(2);
         this.broadcastGlobal({

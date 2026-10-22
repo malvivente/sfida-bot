@@ -961,7 +961,7 @@ export class PokerRoom extends BaseGameRoom {
 
     const champ = this.getActiveSeatedPlayers()[0] || this.seats[0];
     const wagerGram = Number(this.config.wagerAmountNano) / 1e9;
-    const totalPrizePool = wagerGram * this.maxPlayers * 0.92; // 8% tournament fee deducted
+    const totalPrizePool = Number((wagerGram * this.maxPlayers).toFixed(2)); // 100% prize pool to winners (0% platform rake in tournament mode)
 
     // Payout distribution
     // 2-3 players: Winner takes all (100%)
