@@ -1028,6 +1028,8 @@ export const translations: Translations = {
   'poker.directChallengeLabelMulti': { it: 'INVITA AMICI (FINO A {count})', en: 'INVITE FRIENDS (UP TO {count})' },
   'poker.multiInviteTip': { it: 'Stanza privata da {count} giocatori: puoi invitare più amici qui oppure condividere il link d\'invito per riempire il tavolo.', en: 'Private room with {count} players: you can invite multiple friends here or share the invite link to fill the table.' },
   'poker.disconnectedBadge': { it: 'DISCONNESSO', en: 'DISCONNECTED' },
+  'poker.spectatorLobbyWaiting': { it: 'MODALITÀ SPETTATORE • In attesa che i duellanti confermino la preparazione', en: 'SPECTATOR MODE • Waiting for duelists to confirm preparation' },
+  'poker.spectatorModeWaiting': { it: 'MODALITÀ SPETTATORE • In attesa della prossima azione', en: 'SPECTATOR MODE • Waiting for next action' },
   'poker.waitingOtherPlayers': { it: 'In attesa di altri giocatori ({count}/{max})', en: 'Waiting for other players ({count}/{max})' },
   'lobby.waitingReady': { it: 'In attesa...', en: 'Waiting...' },
   'lobby.ready': { it: 'Pronto', en: 'Ready' },

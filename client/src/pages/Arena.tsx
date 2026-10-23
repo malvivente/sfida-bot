@@ -1689,6 +1689,8 @@ export const Arena: React.FC<ArenaProps> = ({
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
               onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
               forfeitCountdown={socketData.forfeitCountdown}
+              spectatorOutcome={socketData.spectatorOutcome}
+              placedBet={socketData.placedBet}
             />
           ) : (
             <RussianRouletteArena

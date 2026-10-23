@@ -371,9 +371,7 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   protected startBettingOrGame() {
-    this.cancelLobbyExpirationTimer();
-    this.cancelPlayerBExpirationTimer();
-    this.onGameStart();
+    this.startBettingWindow();
   }
 
   private initDeck(): PokerCard[] {
@@ -934,6 +932,11 @@ export class PokerRoom extends BaseGameRoom {
 
   private finishHand() {
     if (this.state !== 'GAME_ACTIVE') return;
+    this.activeSeat = null;
+    for (const s of this.seats) {
+      s.isTurn = false;
+    }
+
     // Check for busted players
     for (const seat of this.seats) {
       if (!seat.eliminated && seat.chips <= 0) {
@@ -958,6 +961,14 @@ export class PokerRoom extends BaseGameRoom {
     this.stage = 'TOURNAMENT_OVER';
     this.state = 'MATCH_SETTLED';
     this.clearActionTimers();
+    this.activeSeat = null;
+    for (const s of this.seats) {
+      s.isTurn = false;
+    }
+
+    // Broadcast state immediately so clients transition to settled state without any delay
+    this.broadcastRoomState();
+    this.broadcastState();
 
     const champ = this.getActiveSeatedPlayers()[0] || this.seats[0];
     const wagerGram = Number(this.config.wagerAmountNano) / 1e9;
@@ -1013,6 +1024,14 @@ export class PokerRoom extends BaseGameRoom {
     this.winnerAddress = champ.walletAddress;
     this.winnerName = champ.username;
 
+    // Settle spectator bets if any were placed
+    let spectatorSettlements: any[] = [];
+    try {
+      spectatorSettlements = this.settleSpectatorBets(champ.walletAddress);
+    } catch (e) {
+      console.error('[PokerRoom] Error settling spectator bets:', e);
+    }
+
     // Save settled match into database so it appears in recent wins and match records
     try {
       await dbService.saveMatch({
@@ -1053,6 +1072,7 @@ export class PokerRoom extends BaseGameRoom {
       payoutGram: firstPrize.toFixed(2),
       message: `🏆 ${champ.username} ha vinto il torneo di Poker!`,
       gameData: this.getGamePayload(),
+      spectatorSettlements,
     });
 
     if (this.onMatchSettledCallback) {

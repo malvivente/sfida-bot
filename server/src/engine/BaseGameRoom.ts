@@ -910,6 +910,72 @@ export abstract class BaseGameRoom {
 
     // Settle spectator bets
     const winningSide = this.isSameWallet(winnerAddress, this.playerA.walletAddress) ? 'A' : 'B';
+    const spectatorSettlements = this.settleSpectatorBets(winnerAddress);
+
+    const winnerTelegramId = winnerAddress === this.playerA.walletAddress
+      ? this.playerA.telegramId
+      : this.playerB?.telegramId;
+
+    dbService.saveMatch({
+      matchId: this.matchId.toString(),
+      escrowAddress: this.escrowAddress,
+      wagerAmountNano: this.config.wagerAmountNano.toString(),
+      wagerTon: wagerNum.toFixed(2),
+      wagerGram: wagerNum.toFixed(2),
+      payoutTon: winnerPayoutGram,
+      payoutGram: winnerPayoutGram,
+      playerAAddress: this.playerA.walletAddress,
+      playerAName: this.playerA.username,
+      playerATelegramId: this.playerA.telegramId,
+      playerBAddress: this.playerB?.walletAddress,
+      playerBName: this.playerB?.username,
+      playerBTelegramId: this.playerB?.telegramId,
+      winnerAddress,
+      winnerName: this.winnerName,
+      winnerTelegramId,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB?.score || 0,
+      gameType: this.gameType,
+      settledAt: Date.now(),
+      createdAt: Number(this.matchId) || Date.now(),
+    }).catch((err) => {
+      console.error('[BaseGameRoom] Error saving match to db:', err);
+    });
+
+    this.broadcast({
+      type: 'MATCH_SETTLED',
+      winnerAddress,
+      winnerName,
+      winnerSide: winningSide,
+      resolution: this.resolution,
+      scoreA: this.playerA.score,
+      scoreB: this.playerB?.score || 0,
+      payoutTon: winnerPayoutGram,
+      message: `🏆 ${winnerName} has won the duel!`,
+      gameData: this.getGamePayload(),
+      spectatorSettlements,
+    });
+
+    this.broadcastRoomState();
+
+    if (this.onMatchSettledCallback) {
+      this.onMatchSettledCallback(this, winnerAddress);
+    }
+
+    // Auto cleanup after 90 seconds (can be cancelled if rematch accepted)
+    if (this.settleCleanupTimer) {
+      clearTimeout(this.settleCleanupTimer);
+    }
+    this.settleCleanupTimer = setTimeout(async () => {
+      try {
+        const { RoomManager } = await import('./RoomManager.js');
+        RoomManager.getInstance().removeRoom(this.matchId.toString());
+      } catch {}
+    }, 90_000);
+  }
+
+  public settleSpectatorBets(winnerAddress: string): Array<any> {
+    const winningSide = this.isSameWallet(winnerAddress, this.playerA.walletAddress) ? 'A' : 'B';
     const totalPoolNano = this.totalBetsA + this.totalBetsB;
     const spectatorSettlements: Array<{
       walletAddress: string;
@@ -921,6 +987,7 @@ export abstract class BaseGameRoom {
     }> = [];
 
     if (totalPoolNano > 0n && this.spectatorBets.length > 0) {
+      const { spectatorRakePercent } = feeConfig.getConfig();
       const winningBets = this.spectatorBets.filter((b) => b.target === winningSide);
       const totalWinningBetsNano = winningSide === 'A' ? this.totalBetsA : this.totalBetsB;
       const specRakeRate = (spectatorRakePercent || 0) / 100;
@@ -990,66 +1057,22 @@ export abstract class BaseGameRoom {
       }
     }
 
-    const winnerTelegramId = winnerAddress === this.playerA.walletAddress
-      ? this.playerA.telegramId
-      : this.playerB?.telegramId;
-
-    dbService.saveMatch({
-      matchId: this.matchId.toString(),
-      escrowAddress: this.escrowAddress,
-      wagerAmountNano: this.config.wagerAmountNano.toString(),
-      wagerTon: wagerNum.toFixed(2),
-      wagerGram: wagerNum.toFixed(2),
-      payoutTon: winnerPayoutGram,
-      payoutGram: winnerPayoutGram,
-      playerAAddress: this.playerA.walletAddress,
-      playerAName: this.playerA.username,
-      playerATelegramId: this.playerA.telegramId,
-      playerBAddress: this.playerB?.walletAddress,
-      playerBName: this.playerB?.username,
-      playerBTelegramId: this.playerB?.telegramId,
-      winnerAddress,
-      winnerName: this.winnerName,
-      winnerTelegramId,
-      scoreA: this.playerA.score,
-      scoreB: this.playerB?.score || 0,
-      gameType: this.gameType,
-      settledAt: Date.now(),
-      createdAt: Number(this.matchId) || Date.now(),
-    }).catch((err) => {
-      console.error('[BaseGameRoom] Error saving match to db:', err);
-    });
-
-    this.broadcast({
-      type: 'MATCH_SETTLED',
-      winnerAddress,
-      winnerName,
-      winnerSide: winningSide,
-      resolution: this.resolution,
-      scoreA: this.playerA.score,
-      scoreB: this.playerB?.score || 0,
-      payoutTon: winnerPayoutGram,
-      message: `🏆 ${winnerName} has won the duel!`,
-      gameData: this.getGamePayload(),
-      spectatorSettlements,
-    });
-
-    this.broadcastRoomState();
-
-    if (this.onMatchSettledCallback) {
-      this.onMatchSettledCallback(this, winnerAddress);
+    // Direct notify to spectators
+    for (const spec of this.spectators.values()) {
+      if (spec.wallet) {
+        const mySettlement = spectatorSettlements.find((s) => this.isSameWallet(s.walletAddress, spec.wallet!));
+        if (mySettlement) {
+          try {
+            spec.ws.send(JSON.stringify({
+              type: 'SPECTATOR_OUTCOME',
+              ...mySettlement,
+            }));
+          } catch {}
+        }
+      }
     }
 
-    // Auto cleanup after 90 seconds (can be cancelled if rematch accepted)
-    if (this.settleCleanupTimer) {
-      clearTimeout(this.settleCleanupTimer);
-    }
-    this.settleCleanupTimer = setTimeout(async () => {
-      try {
-        const { RoomManager } = await import('./RoomManager.js');
-        RoomManager.getInstance().removeRoom(this.matchId.toString());
-      } catch {}
-    }, 90_000);
+    return spectatorSettlements;
   }
 
   // Spectator Pari-Mutuel Bet
