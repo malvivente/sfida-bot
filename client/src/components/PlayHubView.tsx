@@ -41,6 +41,25 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 select-none pb-8 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
+      {/* Top Navigation: Back to Home & Title */}
+      <div className="flex items-center justify-between px-1">
+        <button
+          type="button"
+          onClick={() => {
+            triggerImpact('light');
+            onBack();
+          }}
+          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>{t('common.back') || 'Torna'}</span>
+        </button>
+
+        <h2 className="text-sm font-heading font-black text-white tracking-wider uppercase">
+          PVP DUELS
+        </h2>
+      </div>
+
       {/* Category Filter Switcher Tabs */}
       <div className="grid grid-cols-3 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1 items-stretch">
         <button
