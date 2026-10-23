@@ -145,7 +145,7 @@ const NotchedCard: React.FC<NotchedCardProps> = ({
         style={path ? { clipPath: `url(#clip-${cardId})` } : undefined}
         className={`absolute inset-0 w-full h-full overflow-hidden ${
           !path ? 'rounded-[26px]' : ''
-        } ${gradientBg} shadow-xl`}
+        } ${gradientBg} shadow-lg`}
       >
         {children}
       </div>
@@ -197,7 +197,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       {/* ------------------------------------------------------------- */}
       <NotchedCard
         cardId="banner-original"
-        gradientBg="bg-gradient-to-r from-[#9333ea] via-[#6b21a8] to-[#1e1b4b]"
+        gradientBg="bg-gradient-to-r from-[#a855f7] via-[#9333ea] to-[#7e22ce]"
         badgeValue={0}
         badgeIcon={<Users className="w-3.5 h-3.5 text-white/90" />}
         minHeightClass="min-h-[145px] sm:min-h-[160px]"
@@ -207,21 +207,18 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         }}
       >
         {/* Ambient glow effects */}
-        <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-fuchsia-500/35 blur-3xl pointer-events-none" />
-        <div className="absolute right-1/4 -bottom-10 w-48 h-48 rounded-full bg-cyan-400/25 blur-2xl pointer-events-none" />
+        <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-fuchsia-400/30 blur-3xl pointer-events-none" />
+        <div className="absolute right-1/4 -bottom-10 w-48 h-48 rounded-full bg-cyan-400/20 blur-2xl pointer-events-none" />
 
         {/* Section Artwork Image */}
         <CardBackgroundArt
           type="menu_split"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-44 sm:w-52 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-44 sm:w-52 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
         />
-
-        {/* Dark Vignette Overlay for Crisp Bottom Legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none z-0" />
 
         {/* Content: Title Only */}
         <div className="relative z-10 flex flex-col justify-end h-full p-4 sm:p-5">
-          <h2 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-wider uppercase drop-shadow-lg">
+          <h2 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
             ORIGINALS
           </h2>
         </div>
@@ -234,7 +231,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* CARD 1: PVP (Quick Match + Strategy Duels Fused - Radiant Magma) */}
         <NotchedCard
           cardId="grid-pvp"
-          gradientBg="bg-gradient-to-br from-[#ef4444] via-[#dc2626] to-[#991b1b]"
+          gradientBg="bg-gradient-to-br from-[#ef4444] via-[#dc2626] to-[#b91c1c]"
           badgeValue={pvpPlayerBadge}
           badgeIcon={<Users className="w-3.5 h-3.5 text-white/90" />}
           minHeightClass="min-h-[165px] sm:min-h-[180px]"
@@ -244,21 +241,18 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           }}
         >
           {/* Ambient Glow */}
-          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-rose-400/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-amber-500/25 blur-2xl pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-rose-400/30 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_quick"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
           />
-
-          {/* Dark Bottom Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none z-0" />
 
           {/* Card Content: Title Only */}
           <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-lg">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
               PVP
             </h3>
           </div>
@@ -270,24 +264,21 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             triggerImpact('medium');
             setActivePlaceholder('bot');
           }}
-          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#059669] via-[#0d9488] to-[#042f2e] shadow-xl cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
+          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#10b981] via-[#059669] to-[#047857] shadow-lg cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
         >
           {/* Ambient Glow */}
-          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-teal-300/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-cyan-400/25 blur-2xl pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-teal-300/30 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="shotgun"
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
           />
-
-          {/* Dark Bottom Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none z-0" />
 
           {/* Card Content: Title Only */}
           <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-lg">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
               GAMES VS BOT
             </h3>
           </div>
@@ -299,24 +290,21 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
             triggerImpact('medium');
             setActivePlaceholder('casino');
           }}
-          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#f59e0b] via-[#d97706] to-[#78350f] shadow-xl cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
+          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#f59e0b] via-[#ea580c] to-[#d97706] shadow-lg cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
         >
           {/* Ambient Glow */}
-          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-amber-400/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-orange-500/25 blur-2xl pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-amber-400/30 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-orange-400/20 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="roulette"
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
           />
-
-          {/* Dark Bottom Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none z-0" />
 
           {/* Card Content: Title Only */}
           <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-lg">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
               CASINO & HOUSE
             </h3>
           </div>
@@ -325,7 +313,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* CARD 4: SPECTATE & BET (Electric Stadium Cobalt Sapphire) */}
         <NotchedCard
           cardId="grid-spectate"
-          gradientBg="bg-gradient-to-br from-[#3b82f6] via-[#2563eb] to-[#1e1b4b]"
+          gradientBg="bg-gradient-to-br from-[#3b82f6] via-[#2563eb] to-[#1d4ed8]"
           badgeValue={spectateCount}
           badgeIcon={<Users className="w-3.5 h-3.5 text-white/90" />}
           minHeightClass="min-h-[165px] sm:min-h-[180px]"
@@ -335,21 +323,18 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           }}
         >
           {/* Ambient Glow */}
-          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-cyan-400/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-cyan-400/30 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-indigo-400/20 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_spectate"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
           />
-
-          {/* Dark Bottom Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none z-0" />
 
           {/* Card Content: Title Only */}
           <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-lg">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
               SPECTATE & BET
             </h3>
           </div>
@@ -361,7 +346,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       {/* ------------------------------------------------------------- */}
       <NotchedCard
         cardId="banner-raffle"
-        gradientBg="bg-gradient-to-r from-[#9333ea] via-[#7e22ce] to-[#3b0764]"
+        gradientBg="bg-gradient-to-r from-[#a855f7] via-[#9333ea] to-[#6d28d9]"
         badgeValue={userRaffleTickets}
         badgeIcon={<Ticket className="w-3.5 h-3.5 text-amber-300 -rotate-12" />}
         minHeightClass="min-h-[145px] sm:min-h-[155px]"
@@ -371,21 +356,18 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         }}
       >
         {/* Ambient Glow */}
-        <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-amber-400/30 blur-3xl pointer-events-none" />
-        <div className="absolute left-1/4 -bottom-10 w-48 h-48 rounded-full bg-purple-500/25 blur-2xl pointer-events-none" />
+        <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-amber-400/25 blur-3xl pointer-events-none" />
+        <div className="absolute left-1/4 -bottom-10 w-48 h-48 rounded-full bg-purple-400/20 blur-2xl pointer-events-none" />
 
         {/* Section Artwork Image */}
         <CardBackgroundArt
           type="menu_strategy"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
         />
-
-        {/* Dark Vignette Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none z-0" />
 
         {/* Content: Title Only */}
         <div className="relative z-10 flex flex-col justify-end h-full p-4 sm:p-5">
-          <h2 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-wider uppercase drop-shadow-lg">
+          <h2 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
             RAFFLE
           </h2>
         </div>
