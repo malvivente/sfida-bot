@@ -36,7 +36,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
 
   // Count open rooms per game
   const getOpenRoomsCount = (type: GameType) => {
-    return matches.filter((m) => m.gameType === type && m.state === 'LOBBY' && !m.playerB).length;
+    return matches.filter((m) => m.gameType === type && m.state === 'LOBBY' && (!m.playerB || (m.gameType === 'poker' && (m.currentPlayers || 1) < (m.maxPlayers || 2)))).length;
   };
 
   return (

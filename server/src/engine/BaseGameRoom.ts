@@ -186,6 +186,19 @@ export abstract class BaseGameRoom {
     return null;
   }
 
+  public isPlayerParticipant(wallet?: string, telegramId?: string): boolean {
+    if (!wallet && !telegramId) return false;
+    const matchA = (wallet && this.isSameWallet(wallet, this.playerA.walletAddress)) ||
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId));
+    if (matchA) return true;
+    if (this.playerB) {
+      const matchB = (wallet && this.isSameWallet(wallet, this.playerB.walletAddress)) ||
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId));
+      if (matchB) return true;
+    }
+    return false;
+  }
+
   // Bind WebSocket to Player A or B
   public attachPlayer(wallet: string, telegramId: string, username: string, ws: WebSocket, firstName?: string, photoUrl?: string): boolean {
     if (

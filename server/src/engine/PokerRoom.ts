@@ -217,6 +217,56 @@ export class PokerRoom extends BaseGameRoom {
     return session;
   }
 
+  public override isPlayerParticipant(wallet?: string, telegramId?: string): boolean {
+    if (!wallet && !telegramId) return false;
+    const all = this.getAllPlayerSessions();
+    return all.some((p) =>
+      (wallet && this.isSameWallet(wallet, p.walletAddress)) ||
+      (telegramId && p.telegramId && String(telegramId) === String(p.telegramId))
+    );
+  }
+
+  public override upgradeSpectatorToPlayer(wallet: string, telegramId: string, username: string): boolean {
+    const all = this.getAllPlayerSessions();
+    for (const [id, spec] of this.spectators.entries()) {
+      const matchWallet = Boolean(wallet && spec.wallet && this.isSameWallet(wallet, spec.wallet));
+      const matchTg = Boolean(telegramId && spec.telegramId && String(telegramId) === String(spec.telegramId));
+      if (matchWallet || matchTg) {
+        this.spectators.delete(id);
+        // Find which session matches this user
+        for (let i = 0; i < all.length; i++) {
+          const p = all[i];
+          if (
+            (wallet && this.isSameWallet(wallet, p.walletAddress)) ||
+            (telegramId && p.telegramId && String(telegramId) === String(p.telegramId))
+          ) {
+            p.ws = spec.ws;
+            p.connected = true;
+            if (telegramId) p.telegramId = telegramId;
+            if (username) p.username = cleanPlayerName(username);
+            this.syncSeatsFromSessions();
+            this.syncSeatConnection(i, p, spec.ws);
+            const payload = this.getGamePayload(i);
+            this.sendTo(spec.ws, {
+              type: 'INIT_STATE',
+              matchId: this.matchId.toString(),
+              gameType: 'poker',
+              role: i === 0 ? 'PLAYER_A' : i === 1 ? 'PLAYER_B' : `PLAYER_${i}`,
+              state: this.state,
+              payload,
+              gameData: payload,
+            });
+            this.sendHoleCardsTo(i);
+            this.broadcastRoomState();
+            this.broadcastState();
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   public override attachPlayer(
     wallet: string,
     telegramId: string,
@@ -239,6 +289,15 @@ export class PokerRoom extends BaseGameRoom {
       if (this.state === 'GAME_ACTIVE' && this.activeSeat !== null && !this.actionTimer) {
         this.startActionTimer();
       }
+      const payload = this.getGamePayload(0);
+      this.sendTo(ws, {
+        type: 'GAME_STATE',
+        state: this.state,
+        payload,
+      });
+      this.sendHoleCardsTo(0);
+      this.broadcastRoomState();
+      this.broadcastState();
       return true;
     }
 
@@ -257,6 +316,15 @@ export class PokerRoom extends BaseGameRoom {
       if (this.state === 'GAME_ACTIVE' && this.activeSeat !== null && !this.actionTimer) {
         this.startActionTimer();
       }
+      const payload = this.getGamePayload(1);
+      this.sendTo(ws, {
+        type: 'GAME_STATE',
+        state: this.state,
+        payload,
+      });
+      this.sendHoleCardsTo(1);
+      this.broadcastRoomState();
+      this.broadcastState();
       return true;
     }
 
@@ -277,6 +345,15 @@ export class PokerRoom extends BaseGameRoom {
       this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
       if (this.seats[1] && photoUrl) this.seats[1].photoUrl = photoUrl;
       this.syncSeatConnection(1, this.playerB, ws);
+      const payload = this.getGamePayload(1);
+      this.sendTo(ws, {
+        type: 'GAME_STATE',
+        state: this.state,
+        payload,
+      });
+      this.sendHoleCardsTo(1);
+      this.broadcastRoomState();
+      this.broadcastState();
       return true;
     }
 
@@ -334,18 +411,31 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   public override setPlayerReady(wallet: string, telegramId?: string) {
-    const all = this.getAllPlayerSessions();
-    for (let i = 0; i < all.length; i++) {
-      const p = all[i];
-      if (
-        this.isSameWallet(wallet, p.walletAddress) ||
-        (telegramId && p.telegramId && String(p.telegramId) === String(telegramId))
-      ) {
-        p.ready = true;
-        if (this.seats[i]) {
-          this.seats[i].isReady = true;
+    if (
+      this.isSameWallet(wallet, this.playerA.walletAddress) ||
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
+    ) {
+      this.playerA.ready = true;
+      if (this.seats[0]) this.seats[0].isReady = true;
+    } else if (
+      this.playerB &&
+      (this.isSameWallet(wallet, this.playerB.walletAddress) ||
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
+    ) {
+      this.playerB.ready = true;
+      if (this.seats[1]) this.seats[1].isReady = true;
+    } else {
+      for (let idx = 0; idx < this.extraPlayers.length; idx++) {
+        const ep = this.extraPlayers[idx];
+        if (
+          this.isSameWallet(wallet, ep.walletAddress) ||
+          (telegramId && ep.telegramId && String(ep.telegramId) === String(telegramId))
+        ) {
+          ep.ready = true;
+          const sIdx = 2 + idx;
+          if (this.seats[sIdx]) this.seats[sIdx].isReady = true;
+          break;
         }
-        break;
       }
     }
 
@@ -362,6 +452,7 @@ export class PokerRoom extends BaseGameRoom {
     });
 
     // Check if table is full and all seated players are ready
+    const all = this.getAllPlayerSessions();
     const seatedCount = all.length;
     const allReady = seatedCount >= 2 && seatedCount >= this.maxPlayers && all.every((p) => p.ready);
 
@@ -651,7 +742,12 @@ export class PokerRoom extends BaseGameRoom {
 
   public override handleGameAction(wallet: string, data: any) {
     if (data.type === 'POKER_ACTION') {
-      const seatIndex = this.seats.findIndex((s) => this.isSameWallet(s.walletAddress, wallet));
+      const tgId = data.telegramUserId || data.telegramId;
+      const seatIndex = this.seats.findIndex(
+        (s) =>
+          (wallet && this.isSameWallet(s.walletAddress, wallet)) ||
+          (tgId && s.telegramId && String(s.telegramId) === String(tgId))
+      );
       if (seatIndex === -1 || seatIndex !== this.activeSeat) {
         return;
       }
@@ -799,10 +895,12 @@ export class PokerRoom extends BaseGameRoom {
 
   private advanceStreet() {
     this.clearActionTimers();
+    this.activeSeat = null;
 
     // Reset current bets for the new street
     for (const seat of this.seats) {
       seat.currentBet = 0;
+      seat.isTurn = false;
     }
     this.currentBet = 0;
     this.minRaise = this.bigBlind;
@@ -839,10 +937,10 @@ export class PokerRoom extends BaseGameRoom {
       }
     }
 
-    this.broadcastState();
-
     // If fewer than 2 players can still take action (e.g. all-in), auto-run to next street after a suspense delay
     if (actionable.length < 2) {
+      this.activeSeat = null;
+      this.broadcastState();
       if (this.streetTimer) clearTimeout(this.streetTimer);
       this.streetTimer = setTimeout(() => {
         this.streetTimer = undefined;
@@ -1125,15 +1223,33 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   private broadcastState() {
-    const all = this.getAllPlayerSessions();
+    // Seat 0: playerA
+    if (this.playerA?.ws && this.playerA.connected && this.playerA.ws.readyState === WebSocket.OPEN) {
+      this.sendTo(this.playerA.ws, {
+        type: 'GAME_STATE',
+        state: this.state,
+        payload: this.getGamePayload(0),
+      });
+    }
 
-    for (let i = 0; i < all.length; i++) {
-      const p = all[i];
-      if (p.ws && p.connected && p.ws.readyState === WebSocket.OPEN) {
-        this.sendTo(p.ws, {
+    // Seat 1: playerB
+    if (this.playerB?.ws && this.playerB.connected && this.playerB.ws.readyState === WebSocket.OPEN) {
+      this.sendTo(this.playerB.ws, {
+        type: 'GAME_STATE',
+        state: this.state,
+        payload: this.getGamePayload(1),
+      });
+    }
+
+    // Seat 2..N: extraPlayers
+    for (let idx = 0; idx < this.extraPlayers.length; idx++) {
+      const ep = this.extraPlayers[idx];
+      const seatIdx = 2 + idx;
+      if (ep?.ws && ep.connected && ep.ws.readyState === WebSocket.OPEN) {
+        this.sendTo(ep.ws, {
           type: 'GAME_STATE',
           state: this.state,
-          payload: this.getGamePayload(i),
+          payload: this.getGamePayload(seatIdx),
         });
       }
     }
@@ -1152,10 +1268,14 @@ export class PokerRoom extends BaseGameRoom {
   }
 
   private sendHoleCardsTo(seatIndex: number) {
-    const all = this.getAllPlayerSessions();
-    const session = all[seatIndex];
+    let session: PlayerSession | undefined;
+    if (seatIndex === 0) session = this.playerA;
+    else if (seatIndex === 1) session = this.playerB;
+    else if (seatIndex >= 2 && seatIndex < 2 + this.extraPlayers.length) {
+      session = this.extraPlayers[seatIndex - 2];
+    }
     const seat = this.seats[seatIndex];
-    if (session?.ws && session.connected && seat?.holeCards) {
+    if (session?.ws && session.connected && seat?.holeCards && seat.holeCards.length > 0) {
       this.sendTo(session.ws, {
         type: 'POKER_HOLE_CARDS',
         seatIndex,
@@ -1168,8 +1288,7 @@ export class PokerRoom extends BaseGameRoom {
     this.broadcastState();
 
     // Send private hole cards directly to each seat
-    const all = this.getAllPlayerSessions();
-    for (let i = 0; i < all.length; i++) {
+    for (let i = 0; i < this.maxPlayers; i++) {
       this.sendHoleCardsTo(i);
     }
   }

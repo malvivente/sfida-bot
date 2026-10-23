@@ -435,8 +435,22 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     return isUsernameMatch || isIdMatch;
   };
 
+  const isMatchJoinable = (m: MatchData) => {
+    if (m.state !== 'LOBBY') return false;
+    const maxP = m.maxPlayers || (m as any).gameData?.maxPlayers || (m.gameType === 'poker' ? 4 : 2);
+    if (m.gameType === 'poker' && maxP > 2) {
+      const cur = m.currentPlayers !== undefined
+        ? m.currentPlayers
+        : ((m.gameData?.seats && Array.isArray(m.gameData.seats))
+            ? m.gameData.seats.filter((s: any) => Boolean(s.walletAddress)).length
+            : (m.playerB ? 2 : 1));
+      return cur < maxP;
+    }
+    return !m.playerB;
+  };
+
   const incomingDirectMatches = matches.filter(
-    (m) => m.state === 'LOBBY' && !m.playerB && isTargetForDuel(m)
+    (m) => m.state === 'LOBBY' && isMatchJoinable(m) && isTargetForDuel(m)
   );
 
   const myDuelsCount = matches.filter((m) => {
@@ -455,7 +469,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     const isTarget = isTargetForDuel(m);
     return Boolean(isA || isB || isTarget);
   }).length;
-  const openRoomsCount = matches.filter((m) => m.state === 'LOBBY' && !m.playerB).length;
+  const openRoomsCount = matches.filter((m) => isMatchJoinable(m)).length;
   const directChallengesCount = matches.filter((m) => Boolean(m.targetOpponentUsername || m.targetOpponentId)).length;
 
   const filteredMatches = matches
@@ -476,7 +490,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       } else if (lobbySubSection === 'PRIVATE') {
         if (!m.isPrivate) return false;
       } else if (lobbySubSection === 'OPEN') {
-        if (m.playerB !== null || m.state !== 'LOBBY') return false;
+        if (!isMatchJoinable(m)) return false;
       } else if (lobbySubSection === 'MY_DUELS') {
         if (!isParticipant) return false;
       } else if (lobbySubSection === 'DIRECT') {
@@ -493,8 +507,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       if (filterVisibility === 'PUBLIC' && m.isPrivate) return false;
       if (filterVisibility === 'PRIVATE' && !m.isPrivate) return false;
 
-      // 3. Open Rooms Only (Waiting for Player B)
-      if (filterOpenOnly && (m.playerB !== null || m.state !== 'LOBBY')) return false;
+      // 3. Open Rooms Only (Waiting for Player B or Open Seats)
+      if (filterOpenOnly && !isMatchJoinable(m)) return false;
 
       // 3b. Spectators allowed only
       if (filterSpectatorsOnly && m.allowSpectators === false) return false;
@@ -520,8 +534,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     })
     .sort((a, b) => {
       // Prioritize incoming direct duels targeting the current user
-      const isTargetA = isTargetForDuel(a) && a.state === 'LOBBY' && !a.playerB ? 1 : 0;
-      const isTargetB = isTargetForDuel(b) && b.state === 'LOBBY' && !b.playerB ? 1 : 0;
+      const isTargetA = isTargetForDuel(a) && isMatchJoinable(a) ? 1 : 0;
+      const isTargetB = isTargetForDuel(b) && isMatchJoinable(b) ? 1 : 0;
       if (isTargetA !== isTargetB) {
         return isTargetB - isTargetA;
       }
@@ -1156,7 +1170,20 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 )
               );
 
-              const isAlreadyPlayer = isPlayerA || isPlayerB;
+              const isAlreadyExtraPlayer = Boolean(
+                (m as any).extraPlayers?.some((p: any) =>
+                  (userAddress && areAddressesEqual(p.walletAddress, userAddress)) ||
+                  (myTgId && p.telegramId && String(p.telegramId) === myTgId) ||
+                  (!userAddress && !myTgId && cleanMyUsername && p.username && p.username.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
+                ) ||
+                (m as any).gameData?.seats?.some((s: any) =>
+                  (userAddress && areAddressesEqual(s.walletAddress, userAddress)) ||
+                  (myTgId && s.telegramId && String(s.telegramId) === myTgId) ||
+                  (!userAddress && !myTgId && cleanMyUsername && s.username && s.username.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
+                )
+              );
+
+              const isAlreadyPlayer = isPlayerA || isPlayerB || isAlreadyExtraPlayer;
               const isCreator = isPlayerA;
               const isTargetForThisDuel = isTargetForDuel(m);
 
@@ -1170,7 +1197,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <div
                     key={m.matchId}
                     className={`relative overflow-hidden rounded-3xl p-4 transition-all bg-gradient-to-br ${gameTheme.bg} border ${
-                      isTargetForThisDuel && m.state === 'LOBBY' && !m.playerB
+                      isTargetForThisDuel && m.state === 'LOBBY' && isMatchJoinable(m)
                         ? 'border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50'
                         : `${gameTheme.border} shadow-xl hover:shadow-2xl`
                     }`}
@@ -1285,7 +1312,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                         <Swords className="w-3.5 h-3.5" />
                         <span>{t('profile.resume')}</span>
                       </button>
-                    ) : !m.playerB ? (
+                    ) : isMatchJoinable(m) ? (
                       ((Boolean(m.targetOpponentUsername || m.targetOpponentId) && !isTargetForThisDuel) ||
                        (m.isPrivate && !effectiveInviteCode && !isTargetForThisDuel)) ? (
                         m.allowSpectators === false ? (

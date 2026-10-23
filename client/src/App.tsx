@@ -192,7 +192,8 @@ export const App: React.FC = () => {
       const saved = localStorage.getItem('sfidabot_saved_matches');
       if (saved) {
         const matches = JSON.parse(saved);
-        return Array.isArray(matches) ? matches.filter((m: any) => m.state === 'LOBBY' && !m.playerB).length : 0;
+        const isMatchOpen = (m: any) => m.state === 'LOBBY' && (!m.playerB || (m.gameType === 'poker' && (m.currentPlayers || 1) < (m.maxPlayers || 2)));
+        return Array.isArray(matches) ? matches.filter(isMatchOpen).length : 0;
       }
       return 0;
     } catch {
@@ -208,7 +209,8 @@ export const App: React.FC = () => {
         if (saved) {
           const matches = JSON.parse(saved);
           if (Array.isArray(matches)) {
-            setOpenRoomsCount(matches.filter((m: any) => m.state === 'LOBBY' && !m.playerB).length);
+            const isMatchOpen = (m: any) => m.state === 'LOBBY' && (!m.playerB || (m.gameType === 'poker' && (m.currentPlayers || 1) < (m.maxPlayers || 2)));
+            setOpenRoomsCount(matches.filter(isMatchOpen).length);
           }
         }
       } catch {}

@@ -325,10 +325,21 @@ export function useSocket({
           case 'GAME_STATE':
           case 'POKER_SHOWDOWN':
             setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : (msg.state || 'GAME_ACTIVE')));
-            if ((msg as any).payload) {
-              setGameData((msg as any).payload);
-            } else if (msg.gameData) {
-              setGameData(msg.gameData);
+            const incomingPayload = (msg as any).payload || msg.gameData;
+            if (incomingPayload) {
+              setGameData((prev: any) => {
+                if (prev?.seats && incomingPayload?.seats && incomingPayload.stage !== 'WAITING') {
+                  const mergedSeats = incomingPayload.seats.map((nextSeat: any) => {
+                    const prevSeat = prev.seats.find((ps: any) => ps.seatIndex === nextSeat.seatIndex);
+                    if (!nextSeat.holeCards && prevSeat?.holeCards && prevSeat.holeCards.length > 0) {
+                      return { ...nextSeat, holeCards: prevSeat.holeCards };
+                    }
+                    return nextSeat;
+                  });
+                  return { ...incomingPayload, seats: mergedSeats };
+                }
+                return incomingPayload;
+              });
             }
             if (msg.scoreA !== undefined) setScoreA(msg.scoreA);
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
@@ -951,10 +962,10 @@ export function useSocket({
   const sendPokerAction = useCallback(
     (action: 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in', amount?: number) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'POKER_ACTION', action, amount }));
+        wsRef.current.send(JSON.stringify({ type: 'POKER_ACTION', action, amount, wallet, telegramUserId: telegramId, telegramId }));
       }
     },
-    []
+    [wallet, telegramId]
   );
 
   return {

@@ -232,6 +232,16 @@ export const Arena: React.FC<ArenaProps> = ({
       (!effectivePlayerAddress && !myTgId && cleanMyUsername && (
         currentActiveMatch.playerA.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername ||
         (currentActiveMatch.playerB && currentActiveMatch.playerB.name?.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
+      )) ||
+      ((currentActiveMatch as any).extraPlayers && Array.isArray((currentActiveMatch as any).extraPlayers) && (currentActiveMatch as any).extraPlayers.some((p: any) =>
+        (effectivePlayerAddress && p.walletAddress && areAddressesEqual(p.walletAddress, effectivePlayerAddress)) ||
+        (myTgId && p.telegramId && String(p.telegramId) === myTgId) ||
+        (!effectivePlayerAddress && !myTgId && cleanMyUsername && p.username && p.username.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
+      )) ||
+      (currentActiveMatch.gameData?.seats && Array.isArray(currentActiveMatch.gameData.seats) && currentActiveMatch.gameData.seats.some((s: any) =>
+        (effectivePlayerAddress && s.walletAddress && areAddressesEqual(s.walletAddress, effectivePlayerAddress)) ||
+        (myTgId && s.telegramId && String(s.telegramId) === myTgId) ||
+        (!effectivePlayerAddress && !myTgId && cleanMyUsername && s.username && s.username.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
       ))
     )
   );
@@ -435,6 +445,8 @@ export const Arena: React.FC<ArenaProps> = ({
         oddsA: 1.0,
         oddsB: 1.0,
         spectatorCount: 0,
+        maxPlayers: data.maxPlayers || maxPlayers || (gameType === 'poker' ? 4 : 2),
+        currentPlayers: 1,
       };
 
       setMatches((prev) => [newMatch, ...prev.filter((m) => m.matchId !== newMatch.matchId)]);
@@ -484,7 +496,20 @@ export const Arena: React.FC<ArenaProps> = ({
       )
     );
 
-    const isAlreadyPlayer = isPlayerA || isPlayerB;
+    const isAlreadyExtra = Boolean(
+      (match as any).extraPlayers?.some((p: any) =>
+        (userAddress && areAddressesEqual(p.walletAddress, userAddress)) ||
+        (myTgId && p.telegramId && String(p.telegramId) === myTgId) ||
+        (!userAddress && !myTgId && cleanMyUsername && p.username && p.username.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
+      ) ||
+      (match as any).gameData?.seats?.some((s: any) =>
+        (userAddress && areAddressesEqual(s.walletAddress, userAddress)) ||
+        (myTgId && s.telegramId && String(s.telegramId) === myTgId) ||
+        (!userAddress && !myTgId && cleanMyUsername && s.username && s.username.replace(/^@/, '').toLowerCase().trim() === cleanMyUsername)
+      )
+    );
+
+    const isAlreadyPlayer = isPlayerA || isPlayerB || isAlreadyExtra;
 
     if (isAlreadyPlayer || (activeMatchId === match.matchId && role === 'player')) {
       setActiveMatchId(match.matchId);
@@ -642,8 +667,8 @@ export const Arena: React.FC<ArenaProps> = ({
         )
       );
 
-      const tableMaxPlayers = (m as any).maxPlayers || (m as any).gameData?.maxPlayers || 2;
-      const seatedCount = (m as any).gameData?.seats?.filter((s: any) => Boolean(s.walletAddress)).length ||
+      const tableMaxPlayers = (m as any).maxPlayers || (m as any).gameData?.maxPlayers || (m.gameType === 'poker' ? 4 : 2);
+      const seatedCount = (m as any).currentPlayers || (m as any).gameData?.seats?.filter((s: any) => Boolean(s.walletAddress)).length ||
         (m.playerB ? 2 : 1);
       const hasAvailableSeat = !m.playerB || (m.gameType === 'poker' && seatedCount < tableMaxPlayers);
 
@@ -935,17 +960,17 @@ export const Arena: React.FC<ArenaProps> = ({
     (currentActiveMatch?.targetOpponentId && userId && String(currentActiveMatch.targetOpponentId) === String(userId))
   );
 
-  const canJoinAsPlayer = !hasPlayerB && !isCurrentCreator && (
+  const tableMaxPlayers = (currentActiveMatch as any)?.maxPlayers || (socketData.gameData as any)?.maxPlayers || (effectiveGameType === 'poker' ? 4 : 2);
+  const isMultiPokerRoom = effectiveGameType === 'poker' && tableMaxPlayers > 2;
+  const tableHasOpenSeats = (socketData.gameData as any)?.seats
+    ? (socketData.gameData as any).seats.filter((s: any) => Boolean(s.walletAddress)).length < tableMaxPlayers
+    : ((currentActiveMatch as any)?.currentPlayers !== undefined ? (currentActiveMatch as any).currentPlayers < tableMaxPlayers : (!hasPlayerB || isMultiPokerRoom));
+
+  const canJoinAsPlayer = (effectiveGameType === 'poker' ? tableHasOpenSeats : !hasPlayerB) && !isCurrentCreator && !isMatchPlayerResolved && (
     hasDesignatedOpponent
       ? isTargetOpponent
       : (!isPrivateMatch || Boolean(effectiveInviteCode))
   );
-
-  const tableMaxPlayers = (currentActiveMatch as any)?.maxPlayers || (socketData.gameData as any)?.maxPlayers || 2;
-  const isMultiPokerRoom = effectiveGameType === 'poker' && tableMaxPlayers > 2;
-  const tableHasOpenSeats = (socketData.gameData as any)?.seats
-    ? (socketData.gameData as any).seats.filter((s: any) => Boolean(s.walletAddress)).length < tableMaxPlayers
-    : (!hasPlayerB || isMultiPokerRoom);
 
   const canInviteChallenger = isMultiPokerRoom
     ? (tableHasOpenSeats && effectiveRole === 'player')

@@ -45,7 +45,9 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     const firstName = query.firstName || query.first_name || '';
     const photoUrl = query.photoUrl ? decodeURIComponent(query.photoUrl) : '';
 
-    if (role === 'player') {
+    const isAuthorizedParticipant = room.isPlayerParticipant(wallet, telegramId);
+
+    if (role === 'player' || isAuthorizedParticipant) {
       const attached = room.attachPlayer(wallet, telegramId, username, ws, firstName, photoUrl);
       if (attached) {
         console.log(`[WS] Player ${username} (${wallet}) connected to Match #${matchId}`);
@@ -216,7 +218,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
           case 'CHRONO_STOP':
           case 'SPLIT_STEAL_CHOICE':
           case 'POKER_ACTION':
-            room?.handleGameAction(senderWallet, data);
+            room?.handleGameAction(senderWallet, { ...data, telegramUserId: senderTelegramId, telegramId: senderTelegramId });
             break;
 
           case 'LEAVE':

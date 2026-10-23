@@ -21,6 +21,7 @@ import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { GramIcon } from '../GramIcon.js';
 import { UserAvatar } from '../UserAvatar.js';
+import { areAddressesEqual } from '../../utils/ton.js';
 
 interface PokerArenaProps {
   gameData?: PokerState;
@@ -118,9 +119,9 @@ const PlayingCardView: React.FC<{
 
   const sizeClasses = isHorizontal
     ? {
-        sm: 'w-12 h-7.5 text-[9px] rounded-[5px]',
-        md: 'w-15 h-9.5 text-[10px] rounded-[6px]',
-        lg: 'w-18 h-12 text-xs rounded-lg',
+        sm: 'w-[48px] h-[30px] text-[9px] rounded-[5px]',
+        md: 'w-[60px] h-[38px] text-[10px] rounded-[6px]',
+        lg: 'w-[72px] h-[46px] text-xs rounded-lg',
       }[size]
     : {
         sm: 'w-8 h-12 text-[10px] rounded-[6px]',
@@ -313,6 +314,15 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
     return gameData.seats[heroSeatIndex] || null;
   }, [isSpectator, gameData?.seats, heroSeatIndex]);
 
+  const isHeroTournamentWinner = useMemo(() => {
+    if (gameData?.tournamentWinner) {
+      if (heroSeatIndex !== -1 && gameData.tournamentWinner.seatIndex === heroSeatIndex) return true;
+      if (userAddress && gameData.tournamentWinner.walletAddress && areAddressesEqual(userAddress, gameData.tournamentWinner.walletAddress)) return true;
+      if (heroSeat?.username && gameData.tournamentWinner.username === heroSeat.username) return true;
+    }
+    return Boolean(isWinner);
+  }, [gameData?.tournamentWinner, heroSeatIndex, userAddress, heroSeat?.username, isWinner]);
+
   const isHeroTurn = Boolean(
     !isSpectator &&
       isMatchActive &&
@@ -321,6 +331,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
       roomState !== 'MATCH_SETTLED' &&
       roomState !== 'FORFEITED' &&
       gameData &&
+      !gameData.tournamentWinner &&
       gameData.stage !== 'WAITING' &&
       gameData.stage !== 'SHOWDOWN' &&
       gameData.stage !== 'HAND_OVER' &&
@@ -907,7 +918,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                       {/* Avatar */}
                       <div className="relative mb-0.5">
                         <div
-                          className={`w-8 h-8 rounded-full p-0.5 border-2 flex items-center justify-center shadow-md bg-slate-900 ${
+                          className={`w-8 h-8 rounded-full p-0.5 border-2 flex items-center justify-center shadow-md bg-slate-900 shrink-0 overflow-hidden ${
                             !seatWest.isConnected
                               ? 'border-red-500/70 opacity-60'
                               : gameData.activeSeat === seatWest.seatIndex
@@ -920,7 +931,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                           <UserAvatar
                             photoUrl={seatWest.photoUrl}
                             name={seatWest.username}
-                            sizeClass="w-6.5 h-6.5"
+                            sizeClass="w-7 h-7"
                             textClass="text-[9px]"
                           />
                         </div>
@@ -1052,7 +1063,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                       {/* Avatar */}
                       <div className="relative mb-0.5">
                         <div
-                          className={`w-8 h-8 rounded-full p-0.5 border-2 flex items-center justify-center shadow-md bg-slate-900 ${
+                          className={`w-8 h-8 rounded-full p-0.5 border-2 flex items-center justify-center shadow-md bg-slate-900 shrink-0 overflow-hidden ${
                             !seatEast.isConnected
                               ? 'border-red-500/70 opacity-60'
                               : gameData.activeSeat === seatEast.seatIndex
@@ -1065,7 +1076,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                           <UserAvatar
                             photoUrl={seatEast.photoUrl}
                             name={seatEast.username}
-                            sizeClass="w-6.5 h-6.5"
+                            sizeClass="w-7 h-7"
                             textClass="text-[9px]"
                           />
                         </div>
@@ -1605,7 +1616,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                   GRAM
                 </span>
               </div>
-              {isWinner && (
+              {isHeroTournamentWinner && (
                 <div className="text-[10px] text-emerald-400 font-mono font-bold pt-1">
                   {t('poker.prizeCreditedAuto')}
                 </div>
@@ -1616,7 +1627,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
             {isSpectator && spectatorOutcome && (
               <div className={`p-3 rounded-2xl border ${spectatorOutcome.won ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200' : spectatorOutcome.refunded ? 'bg-amber-500/15 border-amber-500/40 text-amber-200' : 'bg-red-500/15 border-red-500/40 text-red-200'}`}>
                 <div className="text-[10px] uppercase font-mono tracking-wider font-bold">
-                  {spectatorOutcome.won ? '✓ SCOMMESSA VINTA!' : spectatorOutcome.refunded ? 'RIMBORSO SCOMMESSA' : 'SCOMMESSA NON VINCENTE'}
+                  {spectatorOutcome.won ? `✓ ${t('spectator.outcomeWonTitle')}` : spectatorOutcome.refunded ? t('spectator.outcomeRefundTitle') : t('arena.spectatorBetLost')}
                 </div>
                 {spectatorOutcome.won && (
                   <div className="text-lg font-mono font-black text-emerald-300 pt-0.5">
