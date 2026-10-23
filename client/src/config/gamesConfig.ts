@@ -125,4 +125,8 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
   },
 };
 
+export const QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'chrono', 'headsoccer'];
+export const STRATEGY_GAMES: GameType[] = ['split', 'shotgun', 'connect4', 'cubecount', 'poker'];
+
+
 
