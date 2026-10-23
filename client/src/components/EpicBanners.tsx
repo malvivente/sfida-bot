@@ -25,16 +25,17 @@ interface EpicBannersProps {
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
   jackpotAmountGram?: string;
+  userRaffleTickets?: number;
 }
 
 type PlaceholderType = 'original' | 'bot' | 'casino' | 'raffle' | null;
 
 /**
  * Generates a seamless continuous SVG path for a card with an inverted
- * rounded notch cutout in the top-right corner, matching the reference design.
+ * rounded notch cutout in the top-right corner.
  */
-function getCardPath(W: number, H: number, offset = 1): string {
-  const R = 22; // Outer corner radius
+function getCardPath(W: number, H: number, offset = 0): string {
+  const R = 24; // Outer corner radius
   const NW = 56; // Notch width
   const NH = 38; // Notch height
   const r = 14; // Notch inner fillet radius
@@ -67,8 +68,8 @@ interface NotchedCardProps {
   cardId: string;
   className?: string;
   gradientBg: string;
-  strokeColor: string;
-  playerCount?: number | string;
+  badgeValue?: number | string;
+  badgeIcon?: React.ReactNode;
   onClick?: () => void;
   children: React.ReactNode;
   minHeightClass?: string;
@@ -78,8 +79,8 @@ const NotchedCard: React.FC<NotchedCardProps> = ({
   cardId,
   className = '',
   gradientBg,
-  strokeColor,
-  playerCount = 0,
+  badgeValue,
+  badgeIcon,
   onClick,
   children,
   minHeightClass = 'min-h-[165px] sm:min-h-[180px]',
@@ -115,7 +116,7 @@ const NotchedCard: React.FC<NotchedCardProps> = ({
 
   const path = useMemo(() => {
     if (!dim.w || !dim.h) return '';
-    return getCardPath(dim.w, dim.h, 1);
+    return getCardPath(dim.w, dim.h, 0);
   }, [dim.w, dim.h]);
 
   return (
@@ -124,10 +125,10 @@ const NotchedCard: React.FC<NotchedCardProps> = ({
       onClick={onClick}
       className={`relative cursor-pointer group active:scale-[0.98] transition-all select-none ${minHeightClass} ${className}`}
     >
-      {/* Continuous single SVG stroke border */}
+      {/* SVG ClipPath Definition without any border stroke */}
       {path && (
         <svg
-          className="absolute inset-0 w-full h-full pointer-events-none z-10"
+          className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-0"
           width={dim.w}
           height={dim.h}
         >
@@ -136,33 +137,28 @@ const NotchedCard: React.FC<NotchedCardProps> = ({
               <path d={path} />
             </clipPath>
           </defs>
-          <path
-            d={path}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth="1.5"
-            className="pointer-events-none"
-          />
         </svg>
       )}
 
-      {/* Content wrapper clipped to the exact scooped notch path */}
+      {/* Content wrapper clipped cleanly without borders */}
       <div
         style={path ? { clipPath: `url(#clip-${cardId})` } : undefined}
         className={`absolute inset-0 w-full h-full overflow-hidden ${
-          !path ? 'rounded-[22px] border border-white/10' : ''
-        } ${gradientBg}`}
+          !path ? 'rounded-[26px]' : ''
+        } ${gradientBg} shadow-xl`}
       >
         {children}
       </div>
 
-      {/* Player Counter placed in the scooped notch negative space */}
-      <div className="absolute top-2.5 right-3.5 z-20 flex items-center space-x-1.5 pointer-events-none select-none">
-        <Users className="w-3.5 h-3.5 text-white/90" />
-        <span className="font-mono font-bold text-xs text-white leading-none">
-          {playerCount}
-        </span>
-      </div>
+      {/* Counter/Badge in the scooped notch negative space */}
+      {badgeValue !== undefined && (
+        <div className="absolute top-2.5 right-3.5 z-20 flex items-center space-x-1.5 pointer-events-none select-none">
+          {badgeIcon || <Users className="w-3.5 h-3.5 text-white/90" />}
+          <span className="font-mono font-bold text-xs text-white leading-none">
+            {badgeValue}
+          </span>
+        </div>
+      )}
     </div>
   );
 };
@@ -173,6 +169,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
   onOpenSpectate,
   onOpenJackpotModal,
   jackpotAmountGram = '5.00',
+  userRaffleTickets = 0,
 }) => {
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
@@ -200,9 +197,9 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       {/* ------------------------------------------------------------- */}
       <NotchedCard
         cardId="banner-original"
-        gradientBg="bg-gradient-to-r from-[#6b21a8] via-[#4c1d95] to-[#1e1b4b]"
-        strokeColor="rgba(192, 132, 252, 0.55)"
-        playerCount={0}
+        gradientBg="bg-gradient-to-r from-[#9333ea] via-[#6b21a8] to-[#1e1b4b]"
+        badgeValue={0}
+        badgeIcon={<Users className="w-3.5 h-3.5 text-white/90" />}
         minHeightClass="min-h-[145px] sm:min-h-[160px]"
         onClick={() => {
           triggerImpact('medium');
@@ -210,8 +207,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         }}
       >
         {/* Ambient glow effects */}
-        <div className="absolute -right-8 -top-8 w-56 h-56 rounded-full bg-fuchsia-500/30 blur-3xl pointer-events-none" />
-        <div className="absolute right-1/4 -bottom-10 w-44 h-44 rounded-full bg-cyan-400/25 blur-2xl pointer-events-none" />
+        <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-fuchsia-500/35 blur-3xl pointer-events-none" />
+        <div className="absolute right-1/4 -bottom-10 w-48 h-48 rounded-full bg-cyan-400/25 blur-2xl pointer-events-none" />
 
         {/* Section Artwork Image */}
         <CardBackgroundArt
@@ -237,9 +234,9 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* CARD 1: PVP (Quick Match + Strategy Duels Fused - Radiant Magma) */}
         <NotchedCard
           cardId="grid-pvp"
-          gradientBg="bg-gradient-to-br from-[#dc2626] via-[#b91c1c] to-[#7f1d1d]"
-          strokeColor="rgba(251, 113, 133, 0.6)"
-          playerCount={pvpPlayerBadge}
+          gradientBg="bg-gradient-to-br from-[#ef4444] via-[#dc2626] to-[#991b1b]"
+          badgeValue={pvpPlayerBadge}
+          badgeIcon={<Users className="w-3.5 h-3.5 text-white/90" />}
           minHeightClass="min-h-[165px] sm:min-h-[180px]"
           onClick={() => {
             triggerImpact('medium');
@@ -248,12 +245,12 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         >
           {/* Ambient Glow */}
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-rose-400/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-amber-500/25 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_quick"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
           />
 
           {/* Dark Bottom Vignette */}
@@ -267,26 +264,22 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           </div>
         </NotchedCard>
 
-        {/* CARD 2: GAMES VS BOT (Electric Neon Teal / Cyber) */}
-        <NotchedCard
-          cardId="grid-vs-bot"
-          gradientBg="bg-gradient-to-br from-[#0d9488] via-[#0f766e] to-[#115e59]"
-          strokeColor="rgba(45, 212, 191, 0.6)"
-          playerCount={0}
-          minHeightClass="min-h-[165px] sm:min-h-[180px]"
+        {/* CARD 2: GAMES VS BOT (Electric Neon Teal - NO NOTCH, NO ICON, NO BORDER) */}
+        <div
           onClick={() => {
             triggerImpact('medium');
             setActivePlaceholder('bot');
           }}
+          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#059669] via-[#0d9488] to-[#042f2e] shadow-xl cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
         >
           {/* Ambient Glow */}
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-teal-300/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-cyan-400/20 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-cyan-400/25 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="shotgun"
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
           />
 
           {/* Dark Bottom Vignette */}
@@ -298,28 +291,24 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
               GAMES VS BOT
             </h3>
           </div>
-        </NotchedCard>
+        </div>
 
-        {/* CARD 3: CASINO & HOUSE (Rich Warm Amber Gold / Casino Velvet) */}
-        <NotchedCard
-          cardId="grid-casino"
-          gradientBg="bg-gradient-to-br from-[#d97706] via-[#b45309] to-[#78350f]"
-          strokeColor="rgba(252, 211, 77, 0.6)"
-          playerCount={0}
-          minHeightClass="min-h-[165px] sm:min-h-[180px]"
+        {/* CARD 3: CASINO & HOUSE (Rich Warm Amber Gold - NO NOTCH, NO ICON, NO BORDER) */}
+        <div
           onClick={() => {
             triggerImpact('medium');
             setActivePlaceholder('casino');
           }}
+          className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#f59e0b] via-[#d97706] to-[#78350f] shadow-xl cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
         >
           {/* Ambient Glow */}
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-amber-400/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-orange-500/25 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="roulette"
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
           />
 
           {/* Dark Bottom Vignette */}
@@ -331,14 +320,14 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
               CASINO & HOUSE
             </h3>
           </div>
-        </NotchedCard>
+        </div>
 
         {/* CARD 4: SPECTATE & BET (Electric Stadium Cobalt Sapphire) */}
         <NotchedCard
           cardId="grid-spectate"
-          gradientBg="bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e1b4b]"
-          strokeColor="rgba(96, 165, 250, 0.6)"
-          playerCount={spectateCount}
+          gradientBg="bg-gradient-to-br from-[#3b82f6] via-[#2563eb] to-[#1e1b4b]"
+          badgeValue={spectateCount}
+          badgeIcon={<Users className="w-3.5 h-3.5 text-white/90" />}
           minHeightClass="min-h-[165px] sm:min-h-[180px]"
           onClick={() => {
             triggerImpact('medium');
@@ -347,12 +336,12 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         >
           {/* Ambient Glow */}
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-cyan-400/35 blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
+          <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_spectate"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
           />
 
           {/* Dark Bottom Vignette */}
@@ -368,13 +357,13 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 3. BOTTOM BANNER: RAFFLE (Vivid Violet & Blazing Golden Sheen) */}
+      {/* 3. BOTTOM BANNER: RAFFLE (Tickets Icon & User Tickets Count)  */}
       {/* ------------------------------------------------------------- */}
       <NotchedCard
         cardId="banner-raffle"
-        gradientBg="bg-gradient-to-r from-[#701a75] via-[#581c87] to-[#1e1b4b]"
-        strokeColor="rgba(251, 191, 36, 0.6)"
-        playerCount={0}
+        gradientBg="bg-gradient-to-r from-[#9333ea] via-[#7e22ce] to-[#3b0764]"
+        badgeValue={userRaffleTickets}
+        badgeIcon={<Ticket className="w-3.5 h-3.5 text-amber-300 -rotate-12" />}
         minHeightClass="min-h-[145px] sm:min-h-[155px]"
         onClick={() => {
           triggerImpact('medium');
@@ -382,13 +371,13 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         }}
       >
         {/* Ambient Glow */}
-        <div className="absolute -right-8 -top-8 w-56 h-56 rounded-full bg-amber-400/30 blur-3xl pointer-events-none" />
-        <div className="absolute left-1/4 -bottom-10 w-44 h-44 rounded-full bg-purple-500/20 blur-2xl pointer-events-none" />
+        <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-amber-400/30 blur-3xl pointer-events-none" />
+        <div className="absolute left-1/4 -bottom-10 w-48 h-48 rounded-full bg-purple-500/25 blur-2xl pointer-events-none" />
 
         {/* Section Artwork Image */}
         <CardBackgroundArt
           type="menu_strategy"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
+          className="absolute -right-2 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-xl"
         />
 
         {/* Dark Vignette Overlay */}
@@ -403,24 +392,24 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       </NotchedCard>
 
       {/* ------------------------------------------------------------- */}
-      {/* 4. STANDALONE LUXURY TRUST JACKPOT CARD                       */}
+      {/* 4. STANDALONE LUXURY TRUST JACKPOT CARD (Borderless Dark Gold)*/}
       {/* ------------------------------------------------------------- */}
       <div
         onClick={() => {
           triggerImpact('medium');
           onOpenJackpotModal?.();
         }}
-        className="relative overflow-hidden rounded-[24px] bg-gradient-to-r from-[#2a1d0f] via-[#3d2914] to-[#20150b] p-4 sm:p-5 border border-amber-400/50 shadow-xl cursor-pointer group active:scale-[0.99] transition-all"
+        className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-[#2a1d0f] via-[#3d2914] to-[#20150b] p-4 sm:p-5 shadow-xl cursor-pointer group active:scale-[0.99] transition-all"
       >
-        <div className="absolute -right-8 -top-8 w-56 h-56 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
+        <div className="absolute -right-8 -top-8 w-56 h-56 rounded-full bg-amber-400/25 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1.5">
             <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 rounded-xl bg-amber-400/25 border border-amber-400/60 flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-7 h-7 rounded-xl bg-amber-400/25 flex items-center justify-center shrink-0 shadow-sm">
                 <Trophy className="w-3.5 h-3.5 text-amber-300 group-hover:rotate-12 transition-transform" />
               </div>
-              <span className="px-2 py-0.5 rounded-lg bg-amber-500/25 border border-amber-400/50 text-amber-300 font-heading font-black text-[9px] uppercase tracking-wider">
+              <span className="px-2 py-0.5 rounded-lg bg-amber-500/25 text-amber-300 font-heading font-black text-[9px] uppercase tracking-wider">
                 {t('epic.jackpotStandaloneTag')}
               </span>
             </div>
