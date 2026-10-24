@@ -271,6 +271,14 @@ export const translations: Translations = {
   'spectator.refundNotice': { it: 'Puntata restituita al tuo saldo in-app', en: 'Stake refunded to your in-app balance' },
   'spectator.outcomeLostTitle': { it: 'SCOMMESSA NON VINCENTE', en: 'BET LOST' },
   'spectator.lossNotice': { it: 'Pronostico non andato a segno', en: 'Prediction did not win' },
+  'spectator.exitLobbyHint': {
+    it: 'Puoi uscire dalla stanza quando vuoi: riceverai una notifica privata su Telegram con i dettagli del pronostico e l\'esito finale!',
+    en: 'You can leave the room at any time: you will receive a private Telegram notification with your bet details and the final outcome!',
+  },
+  'spectator.btnExitAndNotify': {
+    it: 'TORNA ALLA LOBBY (NOTIFICA VIA TELEGRAM)',
+    en: 'RETURN TO LOBBY (TELEGRAM NOTIFICATION)',
+  },
   'arena.matchCancelledTitle': { it: 'DUELLO ANNULLATO', en: 'DUEL CANCELLED' },
   'arena.matchCancelledDesc': { it: 'La partita è stata annullata. La tua puntata è stata interamente restituita al tuo saldo in-app.', en: 'The match was cancelled. Your wager has been fully refunded to your in-app balance.' },
   'arena.wagerRefundedNotice': { it: 'Wager e quote rimborsati al 100%', en: 'Wagers & fees 100% refunded' },

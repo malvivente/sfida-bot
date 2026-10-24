@@ -172,7 +172,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
               );
               await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
 
-              room.registerSpectatorBet(data.target, betAmountNano, bettorWallet, telegramId, spectatorFeeGram);
+              const effectiveTelegramId = telegramId || userAccount?.telegramId;
+              room.registerSpectatorBet(data.target, betAmountNano, bettorWallet, effectiveTelegramId, spectatorFeeGram);
 
               ws.send(JSON.stringify({
                 type: 'BET_CONFIRMED',

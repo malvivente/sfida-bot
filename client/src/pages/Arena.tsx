@@ -1796,6 +1796,7 @@ export const Arena: React.FC<ArenaProps> = ({
                     : 'B'
                   : undefined
               }
+              onExit={handleAttemptExitMatch}
             />
           )}
         </div>

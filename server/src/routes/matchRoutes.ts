@@ -706,6 +706,119 @@ export async function matchRoutes(fastify: FastifyInstance) {
     });
   });
 
+  // Spectator Bet endpoint (allows betting directly without maintaining active WebSocket connection)
+  fastify.post('/api/matches/:id/spectator-bet', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as {
+      target: 'A' | 'B' | 'X';
+      amountGram?: number | string;
+      amountNano?: string;
+      wallet?: string;
+      telegramId?: string | number;
+      username?: string;
+    };
+
+    if (!body.target) {
+      return reply.status(400).send({ error: 'TARGET_REQUIRED', message: 'Target is required (A, B, or X).' });
+    }
+
+    const room = roomManager.getRoom(id);
+    if (!room) {
+      return reply.status(404).send({ error: 'MATCH_NOT_FOUND', message: 'Partita non trovata.' });
+    }
+
+    if (room.state !== 'BETTING_WINDOW') {
+      return reply.status(400).send({
+        error: 'BETTING_CLOSED',
+        message: room.state === 'LOBBY'
+          ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 10s).'
+          : 'Le scommesse per questa partita sono chiuse.',
+      });
+    }
+
+    const betAmountGram = body.amountGram
+      ? parseFloat(String(body.amountGram))
+      : (body.amountNano ? Number(BigInt(body.amountNano)) / 1e9 : 0);
+
+    const { minWagerGram, spectatorFeeGram } = feeConfig.getConfig();
+    if (betAmountGram < minWagerGram) {
+      return reply.status(400).send({
+        error: 'MIN_BET_ERROR',
+        message: `La puntata minima per gli spettatori è di ${minWagerGram.toFixed(1)} GRAM.`,
+      });
+    }
+
+    const totalRequired = betAmountGram + spectatorFeeGram;
+    const cleanTgId = body.telegramId ? String(body.telegramId) : undefined;
+    const userAccount = await dbService.getUserAccount(body.wallet, cleanTgId, body.username);
+    const curBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
+
+    if (curBal < totalRequired) {
+      return reply.status(400).send({
+        error: 'INSUFFICIENT_BALANCE',
+        message: `Saldo insufficiente! Servono ${totalRequired.toFixed(2)} GRAM (${betAmountGram.toFixed(2)} puntata + ${spectatorFeeGram.toFixed(2)} commissione), ma il tuo saldo è di ${curBal.toFixed(2)} GRAM.`,
+        missingGram: (totalRequired - curBal).toFixed(2),
+      });
+    }
+
+    const bettorWallet = userAccount.walletAddress || body.wallet || (body.telegramId ? `tg_${body.telegramId}` : '');
+    const effectiveTelegramId = body.telegramId ? String(body.telegramId) : userAccount?.telegramId;
+
+    // Check if sender is a duelist in this match
+    if (
+      bettorWallet &&
+      (room.isSameWallet(bettorWallet, room.playerA.walletAddress) ||
+        (room.playerB && room.isSameWallet(bettorWallet, room.playerB.walletAddress)))
+    ) {
+      return reply.status(400).send({
+        error: 'PLAYER_BET_DENIED',
+        message: 'I duellanti non possono scommettere sulla propria partita.',
+      });
+    }
+
+    // Prevent duplicate or changing spectator bets
+    const alreadyBet = room.spectatorBets.some((b) =>
+      (bettorWallet && b.walletAddress && room.isSameWallet(b.walletAddress, bettorWallet)) ||
+      (effectiveTelegramId && b.telegramId && String(b.telegramId) === String(effectiveTelegramId))
+    );
+    if (alreadyBet) {
+      return reply.status(400).send({
+        error: 'ALREADY_BET',
+        message: 'Hai già piazzato la tua puntata per questo duello. La scommessa è bloccata.',
+      });
+    }
+
+    const betAmountNano = BigInt(Math.round(betAmountGram * 1e9));
+
+    // Debit bet and participation fee
+    await dbService.debitUserBalance(
+      bettorWallet,
+      betAmountGram.toFixed(2),
+      'MATCH_BET',
+      `Spectator bet on ${body.target === 'X' ? 'Peace (Both Split)' : 'Player ' + body.target} for match #${id}`,
+      effectiveTelegramId
+    );
+    await dbService.debitUserBalance(
+      bettorWallet,
+      spectatorFeeGram.toFixed(2),
+      'CREATION_FEE',
+      `Spectator participation fee for match #${id}`,
+      effectiveTelegramId
+    );
+    await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', id);
+
+    room.registerSpectatorBet(body.target, betAmountNano, bettorWallet, effectiveTelegramId, spectatorFeeGram);
+
+    return reply.send({
+      success: true,
+      matchId: id,
+      target: body.target,
+      amountGram: betAmountGram.toFixed(2),
+      feePaidGram: spectatorFeeGram.toFixed(2),
+      newBalance: (curBal - totalRequired).toFixed(2),
+    });
+  });
+
   // User match history from persistent database
   fastify.get('/api/users/:wallet/history', async (req, reply) => {
     const { wallet } = req.params as { wallet: string };

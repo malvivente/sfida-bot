@@ -198,6 +198,36 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyWithWings}} <b>SFIDA ARENA • TIP RECEIVED!</b>\n\n` +
       `<b>{senderName}</b> sent you <b>{amount} GRAM</b>!{noteText}\n\n` +
       `{{emoji.moneyBag}} <b>New Balance:</b> {newBalance} GRAM`,
+
+    // Spectator Bet Outcome Notifications
+    spectator_notification_won:
+      `{{emoji.trophy}} <b>SFIDA ARENA • SPECTATOR BET WON!</b>\n\n` +
+      `{{emoji.swords}} <b>Match:</b> {game} (Room #{matchId})\n` +
+      `{{emoji.user}} <b>Duelists:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>Your Pick:</b> <b>{target}</b>\n` +
+      `{{emoji.coin}} <b>Stake:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>Result:</b> {outcome}\n` +
+      `{{emoji.moneyBag}} <b>Total Payout:</b> <b>+{payout} GRAM</b> <i>(Profit: +{profit} GRAM)</i>\n\n` +
+      `{{emoji.check}} <i>Winnings have been automatically credited to your balance!</i>`,
+    spectator_notification_lost:
+      `{{emoji.cross}} <b>SFIDA ARENA • SPECTATOR BET LOST</b>\n\n` +
+      `{{emoji.swords}} <b>Match:</b> {game} (Room #{matchId})\n` +
+      `{{emoji.user}} <b>Duelists:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>Your Pick:</b> {target}\n` +
+      `{{emoji.coin}} <b>Stake:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>Winner:</b> {winner}\n\n` +
+      `<i>The prediction did not win this time. Try your luck in the next duel!</i>`,
+    spectator_notification_refund:
+      `{{emoji.shield}} <b>SFIDA ARENA • SPECTATOR BET REFUNDED</b>\n\n` +
+      `{{emoji.swords}} <b>Match:</b> {game} (Room #{matchId})\n` +
+      `{{emoji.user}} <b>Duelists:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.coin}} <b>Refunded Amount:</b> <b>+{payout} GRAM</b>\n\n` +
+      `{{emoji.hourglass}} <b>Reason:</b> <i>{reason}</i>\n\n` +
+      `{{emoji.check}} <i>The funds have been returned to your balance.</i>`,
+    spectator_refund_reason_one_sided: `All spectator bets were placed on the same outcome (no opposing pool to contest).`,
+    spectator_refund_reason_cancelled: `The match was cancelled or timed out.`,
+    spectator_refund_reason_no_winners: `No spectators placed a bet on the winning side.`,
+
     btn_open_arena: `{{emoji.lightning}} OPEN SFIDA ARENA`,
   },
 
@@ -373,6 +403,36 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyWithWings}} <b>SFIDA ARENA • HAI RICEVUTO UN TIP!</b>\n\n` +
       `<b>{senderName}</b> ti ha inviato <b>{amount} GRAM</b>!{noteText}\n\n` +
       `{{emoji.moneyBag}} <b>Nuovo saldo:</b> {newBalance} GRAM`,
+
+    // Spectator Bet Outcome Notifications
+    spectator_notification_won:
+      `{{emoji.trophy}} <b>SFIDA ARENA • SCOMMESSA VINTA!</b>\n\n` +
+      `{{emoji.swords}} <b>Partita:</b> {game} (Stanza #{matchId})\n` +
+      `{{emoji.user}} <b>Duellanti:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>Il tuo pronostico:</b> <b>{target}</b>\n` +
+      `{{emoji.coin}} <b>Puntata:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>Risultato:</b> {outcome}\n` +
+      `{{emoji.moneyBag}} <b>Vincita totale:</b> <b>+{payout} GRAM</b> <i>(Profitto netto: +{profit} GRAM)</i>\n\n` +
+      `{{emoji.check}} <i>La vincita è stata accreditata automaticamente sul tuo saldo!</i>`,
+    spectator_notification_lost:
+      `{{emoji.cross}} <b>SFIDA ARENA • SCOMMESSA NON VINCENTE</b>\n\n` +
+      `{{emoji.swords}} <b>Partita:</b> {game} (Stanza #{matchId})\n` +
+      `{{emoji.user}} <b>Duellanti:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>Il tuo pronostico:</b> {target}\n` +
+      `{{emoji.coin}} <b>Puntata:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>Vincitore:</b> {winner}\n\n` +
+      `<i>Il pronostico non è andato a segno questa volta. Ritenta nel prossimo duello!</i>`,
+    spectator_notification_refund:
+      `{{emoji.shield}} <b>SFIDA ARENA • SCOMMESSA RIMBORSATA</b>\n\n` +
+      `{{emoji.swords}} <b>Partita:</b> {game} (Stanza #{matchId})\n` +
+      `{{emoji.user}} <b>Duellanti:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.coin}} <b>Importo restituito:</b> <b>+{payout} GRAM</b>\n\n` +
+      `{{emoji.hourglass}} <b>Motivo:</b> <i>{reason}</i>\n\n` +
+      `{{emoji.check}} <i>I fondi sono stati riaccreditati per intero sul tuo saldo.</i>`,
+    spectator_refund_reason_one_sided: `Tutte le scommesse degli spettatori erano sullo stesso esito (nessun montepremi avversario).`,
+    spectator_refund_reason_cancelled: `La partita è stata annullata o scaduta per inattività.`,
+    spectator_refund_reason_no_winners: `Nessuno spettatore ha scommesso sul vincitore.`,
+
     btn_open_arena: `{{emoji.lightning}} APRI SFIDA ARENA`,
   },
 
@@ -507,6 +567,36 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyWithWings}} <b>SFIDA ARENA • ВАМ ОТПРАВИЛИ ЧАЕВЫЕ!</b>\n\n` +
       `<b>{senderName}</b> отправил вам <b>{amount} GRAM</b>!{noteText}\n\n` +
       `{{emoji.moneyBag}} <b>Новый баланс:</b> {newBalance} GRAM`,
+
+    // Spectator Bet Outcome Notifications
+    spectator_notification_won:
+      `{{emoji.trophy}} <b>SFIDA ARENA • СТАВКА ВЫИГРАЛА!</b>\n\n` +
+      `{{emoji.swords}} <b>Матч:</b> {game} (Комната #{matchId})\n` +
+      `{{emoji.user}} <b>Дуэлянты:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>Ваш выбор:</b> <b>{target}</b>\n` +
+      `{{emoji.coin}} <b>Ставка:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>Результат:</b> {outcome}\n` +
+      `{{emoji.moneyBag}} <b>Выигрыш:</b> <b>+{payout} GRAM</b> <i>(Прибыль: +{profit} GRAM)</i>\n\n` +
+      `{{emoji.check}} <i>Выигрыш автоматически зачислен на ваш баланс!</i>`,
+    spectator_notification_lost:
+      `{{emoji.cross}} <b>SFIDA ARENA • СТАВКА НЕ СЫГРАЛА</b>\n\n` +
+      `{{emoji.swords}} <b>Матч:</b> {game} (Комната #{matchId})\n` +
+      `{{emoji.user}} <b>Дуэлянты:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>Ваш выбор:</b> {target}\n` +
+      `{{emoji.coin}} <b>Ставка:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>Победитель:</b> {winner}\n\n` +
+      `<i>Прогноз не оправдался в этот раз. Попробуйте снова в следующей дуэли!</i>`,
+    spectator_notification_refund:
+      `{{emoji.shield}} <b>SFIDA ARENA • СТАВКА ВОЗВРАЩЕНА</b>\n\n` +
+      `{{emoji.swords}} <b>Матч:</b> {game} (Комната #{matchId})\n` +
+      `{{emoji.user}} <b>Дуэлянты:</b> {playerA} vs {playerB}\n` +
+      `{{emoji.coin}} <b>Возвращено:</b> <b>+{payout} GRAM</b>\n\n` +
+      `{{emoji.hourglass}} <b>Причина:</b> <i>{reason}</i>\n\n` +
+      `{{emoji.check}} <i>Средства полностью возвращены на ваш баланс.</i>`,
+    spectator_refund_reason_one_sided: `Все зрители поставили на один и тот же исход (нет противоположного пула).`,
+    spectator_refund_reason_cancelled: `Матч был отменен или истекло время ожидания.`,
+    spectator_refund_reason_no_winners: `Ни один зритель не поставил на победителя.`,
+
     btn_open_arena: `{{emoji.lightning}} ОТКРЫТЬ SFIDA ARENA`,
   },
 
@@ -642,6 +732,36 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyWithWings}} <b>SFIDA ARENA • 收到打赏！</b>\n\n` +
       `<b>{senderName}</b> 给你发送了 <b>{amount} GRAM</b>！{noteText}\n\n` +
       `{{emoji.moneyBag}} <b>当前余额:</b> {newBalance} GRAM`,
+
+    // Spectator Bet Outcome Notifications
+    spectator_notification_won:
+      `{{emoji.trophy}} <b>SFIDA ARENA • 观战竞猜获胜！</b>\n\n` +
+      `{{emoji.swords}} <b>比赛：</b> {game} (房间 #{matchId})\n` +
+      `{{emoji.user}} <b>对战双方：</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>您的预测：</b> <b>{target}</b>\n` +
+      `{{emoji.coin}} <b>下注金额：</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>结果：</b> {outcome}\n` +
+      `{{emoji.moneyBag}} <b>派彩总额：</b> <b>+{payout} GRAM</b> <i>(纯利润: +{profit} GRAM)</i>\n\n` +
+      `{{emoji.check}} <i>奖金已自动充值到您的账户余额！</i>`,
+    spectator_notification_lost:
+      `{{emoji.cross}} <b>SFIDA ARENA • 竞猜未命中</b>\n\n` +
+      `{{emoji.swords}} <b>比赛：</b> {game} (房间 #{matchId})\n` +
+      `{{emoji.user}} <b>对战双方：</b> {playerA} vs {playerB}\n` +
+      `{{emoji.target}} <b>您的预测：</b> {target}\n` +
+      `{{emoji.coin}} <b>下注金额：</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>获胜者：</b> {winner}\n\n` +
+      `<i>本次预测未中，欢迎继续参与下一场精彩对决！</i>`,
+    spectator_notification_refund:
+      `{{emoji.shield}} <b>SFIDA ARENA • 竞猜退款通知</b>\n\n` +
+      `{{emoji.swords}} <b>比赛：</b> {game} (房间 #{matchId})\n` +
+      `{{emoji.user}} <b>对战双方：</b> {playerA} vs {playerB}\n` +
+      `{{emoji.coin}} <b>退还金额：</b> <b>+{payout} GRAM</b>\n\n` +
+      `{{emoji.hourglass}} <b>原因：</b> <i>{reason}</i>\n\n` +
+      `{{emoji.check}} <i>资金已全部退回您的账户余额。</i>`,
+    spectator_refund_reason_one_sided: `所有观众均下注了同一方（没有对立奖池竞猜）。`,
+    spectator_refund_reason_cancelled: `比赛已取消或超时未开始。`,
+    spectator_refund_reason_no_winners: `获胜方没有观众下注。`,
+
     btn_open_arena: `{{emoji.lightning}} 打开 SFIDA ARENA`,
   },
 
@@ -777,6 +897,36 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyWithWings}} <b>SFIDA ARENA • تلقيت إكرامية!</b>\n\n` +
       `أرسل لك <b>{senderName}</b> مبلغ <b>{amount} GRAM</b>!{noteText}\n\n` +
       `{{emoji.moneyBag}} <b>الرصيد الجديد:</b> {newBalance} GRAM`,
+
+    // Spectator Bet Outcome Notifications
+    spectator_notification_won:
+      `{{emoji.trophy}} <b>SFIDA ARENA • فازت مراهنة المشاهد!</b>\n\n` +
+      `{{emoji.swords}} <b>المباراة:</b> {game} (غرفة #{matchId})\n` +
+      `{{emoji.user}} <b>المتنافسان:</b> {playerA} ضد {playerB}\n` +
+      `{{emoji.target}} <b>توقعك:</b> <b>{target}</b>\n` +
+      `{{emoji.coin}} <b>الرهان:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>النتيجة:</b> {outcome}\n` +
+      `{{emoji.moneyBag}} <b>إجمالي الجائزة:</b> <b>+{payout} GRAM</b> <i>(الربح الصافي: +{profit} GRAM)</i>\n\n` +
+      `{{emoji.check}} <i>تمت إضافة الأرباح تلقائيًا إلى رصيدك!</i>`,
+    spectator_notification_lost:
+      `{{emoji.cross}} <b>SFIDA ARENA • لم تفز المراهنة</b>\n\n` +
+      `{{emoji.swords}} <b>المباراة:</b> {game} (غرفة #{matchId})\n` +
+      `{{emoji.user}} <b>المتنافسان:</b> {playerA} ضد {playerB}\n` +
+      `{{emoji.target}} <b>توقعك:</b> {target}\n` +
+      `{{emoji.coin}} <b>الرهان:</b> {stake} GRAM\n\n` +
+      `{{emoji.fire}} <b>الفائز:</b> {winner}\n\n` +
+      `<i>لم يحالفك الحظ هذه المرة. جرب مجددًا في النزال القادم!</i>`,
+    spectator_notification_refund:
+      `{{emoji.shield}} <b>SFIDA ARENA • تم استرداد الرهان</b>\n\n` +
+      `{{emoji.swords}} <b>المباراة:</b> {game} (غرفة #{matchId})\n` +
+      `{{emoji.user}} <b>المتنافسان:</b> {playerA} ضد {playerB}\n` +
+      `{{emoji.coin}} <b>المبلغ المسترد:</b> <b>+{payout} GRAM</b>\n\n` +
+      `{{emoji.hourglass}} <b>السبب:</b> <i>{reason}</i>\n\n` +
+      `{{emoji.check}} <i>تمت إعادة الأموال بالكامل إلى رصيدك.</i>`,
+    spectator_refund_reason_one_sided: `كانت جميع رهانات المشاهدين على نفس الطرف (لا يوجد مسبح مضاد).`,
+    spectator_refund_reason_cancelled: `تم إلغاء المباراة أو انتهت مهلة الانتظار.`,
+    spectator_refund_reason_no_winners: `لم يراهن أي مشاهد على الطرف الفائز.`,
+
     btn_open_arena: `{{emoji.lightning}} فتح SFIDA ARENA`,
   },
 };

@@ -774,6 +774,22 @@ export class SplitStealRoom extends BaseGameRoom {
       }
     }
 
+    // Direct notify to spectators via private Telegram DM in their configured language
+    if (spectatorSettlements.length > 0) {
+      const outcomeText =
+        winningSpectatorSide === 'NONE'
+          ? '💀 Doppio Furto'
+          : winningSpectatorSide === 'X'
+          ? '🤝 Pace (Split & Split)'
+          : (winnerName ? `🏆 ${winnerName}` : 'Finished');
+      this.notifySpectatorSettlements(
+        spectatorSettlements,
+        winningSpectatorSide,
+        winnerName || '',
+        outcomeText
+      ).catch((err) => console.error('[SplitStealRoom] Error dispatching spectator notifications:', err));
+    }
+
     // Set state
     this.state = 'MATCH_SETTLED';
     this.winnerAddress = winnerAddress;

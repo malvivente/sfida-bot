@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, TrendingUp, Swords, Lock, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Coins, TrendingUp, Swords, Lock, Clock, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Bell } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
@@ -38,6 +38,7 @@ interface SpectatorOddsBarProps {
   } | null;
   winnerName?: string;
   winnerSide?: 'A' | 'B' | 'X';
+  onExit?: () => void;
 }
 
 export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
@@ -62,6 +63,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
   spectatorOutcome,
   winnerName,
   winnerSide,
+  onExit,
 }) => {
   const { t } = useLanguage();
   const { triggerImpact } = useHaptics();
@@ -675,11 +677,35 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   </div>
                 )
               ) : (
-                <div className="w-full py-2 px-3 rounded-lg bg-black/60 border border-cyber-green/40 text-center flex items-center justify-center space-x-2">
-                  <Lock className="w-3.5 h-3.5 text-cyber-green" />
-                  <span className="text-[11px] font-chakra font-bold text-cyber-green uppercase tracking-wider">
-                    {t('spectator.betLockedNotice')}
-                  </span>
+                <div className="space-y-2">
+                  <div className="w-full py-2 px-3 rounded-lg bg-black/60 border border-cyber-green/40 text-center flex items-center justify-center space-x-2">
+                    <Lock className="w-3.5 h-3.5 text-cyber-green" />
+                    <span className="text-[11px] font-chakra font-bold text-cyber-green uppercase tracking-wider">
+                      {t('spectator.betLockedNotice')}
+                    </span>
+                  </div>
+
+                  {/* Inform user they can leave freely & receive private TG notification */}
+                  <div className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/40 to-purple-950/40 border border-cyan-500/30 text-left flex items-start space-x-2">
+                    <Bell className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5 animate-pulse" />
+                    <span className="text-[11px] text-cyan-200/90 leading-tight font-chakra">
+                      {t('spectator.exitLobbyHint')}
+                    </span>
+                  </div>
+
+                  {onExit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        onExit();
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-chakra font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-sm"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{t('spectator.btnExitAndNotify')}</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -788,6 +788,12 @@ export abstract class BaseGameRoom {
         spectatorSettlements: refundedSettlements,
       });
 
+      if (refundedSettlements.length > 0) {
+        this.notifySpectatorRefunds(refundedSettlements, 'one_sided').catch((err) =>
+          console.error('[BaseGameRoom] Error dispatching one-sided refund notifications:', err)
+        );
+      }
+
       this.spectatorBets = [];
       this.totalBetsA = 0n;
       this.totalBetsB = 0n;
@@ -1070,7 +1076,7 @@ export abstract class BaseGameRoom {
       }
     }
 
-    // Direct notify to spectators
+    // Direct notify to spectators still connected to websocket
     for (const spec of this.spectators.values()) {
       if (spec.wallet) {
         const mySettlement = spectatorSettlements.find((s) => this.isSameWallet(s.walletAddress, spec.wallet!));
@@ -1085,7 +1091,231 @@ export abstract class BaseGameRoom {
       }
     }
 
+    // Direct notify to spectators via private Telegram DM in their configured language
+    if (spectatorSettlements.length > 0) {
+      this.notifySpectatorSettlements(
+        spectatorSettlements,
+        winningSide,
+        this.winnerName || ''
+      ).catch((err) => console.error('[BaseGameRoom] Error dispatching spectator notifications:', err));
+    }
+
     return spectatorSettlements;
+  }
+
+  /**
+   * Sends private Telegram notifications to all spectators who placed a bet on this match,
+   * rendered in each spectator's configured language.
+   */
+  public async notifySpectatorSettlements(
+    settlements: Array<{
+      walletAddress: string;
+      telegramId?: string;
+      target: string;
+      won: boolean;
+      payoutGram: string;
+      refunded?: boolean;
+    }>,
+    winningSide: string,
+    winnerName: string,
+    customOutcomeText?: string
+  ) {
+    if (!settlements || settlements.length === 0) return;
+
+    try {
+      const { getTelegramBot } = await import('../bot/index.js');
+      const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+      const { botT, resolveLanguage } = await import('../bot/i18n.js');
+      const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+      const { dbService } = await import('../services/db.js');
+
+      const bot = getTelegramBot();
+      if (!bot) return;
+
+      const webAppUrl = process.env.TELEGRAM_WEBAPP_URL || 'https://t.me/sfidabot/arena';
+      const gameConfig = (GAMES_CONFIG as any)[this.gameType];
+      const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
+
+      const nameA = this.playerA.username || 'Player A';
+      const nameB = this.playerB?.username || 'Player B';
+      const duelistOpponents = (this as any).seats && (this as any).seats.length > 2
+        ? (this as any).seats.slice(1).map((s: any) => s.username || 'Player').join(' vs ')
+        : nameB;
+
+      for (const settlement of settlements) {
+        let tgId = settlement.telegramId;
+        if (!tgId) {
+          const matchingBet = this.spectatorBets.find(
+            (b) => b.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)
+          );
+          tgId = matchingBet?.telegramId;
+        }
+        if (!tgId) {
+          const userAcc = await dbService.getUserAccount(settlement.walletAddress);
+          tgId = userAcc?.telegramId;
+        }
+
+        if (!tgId) continue;
+
+        const userLang = await dbService.getUserLanguage(tgId);
+        const lang = resolveLanguage(userLang);
+
+        const bet = this.spectatorBets.find(
+          (b) =>
+            (b.walletAddress && settlement.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)) ||
+            (b.telegramId && tgId && String(b.telegramId) === String(tgId))
+        );
+
+        const stakeGram = bet ? bet.amountGram.toFixed(2) : '0.00';
+        const targetSide = settlement.target || bet?.target || 'A';
+        const targetLabel =
+          targetSide === 'A'
+            ? nameA
+            : targetSide === 'B'
+            ? nameB
+            : (this.gameType === 'split' ? 'Peace (Split & Split)' : 'Pareggio / Draw');
+
+        const outcomeDesc = customOutcomeText || (winnerName ? `🏆 ${winnerName}` : 'Finished');
+
+        let msgText = '';
+        if (settlement.won) {
+          const payout = settlement.payoutGram;
+          const profit = Math.max(0, parseFloat(payout) - parseFloat(stakeGram)).toFixed(2);
+          msgText = botT(lang, 'spectator_notification_won', {
+            game: gameTitle,
+            matchId: this.matchId.toString(),
+            playerA: nameA,
+            playerB: duelistOpponents,
+            target: targetLabel,
+            stake: stakeGram,
+            outcome: outcomeDesc,
+            payout,
+            profit,
+          });
+        } else if (settlement.refunded) {
+          const refundReason = botT(lang, 'spectator_refund_reason_no_winners');
+          msgText = botT(lang, 'spectator_notification_refund', {
+            game: gameTitle,
+            matchId: this.matchId.toString(),
+            playerA: nameA,
+            playerB: duelistOpponents,
+            payout: settlement.payoutGram,
+            reason: refundReason,
+          });
+        } else {
+          msgText = botT(lang, 'spectator_notification_lost', {
+            game: gameTitle,
+            matchId: this.matchId.toString(),
+            playerA: nameA,
+            playerB: duelistOpponents,
+            target: targetLabel,
+            stake: stakeGram,
+            winner: winnerName || nameA,
+          });
+        }
+
+        const keyboard = new InlineKeyboard().webApp(
+          botT(lang, 'btn_open_arena') || '⚡ Open Arena',
+          webAppUrl
+        );
+
+        try {
+          await bot.api.sendMessage(Number(tgId), msgText, {
+            parse_mode: 'HTML',
+            reply_markup: keyboard,
+          });
+        } catch (sendErr) {
+          console.warn(`[BaseGameRoom] Failed to send spectator DM to ${tgId}:`, sendErr);
+        }
+      }
+    } catch (err) {
+      console.error(`[BaseGameRoom] Error notifying spectators:`, err);
+    }
+  }
+
+  /**
+   * Sends private Telegram notifications for refunded spectator bets (e.g. one-sided pool, match cancelled).
+   */
+  public async notifySpectatorRefunds(
+    settlements: Array<{
+      walletAddress: string;
+      telegramId?: string;
+      payoutGram: string;
+    }>,
+    reasonType: 'one_sided' | 'cancelled',
+    customReason?: string
+  ) {
+    if (!settlements || settlements.length === 0) return;
+
+    try {
+      const { getTelegramBot } = await import('../bot/index.js');
+      const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
+      const { botT, resolveLanguage } = await import('../bot/i18n.js');
+      const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
+      const { dbService } = await import('../services/db.js');
+
+      const bot = getTelegramBot();
+      if (!bot) return;
+
+      const webAppUrl = process.env.TELEGRAM_WEBAPP_URL || 'https://t.me/sfidabot/arena';
+      const gameConfig = (GAMES_CONFIG as any)[this.gameType];
+      const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
+
+      const nameA = this.playerA.username || 'Player A';
+      const nameB = this.playerB?.username || 'Player B';
+      const duelistOpponents = (this as any).seats && (this as any).seats.length > 2
+        ? (this as any).seats.slice(1).map((s: any) => s.username || 'Player').join(' vs ')
+        : nameB;
+
+      for (const settlement of settlements) {
+        let tgId = settlement.telegramId;
+        if (!tgId) {
+          const matchingBet = this.spectatorBets.find(
+            (b) => b.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)
+          );
+          tgId = matchingBet?.telegramId;
+        }
+        if (!tgId) {
+          const userAcc = await dbService.getUserAccount(settlement.walletAddress);
+          tgId = userAcc?.telegramId;
+        }
+        if (!tgId) continue;
+
+        const userLang = await dbService.getUserLanguage(tgId);
+        const lang = resolveLanguage(userLang);
+
+        const reasonText = customReason || (
+          reasonType === 'one_sided'
+            ? botT(lang, 'spectator_refund_reason_one_sided')
+            : botT(lang, 'spectator_refund_reason_cancelled')
+        );
+
+        const msgText = botT(lang, 'spectator_notification_refund', {
+          game: gameTitle,
+          matchId: this.matchId.toString(),
+          playerA: nameA,
+          playerB: duelistOpponents,
+          payout: settlement.payoutGram,
+          reason: reasonText,
+        });
+
+        const keyboard = new InlineKeyboard().webApp(
+          botT(lang, 'btn_open_arena') || '⚡ Open Arena',
+          webAppUrl
+        );
+
+        try {
+          await bot.api.sendMessage(Number(tgId), msgText, {
+            parse_mode: 'HTML',
+            reply_markup: keyboard,
+          });
+        } catch (sendErr) {
+          console.warn(`[BaseGameRoom] Failed to send refund DM to spectator ${tgId}:`, sendErr);
+        }
+      }
+    } catch (err) {
+      console.error(`[BaseGameRoom] Error notifying spectator refunds:`, err);
+    }
   }
 
   // Spectator Pari-Mutuel Bet
@@ -1158,14 +1388,31 @@ export abstract class BaseGameRoom {
     this.state = 'CANCELLED';
 
     // Refund any spectator bets + spectator fee
-    for (const bet of this.spectatorBets) {
-      const refundTotal = (bet.amountGram + (bet.feePaidGram || 0)).toFixed(2);
-      dbService.refundUserBalance(
-        bet.walletAddress,
-        refundTotal,
-        `Refund for spectator bet on cancelled match #${this.matchId}`,
-        bet.telegramId
-      ).catch(console.error);
+    if (this.spectatorBets.length > 0) {
+      const abortRefunds: Array<{
+        walletAddress: string;
+        telegramId?: string;
+        payoutGram: string;
+      }> = [];
+
+      for (const bet of this.spectatorBets) {
+        const refundTotal = (bet.amountGram + (bet.feePaidGram || 0)).toFixed(2);
+        abortRefunds.push({
+          walletAddress: bet.walletAddress,
+          telegramId: bet.telegramId,
+          payoutGram: refundTotal,
+        });
+        dbService.refundUserBalance(
+          bet.walletAddress,
+          refundTotal,
+          `Refund for spectator bet on cancelled match #${this.matchId}`,
+          bet.telegramId
+        ).catch(console.error);
+      }
+
+      this.notifySpectatorRefunds(abortRefunds, 'cancelled', reason).catch((err) =>
+        console.error('[BaseGameRoom] Error dispatching abort refund notifications:', err)
+      );
     }
 
     this.broadcast({
