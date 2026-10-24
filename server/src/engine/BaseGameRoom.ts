@@ -29,12 +29,15 @@ export interface RoomConfig {
   createdAt?: number;
 }
 
+export type SpectatorTarget = 'A' | 'B' | 'C' | 'D' | 'X';
+
 export interface SpectatorBet {
   walletAddress: string;
   telegramId?: string;
-  target: 'A' | 'B' | 'X';
+  target: SpectatorTarget;
   amountGram: number;
   amountNano: bigint;
+  odds?: number;
   feePaidGram: number;
   timestamp: number;
 }
@@ -84,6 +87,8 @@ export abstract class BaseGameRoom {
 
   public totalBetsA: bigint = 0n;
   public totalBetsB: bigint = 0n;
+  public totalBetsC: bigint = 0n;
+  public totalBetsD: bigint = 0n;
   public totalBetsX: bigint = 0n;
 
   public winnerAddress?: string;
@@ -304,9 +309,13 @@ export abstract class BaseGameRoom {
       wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsC: this.calculateOdds('C'),
+      oddsD: this.calculateOdds('D'),
       oddsX: this.calculateOdds('X'),
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
+      totalBetsC: this.totalBetsC.toString(),
+      totalBetsD: this.totalBetsD.toString(),
       totalBetsX: this.totalBetsX.toString(),
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
@@ -373,9 +382,13 @@ export abstract class BaseGameRoom {
       wagerTon: (Number(this.config.wagerAmountNano) / 1e9).toFixed(2),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsC: this.calculateOdds('C'),
+      oddsD: this.calculateOdds('D'),
       oddsX: this.calculateOdds('X'),
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
+      totalBetsC: this.totalBetsC.toString(),
+      totalBetsD: this.totalBetsD.toString(),
       totalBetsX: this.totalBetsX.toString(),
       winnerAddress: this.winnerAddress,
       winnerName: this.winnerName,
@@ -723,7 +736,14 @@ export abstract class BaseGameRoom {
         secondsLeft: countdown,
         oddsA: this.calculateOdds('A'),
         oddsB: this.calculateOdds('B'),
+        oddsC: this.calculateOdds('C'),
+        oddsD: this.calculateOdds('D'),
         oddsX: this.calculateOdds('X'),
+        totalBetsA: this.totalBetsA.toString(),
+        totalBetsB: this.totalBetsB.toString(),
+        totalBetsC: this.totalBetsC.toString(),
+        totalBetsD: this.totalBetsD.toString(),
+        totalBetsX: this.totalBetsX.toString(),
       });
 
       if (countdown <= 0) {
@@ -732,7 +752,7 @@ export abstract class BaseGameRoom {
           this.bettingTimer = undefined;
         }
         this.bettingCountdownSeconds = undefined;
-        this.checkAndRefundOneSidedSpectatorBets();
+        // Bets remain active throughout the match even if only one side was backed
         this.onGameStart();
       }
     }, 1000);
@@ -994,8 +1014,24 @@ export abstract class BaseGameRoom {
   }
 
   public settleSpectatorBets(winnerAddress: string): Array<any> {
-    const winningSide = this.isSameWallet(winnerAddress, this.playerA.walletAddress) ? 'A' : 'B';
-    const totalPoolNano = this.totalBetsA + this.totalBetsB;
+    let winningSide: SpectatorTarget = 'A';
+    if (this.isSameWallet(winnerAddress, this.playerA.walletAddress)) {
+      winningSide = 'A';
+    } else if (this.playerB && this.isSameWallet(winnerAddress, this.playerB.walletAddress)) {
+      winningSide = 'B';
+    } else if ((this as any).seats && Array.isArray((this as any).seats)) {
+      const seatIdx = (this as any).seats.findIndex((s: any) => s.walletAddress && this.isSameWallet(s.walletAddress, winnerAddress));
+      if (seatIdx === 0) winningSide = 'A';
+      else if (seatIdx === 1) winningSide = 'B';
+      else if (seatIdx === 2) winningSide = 'C';
+      else if (seatIdx === 3) winningSide = 'D';
+    } else if ((this as any).extraPlayers && Array.isArray((this as any).extraPlayers)) {
+      const epIdx = (this as any).extraPlayers.findIndex((p: any) => p.walletAddress && this.isSameWallet(p.walletAddress, winnerAddress));
+      if (epIdx === 0) winningSide = 'C';
+      else if (epIdx === 1) winningSide = 'D';
+    }
+
+    const totalPoolNano = this.totalBetsA + this.totalBetsB + this.totalBetsC + this.totalBetsD + this.totalBetsX;
     const spectatorSettlements: Array<{
       walletAddress: string;
       telegramId?: string;
@@ -1008,7 +1044,13 @@ export abstract class BaseGameRoom {
     if (totalPoolNano > 0n && this.spectatorBets.length > 0) {
       const { spectatorRakePercent } = feeConfig.getConfig();
       const winningBets = this.spectatorBets.filter((b) => b.target === winningSide);
-      const totalWinningBetsNano = winningSide === 'A' ? this.totalBetsA : this.totalBetsB;
+      let totalWinningBetsNano = 0n;
+      if (winningSide === 'A') totalWinningBetsNano = this.totalBetsA;
+      else if (winningSide === 'B') totalWinningBetsNano = this.totalBetsB;
+      else if (winningSide === 'C') totalWinningBetsNano = this.totalBetsC;
+      else if (winningSide === 'D') totalWinningBetsNano = this.totalBetsD;
+      else if (winningSide === 'X') totalWinningBetsNano = this.totalBetsX;
+
       const specRakeRate = (spectatorRakePercent || 0) / 100;
       const totalPoolGram = Number(totalPoolNano) / 1e9;
       const specRakeGram = totalPoolGram * specRakeRate;
@@ -1020,12 +1062,21 @@ export abstract class BaseGameRoom {
         });
       }
 
+      const defaultOdds = this.gameType === 'poker'
+        ? (((this as any).maxPlayers || (this as any).seats?.length || 2) === 4 ? 3.8 : (((this as any).maxPlayers || (this as any).seats?.length || 2) === 3 ? 2.85 : 1.95))
+        : (this.gameType === 'split' ? 2.8 : 2.0);
+
       if (winningBets.length > 0 && totalWinningBetsNano > 0n) {
         const winningBetsGram = Number(totalWinningBetsNano) / 1e9;
         for (const bet of this.spectatorBets) {
           if (bet.target === winningSide) {
             const share = bet.amountGram / winningBetsGram;
-            const payoutGram = (distributablePoolGram * share).toFixed(2);
+            const poolPayout = distributablePoolGram * share;
+            const effectiveOdds = bet.odds && bet.odds > 1 ? bet.odds : defaultOdds;
+            const guaranteedPayout = bet.amountGram * effectiveOdds;
+            const finalPayout = Math.max(poolPayout, guaranteedPayout);
+            const payoutGram = finalPayout.toFixed(2);
+
             spectatorSettlements.push({
               walletAddress: bet.walletAddress,
               telegramId: bet.telegramId,
@@ -1053,24 +1104,19 @@ export abstract class BaseGameRoom {
           }
         }
       } else {
-        // No winners on winning side: refund stakes to all spectators
+        // No winners on winning side: all placed bets on other sides are lost
         for (const bet of this.spectatorBets) {
-          const refundAmount = bet.amountGram.toFixed(2);
           spectatorSettlements.push({
             walletAddress: bet.walletAddress,
             telegramId: bet.telegramId,
             target: bet.target,
             won: false,
-            payoutGram: refundAmount,
-            refunded: true,
+            payoutGram: '0.00',
           });
-          dbService.refundUserBalance(
-            bet.walletAddress,
-            refundAmount,
-            `Refund for spectator bet on match #${this.matchId}`,
-            bet.telegramId
-          ).catch((err) => {
-            console.error(`[BaseGameRoom] Error refunding spectator ${bet.walletAddress}:`, err);
+        }
+        if (distributablePoolGram > 0) {
+          dbService.creditTreasury(distributablePoolGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString()).catch((err) => {
+            console.error('[BaseGameRoom] Error crediting unclaimed spectator pool to treasury:', err);
           });
         }
       }
@@ -1154,6 +1200,9 @@ export abstract class BaseGameRoom {
           const userAcc = await dbService.getUserAccount(settlement.walletAddress);
           tgId = userAcc?.telegramId;
         }
+        if (!tgId && settlement.walletAddress?.startsWith('tg_')) {
+          tgId = settlement.walletAddress.replace('tg_', '');
+        }
 
         if (!tgId) continue;
 
@@ -1168,12 +1217,20 @@ export abstract class BaseGameRoom {
 
         const stakeGram = bet ? bet.amountGram.toFixed(2) : '0.00';
         const targetSide = settlement.target || bet?.target || 'A';
-        const targetLabel =
-          targetSide === 'A'
-            ? nameA
-            : targetSide === 'B'
-            ? nameB
-            : (this.gameType === 'split' ? 'Peace (Split & Split)' : 'Pareggio / Draw');
+        let targetLabel = '';
+        if (targetSide === 'A') {
+          targetLabel = nameA;
+        } else if (targetSide === 'B') {
+          targetLabel = nameB;
+        } else if (targetSide === 'C') {
+          targetLabel = (this as any).seats?.[2]?.username || (this as any).extraPlayers?.[0]?.username || 'Player C';
+        } else if (targetSide === 'D') {
+          targetLabel = (this as any).seats?.[3]?.username || (this as any).extraPlayers?.[1]?.username || 'Player D';
+        } else if (targetSide === 'X') {
+          targetLabel = this.gameType === 'split' ? 'Peace (Split & Split)' : 'Pareggio / Draw';
+        } else {
+          targetLabel = targetSide;
+        }
 
         const outcomeDesc = customOutcomeText || (winnerName ? `🏆 ${winnerName}` : 'Finished');
 
@@ -1279,6 +1336,9 @@ export abstract class BaseGameRoom {
           const userAcc = await dbService.getUserAccount(settlement.walletAddress);
           tgId = userAcc?.telegramId;
         }
+        if (!tgId && settlement.walletAddress?.startsWith('tg_')) {
+          tgId = settlement.walletAddress.replace('tg_', '');
+        }
         if (!tgId) continue;
 
         const userLang = await dbService.getUserLanguage(tgId);
@@ -1320,7 +1380,7 @@ export abstract class BaseGameRoom {
 
   // Spectator Pari-Mutuel Bet
   public registerSpectatorBet(
-    target: 'A' | 'B' | 'X',
+    target: SpectatorTarget,
     amountNano: bigint,
     bettorWallet?: string,
     telegramId?: string,
@@ -1334,13 +1394,28 @@ export abstract class BaseGameRoom {
     if (
       bettorWallet &&
       (this.isSameWallet(bettorWallet, this.playerA.walletAddress) ||
-        (this.playerB && this.isSameWallet(bettorWallet, this.playerB.walletAddress)))
+        (this.playerB && this.isSameWallet(bettorWallet, this.playerB.walletAddress)) ||
+        ((this as any).isPlayerParticipant && (this as any).isPlayerParticipant(bettorWallet, telegramId)))
     ) {
       console.warn(`[BaseGameRoom] Duelist ${bettorWallet} attempted spectator bet. Denied.`);
       return;
     }
 
     const amountGram = Number(amountNano) / 1e9;
+    const currentOdds = this.calculateOdds(target);
+
+    if (target === 'A') {
+      this.totalBetsA += amountNano;
+    } else if (target === 'B') {
+      this.totalBetsB += amountNano;
+    } else if (target === 'C') {
+      this.totalBetsC += amountNano;
+    } else if (target === 'D') {
+      this.totalBetsD += amountNano;
+    } else {
+      this.totalBetsX += amountNano;
+    }
+
     if (bettorWallet) {
       this.spectatorBets.push({
         walletAddress: bettorWallet,
@@ -1348,39 +1423,50 @@ export abstract class BaseGameRoom {
         target,
         amountGram,
         amountNano,
+        odds: currentOdds,
         feePaidGram,
         timestamp: Date.now(),
       });
-    }
-
-    if (target === 'A') {
-      this.totalBetsA += amountNano;
-    } else if (target === 'B') {
-      this.totalBetsB += amountNano;
-    } else {
-      this.totalBetsX += amountNano;
     }
 
     this.broadcast({
       type: 'ODDS_UPDATE',
       totalBetsA: this.totalBetsA.toString(),
       totalBetsB: this.totalBetsB.toString(),
+      totalBetsC: this.totalBetsC.toString(),
+      totalBetsD: this.totalBetsD.toString(),
       totalBetsX: this.totalBetsX.toString(),
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsC: this.calculateOdds('C'),
+      oddsD: this.calculateOdds('D'),
       oddsX: this.calculateOdds('X'),
     });
   }
 
-  public calculateOdds(side: 'A' | 'B' | 'X'): number {
-    const totalPool = Number(this.totalBetsA + this.totalBetsB + this.totalBetsX);
-    if (totalPool === 0) return this.gameType === 'split' || this.totalBetsX > 0n || side === 'X' ? 2.8 : 2.0;
+  public calculateOdds(side: SpectatorTarget): number {
+    const totalPool = Number(this.totalBetsA + this.totalBetsB + this.totalBetsC + this.totalBetsD + this.totalBetsX);
+    let defaultOdds = 2.0;
+    if (this.gameType === 'split' || side === 'X') {
+      defaultOdds = 2.8;
+    } else if (this.gameType === 'poker') {
+      const numContenders = (this as any).maxPlayers || ((this as any).seats?.length) || 2;
+      defaultOdds = numContenders === 4 ? 3.8 : (numContenders === 3 ? 2.85 : 1.95);
+    }
+
+    if (totalPool === 0) return defaultOdds;
 
     const { spectatorRakePercent } = feeConfig.getConfig();
     const distributablePool = totalPool * (1 - (spectatorRakePercent || 0) / 100);
-    const sideBets = side === 'A' ? Number(this.totalBetsA) : (side === 'B' ? Number(this.totalBetsB) : Number(this.totalBetsX));
-    if (sideBets === 0) return this.gameType === 'split' ? 2.8 : 2.0;
-    return parseFloat((distributablePool / sideBets).toFixed(2));
+    let sideBets = 0;
+    if (side === 'A') sideBets = Number(this.totalBetsA);
+    else if (side === 'B') sideBets = Number(this.totalBetsB);
+    else if (side === 'C') sideBets = Number(this.totalBetsC);
+    else if (side === 'D') sideBets = Number(this.totalBetsD);
+    else if (side === 'X') sideBets = Number(this.totalBetsX);
+
+    if (sideBets === 0) return defaultOdds;
+    return Math.max(1.10, parseFloat((distributablePool / sideBets).toFixed(2)));
   }
 
   public abortRoom(reason: string = 'Match was cancelled.') {
@@ -1668,6 +1754,14 @@ export abstract class BaseGameRoom {
         : null,
       oddsA: this.calculateOdds('A'),
       oddsB: this.calculateOdds('B'),
+      oddsC: this.calculateOdds('C'),
+      oddsD: this.calculateOdds('D'),
+      oddsX: this.calculateOdds('X'),
+      totalBetsA: this.totalBetsA.toString(),
+      totalBetsB: this.totalBetsB.toString(),
+      totalBetsC: this.totalBetsC.toString(),
+      totalBetsD: this.totalBetsD.toString(),
+      totalBetsX: this.totalBetsX.toString(),
       gameData: this.getGamePayload(),
       createdAt: this.createdAt,
       expiresAt: this.playerB ? (this.playerBExpiresAt || this.expiresAt) : this.expiresAt,

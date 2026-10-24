@@ -39,7 +39,7 @@ interface CyberShotgunArenaProps {
   isWinner?: boolean;
   winnerName?: string;
   spectatorOutcome?: { won: boolean; payoutGram: string; refunded?: boolean } | null;
-  placedBet?: { target: 'A' | 'B' | 'X'; amountGram: string; targetName?: string; odds?: number } | null;
+  placedBet?: { target: string; amountGram: string; targetName?: string; odds?: number } | null;
   onClaimPayout?: () => void;
   isClaimingPayout?: boolean;
   payoutClaimed?: boolean;

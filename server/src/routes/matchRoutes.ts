@@ -710,7 +710,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
   fastify.post('/api/matches/:id/spectator-bet', async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = req.body as {
-      target: 'A' | 'B' | 'X';
+      target: 'A' | 'B' | 'C' | 'D' | 'X';
       amountGram?: number | string;
       amountNano?: string;
       wallet?: string;

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { RoomState, WsMessage, MatchResolution, GameType, ShotgunItem } from '../types/index.js';
 
+export type SpectatorTarget = 'A' | 'B' | 'C' | 'D' | 'X';
+
 export interface PlacedSpectatorBet {
-  target: 'A' | 'B' | 'X';
+  target: SpectatorTarget;
   amountGram: string;
   feePaidGram: string;
   targetName?: string;
@@ -80,9 +82,13 @@ export function useSocket({
   const [scoreB, setScoreB] = useState<number>(0);
   const [oddsA, setOddsA] = useState<number>(2.0);
   const [oddsB, setOddsB] = useState<number>(2.0);
+  const [oddsC, setOddsC] = useState<number>(2.85);
+  const [oddsD, setOddsD] = useState<number>(3.8);
   const [oddsX, setOddsX] = useState<number>(2.8);
   const [totalBetsA, setTotalBetsA] = useState<string>('0');
   const [totalBetsB, setTotalBetsB] = useState<string>('0');
+  const [totalBetsC, setTotalBetsC] = useState<string>('0');
+  const [totalBetsD, setTotalBetsD] = useState<string>('0');
   const [totalBetsX, setTotalBetsX] = useState<string>('0');
   const [lastSignal, setLastSignal] = useState<string | null>(null);
   const [feedMessage, setFeedMessage] = useState<string>('In attesa nella lobby del duello...');
@@ -229,9 +235,13 @@ export function useSocket({
             if (msg.scoreB !== undefined) setScoreB(msg.scoreB);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsC) setOddsC(msg.oddsC);
+            if (msg.oddsD) setOddsD(msg.oddsD);
             if (msg.oddsX) setOddsX(msg.oddsX);
             if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
             if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.totalBetsC) setTotalBetsC(msg.totalBetsC);
+            if (msg.totalBetsD) setTotalBetsD(msg.totalBetsD);
             if (msg.totalBetsX) setTotalBetsX(msg.totalBetsX);
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
@@ -262,7 +272,14 @@ export function useSocket({
             if (msg.state) setRoomState(msg.state);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsC) setOddsC(msg.oddsC);
+            if (msg.oddsD) setOddsD(msg.oddsD);
             if (msg.oddsX) setOddsX(msg.oddsX);
+            if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
+            if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.totalBetsC) setTotalBetsC(msg.totalBetsC);
+            if (msg.totalBetsD) setTotalBetsD(msg.totalBetsD);
+            if (msg.totalBetsX) setTotalBetsX(msg.totalBetsX);
             if (msg.winnerAddress) setMatchWinner(msg.winnerAddress);
             if (msg.winnerName) setMatchWinnerName(msg.winnerName);
             if (msg.resolution) setResolution(msg.resolution);
@@ -469,7 +486,14 @@ export function useSocket({
             if (msg.secondsLeft !== undefined) setCountdownSeconds(msg.secondsLeft);
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsC) setOddsC(msg.oddsC);
+            if (msg.oddsD) setOddsD(msg.oddsD);
             if (msg.oddsX) setOddsX(msg.oddsX);
+            if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
+            if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.totalBetsC) setTotalBetsC(msg.totalBetsC);
+            if (msg.totalBetsD) setTotalBetsD(msg.totalBetsD);
+            if (msg.totalBetsX) setTotalBetsX(msg.totalBetsX);
             break;
 
           case 'ROUND_INITIALIZING':
@@ -647,9 +671,13 @@ export function useSocket({
           case 'ODDS_UPDATE':
             if (msg.oddsA) setOddsA(msg.oddsA);
             if (msg.oddsB) setOddsB(msg.oddsB);
+            if (msg.oddsC) setOddsC(msg.oddsC);
+            if (msg.oddsD) setOddsD(msg.oddsD);
             if (msg.oddsX) setOddsX(msg.oddsX);
             if (msg.totalBetsA) setTotalBetsA(msg.totalBetsA);
             if (msg.totalBetsB) setTotalBetsB(msg.totalBetsB);
+            if (msg.totalBetsC) setTotalBetsC(msg.totalBetsC);
+            if (msg.totalBetsD) setTotalBetsD(msg.totalBetsD);
             if (msg.totalBetsX) setTotalBetsX(msg.totalBetsX);
             break;
 
@@ -708,13 +736,26 @@ export function useSocket({
 
           case 'BET_CONFIRMED':
             if (msg.target && msg.amountGram) {
-              const bTarget = msg.target as 'A' | 'B' | 'X';
+              const bTarget = msg.target as SpectatorTarget;
+              let tName = playerAName;
+              if (bTarget === 'B') tName = playerBName || 'Player B';
+              else if (bTarget === 'C') tName = (gameData as any)?.seats?.[2]?.username || 'Player C';
+              else if (bTarget === 'D') tName = (gameData as any)?.seats?.[3]?.username || 'Player D';
+              else if (bTarget === 'X') tName = 'Peace (Both Split)';
+
+              const currentOdd =
+                bTarget === 'A' ? oddsA :
+                bTarget === 'B' ? oddsB :
+                bTarget === 'C' ? oddsC :
+                bTarget === 'D' ? oddsD :
+                oddsX;
+
               setPlacedBet({
                 target: bTarget,
                 amountGram: msg.amountGram,
                 feePaidGram: msg.feePaidGram || '0.05',
-                targetName: bTarget === 'A' ? playerAName : (bTarget === 'B' ? (playerBName || 'Player B') : 'Peace (Both Split)'),
-                odds: bTarget === 'A' ? oddsA : (bTarget === 'B' ? oddsB : oddsX),
+                targetName: tName,
+                odds: currentOdd,
               });
               setBetStatus('confirmed');
               setBetError(null);
@@ -846,11 +887,11 @@ export function useSocket({
     }
   }, []);
 
-  const placeSpectatorBet = useCallback((target: 'A' | 'B' | 'X', amountNano: string) => {
+  const placeSpectatorBet = useCallback((target: SpectatorTarget, amountNano: string) => {
     setBetError(null);
     setBetStatus('placing');
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'SPECTATOR_BET', target, amountNano }));
+      wsRef.current.send(JSON.stringify({ type: 'PLACE_SPECTATOR_BET', target, amountNano }));
     } else {
       setBetError('Connessione WebSocket non attiva');
       setBetStatus('error');
@@ -976,9 +1017,13 @@ export function useSocket({
     scoreB,
     oddsA,
     oddsB,
+    oddsC,
+    oddsD,
     oddsX,
     totalBetsA,
     totalBetsB,
+    totalBetsC,
+    totalBetsD,
     totalBetsX,
     lastSignal,
     feedMessage,

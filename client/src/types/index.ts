@@ -252,9 +252,13 @@ export interface WsMessage {
   scoreB?: number;
   oddsA?: number;
   oddsB?: number;
+  oddsC?: number;
+  oddsD?: number;
   oddsX?: number;
   totalBetsA?: string;
   totalBetsB?: string;
+  totalBetsC?: string;
+  totalBetsD?: string;
   totalBetsX?: string;
   winnerAddress?: string;
   winnerName?: string;

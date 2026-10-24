@@ -9,6 +9,7 @@ import {
   X,
   Lock,
   Eye,
+  Skull,
 } from 'lucide-react';
 import {
   PokerState,
@@ -1579,27 +1580,74 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
       {/* TOURNAMENT SETTLEMENT & WINNER MODAL */}
       {isMatchSettled && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-400 shadow-[0_0_50px_rgba(251,191,36,0.3)] text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-slate-950 shadow-xl">
-              <Trophy className="w-9 h-9" />
+          <div className={`w-full max-w-sm p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 text-center space-y-4 shadow-2xl ${
+            isHeroTournamentWinner
+              ? 'border-amber-400 shadow-[0_0_50px_rgba(251,191,36,0.35)]'
+              : !isSpectator
+              ? 'border-rose-500/80 shadow-[0_0_50px_rgba(244,63,94,0.3)]'
+              : 'border-cyan-500/60 shadow-[0_0_50px_rgba(0,240,255,0.25)]'
+          }`}>
+            <div className={`w-16 h-16 mx-auto rounded-3xl flex items-center justify-center shadow-xl ${
+              isHeroTournamentWinner
+                ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-slate-950'
+                : !isSpectator
+                ? 'bg-gradient-to-br from-rose-600 to-red-700 text-white'
+                : 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white'
+            }`}>
+              {isHeroTournamentWinner ? (
+                <Trophy className="w-9 h-9" />
+              ) : !isSpectator ? (
+                <Skull className="w-9 h-9" />
+              ) : (
+                <Trophy className="w-9 h-9" />
+              )}
             </div>
 
             <div>
-              <h3 className="text-xl font-heading font-black text-white">
-                {t('poker.tournamentOver')}
+              <h3 className={`text-xl font-heading font-black ${
+                isHeroTournamentWinner
+                  ? 'text-amber-400'
+                  : !isSpectator
+                  ? 'text-rose-400'
+                  : 'text-white'
+              }`}>
+                {isHeroTournamentWinner
+                  ? t('poker.victoryTitle')
+                  : !isSpectator
+                  ? t('poker.defeatTitle')
+                  : t('poker.tournamentOver')}
               </h3>
-              <p className="text-xs text-amber-300 font-heading font-bold pt-1">
-                🏆 {t('poker.champion')}:{' '}
-                {gameData?.tournamentWinner?.username ||
-                  winnerName ||
-                  (isWinner
-                    ? userSide === 'A'
-                      ? playerAName
-                      : playerBName
-                    : userSide === 'A'
-                    ? playerBName
-                    : playerAName)}
+              <p className="text-xs text-slate-300 font-heading font-medium pt-1">
+                {isHeroTournamentWinner
+                  ? t('poker.victoryDesc')
+                  : !isSpectator
+                  ? t('poker.defeatDesc')
+                  : `🏆 ${t('poker.champion')}: ${
+                      gameData?.tournamentWinner?.username ||
+                      winnerName ||
+                      (isWinner
+                        ? userSide === 'A'
+                          ? playerAName
+                          : playerBName
+                        : userSide === 'A'
+                        ? playerBName
+                        : playerAName)
+                    }`}
               </p>
+              {!isHeroTournamentWinner && !isSpectator && (
+                <p className="text-[11px] text-amber-300 font-heading font-bold pt-1.5">
+                  🏆 {t('poker.champion')}:{' '}
+                  {gameData?.tournamentWinner?.username ||
+                    winnerName ||
+                    (isWinner
+                      ? userSide === 'A'
+                        ? playerAName
+                        : playerBName
+                      : userSide === 'A'
+                      ? playerBName
+                      : playerAName)}
+                </p>
+              )}
             </div>
 
             <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200">

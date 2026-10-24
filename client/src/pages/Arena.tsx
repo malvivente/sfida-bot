@@ -737,7 +737,7 @@ export const Arena: React.FC<ArenaProps> = ({
     setRole('spectator');
   };
 
-  const handleSpectatorBet = async (target: 'A' | 'B' | 'X', amountGram: string) => {
+  const handleSpectatorBet = async (target: 'A' | 'B' | 'C' | 'D' | 'X', amountGram: string) => {
     if (isMatchPlayer) {
       setCreateError(t('arena.spectatorSelfBetDisabled'));
       return;
@@ -1771,10 +1771,31 @@ export const Arena: React.FC<ArenaProps> = ({
             <SpectatorOddsBar
               oddsA={socketData.oddsA}
               oddsB={socketData.oddsB}
+              oddsC={socketData.oddsC}
+              oddsD={socketData.oddsD}
               oddsX={socketData.oddsX}
               totalBetsA={socketData.totalBetsA}
               totalBetsB={socketData.totalBetsB}
+              totalBetsC={socketData.totalBetsC}
+              totalBetsD={socketData.totalBetsD}
               totalBetsX={socketData.totalBetsX}
+              multiChoices={
+                effectiveGameType === 'poker' && Array.isArray((socketData.gameData as any)?.seats) && (socketData.gameData as any).seats.length > 2
+                  ? ((socketData.gameData as any).seats as any[]).map((seat, idx) => {
+                      const sideCodes: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
+                      const oddsMap = [socketData.oddsA, socketData.oddsB, socketData.oddsC, socketData.oddsD];
+                      const betsMap = [socketData.totalBetsA, socketData.totalBetsB, socketData.totalBetsC, socketData.totalBetsD];
+                      return {
+                        side: sideCodes[idx] || 'A',
+                        label: seat.displayName || seat.username || `Player ${idx + 1}`,
+                        subLabel: `Seat ${idx + 1}`,
+                        odds: oddsMap[idx] || ((socketData.gameData as any).seats.length === 4 ? 3.8 : 2.85),
+                        totalBets: betsMap[idx] || '0',
+                        photoUrl: seat.photoUrl,
+                      };
+                    })
+                  : undefined
+              }
               gameType={effectiveGameType}
               playerAName={socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A'}
               playerBName={socketData.playerBName || currentActiveMatch?.playerB?.name || (currentActiveMatch?.playerB ? 'Player B' : 'Player B')}
@@ -1793,7 +1814,14 @@ export const Arena: React.FC<ArenaProps> = ({
                 socketData.matchWinner
                   ? currentActiveMatch?.playerA && areAddressesEqual(socketData.matchWinner, currentActiveMatch.playerA.wallet)
                     ? 'A'
-                    : 'B'
+                    : currentActiveMatch?.playerB && areAddressesEqual(socketData.matchWinner, currentActiveMatch.playerB.wallet)
+                    ? 'B'
+                    : effectiveGameType === 'poker' && Array.isArray((socketData.gameData as any)?.seats)
+                    ? (() => {
+                        const idx = ((socketData.gameData as any).seats as any[]).findIndex((s) => s.walletAddress && areAddressesEqual(socketData.matchWinner!, s.walletAddress));
+                        return idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : idx === 3 ? 'D' : undefined;
+                      })()
+                    : undefined
                   : undefined
               }
               onExit={handleAttemptExitMatch}

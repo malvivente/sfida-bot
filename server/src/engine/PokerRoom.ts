@@ -1161,11 +1161,14 @@ export class PokerRoom extends BaseGameRoom {
 
     this.broadcastState();
 
+    const champSeatIdx = this.seats.findIndex((s) => s.walletAddress && this.isSameWallet(s.walletAddress, champ.walletAddress));
+    const champSide: 'A' | 'B' | 'C' | 'D' = champSeatIdx === 0 ? 'A' : (champSeatIdx === 1 ? 'B' : (champSeatIdx === 2 ? 'C' : 'D'));
+
     this.broadcast({
       type: 'MATCH_SETTLED',
       winnerAddress: champ.walletAddress,
       winnerName: champ.username,
-      winnerSide: this.isSameWallet(champ.walletAddress, this.playerA.walletAddress) ? 'A' : 'B',
+      winnerSide: champSide,
       payoutTon: firstPrize.toFixed(2),
       payoutGram: firstPrize.toFixed(2),
       message: `🏆 ${champ.username} ha vinto il torneo di Poker!`,
