@@ -9,8 +9,6 @@ import {
   Loader2,
   ArrowLeft,
   Bell,
-  X,
-  ShieldCheck,
 } from 'lucide-react';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { GramIcon } from './GramIcon.js';
@@ -132,8 +130,6 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
 
   const [selectedSide, setSelectedSide] = useState<SpectatorTarget>(() => choices[0]?.side || 'A');
   const [betAmount, setBetAmount] = useState<string>('1');
-  const [showBetActiveModal, setShowBetActiveModal] = useState<boolean>(false);
-  const [modalDismissedForMatch, setModalDismissedForMatch] = useState<boolean>(false);
 
   // Sync selected side if choice list changes
   useEffect(() => {
@@ -141,14 +137,6 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
       setSelectedSide(choices[0]?.side || 'A');
     }
   }, [choices, selectedSide]);
-
-  // Show reassurance modal when bet is placed and confirmed
-  useEffect(() => {
-    if (placedBet && !modalDismissedForMatch) {
-      setShowBetActiveModal(true);
-      setModalDismissedForMatch(true);
-    }
-  }, [placedBet, modalDismissedForMatch]);
 
   const currentChoice = choices.find((c) => c.side === selectedSide) || choices[0];
   const currentOdds = currentChoice ? currentChoice.odds : oddsA;
@@ -470,14 +458,10 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   <CheckCircle2 className="w-4 h-4 shrink-0 text-cyber-green" />
                   <span>{t('spectator.betConfirmedTitle')}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowBetActiveModal(true)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyber-green/20 text-cyber-green border border-cyber-green/40 hover:bg-cyber-green/30 transition-all flex items-center space-x-1"
-                >
+                <div className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyber-green/20 text-cyber-green border border-cyber-green/40 flex items-center space-x-1">
                   <Bell className="w-3 h-3 text-cyber-green" />
                   <span>Notifica TG</span>
-                </button>
+                </div>
               </div>
 
               <div className="bg-cyber-bg/80 rounded-xl p-2.5 border border-cyber-border/70 grid grid-cols-3 gap-2 text-center">
@@ -582,10 +566,7 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
                   </div>
 
                   {/* Inform user they can leave freely & receive private TG notification */}
-                  <div
-                    onClick={() => setShowBetActiveModal(true)}
-                    className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/40 to-purple-950/40 border border-cyan-500/30 text-left flex items-start space-x-2 cursor-pointer hover:border-cyan-400/60 transition-all"
-                  >
+                  <div className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/40 to-purple-950/40 border border-cyan-500/30 text-left flex items-start space-x-2">
                     <Bell className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5 animate-pulse" />
                     <span className="text-[11px] text-cyan-200/90 leading-tight font-chakra flex-1">
                       {t('spectator.exitLobbyHint')}
@@ -746,89 +727,6 @@ export const SpectatorOddsBar: React.FC<SpectatorOddsBarProps> = ({
         </>
       )}
 
-      {/* REASSURANCE POPUP MODAL (Assures spectator that leaving does not cancel bet) */}
-      {showBetActiveModal && placedBet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm p-5 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-cyber-green/70 shadow-[0_0_40px_rgba(0,255,136,0.3)] text-center space-y-4 relative">
-            <button
-              type="button"
-              onClick={() => setShowBetActiveModal(false)}
-              className="absolute top-3.5 right-3.5 p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-cyber-green/20 border border-cyber-green/50 flex items-center justify-center text-cyber-green shadow-lg">
-              <ShieldCheck className="w-8 h-8 animate-pulse" />
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-base font-orbitron font-extrabold text-white tracking-wide">
-                {t('spectator.betActiveModalTitle')}
-              </h3>
-              <p className="text-xs text-slate-300 font-chakra leading-relaxed whitespace-pre-line px-1">
-                {t('spectator.betActiveModalDesc')}
-              </p>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-cyber-bg/90 border border-cyber-border text-center space-y-1.5">
-              <div className="flex justify-between items-center text-xs font-chakra">
-                <span className="text-slate-400 font-medium">Pronostico:</span>
-                <span className="font-bold text-white truncate max-w-[170px]">
-                  {placedBet.targetName ||
-                    choices.find((c) => c.side === placedBet.target)?.label ||
-                    placedBet.target}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-chakra">
-                <span className="text-slate-400 font-medium">Puntata:</span>
-                <span className="font-bold text-cyber-cyan flex items-center space-x-1">
-                  <span>{placedBet.amountGram}</span>
-                  <GramIcon className="w-3 h-3" />
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-chakra">
-                <span className="text-slate-400 font-medium">Vincita stimata:</span>
-                <span className="font-bold text-cyber-green flex items-center space-x-1">
-                  <span>
-                    ~
-                    {(
-                      parseFloat(placedBet.amountGram) *
-                      (placedBet.odds ||
-                        choices.find((c) => c.side === placedBet.target)?.odds ||
-                        currentOdds)
-                    ).toFixed(2)}
-                  </span>
-                  <GramIcon className="w-3 h-3" />
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              {onExit && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBetActiveModal(false);
-                    onExit();
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-chakra font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>{t('spectator.betActiveModalExitBtn')}</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowBetActiveModal(false)}
-                className="w-full py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-300 hover:text-white font-chakra font-bold text-xs uppercase tracking-wider transition-all"
-              >
-                {t('spectator.betActiveModalStayBtn')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

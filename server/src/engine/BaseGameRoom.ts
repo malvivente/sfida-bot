@@ -1172,13 +1172,40 @@ export abstract class BaseGameRoom {
       const { getTelegramBot } = await import('../bot/index.js');
       const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
       const { botT, resolveLanguage } = await import('../bot/i18n.js');
+      const { renderCustomEmojis } = await import('../bot/emojis.js');
       const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
       const { dbService } = await import('../services/db.js');
 
       const bot = getTelegramBot();
-      if (!bot) return;
+      if (!bot) {
+        console.warn(`[BaseGameRoom] Telegram bot instance unavailable, skipping spectator settlement notifications.`);
+        return;
+      }
 
-      const webAppUrl = process.env.TELEGRAM_WEBAPP_URL || 'https://t.me/sfidabot/arena';
+      const escapeHtml = (str: string): string => {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
+
+      const rawWebUrl = process.env.WEBAPP_URL?.trim();
+      const rawTgUrl = (process.env.TELEGRAM_WEBAPP_URL || '').trim();
+      const botUsername = (process.env.BOT_USERNAME || 'sfidabot').replace(/^@/, '');
+      const fallbackTgUrl = `https://t.me/${botUsername}`;
+
+      const buildArenaKeyboard = (label: string) => {
+        const keyboard = new InlineKeyboard();
+        if (rawWebUrl && !rawWebUrl.includes('t.me') && rawWebUrl.startsWith('https://')) {
+          keyboard.webApp(label, rawWebUrl);
+        } else if (rawTgUrl && !rawTgUrl.includes('t.me') && rawTgUrl.startsWith('https://')) {
+          keyboard.webApp(label, rawTgUrl);
+        } else if (rawTgUrl) {
+          keyboard.url(label, rawTgUrl);
+        } else {
+          keyboard.url(label, fallbackTgUrl);
+        }
+        return keyboard;
+      };
+
       const gameConfig = (GAMES_CONFIG as any)[this.gameType];
       const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
 
@@ -1200,11 +1227,24 @@ export abstract class BaseGameRoom {
           const userAcc = await dbService.getUserAccount(settlement.walletAddress);
           tgId = userAcc?.telegramId;
         }
+        if (!tgId) {
+          const userObj = dbService.findUser(settlement.walletAddress);
+          tgId = userObj?.telegramId;
+        }
         if (!tgId && settlement.walletAddress?.startsWith('tg_')) {
           tgId = settlement.walletAddress.replace('tg_', '');
         }
 
-        if (!tgId) continue;
+        if (!tgId) {
+          console.warn(`[BaseGameRoom] Could not resolve telegramId for spectator settlement: wallet=${settlement.walletAddress}`);
+          continue;
+        }
+
+        const numericTgId = Number(tgId);
+        if (isNaN(numericTgId) || numericTgId <= 0) {
+          console.warn(`[BaseGameRoom] Skipping spectator DM: invalid numeric tgId '${tgId}' for wallet ${settlement.walletAddress}`);
+          continue;
+        }
 
         const userLang = await dbService.getUserLanguage(tgId);
         const lang = resolveLanguage(userLang);
@@ -1234,55 +1274,54 @@ export abstract class BaseGameRoom {
 
         const outcomeDesc = customOutcomeText || (winnerName ? `🏆 ${winnerName}` : 'Finished');
 
-        let msgText = '';
+        let rawMsgText = '';
         if (settlement.won) {
           const payout = settlement.payoutGram;
           const profit = Math.max(0, parseFloat(payout) - parseFloat(stakeGram)).toFixed(2);
-          msgText = botT(lang, 'spectator_notification_won', {
-            game: gameTitle,
+          rawMsgText = botT(lang, 'spectator_notification_won', {
+            game: escapeHtml(gameTitle),
             matchId: this.matchId.toString(),
-            playerA: nameA,
-            playerB: duelistOpponents,
-            target: targetLabel,
+            playerA: escapeHtml(nameA),
+            playerB: escapeHtml(duelistOpponents),
+            target: escapeHtml(targetLabel),
             stake: stakeGram,
-            outcome: outcomeDesc,
+            outcome: escapeHtml(outcomeDesc),
             payout,
             profit,
           });
         } else if (settlement.refunded) {
           const refundReason = botT(lang, 'spectator_refund_reason_no_winners');
-          msgText = botT(lang, 'spectator_notification_refund', {
-            game: gameTitle,
+          rawMsgText = botT(lang, 'spectator_notification_refund', {
+            game: escapeHtml(gameTitle),
             matchId: this.matchId.toString(),
-            playerA: nameA,
-            playerB: duelistOpponents,
+            playerA: escapeHtml(nameA),
+            playerB: escapeHtml(duelistOpponents),
             payout: settlement.payoutGram,
-            reason: refundReason,
+            reason: escapeHtml(refundReason),
           });
         } else {
-          msgText = botT(lang, 'spectator_notification_lost', {
-            game: gameTitle,
+          rawMsgText = botT(lang, 'spectator_notification_lost', {
+            game: escapeHtml(gameTitle),
             matchId: this.matchId.toString(),
-            playerA: nameA,
-            playerB: duelistOpponents,
-            target: targetLabel,
+            playerA: escapeHtml(nameA),
+            playerB: escapeHtml(duelistOpponents),
+            target: escapeHtml(targetLabel),
             stake: stakeGram,
-            winner: winnerName || nameA,
+            winner: escapeHtml(winnerName || nameA),
           });
         }
 
-        const keyboard = new InlineKeyboard().webApp(
-          botT(lang, 'btn_open_arena') || '⚡ Open Arena',
-          webAppUrl
-        );
+        const formattedMsg = renderCustomEmojis(rawMsgText);
+        const keyboard = buildArenaKeyboard(botT(lang, 'btn_open_arena') || '⚡ Open Arena');
 
         try {
-          await bot.api.sendMessage(Number(tgId), msgText, {
+          await bot.api.sendMessage(numericTgId, formattedMsg, {
             parse_mode: 'HTML',
             reply_markup: keyboard,
           });
-        } catch (sendErr) {
-          console.warn(`[BaseGameRoom] Failed to send spectator DM to ${tgId}:`, sendErr);
+          console.log(`[BaseGameRoom] Spectator settlement DM delivered to tg:${numericTgId} for match #${this.matchId} (won: ${settlement.won})`);
+        } catch (sendErr: any) {
+          console.warn(`[BaseGameRoom] Failed to send spectator DM to ${tgId}:`, sendErr?.message || sendErr);
         }
       }
     } catch (err) {
@@ -1308,13 +1347,37 @@ export abstract class BaseGameRoom {
       const { getTelegramBot } = await import('../bot/index.js');
       const { SfidaInlineKeyboard: InlineKeyboard } = await import('../bot/keyboardUtils.js');
       const { botT, resolveLanguage } = await import('../bot/i18n.js');
+      const { renderCustomEmojis } = await import('../bot/emojis.js');
       const { GAMES_CONFIG } = await import('../config/gamesConfig.js');
       const { dbService } = await import('../services/db.js');
 
       const bot = getTelegramBot();
       if (!bot) return;
 
-      const webAppUrl = process.env.TELEGRAM_WEBAPP_URL || 'https://t.me/sfidabot/arena';
+      const escapeHtml = (str: string): string => {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
+
+      const rawWebUrl = process.env.WEBAPP_URL?.trim();
+      const rawTgUrl = (process.env.TELEGRAM_WEBAPP_URL || '').trim();
+      const botUsername = (process.env.BOT_USERNAME || 'sfidabot').replace(/^@/, '');
+      const fallbackTgUrl = `https://t.me/${botUsername}`;
+
+      const buildArenaKeyboard = (label: string) => {
+        const keyboard = new InlineKeyboard();
+        if (rawWebUrl && !rawWebUrl.includes('t.me') && rawWebUrl.startsWith('https://')) {
+          keyboard.webApp(label, rawWebUrl);
+        } else if (rawTgUrl && !rawTgUrl.includes('t.me') && rawTgUrl.startsWith('https://')) {
+          keyboard.webApp(label, rawTgUrl);
+        } else if (rawTgUrl) {
+          keyboard.url(label, rawTgUrl);
+        } else {
+          keyboard.url(label, fallbackTgUrl);
+        }
+        return keyboard;
+      };
+
       const gameConfig = (GAMES_CONFIG as any)[this.gameType];
       const gameTitle = gameConfig?.name || this.gameType.toUpperCase();
 
@@ -1336,10 +1399,20 @@ export abstract class BaseGameRoom {
           const userAcc = await dbService.getUserAccount(settlement.walletAddress);
           tgId = userAcc?.telegramId;
         }
+        if (!tgId) {
+          const userObj = dbService.findUser(settlement.walletAddress);
+          tgId = userObj?.telegramId;
+        }
         if (!tgId && settlement.walletAddress?.startsWith('tg_')) {
           tgId = settlement.walletAddress.replace('tg_', '');
         }
         if (!tgId) continue;
+
+        const numericTgId = Number(tgId);
+        if (isNaN(numericTgId) || numericTgId <= 0) {
+          console.warn(`[BaseGameRoom] Skipping spectator refund DM: invalid numeric tgId '${tgId}' for wallet ${settlement.walletAddress}`);
+          continue;
+        }
 
         const userLang = await dbService.getUserLanguage(tgId);
         const lang = resolveLanguage(userLang);
@@ -1350,27 +1423,26 @@ export abstract class BaseGameRoom {
             : botT(lang, 'spectator_refund_reason_cancelled')
         );
 
-        const msgText = botT(lang, 'spectator_notification_refund', {
-          game: gameTitle,
+        const rawMsgText = botT(lang, 'spectator_notification_refund', {
+          game: escapeHtml(gameTitle),
           matchId: this.matchId.toString(),
-          playerA: nameA,
-          playerB: duelistOpponents,
+          playerA: escapeHtml(nameA),
+          playerB: escapeHtml(duelistOpponents),
           payout: settlement.payoutGram,
-          reason: reasonText,
+          reason: escapeHtml(reasonText),
         });
 
-        const keyboard = new InlineKeyboard().webApp(
-          botT(lang, 'btn_open_arena') || '⚡ Open Arena',
-          webAppUrl
-        );
+        const formattedMsg = renderCustomEmojis(rawMsgText);
+        const keyboard = buildArenaKeyboard(botT(lang, 'btn_open_arena') || '⚡ Open Arena');
 
         try {
-          await bot.api.sendMessage(Number(tgId), msgText, {
+          await bot.api.sendMessage(numericTgId, formattedMsg, {
             parse_mode: 'HTML',
             reply_markup: keyboard,
           });
-        } catch (sendErr) {
-          console.warn(`[BaseGameRoom] Failed to send refund DM to spectator ${tgId}:`, sendErr);
+          console.log(`[BaseGameRoom] Spectator refund DM delivered to tg:${numericTgId} for match #${this.matchId}`);
+        } catch (sendErr: any) {
+          console.warn(`[BaseGameRoom] Failed to send refund DM to spectator ${tgId}:`, sendErr?.message || sendErr);
         }
       }
     } catch (err) {

@@ -888,7 +888,7 @@ export function useSocket({
   }, []);
 
   const placeSpectatorBet = useCallback(
-    (target: SpectatorTarget, amountNano: string) => {
+    async (target: SpectatorTarget, amountNano: string) => {
       setBetError(null);
       setBetStatus('placing');
 
@@ -900,28 +900,78 @@ export function useSocket({
         telegramId,
       };
 
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify(payload));
+      const httpBase = serverUrl || (import.meta as any).env?.VITE_SERVER_URL || '';
 
-        // 8-second safety timeout so user is never stuck in infinite loading
-        const timer = setTimeout(() => {
+      const fallbackHttpCall = async () => {
+        try {
+          const res = await fetch(`${httpBase}/api/matches/${matchId}/spectator-bet`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              target,
+              amountNano,
+              wallet,
+              telegramId,
+              username,
+            }),
+          });
+          const resData = await res.json();
+          if (res.ok && resData.success) {
+            const bTarget = (resData.target || target) as SpectatorTarget;
+            const tOdds =
+              bTarget === 'A' ? oddsA :
+              bTarget === 'B' ? oddsB :
+              bTarget === 'C' ? oddsC :
+              bTarget === 'D' ? oddsD :
+              oddsX;
+            setPlacedBet({
+              target: bTarget,
+              amountGram: resData.amountGram,
+              feePaidGram: resData.feePaidGram || '0.05',
+              targetName: bTarget === 'A' ? playerAName : bTarget === 'B' ? (playerBName || 'Player B') : `Scelta ${bTarget}`,
+              odds: tOdds,
+            });
+            setBetStatus('confirmed');
+            setBetError(null);
+            window.dispatchEvent(new CustomEvent('sfida_balance_refresh'));
+            return true;
+          } else {
+            setBetError(resData?.message || resData?.error || 'Errore piazzamento scommessa');
+            setBetStatus('error');
+            return false;
+          }
+        } catch (httpErr: any) {
+          setBetError(httpErr?.message || 'Errore di connessione al server');
+          setBetStatus('error');
+          return false;
+        }
+      };
+
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(JSON.stringify(payload));
+        } catch {
+          await fallbackHttpCall();
+          return;
+        }
+
+        // 3.5s timeout: if WS hasn't confirmed yet, try HTTP fallback
+        const timer = setTimeout(async () => {
           setBetStatus((prev) => {
             if (prev === 'placing') {
-              setBetError('Timeout connessione: la scommessa non ha ricevuto risposta. Riprova.');
-              return 'error';
+              fallbackHttpCall();
             }
             return prev;
           });
-        }, 8000);
+        }, 3500);
 
         const onConfirmedOrError = () => clearTimeout(timer);
         window.addEventListener('sfida_balance_refresh', onConfirmedOrError, { once: true });
       } else {
-        setBetError('Connessione WebSocket non attiva');
-        setBetStatus('error');
+        await fallbackHttpCall();
       }
     },
-    [wallet, telegramId]
+    [wallet, telegramId, serverUrl, matchId, username, oddsA, oddsB, oddsC, oddsD, oddsX, playerAName, playerBName]
   );
 
   const clearPlacedBet = useCallback(() => {

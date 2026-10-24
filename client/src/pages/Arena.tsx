@@ -245,7 +245,7 @@ export const Arena: React.FC<ArenaProps> = ({
       ))
     )
   );
-  const initialEffectiveRole: 'player' | 'spectator' = isMatchPlayer ? 'player' : role;
+  const initialEffectiveRole: 'player' | 'spectator' = isMatchPlayer ? 'player' : 'spectator';
 
   const socketData = useSocket({
     matchId: activeMatchId || '',
@@ -982,6 +982,14 @@ export const Arena: React.FC<ArenaProps> = ({
   );
 
   const handleAttemptExitMatch = () => {
+    if (!isMatchPlayer) {
+      // Spectator exits freely immediately with ZERO modal dialogs or delays
+      triggerImpact('light');
+      setActiveMatchId(null);
+      onClearDeepMatch?.();
+      return;
+    }
+
     if (isMatchInProgress) {
       triggerImpact('heavy');
       setShowExitConfirmModal(true);

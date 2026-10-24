@@ -98,10 +98,12 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                 const bettorWalletRaw = data.wallet || wallet;
                 const bettorTgRaw = data.telegramId || telegramId;
 
-                const isPlayerInRoom = Boolean(senderSide) || role === 'player' ||
-                  (room && (room.isSameWallet(bettorWalletRaw, room.playerA?.walletAddress) ||
-                    (room.playerB && room.isSameWallet(bettorWalletRaw, room.playerB.walletAddress)) ||
-                    ((room as any).isPlayerParticipant && (room as any).isPlayerParticipant(bettorWalletRaw, bettorTgRaw))));
+                const isPlayerInRoom = Boolean(senderSide) ||
+                  (room && (
+                    (room.playerA && (room.isSameWallet(bettorWalletRaw, room.playerA.walletAddress) || (bettorTgRaw && room.playerA.telegramId && String(room.playerA.telegramId) === String(bettorTgRaw)))) ||
+                    (room.playerB && (room.isSameWallet(bettorWalletRaw, room.playerB.walletAddress) || (bettorTgRaw && room.playerB.telegramId && String(room.playerB.telegramId) === String(bettorTgRaw)))) ||
+                    ((room as any).isPlayerParticipant && (room as any).isPlayerParticipant(bettorWalletRaw, bettorTgRaw))
+                  ));
                 if (isPlayerInRoom) {
                   console.warn(`[WS] Spectator bet rejected: ${bettorWalletRaw} is a duelist in match ${matchId}`);
                   ws.send(JSON.stringify({
