@@ -887,16 +887,42 @@ export function useSocket({
     }
   }, []);
 
-  const placeSpectatorBet = useCallback((target: SpectatorTarget, amountNano: string) => {
-    setBetError(null);
-    setBetStatus('placing');
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'PLACE_SPECTATOR_BET', target, amountNano }));
-    } else {
-      setBetError('Connessione WebSocket non attiva');
-      setBetStatus('error');
-    }
-  }, []);
+  const placeSpectatorBet = useCallback(
+    (target: SpectatorTarget, amountNano: string) => {
+      setBetError(null);
+      setBetStatus('placing');
+
+      const payload = {
+        type: 'SPECTATOR_BET',
+        target,
+        amountNano,
+        wallet,
+        telegramId,
+      };
+
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(payload));
+
+        // 8-second safety timeout so user is never stuck in infinite loading
+        const timer = setTimeout(() => {
+          setBetStatus((prev) => {
+            if (prev === 'placing') {
+              setBetError('Timeout connessione: la scommessa non ha ricevuto risposta. Riprova.');
+              return 'error';
+            }
+            return prev;
+          });
+        }, 8000);
+
+        const onConfirmedOrError = () => clearTimeout(timer);
+        window.addEventListener('sfida_balance_refresh', onConfirmedOrError, { once: true });
+      } else {
+        setBetError('Connessione WebSocket non attiva');
+        setBetStatus('error');
+      }
+    },
+    [wallet, telegramId]
+  );
 
   const clearPlacedBet = useCallback(() => {
     setPlacedBet(null);

@@ -92,96 +92,111 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
             break;
 
           case 'SPECTATOR_BET':
+          case 'PLACE_SPECTATOR_BET':
             if (data.target && data.amountNano) {
-              const isPlayerInRoom = Boolean(senderSide) || role === 'player' ||
-                (room && (wallet.toLowerCase() === room.playerA?.walletAddress.toLowerCase() ||
-                  (room.playerB && wallet.toLowerCase() === room.playerB.walletAddress.toLowerCase())));
-              if (isPlayerInRoom) {
-                console.warn(`[WS] Spectator bet rejected: ${wallet} is a duelist in match ${matchId}`);
+              try {
+                const bettorWalletRaw = data.wallet || wallet;
+                const bettorTgRaw = data.telegramId || telegramId;
+
+                const isPlayerInRoom = Boolean(senderSide) || role === 'player' ||
+                  (room && (room.isSameWallet(bettorWalletRaw, room.playerA?.walletAddress) ||
+                    (room.playerB && room.isSameWallet(bettorWalletRaw, room.playerB.walletAddress)) ||
+                    ((room as any).isPlayerParticipant && (room as any).isPlayerParticipant(bettorWalletRaw, bettorTgRaw))));
+                if (isPlayerInRoom) {
+                  console.warn(`[WS] Spectator bet rejected: ${bettorWalletRaw} is a duelist in match ${matchId}`);
+                  ws.send(JSON.stringify({
+                    type: 'BET_ERROR',
+                    message: 'I duellanti non possono scommettere sulla propria partita.',
+                  }));
+                  break;
+                }
+
+                if (!room || room.state !== 'BETTING_WINDOW') {
+                  ws.send(JSON.stringify({
+                    type: 'BET_ERROR',
+                    message: !room
+                      ? 'Partita non trovata.'
+                      : room.state === 'LOBBY'
+                      ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti.'
+                      : 'Le scommesse per questa partita sono chiuse.',
+                  }));
+                  break;
+                }
+
+                const betAmountNano = BigInt(data.amountNano);
+                const betAmountGram = Number(betAmountNano) / 1e9;
+                const { minWagerGram, spectatorFeeGram } = feeConfig.getConfig();
+
+                if (betAmountGram < minWagerGram) {
+                  ws.send(JSON.stringify({
+                    type: 'BET_ERROR',
+                    message: `La puntata minima per gli spettatori è di ${minWagerGram.toFixed(1)} GRAM.`,
+                  }));
+                  break;
+                }
+
+                const totalRequired = betAmountGram + spectatorFeeGram;
+                const userAccount = await dbService.getUserAccount(bettorWalletRaw, bettorTgRaw, username);
+                const curBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
+
+                if (curBal < totalRequired) {
+                  ws.send(JSON.stringify({
+                    type: 'BET_ERROR',
+                    message: `Saldo insufficiente! Servono ${totalRequired.toFixed(2)} GRAM (${betAmountGram.toFixed(2)} puntata + ${spectatorFeeGram.toFixed(2)} commissione), ma il tuo saldo è di ${curBal.toFixed(2)} GRAM.`,
+                    missingGram: (totalRequired - curBal).toFixed(2),
+                  }));
+                  break;
+                }
+
+                const bettorWallet = userAccount.walletAddress || bettorWalletRaw || (bettorTgRaw ? `tg_${bettorTgRaw}` : '');
+
+                // Prevent duplicate or changing spectator bets: bet is locked once placed
+                const alreadyBet = room.spectatorBets.some((b) =>
+                  (bettorWallet && b.walletAddress && room.isSameWallet(b.walletAddress, bettorWallet)) ||
+                  (bettorTgRaw && b.telegramId && String(b.telegramId) === String(bettorTgRaw))
+                );
+                if (alreadyBet) {
+                  ws.send(JSON.stringify({
+                    type: 'BET_ERROR',
+                    message: 'Hai già piazzato la tua puntata per questo duello. La scommessa è bloccata.',
+                  }));
+                  break;
+                }
+
+                // Debit bet and participation fee
+                await dbService.debitUserBalance(
+                  bettorWallet,
+                  betAmountGram.toFixed(2),
+                  'MATCH_BET',
+                  `Spectator bet on ${data.target === 'X' ? 'Peace (Both Split)' : 'Player ' + data.target} for match #${matchId}`,
+                  bettorTgRaw
+                );
+                await dbService.debitUserBalance(
+                  bettorWallet,
+                  spectatorFeeGram.toFixed(2),
+                  'CREATION_FEE',
+                  `Spectator participation fee for match #${matchId}`,
+                  bettorTgRaw
+                );
+                await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
+
+                const effectiveTelegramId = bettorTgRaw || userAccount?.telegramId;
+                room.registerSpectatorBet(data.target, betAmountNano, bettorWallet, effectiveTelegramId, spectatorFeeGram);
+
+                ws.send(JSON.stringify({
+                  type: 'BET_CONFIRMED',
+                  target: data.target,
+                  amountGram: betAmountGram.toFixed(2),
+                  feePaidGram: spectatorFeeGram.toFixed(2),
+                  newBalance: (curBal - totalRequired).toFixed(2),
+                }));
+              } catch (err: any) {
+                console.error(`[WS] Error processing spectator bet on match #${matchId}:`, err);
                 ws.send(JSON.stringify({
                   type: 'BET_ERROR',
-                  message: 'I duellanti non possono scommettere sulla propria partita.',
+                  message: err?.message || 'Errore durante il piazzamento della scommessa.',
                 }));
-                break;
               }
-
-              if (!room || room.state !== 'BETTING_WINDOW') {
-                ws.send(JSON.stringify({
-                  type: 'BET_ERROR',
-                  message: !room
-                    ? 'Partita non trovata.'
-                    : room.state === 'LOBBY'
-                    ? 'Le scommesse si aprono solo quando entrambi i duellanti sono pronti (finestra di 10s).'
-                    : 'Le scommesse per questa partita sono chiuse.',
-                }));
-                break;
-              }
-
-              const betAmountNano = BigInt(data.amountNano);
-              const betAmountGram = Number(betAmountNano) / 1e9;
-              const { minWagerGram, spectatorFeeGram } = feeConfig.getConfig();
-
-              if (betAmountGram < minWagerGram) {
-                ws.send(JSON.stringify({
-                  type: 'BET_ERROR',
-                  message: `La puntata minima per gli spettatori è di ${minWagerGram.toFixed(1)} GRAM.`,
-                }));
-                break;
-              }
-
-              const totalRequired = betAmountGram + spectatorFeeGram;
-              const userAccount = await dbService.getUserAccount(wallet, telegramId, username);
-              const curBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
-
-              if (curBal < totalRequired) {
-                ws.send(JSON.stringify({
-                  type: 'BET_ERROR',
-                  message: `Saldo insufficiente! Servono ${totalRequired.toFixed(2)} GRAM (${betAmountGram.toFixed(2)} puntata + ${spectatorFeeGram.toFixed(2)} commissione), ma il tuo saldo è di ${curBal.toFixed(2)} GRAM.`,
-                  missingGram: (totalRequired - curBal).toFixed(2),
-                }));
-                break;
-              }
-
-              const bettorWallet = userAccount.walletAddress || wallet || (telegramId ? `tg_${telegramId}` : '');
-
-              // Prevent duplicate or changing spectator bets: bet is locked once placed
-              const alreadyBet = room.spectatorBets.some((b) =>
-                (bettorWallet && b.walletAddress && b.walletAddress.toLowerCase() === bettorWallet.toLowerCase()) ||
-                (telegramId && b.telegramId && String(b.telegramId) === String(telegramId))
-              );
-              if (alreadyBet) {
-                ws.send(JSON.stringify({
-                  type: 'BET_ERROR',
-                  message: 'Hai già piazzato la tua puntata per questo duello. La scommessa è bloccata.',
-                }));
-                break;
-              }
-
-              // Debit bet and participation fee
-              await dbService.debitUserBalance(
-                bettorWallet,
-                betAmountGram.toFixed(2),
-                'MATCH_BET',
-                `Spectator bet on ${data.target === 'X' ? 'Peace (Both Split)' : 'Player ' + data.target} for match #${matchId}`
-              );
-              await dbService.debitUserBalance(
-                bettorWallet,
-                spectatorFeeGram.toFixed(2),
-                'CREATION_FEE',
-                `Spectator participation fee for match #${matchId}`
-              );
-              await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
-
-              const effectiveTelegramId = telegramId || userAccount?.telegramId;
-              room.registerSpectatorBet(data.target, betAmountNano, bettorWallet, effectiveTelegramId, spectatorFeeGram);
-
-              ws.send(JSON.stringify({
-                type: 'BET_CONFIRMED',
-                target: data.target,
-                amountGram: betAmountGram.toFixed(2),
-                feePaidGram: spectatorFeeGram.toFixed(2),
-                newBalance: (curBal - totalRequired).toFixed(2),
-              }));
             }
             break;
 
