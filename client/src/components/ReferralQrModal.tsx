@@ -108,8 +108,6 @@ export const ReferralQrModal: React.FC<ReferralQrModalProps> = ({
     }
   }, [isOpen, refLink]);
 
-  if (!isOpen) return null;
-
   const handleCopy = () => {
     triggerImpact('light');
     navigator.clipboard.writeText(refLink);

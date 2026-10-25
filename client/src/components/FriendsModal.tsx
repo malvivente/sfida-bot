@@ -83,8 +83,6 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
     }
   }, [isOpen, initialTab, userId, userAddress]);
 
-  if (!isOpen) return null;
-
   const handleSendRequest = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!addInput.trim()) return;

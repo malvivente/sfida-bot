@@ -57,8 +57,6 @@ export const TipModal: React.FC<TipModalProps> = ({
     }
   }, [isOpen, initialRecipient]);
 
-  if (!isOpen) return null;
-
   const currentBal = parseFloat(userBalanceGram || '0');
   const parsedAmt = parseFloat(amountInput || '0');
   const isInsufficient = parsedAmt > currentBal;
