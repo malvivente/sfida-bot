@@ -5,6 +5,9 @@ export type CardArtType =
   | 'menu_quick'
   | 'menu_strategy'
   | 'menu_spectate'
+  | 'casino_house'
+  | 'games_vs_bot'
+  | 'raffle'
   | 'shotgun'
   | 'connect4'
   | 'split'
@@ -21,6 +24,9 @@ const CARD_IMAGE_MAP: Record<CardArtType, { webp: string; png: string }> = {
   menu_quick: { webp: '/assets/cards/quick_match.webp', png: '/assets/cards/quick_match.png' },
   menu_strategy: { webp: '/assets/cards/strategy_duels.webp', png: '/assets/cards/strategy_duels.png' },
   menu_spectate: { webp: '/assets/cards/spectate_bet.webp', png: '/assets/cards/spectate_bet.png' },
+  casino_house: { webp: '/assets/cards/casino_house.webp', png: '/assets/cards/casino_house.png' },
+  games_vs_bot: { webp: '/assets/cards/games_vs_bot.webp', png: '/assets/cards/games_vs_bot.png' },
+  raffle: { webp: '/assets/cards/raffle.webp', png: '/assets/cards/raffle.png' },
   shotgun: { webp: '/assets/cards/shotgun.webp', png: '/assets/cards/shotgun.png' },
   connect4: { webp: '/assets/cards/forza4.webp', png: '/assets/cards/forza4.png' },
   split: { webp: '/assets/cards/split_steal.webp', png: '/assets/cards/split_steal.png' },
@@ -30,7 +36,7 @@ const CARD_IMAGE_MAP: Record<CardArtType, { webp: string; png: string }> = {
   bridge: { webp: '/assets/cards/glass_bridge.webp', png: '/assets/cards/glass_bridge.png' },
   chrono: { webp: '/assets/cards/chrono_blind.webp', png: '/assets/cards/chrono_blind.png' },
   headsoccer: { webp: '/assets/cards/headsoccer.webp', png: '/assets/cards/headsoccer.png' },
-  poker: { webp: '/assets/cards/blackjack.webp', png: '/assets/cards/blackjack.png' },
+  poker: { webp: '/assets/cards/poker.webp', png: '/assets/cards/poker.png' },
 };
 
 // Immediate background preloader so cards are instantly available from memory

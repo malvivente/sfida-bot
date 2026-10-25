@@ -272,7 +272,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
-            type="shotgun"
+            type="games_vs_bot"
             className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
           />
 
@@ -298,7 +298,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
 
           {/* Section Artwork Image */}
           <CardBackgroundArt
-            type="roulette"
+            type="casino_house"
             className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
           />
 
@@ -361,7 +361,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
 
         {/* Section Artwork Image */}
         <CardBackgroundArt
-          type="menu_strategy"
+          type="raffle"
           className="absolute -right-2 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
         />
 
