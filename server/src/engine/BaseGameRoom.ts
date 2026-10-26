@@ -1039,6 +1039,9 @@ export abstract class BaseGameRoom {
       won: boolean;
       payoutGram: string;
       refunded?: boolean;
+      amountGram?: number;
+      odds?: number;
+      feePaidGram?: number;
     }> = [];
 
     if (totalPoolNano > 0n && this.spectatorBets.length > 0) {
@@ -1081,6 +1084,9 @@ export abstract class BaseGameRoom {
               walletAddress: bet.walletAddress,
               telegramId: bet.telegramId,
               target: bet.target,
+              amountGram: bet.amountGram,
+              odds: bet.odds,
+              feePaidGram: bet.feePaidGram,
               won: true,
               payoutGram,
             });
@@ -1098,6 +1104,9 @@ export abstract class BaseGameRoom {
               walletAddress: bet.walletAddress,
               telegramId: bet.telegramId,
               target: bet.target,
+              amountGram: bet.amountGram,
+              odds: bet.odds,
+              feePaidGram: bet.feePaidGram,
               won: false,
               payoutGram: '0.00',
             });
@@ -1110,6 +1119,9 @@ export abstract class BaseGameRoom {
             walletAddress: bet.walletAddress,
             telegramId: bet.telegramId,
             target: bet.target,
+            amountGram: bet.amountGram,
+            odds: bet.odds,
+            feePaidGram: bet.feePaidGram,
             won: false,
             payoutGram: '0.00',
           });
@@ -1161,6 +1173,9 @@ export abstract class BaseGameRoom {
       won: boolean;
       payoutGram: string;
       refunded?: boolean;
+      amountGram?: number;
+      odds?: number;
+      feePaidGram?: number;
     }>,
     winningSide: string,
     winnerName: string,
@@ -1182,8 +1197,8 @@ export abstract class BaseGameRoom {
         return;
       }
 
-      const escapeHtml = (str: string): string => {
-        if (!str) return '';
+      const escapeHtml = (str: any): string => {
+        if (str === undefined || str === null) return '';
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       };
 
@@ -1215,113 +1230,150 @@ export abstract class BaseGameRoom {
         ? (this as any).seats.slice(1).map((s: any) => s.username || 'Player').join(' vs ')
         : nameB;
 
+      console.log(`[BaseGameRoom] Dispatching spectator settlement DMs for match #${this.matchId} to ${settlements.length} settlement(s)...`);
+
+      // Track already notified Telegram IDs to prevent duplicate DMs for the exact same settlement
+      const notifiedTgIds = new Set<string>();
+
       for (const settlement of settlements) {
-        let tgId = settlement.telegramId;
-        if (!tgId) {
-          const matchingBet = this.spectatorBets.find(
-            (b) => b.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)
-          );
-          tgId = matchingBet?.telegramId;
-        }
-        if (!tgId) {
-          const userAcc = await dbService.getUserAccount(settlement.walletAddress);
-          tgId = userAcc?.telegramId;
-        }
-        if (!tgId) {
-          const userObj = dbService.findUser(settlement.walletAddress);
-          tgId = userObj?.telegramId;
-        }
-        if (!tgId && settlement.walletAddress?.startsWith('tg_')) {
-          tgId = settlement.walletAddress.replace('tg_', '');
-        }
-
-        if (!tgId) {
-          console.warn(`[BaseGameRoom] Could not resolve telegramId for spectator settlement: wallet=${settlement.walletAddress}`);
-          continue;
-        }
-
-        const numericTgId = Number(tgId);
-        if (isNaN(numericTgId) || numericTgId <= 0) {
-          console.warn(`[BaseGameRoom] Skipping spectator DM: invalid numeric tgId '${tgId}' for wallet ${settlement.walletAddress}`);
-          continue;
-        }
-
-        const userLang = await dbService.getUserLanguage(tgId);
-        const lang = resolveLanguage(userLang);
-
-        const bet = this.spectatorBets.find(
-          (b) =>
-            (b.walletAddress && settlement.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)) ||
-            (b.telegramId && tgId && String(b.telegramId) === String(tgId))
-        );
-
-        const stakeGram = bet ? bet.amountGram.toFixed(2) : '0.00';
-        const targetSide = settlement.target || bet?.target || 'A';
-        let targetLabel = '';
-        if (targetSide === 'A') {
-          targetLabel = nameA;
-        } else if (targetSide === 'B') {
-          targetLabel = nameB;
-        } else if (targetSide === 'C') {
-          targetLabel = (this as any).seats?.[2]?.username || (this as any).extraPlayers?.[0]?.username || 'Player C';
-        } else if (targetSide === 'D') {
-          targetLabel = (this as any).seats?.[3]?.username || (this as any).extraPlayers?.[1]?.username || 'Player D';
-        } else if (targetSide === 'X') {
-          targetLabel = this.gameType === 'split' ? 'Peace (Split & Split)' : 'Pareggio / Draw';
-        } else {
-          targetLabel = targetSide;
-        }
-
-        const outcomeDesc = customOutcomeText || (winnerName ? `🏆 ${winnerName}` : 'Finished');
-
-        let rawMsgText = '';
-        if (settlement.won) {
-          const payout = settlement.payoutGram;
-          const profit = Math.max(0, parseFloat(payout) - parseFloat(stakeGram)).toFixed(2);
-          rawMsgText = botT(lang, 'spectator_notification_won', {
-            game: escapeHtml(gameTitle),
-            matchId: this.matchId.toString(),
-            playerA: escapeHtml(nameA),
-            playerB: escapeHtml(duelistOpponents),
-            target: escapeHtml(targetLabel),
-            stake: stakeGram,
-            outcome: escapeHtml(outcomeDesc),
-            payout,
-            profit,
-          });
-        } else if (settlement.refunded) {
-          const refundReason = botT(lang, 'spectator_refund_reason_no_winners');
-          rawMsgText = botT(lang, 'spectator_notification_refund', {
-            game: escapeHtml(gameTitle),
-            matchId: this.matchId.toString(),
-            playerA: escapeHtml(nameA),
-            playerB: escapeHtml(duelistOpponents),
-            payout: settlement.payoutGram,
-            reason: escapeHtml(refundReason),
-          });
-        } else {
-          rawMsgText = botT(lang, 'spectator_notification_lost', {
-            game: escapeHtml(gameTitle),
-            matchId: this.matchId.toString(),
-            playerA: escapeHtml(nameA),
-            playerB: escapeHtml(duelistOpponents),
-            target: escapeHtml(targetLabel),
-            stake: stakeGram,
-            winner: escapeHtml(winnerName || nameA),
-          });
-        }
-
-        const formattedMsg = renderCustomEmojis(rawMsgText);
-        const keyboard = buildArenaKeyboard(botT(lang, 'btn_open_arena') || '⚡ Open Arena');
-
         try {
+          // Comprehensive Telegram ID resolution
+          let candidateTg: string | undefined = settlement.telegramId ? String(settlement.telegramId) : undefined;
+
+          // 1. If prefixed with tg_, strip it
+          if (candidateTg && candidateTg.startsWith('tg_')) {
+            candidateTg = candidateTg.replace(/^tg_/, '');
+          }
+
+          // 2. Fallback to matching bet from room spectatorBets
+          if (!candidateTg) {
+            const matchingBet = this.spectatorBets.find((b) => {
+              if (b.walletAddress && settlement.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)) return true;
+              return false;
+            });
+            if (matchingBet?.telegramId) {
+              candidateTg = String(matchingBet.telegramId).replace(/^tg_/, '');
+            }
+          }
+
+          // 3. Fallback to walletAddress starting with tg_
+          if (!candidateTg && settlement.walletAddress?.startsWith('tg_')) {
+            candidateTg = settlement.walletAddress.replace(/^tg_/, '');
+          }
+
+          // 4. Query dbService findUser by walletAddress
+          if (!candidateTg && settlement.walletAddress) {
+            const userObj = dbService.findUser(settlement.walletAddress);
+            if (userObj?.telegramId) {
+              candidateTg = String(userObj.telegramId).replace(/^tg_/, '');
+            }
+          }
+
+          // 5. Query dbService getUserAccount by walletAddress (skip placeholder addresses)
+          if (!candidateTg && settlement.walletAddress && !settlement.walletAddress.startsWith('spectator_')) {
+            const userAcc = await dbService.getUserAccount(settlement.walletAddress);
+            if (userAcc?.telegramId) {
+              candidateTg = String(userAcc.telegramId).replace(/^tg_/, '');
+            }
+          }
+
+          const cleanTgId = candidateTg ? candidateTg.trim() : '';
+          const numericTgId = Number(cleanTgId);
+
+          if (!cleanTgId || isNaN(numericTgId) || numericTgId <= 0) {
+            console.warn(`[BaseGameRoom] Could not resolve valid numeric telegramId for spectator settlement (wallet=${settlement.walletAddress}, rawTg=${settlement.telegramId})`);
+            continue;
+          }
+
+          // Prevent sending identical duplicate DM if spectator had multiple duplicates in the settlements array
+          const dedupeKey = `${cleanTgId}_${settlement.target}_${settlement.won}`;
+          if (notifiedTgIds.has(dedupeKey)) {
+            console.log(`[BaseGameRoom] Skipping duplicate settlement DM for tg:${cleanTgId} (${dedupeKey})`);
+            continue;
+          }
+          notifiedTgIds.add(dedupeKey);
+
+          const userLang = await dbService.getUserLanguage(cleanTgId);
+          const lang = resolveLanguage(userLang);
+
+          const bet = this.spectatorBets.find(
+            (b) =>
+              (b.walletAddress && settlement.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)) ||
+              (b.telegramId && String(b.telegramId).replace(/^tg_/, '') === cleanTgId)
+          );
+
+          const stakeGram = (settlement.amountGram !== undefined && settlement.amountGram > 0)
+            ? settlement.amountGram.toFixed(2)
+            : (bet ? bet.amountGram.toFixed(2) : '0.00');
+
+          const targetSide = settlement.target || bet?.target || 'A';
+          let targetLabel = '';
+          if (targetSide === 'A') {
+            targetLabel = nameA;
+          } else if (targetSide === 'B') {
+            targetLabel = nameB;
+          } else if (targetSide === 'C') {
+            targetLabel = (this as any).seats?.[2]?.username || (this as any).extraPlayers?.[0]?.username || 'Player C';
+          } else if (targetSide === 'D') {
+            targetLabel = (this as any).seats?.[3]?.username || (this as any).extraPlayers?.[1]?.username || 'Player D';
+          } else if (targetSide === 'X') {
+            targetLabel = this.gameType === 'split' ? 'Peace (Split & Split)' : 'Pareggio / Draw';
+          } else {
+            targetLabel = targetSide;
+          }
+
+          const outcomeDesc = customOutcomeText || (winnerName ? `🏆 ${winnerName}` : 'Finished');
+
+          let rawMsgText = '';
+          if (settlement.won) {
+            const payout = settlement.payoutGram;
+            const profit = Math.max(0, parseFloat(payout) - parseFloat(stakeGram)).toFixed(2);
+            rawMsgText = botT(lang, 'spectator_notification_won', {
+              game: escapeHtml(gameTitle),
+              matchId: this.matchId.toString(),
+              playerA: escapeHtml(nameA),
+              playerB: escapeHtml(duelistOpponents),
+              target: escapeHtml(targetLabel),
+              stake: stakeGram,
+              outcome: escapeHtml(outcomeDesc),
+              payout,
+              profit,
+            });
+          } else if (settlement.refunded) {
+            const refundReason = botT(lang, 'spectator_refund_reason_no_winners');
+            rawMsgText = botT(lang, 'spectator_notification_refund', {
+              game: escapeHtml(gameTitle),
+              matchId: this.matchId.toString(),
+              playerA: escapeHtml(nameA),
+              playerB: escapeHtml(duelistOpponents),
+              payout: settlement.payoutGram,
+              reason: escapeHtml(refundReason),
+            });
+          } else {
+            rawMsgText = botT(lang, 'spectator_notification_lost', {
+              game: escapeHtml(gameTitle),
+              matchId: this.matchId.toString(),
+              playerA: escapeHtml(nameA),
+              playerB: escapeHtml(duelistOpponents),
+              target: escapeHtml(targetLabel),
+              stake: stakeGram,
+              winner: escapeHtml(winnerName || nameA),
+            });
+          }
+
+          const formattedMsg = renderCustomEmojis(rawMsgText);
+          const keyboard = buildArenaKeyboard(botT(lang, 'btn_open_arena') || '⚡ Open Arena');
+
           await bot.api.sendMessage(numericTgId, formattedMsg, {
             parse_mode: 'HTML',
             reply_markup: keyboard,
           });
-          console.log(`[BaseGameRoom] Spectator settlement DM delivered to tg:${numericTgId} for match #${this.matchId} (won: ${settlement.won})`);
-        } catch (sendErr: any) {
-          console.warn(`[BaseGameRoom] Failed to send spectator DM to ${tgId}:`, sendErr?.message || sendErr);
+          console.log(`[BaseGameRoom] Spectator settlement DM successfully delivered to tg:${numericTgId} for match #${this.matchId} (won: ${settlement.won}, payout: ${settlement.payoutGram})`);
+
+          // Rate-limiting delay between sends to prevent Telegram flood limits
+          await new Promise((r) => setTimeout(r, 80));
+        } catch (itemErr: any) {
+          console.warn(`[BaseGameRoom] Failed to send spectator settlement DM to spectator (${settlement.walletAddress}, tg:${settlement.telegramId}):`, itemErr?.message || itemErr);
         }
       }
     } catch (err) {
@@ -1337,6 +1389,8 @@ export abstract class BaseGameRoom {
       walletAddress: string;
       telegramId?: string;
       payoutGram: string;
+      amountGram?: number;
+      target?: string;
     }>,
     reasonType: 'one_sided' | 'cancelled',
     customReason?: string
@@ -1354,8 +1408,8 @@ export abstract class BaseGameRoom {
       const bot = getTelegramBot();
       if (!bot) return;
 
-      const escapeHtml = (str: string): string => {
-        if (!str) return '';
+      const escapeHtml = (str: any): string => {
+        if (str === undefined || str === null) return '';
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       };
 
@@ -1387,62 +1441,80 @@ export abstract class BaseGameRoom {
         ? (this as any).seats.slice(1).map((s: any) => s.username || 'Player').join(' vs ')
         : nameB;
 
+      const notifiedTgIds = new Set<string>();
+
       for (const settlement of settlements) {
-        let tgId = settlement.telegramId;
-        if (!tgId) {
-          const matchingBet = this.spectatorBets.find(
-            (b) => b.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)
-          );
-          tgId = matchingBet?.telegramId;
-        }
-        if (!tgId) {
-          const userAcc = await dbService.getUserAccount(settlement.walletAddress);
-          tgId = userAcc?.telegramId;
-        }
-        if (!tgId) {
-          const userObj = dbService.findUser(settlement.walletAddress);
-          tgId = userObj?.telegramId;
-        }
-        if (!tgId && settlement.walletAddress?.startsWith('tg_')) {
-          tgId = settlement.walletAddress.replace('tg_', '');
-        }
-        if (!tgId) continue;
-
-        const numericTgId = Number(tgId);
-        if (isNaN(numericTgId) || numericTgId <= 0) {
-          console.warn(`[BaseGameRoom] Skipping spectator refund DM: invalid numeric tgId '${tgId}' for wallet ${settlement.walletAddress}`);
-          continue;
-        }
-
-        const userLang = await dbService.getUserLanguage(tgId);
-        const lang = resolveLanguage(userLang);
-
-        const reasonText = customReason || (
-          reasonType === 'one_sided'
-            ? botT(lang, 'spectator_refund_reason_one_sided')
-            : botT(lang, 'spectator_refund_reason_cancelled')
-        );
-
-        const rawMsgText = botT(lang, 'spectator_notification_refund', {
-          game: escapeHtml(gameTitle),
-          matchId: this.matchId.toString(),
-          playerA: escapeHtml(nameA),
-          playerB: escapeHtml(duelistOpponents),
-          payout: settlement.payoutGram,
-          reason: escapeHtml(reasonText),
-        });
-
-        const formattedMsg = renderCustomEmojis(rawMsgText);
-        const keyboard = buildArenaKeyboard(botT(lang, 'btn_open_arena') || '⚡ Open Arena');
-
         try {
+          let candidateTg: string | undefined = settlement.telegramId ? String(settlement.telegramId) : undefined;
+          if (candidateTg && candidateTg.startsWith('tg_')) {
+            candidateTg = candidateTg.replace(/^tg_/, '');
+          }
+          if (!candidateTg) {
+            const matchingBet = this.spectatorBets.find(
+              (b) => b.walletAddress && this.isSameWallet(b.walletAddress, settlement.walletAddress)
+            );
+            if (matchingBet?.telegramId) {
+              candidateTg = String(matchingBet.telegramId).replace(/^tg_/, '');
+            }
+          }
+          if (!candidateTg && settlement.walletAddress?.startsWith('tg_')) {
+            candidateTg = settlement.walletAddress.replace(/^tg_/, '');
+          }
+          if (!candidateTg && settlement.walletAddress) {
+            const userObj = dbService.findUser(settlement.walletAddress);
+            if (userObj?.telegramId) {
+              candidateTg = String(userObj.telegramId).replace(/^tg_/, '');
+            }
+          }
+          if (!candidateTg && settlement.walletAddress && !settlement.walletAddress.startsWith('spectator_')) {
+            const userAcc = await dbService.getUserAccount(settlement.walletAddress);
+            if (userAcc?.telegramId) {
+              candidateTg = String(userAcc.telegramId).replace(/^tg_/, '');
+            }
+          }
+
+          const cleanTgId = candidateTg ? candidateTg.trim() : '';
+          const numericTgId = Number(cleanTgId);
+          if (!cleanTgId || isNaN(numericTgId) || numericTgId <= 0) {
+            console.warn(`[BaseGameRoom] Skipping spectator refund DM: invalid numeric tgId '${candidateTg}' for wallet ${settlement.walletAddress}`);
+            continue;
+          }
+
+          if (notifiedTgIds.has(cleanTgId)) {
+            continue;
+          }
+          notifiedTgIds.add(cleanTgId);
+
+          const userLang = await dbService.getUserLanguage(cleanTgId);
+          const lang = resolveLanguage(userLang);
+
+          const reasonText = customReason || (
+            reasonType === 'one_sided'
+              ? botT(lang, 'spectator_refund_reason_one_sided')
+              : botT(lang, 'spectator_refund_reason_cancelled')
+          );
+
+          const rawMsgText = botT(lang, 'spectator_notification_refund', {
+            game: escapeHtml(gameTitle),
+            matchId: this.matchId.toString(),
+            playerA: escapeHtml(nameA),
+            playerB: escapeHtml(duelistOpponents),
+            payout: settlement.payoutGram,
+            reason: escapeHtml(reasonText),
+          });
+
+          const formattedMsg = renderCustomEmojis(rawMsgText);
+          const keyboard = buildArenaKeyboard(botT(lang, 'btn_open_arena') || '⚡ Open Arena');
+
           await bot.api.sendMessage(numericTgId, formattedMsg, {
             parse_mode: 'HTML',
             reply_markup: keyboard,
           });
-          console.log(`[BaseGameRoom] Spectator refund DM delivered to tg:${numericTgId} for match #${this.matchId}`);
+          console.log(`[BaseGameRoom] Spectator refund DM successfully delivered to tg:${numericTgId} for match #${this.matchId}`);
+
+          await new Promise((r) => setTimeout(r, 80));
         } catch (sendErr: any) {
-          console.warn(`[BaseGameRoom] Failed to send refund DM to spectator ${tgId}:`, sendErr?.message || sendErr);
+          console.warn(`[BaseGameRoom] Failed to send refund DM to spectator (wallet=${settlement.walletAddress}, tg=${settlement.telegramId}):`, sendErr?.message || sendErr);
         }
       }
     } catch (err) {
@@ -1488,18 +1560,21 @@ export abstract class BaseGameRoom {
       this.totalBetsX += amountNano;
     }
 
-    if (bettorWallet) {
-      this.spectatorBets.push({
-        walletAddress: bettorWallet,
-        telegramId,
-        target,
-        amountGram,
-        amountNano,
-        odds: currentOdds,
-        feePaidGram,
-        timestamp: Date.now(),
-      });
-    }
+    const cleanTg = telegramId ? String(telegramId).replace(/^tg_/, '').trim() : undefined;
+    const effectiveWallet = bettorWallet || (cleanTg ? `tg_${cleanTg}` : `spectator_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
+
+    this.spectatorBets.push({
+      walletAddress: effectiveWallet,
+      telegramId: cleanTg,
+      target,
+      amountGram,
+      amountNano,
+      odds: currentOdds,
+      feePaidGram,
+      timestamp: Date.now(),
+    });
+
+    console.log(`[BaseGameRoom] Match #${this.matchId}: registered spectator bet on ${target} for ${effectiveWallet} (tg: ${cleanTg || 'none'}), amount: ${amountGram.toFixed(2)} GRAM. Total bets in room: ${this.spectatorBets.length}`);
 
     this.broadcast({
       type: 'ODDS_UPDATE',
@@ -1551,6 +1626,8 @@ export abstract class BaseGameRoom {
         walletAddress: string;
         telegramId?: string;
         payoutGram: string;
+        amountGram?: number;
+        target?: string;
       }> = [];
 
       for (const bet of this.spectatorBets) {
@@ -1558,6 +1635,8 @@ export abstract class BaseGameRoom {
         abortRefunds.push({
           walletAddress: bet.walletAddress,
           telegramId: bet.telegramId,
+          target: bet.target,
+          amountGram: bet.amountGram,
           payoutGram: refundTotal,
         });
         dbService.refundUserBalance(

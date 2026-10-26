@@ -749,7 +749,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     const totalRequired = betAmountGram + spectatorFeeGram;
-    const cleanTgId = body.telegramId ? String(body.telegramId) : undefined;
+    const cleanTgId = body.telegramId ? String(body.telegramId).replace(/^tg_/, '').trim() : undefined;
     const userAccount = await dbService.getUserAccount(body.wallet, cleanTgId, body.username);
     const curBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
@@ -761,8 +761,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       });
     }
 
-    const bettorWallet = userAccount.walletAddress || body.wallet || (body.telegramId ? `tg_${body.telegramId}` : '');
-    const effectiveTelegramId = body.telegramId ? String(body.telegramId) : userAccount?.telegramId;
+    const effectiveTelegramId = cleanTgId || (userAccount?.telegramId ? String(userAccount.telegramId).replace(/^tg_/, '').trim() : undefined) || (body.wallet?.startsWith('tg_') ? body.wallet.replace(/^tg_/, '') : undefined);
+    const bettorWallet = userAccount.walletAddress || body.wallet || (effectiveTelegramId ? `tg_${effectiveTelegramId}` : `spectator_${Date.now()}`);
 
     // Check if sender is a duelist in this match
     if (
@@ -779,7 +779,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     // Prevent duplicate or changing spectator bets
     const alreadyBet = room.spectatorBets.some((b) =>
       (bettorWallet && b.walletAddress && room.isSameWallet(b.walletAddress, bettorWallet)) ||
-      (effectiveTelegramId && b.telegramId && String(b.telegramId) === String(effectiveTelegramId))
+      (effectiveTelegramId && b.telegramId && String(b.telegramId).replace(/^tg_/, '') === effectiveTelegramId)
     );
     if (alreadyBet) {
       return reply.status(400).send({

@@ -681,6 +681,7 @@ export class SplitStealRoom extends BaseGameRoom {
       won: boolean;
       payoutGram: string;
       refunded?: boolean;
+      amountGram?: number;
     }> = [];
 
     if (totalSpecPoolGram > 0 && this.spectatorBets.length > 0) {
@@ -698,6 +699,7 @@ export class SplitStealRoom extends BaseGameRoom {
             walletAddress: bet.walletAddress,
             telegramId: bet.telegramId,
             target: bet.target,
+            amountGram: bet.amountGram,
             won: false,
             payoutGram: '0.00',
           });
@@ -731,6 +733,7 @@ export class SplitStealRoom extends BaseGameRoom {
                 walletAddress: bet.walletAddress,
                 telegramId: bet.telegramId,
                 target: bet.target,
+                amountGram: bet.amountGram,
                 won: true,
                 payoutGram,
               });
@@ -746,6 +749,7 @@ export class SplitStealRoom extends BaseGameRoom {
                 walletAddress: bet.walletAddress,
                 telegramId: bet.telegramId,
                 target: bet.target,
+                amountGram: bet.amountGram,
                 won: false,
                 payoutGram: '0.00',
               });
@@ -759,6 +763,7 @@ export class SplitStealRoom extends BaseGameRoom {
               walletAddress: bet.walletAddress,
               telegramId: bet.telegramId,
               target: bet.target,
+              amountGram: bet.amountGram,
               won: false,
               payoutGram: refundAmount,
               refunded: true,

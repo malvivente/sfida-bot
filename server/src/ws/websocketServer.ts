@@ -97,12 +97,13 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
               try {
                 const bettorWalletRaw = data.wallet || wallet;
                 const bettorTgRaw = data.telegramId || telegramId;
+                const cleanTg = bettorTgRaw ? String(bettorTgRaw).replace(/^tg_/, '').trim() : undefined;
 
                 const isPlayerInRoom = Boolean(senderSide) ||
                   (room && (
-                    (room.playerA && (room.isSameWallet(bettorWalletRaw, room.playerA.walletAddress) || (bettorTgRaw && room.playerA.telegramId && String(room.playerA.telegramId) === String(bettorTgRaw)))) ||
-                    (room.playerB && (room.isSameWallet(bettorWalletRaw, room.playerB.walletAddress) || (bettorTgRaw && room.playerB.telegramId && String(room.playerB.telegramId) === String(bettorTgRaw)))) ||
-                    ((room as any).isPlayerParticipant && (room as any).isPlayerParticipant(bettorWalletRaw, bettorTgRaw))
+                    (room.playerA && (room.isSameWallet(bettorWalletRaw, room.playerA.walletAddress) || (cleanTg && room.playerA.telegramId && String(room.playerA.telegramId).replace(/^tg_/, '') === cleanTg))) ||
+                    (room.playerB && (room.isSameWallet(bettorWalletRaw, room.playerB.walletAddress) || (cleanTg && room.playerB.telegramId && String(room.playerB.telegramId).replace(/^tg_/, '') === cleanTg))) ||
+                    ((room as any).isPlayerParticipant && (room as any).isPlayerParticipant(bettorWalletRaw, cleanTg))
                   ));
                 if (isPlayerInRoom) {
                   console.warn(`[WS] Spectator bet rejected: ${bettorWalletRaw} is a duelist in match ${matchId}`);
@@ -138,7 +139,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                 }
 
                 const totalRequired = betAmountGram + spectatorFeeGram;
-                const userAccount = await dbService.getUserAccount(bettorWalletRaw, bettorTgRaw, username);
+                const userAccount = await dbService.getUserAccount(bettorWalletRaw, cleanTg, username);
                 const curBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
                 if (curBal < totalRequired) {
@@ -150,12 +151,13 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                   break;
                 }
 
-                const bettorWallet = userAccount.walletAddress || bettorWalletRaw || (bettorTgRaw ? `tg_${bettorTgRaw}` : '');
+                const effectiveTelegramId = cleanTg || (userAccount?.telegramId ? String(userAccount.telegramId).replace(/^tg_/, '').trim() : undefined) || (bettorWalletRaw?.startsWith('tg_') ? bettorWalletRaw.replace(/^tg_/, '') : undefined);
+                const bettorWallet = userAccount.walletAddress || bettorWalletRaw || (effectiveTelegramId ? `tg_${effectiveTelegramId}` : `spectator_${Date.now()}`);
 
                 // Prevent duplicate or changing spectator bets: bet is locked once placed
                 const alreadyBet = room.spectatorBets.some((b) =>
                   (bettorWallet && b.walletAddress && room.isSameWallet(b.walletAddress, bettorWallet)) ||
-                  (bettorTgRaw && b.telegramId && String(b.telegramId) === String(bettorTgRaw))
+                  (effectiveTelegramId && b.telegramId && String(b.telegramId).replace(/^tg_/, '') === effectiveTelegramId)
                 );
                 if (alreadyBet) {
                   ws.send(JSON.stringify({
@@ -171,18 +173,17 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
                   betAmountGram.toFixed(2),
                   'MATCH_BET',
                   `Spectator bet on ${data.target === 'X' ? 'Peace (Both Split)' : 'Player ' + data.target} for match #${matchId}`,
-                  bettorTgRaw
+                  effectiveTelegramId
                 );
                 await dbService.debitUserBalance(
                   bettorWallet,
                   spectatorFeeGram.toFixed(2),
                   'CREATION_FEE',
                   `Spectator participation fee for match #${matchId}`,
-                  bettorTgRaw
+                  effectiveTelegramId
                 );
                 await dbService.creditTreasury(spectatorFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
 
-                const effectiveTelegramId = bettorTgRaw || userAccount?.telegramId;
                 room.registerSpectatorBet(data.target, betAmountNano, bettorWallet, effectiveTelegramId, spectatorFeeGram);
 
                 ws.send(JSON.stringify({
