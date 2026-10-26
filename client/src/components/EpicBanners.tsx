@@ -225,7 +225,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
       </NotchedCard>
 
       {/* ------------------------------------------------------------- */}
-      {/* 2. 2x2 GRID: PVP, GAMES VS BOT, CASINO & HOUSE, SPECTATE & BET*/}
+      {/* 2. 2x2 GRID: PVP, VS BOT, CASINO, SPECTATE                     */}
       {/* ------------------------------------------------------------- */}
       <div className="grid grid-cols-2 gap-3">
         {/* CARD 1: PVP (Quick Match + Strategy Duels Fused - Radiant Magma) */}
@@ -244,21 +244,21 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-rose-400/30 blur-2xl pointer-events-none" />
           <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
 
-          {/* Section Artwork Image */}
+          {/* Section Artwork Image - Centered */}
           <CardBackgroundArt
             type="menu_quick"
-            className="absolute right-1 sm:right-2.5 top-[44%] -translate-y-1/2 w-[105px] sm:w-[120px] max-h-[66%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[105px] sm:w-[120px] max-h-[64%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
-          {/* Card Content: Title Only */}
-          <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
+          {/* Card Content: Title Centered on One Line */}
+          <div className="relative z-10 flex flex-col justify-end items-center text-center h-full p-3.5 sm:p-4">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm whitespace-nowrap">
               PVP
             </h3>
           </div>
         </NotchedCard>
 
-        {/* CARD 2: GAMES VS BOT (Electric Neon Teal - NO NOTCH, NO ICON, NO BORDER) */}
+        {/* CARD 2: VS BOT (Electric Neon Teal - NO NOTCH, NO ICON, NO BORDER) */}
         <div
           onClick={() => {
             triggerImpact('medium');
@@ -270,21 +270,21 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-teal-300/30 blur-2xl pointer-events-none" />
           <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
 
-          {/* Section Artwork Image */}
+          {/* Section Artwork Image - Centered */}
           <CardBackgroundArt
             type="games_vs_bot"
-            className="absolute right-1.5 sm:right-3 top-[43%] -translate-y-1/2 w-[110px] sm:w-[124px] max-h-[66%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[110px] sm:w-[124px] max-h-[64%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
-          {/* Card Content: Title Only */}
-          <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
-              GAMES VS BOT
+          {/* Card Content: Title Centered on One Line */}
+          <div className="relative z-10 flex flex-col justify-end items-center text-center h-full p-3.5 sm:p-4">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm whitespace-nowrap">
+              VS BOT
             </h3>
           </div>
         </div>
 
-        {/* CARD 3: CASINO & HOUSE (Rich Warm Amber Gold - NO NOTCH, NO ICON, NO BORDER) */}
+        {/* CARD 3: CASINO (Rich Warm Amber Gold - NO NOTCH, NO ICON, NO BORDER) */}
         <div
           onClick={() => {
             triggerImpact('medium');
@@ -296,21 +296,21 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-amber-400/30 blur-2xl pointer-events-none" />
           <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-orange-400/20 blur-2xl pointer-events-none" />
 
-          {/* Section Artwork Image */}
+          {/* Section Artwork Image - Centered */}
           <CardBackgroundArt
             type="casino_house"
-            className="absolute right-1.5 sm:right-3 top-[42%] -translate-y-1/2 w-[105px] sm:w-[120px] max-h-[66%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[105px] sm:w-[120px] max-h-[64%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
-          {/* Card Content: Title Only */}
-          <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
-              CASINO & HOUSE
+          {/* Card Content: Title Centered on One Line */}
+          <div className="relative z-10 flex flex-col justify-end items-center text-center h-full p-3.5 sm:p-4">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm whitespace-nowrap">
+              CASINO
             </h3>
           </div>
         </div>
 
-        {/* CARD 4: SPECTATE & BET (Electric Stadium Cobalt Sapphire) */}
+        {/* CARD 4: SPECTATE (Electric Stadium Cobalt Sapphire) */}
         <NotchedCard
           cardId="grid-spectate"
           gradientBg="bg-gradient-to-br from-[#3b82f6] via-[#2563eb] to-[#1d4ed8]"
@@ -326,16 +326,16 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-cyan-400/30 blur-2xl pointer-events-none" />
           <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-indigo-400/20 blur-2xl pointer-events-none" />
 
-          {/* Section Artwork Image */}
+          {/* Section Artwork Image - Centered */}
           <CardBackgroundArt
             type="menu_spectate"
-            className="absolute right-1 sm:right-2.5 top-[43%] -translate-y-1/2 w-[114px] sm:w-[128px] max-h-[66%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[114px] sm:w-[128px] max-h-[64%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
-          {/* Card Content: Title Only */}
-          <div className="relative z-10 flex flex-col justify-end h-full p-3.5 sm:p-4">
-            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm">
-              SPECTATE & BET
+          {/* Card Content: Title Centered on One Line */}
+          <div className="relative z-10 flex flex-col justify-end items-center text-center h-full p-3.5 sm:p-4">
+            <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wider uppercase drop-shadow-sm whitespace-nowrap">
+              SPECTATE
             </h3>
           </div>
         </NotchedCard>
@@ -359,10 +359,10 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         <div className="absolute -right-8 -top-8 w-60 h-60 rounded-full bg-amber-400/25 blur-3xl pointer-events-none" />
         <div className="absolute left-1/4 -bottom-10 w-48 h-48 rounded-full bg-purple-400/20 blur-2xl pointer-events-none" />
 
-        {/* Section Artwork Image */}
+        {/* Section Artwork Image - Moved further left away from notch and right edge */}
         <CardBackgroundArt
           type="raffle"
-          className="absolute right-3 sm:right-7 top-1/2 -translate-y-1/2 w-46 sm:w-54 max-h-[92%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+          className="absolute right-10 sm:right-18 top-1/2 -translate-y-1/2 w-46 sm:w-54 max-h-[92%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
         />
 
         {/* Content: Title Only */}
@@ -462,8 +462,8 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
               </span>
               <h3 className="text-xl font-heading font-black text-white tracking-wide uppercase">
                 {activePlaceholder === 'original' && 'ORIGINALS'}
-                {activePlaceholder === 'bot' && 'GAMES VS BOT'}
-                {activePlaceholder === 'casino' && 'CASINO & HOUSE'}
+                {activePlaceholder === 'bot' && 'VS BOT'}
+                {activePlaceholder === 'casino' && 'CASINO'}
                 {activePlaceholder === 'raffle' && 'RAFFLE'}
               </h3>
             </div>
