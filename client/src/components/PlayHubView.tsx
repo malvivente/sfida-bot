@@ -168,7 +168,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           {/* 2D Minimal Graphic in Background */}
           <CardBackgroundArt
             type="shotgun"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-44 sm:w-52 h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+            className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 w-38 sm:w-46 max-h-[85%] h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none object-contain"
           />
 
           <div className="relative z-10 flex items-center justify-between">
@@ -328,7 +328,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="cubecount"
-              className="absolute right-20 top-1/2 -translate-y-1/2 w-28 h-28 opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+              className="absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 w-24 sm:w-26 h-24 sm:h-26 max-h-[85%] opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none object-contain"
             />
 
             <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
@@ -407,7 +407,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="poker"
-              className="absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 w-32 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+              className="absolute right-16 sm:right-22 top-1/2 -translate-y-1/2 w-26 sm:w-30 h-auto max-h-[82%] opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
             />
 
             <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
@@ -674,7 +674,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
             {/* 2D Minimal Graphic in Background */}
             <CardBackgroundArt
               type="headsoccer"
-              className="absolute right-20 top-1/2 -translate-y-1/2 w-28 h-28 opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+              className="absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 w-24 sm:w-26 h-24 sm:h-26 max-h-[85%] opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none object-contain"
             />
 
             <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'framer-motion';
 import { QuickdrawCanvas } from '../components/QuickdrawCanvas.js';
 import { RussianRouletteArena } from '../components/games/RussianRouletteArena.js';
@@ -1134,65 +1135,72 @@ export const Arena: React.FC<ArenaProps> = ({
       )}
 
       {/* Cancel Match Modal */}
-      {matchToCancel && (
-        <div
-          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
-        >
+      {matchToCancel && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
           <div
-            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-[#181b29] border border-rose-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            onClick={() => setMatchToCancel(null)}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md"
+          />
+          <div
+            style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+            className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
           >
-            <h3 className="text-base font-heading font-extrabold text-white flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-rose-400 animate-pulse" />
-              <span>{t('arena.cancelModalTitle')}</span>
-            </h3>
+            <div
+              style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+              className="bg-[#181b29] border border-rose-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto my-auto"
+            >
+              <h3 className="text-base font-heading font-extrabold text-white flex items-center space-x-2">
+                <AlertTriangle className="w-5 h-5 text-rose-400 animate-pulse" />
+                <span>{t('arena.cancelModalTitle')}</span>
+              </h3>
 
-            <p className="text-xs text-slate-300 font-sans leading-relaxed">
-              {t('arena.cancelModalDesc', { matchId: matchToCancel.matchId })}
-            </p>
+              <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                {t('arena.cancelModalDesc', { matchId: matchToCancel.matchId })}
+              </p>
 
-            <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-sans">{t('arena.amountToRefund')}</span>
-              <span className="text-sm font-heading font-black text-amber-300 flex items-center space-x-1">
-                <span>{(parseFloat(matchToCancel.wagerAmountNano) / 1e9 + (feeConfigData?.creationFeeGram || 0.02)).toFixed(2)}</span>
-                <GramIcon className="w-3.5 h-3.5 text-amber-400 inline" />
-              </span>
-            </div>
+              <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-sans">{t('arena.amountToRefund')}</span>
+                <span className="text-sm font-heading font-black text-amber-300 flex items-center space-x-1">
+                  <span>{(parseFloat(matchToCancel.wagerAmountNano) / 1e9 + (feeConfigData?.creationFeeGram || 0.02)).toFixed(2)}</span>
+                  <GramIcon className="w-3.5 h-3.5 text-amber-400 inline" />
+                </span>
+              </div>
 
-            <p className="text-[11px] text-slate-400 font-sans">
-              {t('arena.cancelRefundNotice')}
-              {matchToCancel.playerB && t('arena.cancelOpponentRefundNotice')}
-            </p>
+              <p className="text-[11px] text-slate-400 font-sans">
+                {t('arena.cancelRefundNotice')}
+                {matchToCancel.playerB && t('arena.cancelOpponentRefundNotice')}
+              </p>
 
-            <div className="flex space-x-2.5 pt-1">
-              <button
-                disabled={isCancelling}
-                onClick={() => setMatchToCancel(null)}
-                className="flex-1 min-h-[44px] py-2.5 px-3 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-heading font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center text-center"
-              >
-                {t('lobby.cancelBtn')}
-              </button>
-              <button
-                disabled={isCancelling}
-                onClick={confirmCancelMatch}
-                className="flex-1 min-h-[44px] py-2.5 px-3 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-2xl font-heading font-extrabold text-xs uppercase shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isCancelling ? (
-                  <>
-                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
-                    <span className="leading-tight text-center">{t('arena.refundingBtn')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 shrink-0" />
-                    <span className="leading-tight text-center">{t('arena.confirmCancelBtn')}</span>
-                  </>
-                )}
-              </button>
+              <div className="flex space-x-2.5 pt-1">
+                <button
+                  disabled={isCancelling}
+                  onClick={() => setMatchToCancel(null)}
+                  className="flex-1 min-h-[44px] py-2.5 px-3 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-heading font-bold text-xs uppercase hover:text-white transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center text-center"
+                >
+                  {t('lobby.cancelBtn')}
+                </button>
+                <button
+                  disabled={isCancelling}
+                  onClick={confirmCancelMatch}
+                  className="flex-1 min-h-[44px] py-2.5 px-3 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-2xl font-heading font-extrabold text-xs uppercase shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                      <span className="leading-tight text-center">{t('arena.refundingBtn')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 shrink-0" />
+                      <span className="leading-tight text-center">{t('arena.confirmCancelBtn')}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Quick Deposit Modal */}

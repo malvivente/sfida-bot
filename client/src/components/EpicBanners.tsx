@@ -213,7 +213,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* Section Artwork Image */}
         <CardBackgroundArt
           type="menu_split"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-44 sm:w-52 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+          className="absolute right-2 sm:right-6 top-[54%] -translate-y-1/2 w-38 sm:w-46 max-h-[85%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
         />
 
         {/* Content: Title Only */}
@@ -247,7 +247,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_quick"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+            className="absolute right-0.5 sm:right-2 top-1/2 -translate-y-1/2 w-30 sm:w-36 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -273,7 +273,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="games_vs_bot"
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+            className="absolute right-1 sm:right-2.5 top-1/2 -translate-y-1/2 w-27 sm:w-34 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -299,7 +299,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="casino_house"
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-28 sm:w-36 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+            className="absolute right-1 sm:right-2.5 top-1/2 -translate-y-1/2 w-27 sm:w-34 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -329,7 +329,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_spectate"
-            className="absolute -right-2 top-1/2 -translate-y-1/2 w-32 sm:w-40 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+            className="absolute right-0.5 sm:right-2 top-1/2 -translate-y-1/2 w-30 sm:w-36 h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -362,7 +362,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         {/* Section Artwork Image */}
         <CardBackgroundArt
           type="raffle"
-          className="absolute -right-2 top-1/2 -translate-y-1/2 w-36 sm:w-44 h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md"
+          className="absolute right-2 sm:right-6 top-[54%] -translate-y-1/2 w-34 sm:w-42 max-h-[85%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
         />
 
         {/* Content: Title Only */}

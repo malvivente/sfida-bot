@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Target, Trophy, X, ArrowRight, Zap, Info } from 'lucide-react';
 import { GameType } from '../types/index.js';
 import { useHaptics } from '../hooks/useHaptics.js';
@@ -104,6 +105,16 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
   const { t } = useI18n();
   const { isFullscreen, topInset } = useTelegramViewport();
 
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen || !gameType) return null;
 
   const config = GAME_CONFIGS[gameType] || GAME_CONFIGS.roulette;
@@ -118,15 +129,26 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
   const r3Text = t(`gameRules.${gameType}.r3`);
   const winText = t(`gameRules.${gameType}.win`);
 
-  return (
-    <div
-      style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200"
-    >
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
+      {/* Fullscreen Backdrop: 100% of viewport from pixel 0, non-scrolling */}
       <div
-        style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-        className={`bg-[#121520] border ${config.border} rounded-3xl max-w-sm sm:max-w-md w-full ${config.glow} flex flex-col my-auto overflow-hidden animate-in zoom-in-95 duration-150 font-sans`}
+        onClick={() => {
+          triggerImpact('light');
+          onClose();
+        }}
+        className="fixed inset-0 bg-black/85 backdrop-blur-md"
+      />
+
+      {/* Transparent Scrollable Container on top */}
+      <div
+        style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+        className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
       >
+        <div
+          style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+          className={`bg-[#121520] border ${config.border} rounded-3xl max-w-sm sm:max-w-md w-full ${config.glow} flex flex-col my-auto overflow-hidden animate-in zoom-in-95 duration-150 font-sans shadow-2xl`}
+        >
         {/* Header with Visual Banner */}
         <div className={`relative p-4 sm:p-5 pb-4 border-b border-white/10 bg-gradient-to-r ${config.gradient} overflow-hidden shrink-0`}>
           {/* Subtle background art */}
@@ -260,5 +282,7 @@ export const GameRulesModal: React.FC<GameRulesModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>,
+  document.body
+);
 };

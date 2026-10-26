@@ -176,14 +176,22 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const QUICK_AMOUNTS = ['1.0', '5.0', '10.0', '25.0'];
 
   return createPortal(
-    <div
-      style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
-    >
+    <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
+      {/* Fullscreen Backdrop: 100% viewport, non-scrolling */}
       <div
-        style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-        className="bg-[#151821] border border-white/10 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto animate-in fade-in zoom-in-95 duration-150"
+        onClick={onClose}
+        className="fixed inset-0 bg-black/85 backdrop-blur-md"
+      />
+
+      {/* Transparent Scrollable Container on top */}
+      <div
+        style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+        className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
       >
+        <div
+          style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+          className="bg-[#151821] border border-white/10 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto animate-in fade-in zoom-in-95 duration-150 my-auto"
+        >
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-white/10">
           <div className="flex items-center space-x-2">
@@ -306,7 +314,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           </button>
         </div>
       </div>
-    </div>,
-    document.body
-  );
+    </div>
+  </div>,
+  document.body
+);
 };

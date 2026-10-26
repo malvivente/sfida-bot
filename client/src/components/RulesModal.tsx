@@ -33,14 +33,25 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
   const bottomOffset = isFullscreen ? 24 : 16;
 
   return createPortal(
-    <div
-      style={{ paddingTop: `${topOffset}px`, paddingBottom: `${bottomOffset}px` }}
-      className="fixed inset-0 bg-black/85 backdrop-blur-md z-[9999] flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
-    >
+    <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
+      {/* Fullscreen Backdrop: 100% viewport coverage */}
       <div
-        style={{ maxHeight: `calc(100dvh - ${topOffset + bottomOffset}px)` }}
-        className="bg-[#111420]/95 border border-white/15 rounded-3xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans"
+        onClick={() => {
+          triggerImpact('light');
+          onClose();
+        }}
+        className="fixed inset-0 bg-black/85 backdrop-blur-md"
+      />
+
+      {/* Transparent Scrollable Container on top */}
+      <div
+        style={{ paddingTop: `${topOffset}px`, paddingBottom: `${bottomOffset}px` }}
+        className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
       >
+        <div
+          style={{ maxHeight: `calc(100dvh - ${topOffset + bottomOffset}px)` }}
+          className="bg-[#111420]/95 border border-white/15 rounded-3xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans my-auto"
+        >
         
         {/* Modal Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
@@ -208,7 +219,8 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         </div>
 
       </div>
-    </div>,
-    document.body
-  );
+    </div>
+  </div>,
+  document.body
+);
 };

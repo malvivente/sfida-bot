@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare, ArrowLeft, Target, Users, Clock } from 'lucide-react';
 import { MatchData, GameType, FriendUser } from '../types/index.js';
 import { GAMES_METADATA, GameMetadata, QUICK_GAMES, STRATEGY_GAMES } from '../config/gamesConfig.js';
@@ -210,6 +211,16 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [sectionView]);
+
+  React.useEffect(() => {
+    if (showCreateModal || insufficientJoinMatch) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showCreateModal, insufficientJoinMatch]);
 
   React.useEffect(() => {
     const handleResetHome = () => {
@@ -1420,68 +1431,83 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       )}
 
       {/* Insufficient Balance to Join Modal */}
-      {insufficientJoinMatch && (
-        <div
-          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
-        >
+      {insufficientJoinMatch && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
           <div
-            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-[#181b29] border border-rose-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto"
+            onClick={() => setInsufficientJoinMatch(null)}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md"
+          />
+          <div
+            style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+            className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
           >
-            <h3 className="text-sm font-heading font-extrabold text-white flex items-center space-x-2">
-              <AlertCircle className="w-4 h-4 text-rose-400" />
-              <span>{t('lobby.insufficientModalTitle')}</span>
-            </h3>
+            <div
+              style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+              className="bg-[#181b29] border border-rose-500/40 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 overflow-y-auto my-auto"
+            >
+              <h3 className="text-sm font-heading font-extrabold text-white flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-400" />
+                <span>{t('lobby.insufficientModalTitle')}</span>
+              </h3>
 
-            <p className="text-xs text-slate-300 font-sans leading-relaxed">
-              {t('lobby.insufficientJoinDesc', {
-                required: insufficientJoinMatch.required,
-                current: currentBal.toFixed(2),
-              })}
-            </p>
+              <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                {t('lobby.insufficientJoinDesc', {
+                  required: insufficientJoinMatch.required,
+                  current: currentBal.toFixed(2),
+                })}
+              </p>
 
-            <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between text-xs font-sans">
-              <span className="text-slate-400">{t('lobby.missingDeposit')}</span>
-              <span className="font-bold text-rose-400 flex items-center space-x-1">
-                <span>{insufficientJoinMatch.missing}</span>
-                <GramIcon className="w-3.5 h-3.5 text-rose-400" />
-              </span>
-            </div>
+              <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between text-xs font-sans">
+                <span className="text-slate-400">{t('lobby.missingDeposit')}</span>
+                <span className="font-bold text-rose-400 flex items-center space-x-1">
+                  <span>{insufficientJoinMatch.missing}</span>
+                  <GramIcon className="w-3.5 h-3.5 text-rose-400" />
+                </span>
+              </div>
 
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setInsufficientJoinMatch(null)}
-                className="flex-1 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-heading font-bold text-slate-400 hover:text-white"
-              >
-                {t('lobby.cancelBtn')}
-              </button>
-              <button
-                onClick={() => {
-                  const missing = insufficientJoinMatch.missing;
-                  setInsufficientJoinMatch(null);
-                  onOpenDeposit?.(missing);
-                }}
-                className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
-              >
-                <ArrowDownLeft className="w-4 h-4" />
-                <span>{t('lobby.depositGram')}</span>
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setInsufficientJoinMatch(null)}
+                  className="flex-1 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-heading font-bold text-slate-400 hover:text-white"
+                >
+                  {t('lobby.cancelBtn')}
+                </button>
+                <button
+                  onClick={() => {
+                    const missing = insufficientJoinMatch.missing;
+                    setInsufficientJoinMatch(null);
+                    onOpenDeposit?.(missing);
+                  }}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 flex items-center justify-center space-x-1.5"
+                >
+                  <ArrowDownLeft className="w-4 h-4" />
+                  <span>{t('lobby.depositGram')}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Create Match Modal */}
-      {showCreateModal && (
-        <div
-          style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
-        >
+      {showCreateModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
           <div
-            style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-            className="bg-[#161826] border border-white/10 rounded-3xl max-w-sm w-full shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            onClick={() => {
+              triggerImpact('light');
+              setShowCreateModal(false);
+            }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md"
+          />
+          <div
+            style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+            className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
           >
+            <div
+              style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+              className="bg-[#161826] border border-white/10 rounded-3xl max-w-sm w-full shadow-2xl flex flex-col my-auto overflow-hidden animate-in zoom-in-95 duration-150"
+            >
             {/* Modal Header */}
             <div className="p-4 sm:p-5 pb-3 border-b border-white/10 flex items-start justify-between shrink-0 bg-white/[0.02]">
               <div>
@@ -2121,7 +2147,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
             </div>
           </div>
         </div>
-      )}
+      </div>,
+      document.body
+    )}
     </div>
   );
 };

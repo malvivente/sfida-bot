@@ -42,14 +42,25 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
   const isActive = currentJackpotNum >= 5.0;
 
   return createPortal(
-    <div
-      style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
-      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200"
-    >
+    <div className="fixed inset-0 z-[9999] overflow-hidden select-none animate-in fade-in duration-200">
+      {/* Fullscreen Backdrop: 100% viewport coverage */}
       <div
-        style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
-        className="bg-[#121520] border border-amber-400/40 rounded-3xl max-w-sm w-full shadow-[0_0_30px_rgba(245,158,11,0.25)] flex flex-col my-auto overflow-hidden animate-in zoom-in-95 duration-150 font-sans"
+        onClick={() => {
+          triggerImpact('light');
+          onClose();
+        }}
+        className="fixed inset-0 bg-black/85 backdrop-blur-md"
+      />
+
+      {/* Transparent Scrollable Container on top */}
+      <div
+        style={{ paddingTop: `${modalTopOffset}px`, paddingBottom: `${modalBottomOffset}px` }}
+        className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-4 overflow-y-auto"
       >
+        <div
+          style={{ maxHeight: `calc(100dvh - ${modalTopOffset + modalBottomOffset}px)` }}
+          className="bg-[#121520] border border-amber-400/40 rounded-3xl max-w-sm w-full shadow-[0_0_30px_rgba(245,158,11,0.25)] flex flex-col my-auto overflow-hidden animate-in zoom-in-95 duration-150 font-sans"
+        >
         {/* Modal Header */}
         <div className="p-4 sm:p-5 pb-3 border-b border-white/10 flex items-start justify-between shrink-0 bg-gradient-to-r from-amber-500/10 via-purple-950/30 to-amber-500/10">
           <div className="flex items-center space-x-3">
@@ -226,7 +237,8 @@ export const TrustJackpotModal: React.FC<TrustJackpotModalProps> = ({
           )}
         </div>
       </div>
-    </div>,
-    document.body
-  );
+    </div>
+  </div>,
+  document.body
+);
 };
