@@ -247,7 +247,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_quick"
-            className="absolute right-1 sm:right-2.5 top-[40%] -translate-y-1/2 w-20 sm:w-24 max-h-[55%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute right-1 sm:right-2.5 top-[44%] -translate-y-1/2 w-[105px] sm:w-[120px] max-h-[66%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -273,7 +273,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="games_vs_bot"
-            className="absolute right-1.5 sm:right-3 top-[40%] -translate-y-1/2 w-20 sm:w-24 max-h-[55%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute right-1.5 sm:right-3 top-[43%] -translate-y-1/2 w-[110px] sm:w-[124px] max-h-[66%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -299,7 +299,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="casino_house"
-            className="absolute right-1.5 sm:right-3 top-[40%] -translate-y-1/2 w-20 sm:w-24 max-h-[55%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute right-1.5 sm:right-3 top-[42%] -translate-y-1/2 w-[105px] sm:w-[120px] max-h-[66%] h-auto opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
@@ -329,7 +329,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
           {/* Section Artwork Image */}
           <CardBackgroundArt
             type="menu_spectate"
-            className="absolute right-1 sm:right-2.5 top-[40%] -translate-y-1/2 w-20 sm:w-24 max-h-[55%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
+            className="absolute right-1 sm:right-2.5 top-[43%] -translate-y-1/2 w-[114px] sm:w-[128px] max-h-[66%] h-auto opacity-95 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
           />
 
           {/* Card Content: Title Only */}
