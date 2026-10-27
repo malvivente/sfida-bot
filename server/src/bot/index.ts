@@ -214,16 +214,21 @@ export function createTelegramBot(token?: string): Bot {
 
     let welcomeText = `${botT(lang, 'welcome_header')}\n\n${botT(lang, 'welcome_body')}\n\n`;
 
-    if (parsed.matchId) {
+    if (parsed.mode === 'spectate' && parsed.matchId) {
+      welcomeText = botT(lang, 'start_spectate_body', { matchId: parsed.matchId });
+    } else if (parsed.matchId) {
       welcomeText = botT(lang, 'start_invite_body', { matchId: parsed.matchId });
     } else if (parsed.recruiterWallet) {
       const truncatedRecruiter = `${parsed.recruiterWallet.slice(0, 8)}...${parsed.recruiterWallet.slice(-6)}`;
       welcomeText += botT(lang, 'welcome_recruited', { recruiter: truncatedRecruiter });
     }
 
-    const buttonLabel = parsed.matchId
-      ? botT(lang, 'btn_enter_duel')
-      : botT(lang, 'btn_enter_arena');
+    let buttonLabel = botT(lang, 'btn_enter_arena');
+    if (parsed.mode === 'spectate' && parsed.matchId) {
+      buttonLabel = botT(lang, 'btn_spectate_duel');
+    } else if (parsed.matchId) {
+      buttonLabel = botT(lang, 'btn_enter_duel');
+    }
 
     const isPrivateChat = ctx.chat?.type === 'private';
     const botUsername = await getBotUsername();

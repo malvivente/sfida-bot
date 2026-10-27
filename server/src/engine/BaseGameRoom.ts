@@ -752,7 +752,8 @@ export abstract class BaseGameRoom {
           this.bettingTimer = undefined;
         }
         this.bettingCountdownSeconds = undefined;
-        // Bets remain active throughout the match even if only one side was backed
+        // Check if only one side (or single bettor) placed a bet; if so, refund immediately
+        this.checkAndRefundOneSidedSpectatorBets();
         this.onGameStart();
       }
     }, 1000);
@@ -763,21 +764,25 @@ export abstract class BaseGameRoom {
 
     const hasBetsA = this.totalBetsA > 0n;
     const hasBetsB = this.totalBetsB > 0n;
+    const hasBetsC = this.totalBetsC > 0n;
+    const hasBetsD = this.totalBetsD > 0n;
     const hasBetsX = this.totalBetsX > 0n;
-    const distinctSides = (hasBetsA ? 1 : 0) + (hasBetsB ? 1 : 0) + (hasBetsX ? 1 : 0);
+    const distinctSides = (hasBetsA ? 1 : 0) + (hasBetsB ? 1 : 0) + (hasBetsC ? 1 : 0) + (hasBetsD ? 1 : 0) + (hasBetsX ? 1 : 0);
 
     // If all bets are placed on only 1 side (or only 1 bettor), there is no opposing pool to win against!
     // Immediately refund stakes and fees so users aren't locked in or losing fees.
     if (distinctSides <= 1) {
-      console.log(`[BaseGameRoom] Match #${this.matchId}: Only ${distinctSides} side backed by spectators. Refunding ${this.spectatorBets.length} bet(s).`);
+      console.log(`[BaseGameRoom] Match #${this.matchId}: Only ${distinctSides} side backed by spectators (${this.spectatorBets.length} bet(s)). Refunding all bets.`);
 
       const refundedSettlements: Array<{
         walletAddress: string;
         telegramId?: string;
         target: string;
+        amountGram: number;
         won: boolean;
         payoutGram: string;
         refunded: boolean;
+        refundReasonKey?: string;
       }> = [];
 
       for (const bet of this.spectatorBets) {
@@ -786,9 +791,11 @@ export abstract class BaseGameRoom {
           walletAddress: bet.walletAddress,
           telegramId: bet.telegramId,
           target: bet.target,
+          amountGram: bet.amountGram,
           won: false,
           payoutGram: refundTotal,
           refunded: true,
+          refundReasonKey: 'spectator_refund_reason_one_sided',
         });
 
         dbService.refundUserBalance(
@@ -817,15 +824,21 @@ export abstract class BaseGameRoom {
       this.spectatorBets = [];
       this.totalBetsA = 0n;
       this.totalBetsB = 0n;
+      this.totalBetsC = 0n;
+      this.totalBetsD = 0n;
       this.totalBetsX = 0n;
 
       this.broadcast({
         type: 'ODDS_UPDATE',
         totalBetsA: '0',
         totalBetsB: '0',
+        totalBetsC: '0',
+        totalBetsD: '0',
         totalBetsX: '0',
         oddsA: this.calculateOdds('A'),
         oddsB: this.calculateOdds('B'),
+        oddsC: this.calculateOdds('C'),
+        oddsD: this.calculateOdds('D'),
         oddsX: this.calculateOdds('X'),
       });
     }
@@ -1039,67 +1052,112 @@ export abstract class BaseGameRoom {
       won: boolean;
       payoutGram: string;
       refunded?: boolean;
+      refundReasonKey?: string;
       amountGram?: number;
       odds?: number;
       feePaidGram?: number;
     }> = [];
 
     if (totalPoolNano > 0n && this.spectatorBets.length > 0) {
-      const { spectatorRakePercent } = feeConfig.getConfig();
-      const winningBets = this.spectatorBets.filter((b) => b.target === winningSide);
-      let totalWinningBetsNano = 0n;
-      if (winningSide === 'A') totalWinningBetsNano = this.totalBetsA;
-      else if (winningSide === 'B') totalWinningBetsNano = this.totalBetsB;
-      else if (winningSide === 'C') totalWinningBetsNano = this.totalBetsC;
-      else if (winningSide === 'D') totalWinningBetsNano = this.totalBetsD;
-      else if (winningSide === 'X') totalWinningBetsNano = this.totalBetsX;
+      // 1. Check if the pool is one-sided (or only 1 bettor in total): no opposing bets to contest!
+      const hasBetsA = this.totalBetsA > 0n;
+      const hasBetsB = this.totalBetsB > 0n;
+      const hasBetsC = this.totalBetsC > 0n;
+      const hasBetsD = this.totalBetsD > 0n;
+      const hasBetsX = this.totalBetsX > 0n;
+      const distinctSides = (hasBetsA ? 1 : 0) + (hasBetsB ? 1 : 0) + (hasBetsC ? 1 : 0) + (hasBetsD ? 1 : 0) + (hasBetsX ? 1 : 0);
 
-      const specRakeRate = (spectatorRakePercent || 0) / 100;
-      const totalPoolGram = Number(totalPoolNano) / 1e9;
-      const specRakeGram = totalPoolGram * specRakeRate;
-      const distributablePoolGram = totalPoolGram - specRakeGram;
-
-      if (specRakeGram > 0) {
-        dbService.creditTreasury(specRakeGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString()).catch((err) => {
-          console.error(`[BaseGameRoom] Error crediting spectator rake:`, err);
-        });
-      }
-
-      const defaultOdds = this.gameType === 'poker'
-        ? (((this as any).maxPlayers || (this as any).seats?.length || 2) === 4 ? 3.8 : (((this as any).maxPlayers || (this as any).seats?.length || 2) === 3 ? 2.85 : 1.95))
-        : (this.gameType === 'split' ? 2.8 : 2.0);
-
-      if (winningBets.length > 0 && totalWinningBetsNano > 0n) {
-        const winningBetsGram = Number(totalWinningBetsNano) / 1e9;
+      if (distinctSides <= 1) {
+        console.log(`[BaseGameRoom] settleSpectatorBets for match #${this.matchId}: Only ${distinctSides} side backed (${this.spectatorBets.length} bet(s)). Refunding all spectator bets.`);
         for (const bet of this.spectatorBets) {
-          if (bet.target === winningSide) {
-            const share = bet.amountGram / winningBetsGram;
-            const poolPayout = distributablePoolGram * share;
-            const effectiveOdds = bet.odds && bet.odds > 1 ? bet.odds : defaultOdds;
-            const guaranteedPayout = bet.amountGram * effectiveOdds;
-            const finalPayout = Math.max(poolPayout, guaranteedPayout);
-            const payoutGram = finalPayout.toFixed(2);
+          const refundTotal = (bet.amountGram + (bet.feePaidGram || 0)).toFixed(2);
+          spectatorSettlements.push({
+            walletAddress: bet.walletAddress,
+            telegramId: bet.telegramId,
+            target: bet.target,
+            amountGram: bet.amountGram,
+            odds: bet.odds,
+            feePaidGram: bet.feePaidGram,
+            won: false,
+            payoutGram: refundTotal,
+            refunded: true,
+            refundReasonKey: 'spectator_refund_reason_one_sided',
+          });
+          dbService.refundUserBalance(
+            bet.walletAddress,
+            refundTotal,
+            `Refund for spectator bet on match #${this.matchId} (one-sided pool, no opposing bets)`,
+            bet.telegramId
+          ).catch((err) => {
+            console.error(`[BaseGameRoom] Error refunding spectator ${bet.walletAddress}:`, err);
+          });
+        }
+      } else {
+        const { spectatorRakePercent } = feeConfig.getConfig();
+        const winningBets = this.spectatorBets.filter((b) => b.target === winningSide);
+        let totalWinningBetsNano = 0n;
+        if (winningSide === 'A') totalWinningBetsNano = this.totalBetsA;
+        else if (winningSide === 'B') totalWinningBetsNano = this.totalBetsB;
+        else if (winningSide === 'C') totalWinningBetsNano = this.totalBetsC;
+        else if (winningSide === 'D') totalWinningBetsNano = this.totalBetsD;
+        else if (winningSide === 'X') totalWinningBetsNano = this.totalBetsX;
 
-            spectatorSettlements.push({
-              walletAddress: bet.walletAddress,
-              telegramId: bet.telegramId,
-              target: bet.target,
-              amountGram: bet.amountGram,
-              odds: bet.odds,
-              feePaidGram: bet.feePaidGram,
-              won: true,
-              payoutGram,
-            });
-            dbService.creditUserBalance(
-              bet.walletAddress,
-              payoutGram,
-              'MATCH_WIN',
-              `Won spectator bet on match #${this.matchId}`,
-              bet.telegramId
-            ).catch((err) => {
-              console.error(`[BaseGameRoom] Error crediting spectator winner ${bet.walletAddress}:`, err);
-            });
-          } else {
+        const specRakeRate = (spectatorRakePercent || 0) / 100;
+        const totalPoolGram = Number(totalPoolNano) / 1e9;
+        const specRakeGram = totalPoolGram * specRakeRate;
+        const distributablePoolGram = totalPoolGram - specRakeGram;
+
+        if (specRakeGram > 0) {
+          dbService.creditTreasury(specRakeGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString()).catch((err) => {
+            console.error(`[BaseGameRoom] Error crediting spectator rake:`, err);
+          });
+        }
+
+        if (winningBets.length > 0 && totalWinningBetsNano > 0n) {
+          const winningBetsGram = Number(totalWinningBetsNano) / 1e9;
+          for (const bet of this.spectatorBets) {
+            if (bet.target === winningSide) {
+              const share = bet.amountGram / winningBetsGram;
+              const poolPayout = distributablePoolGram * share;
+              // Parimutuel payout from the pool (with at least original stake return)
+              const finalPayout = Math.max(poolPayout, bet.amountGram);
+              const payoutGram = finalPayout.toFixed(2);
+
+              spectatorSettlements.push({
+                walletAddress: bet.walletAddress,
+                telegramId: bet.telegramId,
+                target: bet.target,
+                amountGram: bet.amountGram,
+                odds: bet.odds,
+                feePaidGram: bet.feePaidGram,
+                won: true,
+                payoutGram,
+              });
+              dbService.creditUserBalance(
+                bet.walletAddress,
+                payoutGram,
+                'MATCH_WIN',
+                `Won spectator bet on match #${this.matchId}`,
+                bet.telegramId
+              ).catch((err) => {
+                console.error(`[BaseGameRoom] Error crediting spectator winner ${bet.walletAddress}:`, err);
+              });
+            } else {
+              spectatorSettlements.push({
+                walletAddress: bet.walletAddress,
+                telegramId: bet.telegramId,
+                target: bet.target,
+                amountGram: bet.amountGram,
+                odds: bet.odds,
+                feePaidGram: bet.feePaidGram,
+                won: false,
+                payoutGram: '0.00',
+              });
+            }
+          }
+        } else {
+          // No winners on winning side: all placed bets on other sides are lost
+          for (const bet of this.spectatorBets) {
             spectatorSettlements.push({
               walletAddress: bet.walletAddress,
               telegramId: bet.telegramId,
@@ -1111,25 +1169,11 @@ export abstract class BaseGameRoom {
               payoutGram: '0.00',
             });
           }
-        }
-      } else {
-        // No winners on winning side: all placed bets on other sides are lost
-        for (const bet of this.spectatorBets) {
-          spectatorSettlements.push({
-            walletAddress: bet.walletAddress,
-            telegramId: bet.telegramId,
-            target: bet.target,
-            amountGram: bet.amountGram,
-            odds: bet.odds,
-            feePaidGram: bet.feePaidGram,
-            won: false,
-            payoutGram: '0.00',
-          });
-        }
-        if (distributablePoolGram > 0) {
-          dbService.creditTreasury(distributablePoolGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString()).catch((err) => {
-            console.error('[BaseGameRoom] Error crediting unclaimed spectator pool to treasury:', err);
-          });
+          if (distributablePoolGram > 0) {
+            dbService.creditTreasury(distributablePoolGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString()).catch((err) => {
+              console.error('[BaseGameRoom] Error crediting unclaimed spectator pool to treasury:', err);
+            });
+          }
         }
       }
     }
@@ -1173,6 +1217,7 @@ export abstract class BaseGameRoom {
       won: boolean;
       payoutGram: string;
       refunded?: boolean;
+      refundReasonKey?: string;
       amountGram?: number;
       odds?: number;
       feePaidGram?: number;
@@ -1340,7 +1385,8 @@ export abstract class BaseGameRoom {
               profit,
             });
           } else if (settlement.refunded) {
-            const refundReason = botT(lang, 'spectator_refund_reason_no_winners');
+            const reasonKey = settlement.refundReasonKey || 'spectator_refund_reason_one_sided';
+            const refundReason = botT(lang, reasonKey);
             rawMsgText = botT(lang, 'spectator_notification_refund', {
               game: escapeHtml(gameTitle),
               matchId: this.matchId.toString(),

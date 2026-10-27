@@ -681,7 +681,10 @@ export class SplitStealRoom extends BaseGameRoom {
       won: boolean;
       payoutGram: string;
       refunded?: boolean;
+      refundReasonKey?: string;
       amountGram?: number;
+      odds?: number;
+      feePaidGram?: number;
     }> = [];
 
     if (totalSpecPoolGram > 0 && this.spectatorBets.length > 0) {
@@ -706,59 +709,15 @@ export class SplitStealRoom extends BaseGameRoom {
         }
       } else {
         // Winning side is 'A', 'B', or 'X'
-        const { spectatorRakePercent } = feeConfig.getConfig();
-        const specRakeRate = (spectatorRakePercent || 0) / 100;
-        const specRakeGram = totalSpecPoolGram * specRakeRate;
-        const distributableSpecGram = totalSpecPoolGram - specRakeGram;
+        const hasBetsA = this.totalBetsA > 0n;
+        const hasBetsB = this.totalBetsB > 0n;
+        const hasBetsX = this.totalBetsX > 0n;
+        const distinctSides = (hasBetsA ? 1 : 0) + (hasBetsB ? 1 : 0) + (hasBetsX ? 1 : 0);
 
-        if (specRakeGram > 0) {
-          await dbService.creditTreasury(specRakeGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString());
-        }
-
-        const winningBets = this.spectatorBets.filter((b) => b.target === winningSpectatorSide);
-        const winningBetsTotalNano =
-          winningSpectatorSide === 'A'
-            ? this.totalBetsA
-            : winningSpectatorSide === 'B'
-            ? this.totalBetsB
-            : this.totalBetsX;
-        const winningBetsGram = Number(winningBetsTotalNano) / 1e9;
-
-        if (winningBets.length > 0 && winningBetsGram > 0) {
+        if (distinctSides <= 1) {
+          console.log(`[SplitStealRoom] Match #${this.matchId}: Only ${distinctSides} side backed. Refunding all spectator bets.`);
           for (const bet of this.spectatorBets) {
-            if (bet.target === winningSpectatorSide) {
-              const share = bet.amountGram / winningBetsGram;
-              const payoutGram = (distributableSpecGram * share).toFixed(2);
-              spectatorSettlements.push({
-                walletAddress: bet.walletAddress,
-                telegramId: bet.telegramId,
-                target: bet.target,
-                amountGram: bet.amountGram,
-                won: true,
-                payoutGram,
-              });
-              await dbService.creditUserBalance(
-                bet.walletAddress,
-                payoutGram,
-                'MATCH_WIN',
-                `Won 1-X-2 spectator bet (${winningSpectatorSide}) on Split or Steal #${this.matchId}`,
-                bet.telegramId
-              );
-            } else {
-              spectatorSettlements.push({
-                walletAddress: bet.walletAddress,
-                telegramId: bet.telegramId,
-                target: bet.target,
-                amountGram: bet.amountGram,
-                won: false,
-                payoutGram: '0.00',
-              });
-            }
-          }
-        } else {
-          // No winners on winning side: refund all spectators
-          for (const bet of this.spectatorBets) {
-            const refundAmount = bet.amountGram.toFixed(2);
+            const refundAmount = (bet.amountGram + (bet.feePaidGram || 0)).toFixed(2);
             spectatorSettlements.push({
               walletAddress: bet.walletAddress,
               telegramId: bet.telegramId,
@@ -767,13 +726,87 @@ export class SplitStealRoom extends BaseGameRoom {
               won: false,
               payoutGram: refundAmount,
               refunded: true,
+              refundReasonKey: 'spectator_refund_reason_one_sided',
             });
             await dbService.refundUserBalance(
               bet.walletAddress,
               refundAmount,
-              `Refund for spectator bet on Split or Steal match #${this.matchId} (no winners on side ${winningSpectatorSide})`,
+              `Refund for spectator bet on Split or Steal match #${this.matchId} (one-sided pool, no opposing bets)`,
               bet.telegramId
             );
+          }
+        } else {
+          const { spectatorRakePercent } = feeConfig.getConfig();
+          const specRakeRate = (spectatorRakePercent || 0) / 100;
+          const specRakeGram = totalSpecPoolGram * specRakeRate;
+          const distributableSpecGram = totalSpecPoolGram - specRakeGram;
+
+          if (specRakeGram > 0) {
+            await dbService.creditTreasury(specRakeGram.toFixed(2), 'SPECTATOR_RAKE', this.matchId.toString());
+          }
+
+          const winningBets = this.spectatorBets.filter((b) => b.target === winningSpectatorSide);
+          const winningBetsTotalNano =
+            winningSpectatorSide === 'A'
+              ? this.totalBetsA
+              : winningSpectatorSide === 'B'
+              ? this.totalBetsB
+              : this.totalBetsX;
+          const winningBetsGram = Number(winningBetsTotalNano) / 1e9;
+
+          if (winningBets.length > 0 && winningBetsGram > 0) {
+            for (const bet of this.spectatorBets) {
+              if (bet.target === winningSpectatorSide) {
+                const share = bet.amountGram / winningBetsGram;
+                const poolPayout = distributableSpecGram * share;
+                const payoutGram = Math.max(poolPayout, bet.amountGram).toFixed(2);
+                spectatorSettlements.push({
+                  walletAddress: bet.walletAddress,
+                  telegramId: bet.telegramId,
+                  target: bet.target,
+                  amountGram: bet.amountGram,
+                  won: true,
+                  payoutGram,
+                });
+                await dbService.creditUserBalance(
+                  bet.walletAddress,
+                  payoutGram,
+                  'MATCH_WIN',
+                  `Won 1-X-2 spectator bet (${winningSpectatorSide}) on Split or Steal #${this.matchId}`,
+                  bet.telegramId
+                );
+              } else {
+                spectatorSettlements.push({
+                  walletAddress: bet.walletAddress,
+                  telegramId: bet.telegramId,
+                  target: bet.target,
+                  amountGram: bet.amountGram,
+                  won: false,
+                  payoutGram: '0.00',
+                });
+              }
+            }
+          } else {
+            // No winners on winning side: refund all spectators
+            for (const bet of this.spectatorBets) {
+              const refundAmount = bet.amountGram.toFixed(2);
+              spectatorSettlements.push({
+                walletAddress: bet.walletAddress,
+                telegramId: bet.telegramId,
+                target: bet.target,
+                amountGram: bet.amountGram,
+                won: false,
+                payoutGram: refundAmount,
+                refunded: true,
+                refundReasonKey: 'spectator_refund_reason_no_winners',
+              });
+              await dbService.refundUserBalance(
+                bet.walletAddress,
+                refundAmount,
+                `Refund for spectator bet on Split or Steal match #${this.matchId} (no winners on side ${winningSpectatorSide})`,
+                bet.telegramId
+              );
+            }
           }
         }
       }

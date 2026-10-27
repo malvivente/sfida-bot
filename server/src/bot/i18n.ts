@@ -180,11 +180,17 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyBag}} <b>Wager:</b> {wager} GRAM\n\n` +
       `{{emoji.lightning}} <i>Enter the Arena now to start playing!</i>`,
     btn_enter_duel: `{{emoji.swords}} ENTER DUEL`,
+    btn_spectate_duel: `{{emoji.eye}} WATCH & BET`,
     start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • MATCH INVITE</b>`,
     start_invite_body:
       `{{emoji.swords}} <b>SFIDA ARENA • MATCH INVITE</b>\n\n` +
       `{{emoji.controller}} You have been invited to a duel in room <b>#{matchId}</b>!\n\n` +
       `{{emoji.lightning}} <i>Tap below to enter and play:</i>`,
+    start_spectate_title: `{{emoji.eye}} <b>SFIDA ARENA • SPECTATOR INVITE</b>`,
+    start_spectate_body:
+      `{{emoji.eye}} <b>SFIDA ARENA • SPECTATOR INVITE</b>\n\n` +
+      `{{emoji.controller}} You have been invited to spectate and bet on the match in room <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>Tap below to watch live and place your bets:</i>`,
     friend_request_msg:
       `{{emoji.handshake}} <b>SFIDA ARENA • FRIEND REQUEST!</b>\n\n` +
       `<b>{senderName}</b> sent you a friend request on Sfida Arena!\n\n` +
@@ -385,11 +391,17 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyBag}} <b>Posta in palio:</b> {wager} GRAM\n\n` +
       `{{emoji.lightning}} <i>Entra subito nell'Arena per iniziare a giocare!</i>`,
     btn_enter_duel: `{{emoji.swords}} ENTRA NELLA SFIDA`,
+    btn_spectate_duel: `{{emoji.eye}} GUARDA & SCOMMETTI`,
     start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • INVITO A GIOCARE</b>`,
     start_invite_body:
       `{{emoji.swords}} <b>SFIDA ARENA • INVITO A GIOCARE</b>\n\n` +
       `{{emoji.controller}} Sei stato invitato a una sfida nella stanza <b>#{matchId}</b>!\n\n` +
       `{{emoji.lightning}} <i>Premi il pulsante qui sotto per entrare e giocare:</i>`,
+    start_spectate_title: `{{emoji.eye}} <b>SFIDA ARENA • INVITO DA SPETTATORE</b>`,
+    start_spectate_body:
+      `{{emoji.eye}} <b>SFIDA ARENA • INVITO DA SPETTATORE</b>\n\n` +
+      `{{emoji.controller}} Sei stato invitato a guardare e scommettere sul match nella stanza <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>Premi il pulsante qui sotto per aprire la diretta e scommettere:</i>`,
     friend_request_msg:
       `{{emoji.handshake}} <b>SFIDA ARENA • RICHIESTA DI AMICIZIA!</b>\n\n` +
       `<b>{senderName}</b> ti ha inviato una richiesta di amicizia su Sfida Arena!\n\n` +
@@ -549,11 +561,17 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyBag}} <b>Ставка:</b> {wager} GRAM\n\n` +
       `{{emoji.lightning}} <i>Заходите на Арену прямо сейчас!</i>`,
     btn_enter_duel: `{{emoji.swords}} ВОЙТИ В ДУЭЛЬ`,
+    btn_spectate_duel: `{{emoji.eye}} СМОТРЕТЬ И СТАВИТЬ`,
     start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • ПРИГЛАШЕНИЕ В ИГРУ</b>`,
     start_invite_body:
       `{{emoji.swords}} <b>SFIDA ARENA • ПРИГЛАШЕНИЕ В ИГРУ</b>\n\n` +
       `{{emoji.controller}} Вас пригласили на дуэль в комнату <b>#{matchId}</b>!\n\n` +
       `{{emoji.lightning}} <i>Нажмите кнопку ниже, чтобы войти в игру:</i>`,
+    start_spectate_title: `{{emoji.eye}} <b>SFIDA ARENA • ПРИГЛАШЕНИЕ ЗРИТЕЛЯ</b>`,
+    start_spectate_body:
+      `{{emoji.eye}} <b>SFIDA ARENA • ПРИГЛАШЕНИЕ ЗРИТЕЛЯ</b>\n\n` +
+      `{{emoji.controller}} Вас пригласили смотреть и делать ставки на матч в комнате <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>Нажмите кнопку ниже, чтобы открыть трансляцию матча:</i>`,
     friend_request_msg:
       `{{emoji.handshake}} <b>SFIDA ARENA • ЗАПРОС В ДРУЗЬЯ!</b>\n\n` +
       `<b>{senderName}</b> отправил вам запрос в друзья в Sfida Arena!\n\n` +
@@ -714,11 +732,17 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyBag}} <b>赌注:</b> {wager} GRAM\n\n` +
       `{{emoji.lightning}} <i>立即进入竞技场准备开战！</i>`,
     btn_enter_duel: `{{emoji.swords}} 进入对决`,
+    btn_spectate_duel: `{{emoji.eye}} 观战与下注`,
     start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • 游戏邀请</b>`,
     start_invite_body:
       `{{emoji.swords}} <b>SFIDA ARENA • 游戏邀请</b>\n\n` +
       `{{emoji.controller}} 你受邀加入房间 <b>#{matchId}</b> 进行对决！\n\n` +
       `{{emoji.lightning}} <i>点击下方按钮进入并开始游戏：</i>`,
+    start_spectate_title: `{{emoji.eye}} <b>SFIDA ARENA • 观战邀请</b>`,
+    start_spectate_body:
+      `{{emoji.eye}} <b>SFIDA ARENA • 观战邀请</b>\n\n` +
+      `{{emoji.controller}} 您受邀观战并对房间 <b>#{matchId}</b> 的比赛进行下注！\n\n` +
+      `{{emoji.lightning}} <i>点击下方按钮进入实时观战：</i>`,
     friend_request_msg:
       `{{emoji.handshake}} <b>SFIDA ARENA • 好友申请！</b>\n\n` +
       `<b>{senderName}</b> 在 Sfida Arena 向你发送了好友申请！\n\n` +
@@ -879,11 +903,17 @@ export const BOT_TRANSLATIONS: Record<BotLanguage, Record<string, string>> = {
       `{{emoji.moneyBag}} <b>الرهان:</b> {wager} GRAM\n\n` +
       `{{emoji.lightning}} <i>ادخل الساحة الآن للانضمام للنزال!</i>`,
     btn_enter_duel: `{{emoji.swords}} دخول المبارزة`,
+    btn_spectate_duel: `{{emoji.eye}} مشاهدة ومراهنة`,
     start_invite_title: `{{emoji.swords}} <b>SFIDA ARENA • دعوة للعب</b>`,
     start_invite_body:
       `{{emoji.swords}} <b>SFIDA ARENA • دعوة للعب</b>\n\n` +
       `{{emoji.controller}} تمت دعوتك لمبارزة في الغرفة <b>#{matchId}</b>!\n\n` +
       `{{emoji.lightning}} <i>اضغط بالأسفل للدخول وبدء اللعب:</i>`,
+    start_spectate_title: `{{emoji.eye}} <b>SFIDA ARENA • دعوة متفرج</b>`,
+    start_spectate_body:
+      `{{emoji.eye}} <b>SFIDA ARENA • دعوة متفرج</b>\n\n` +
+      `{{emoji.controller}} تمت دعوتك لمشاهدة والمراهنة على النزال في الغرفة <b>#{matchId}</b>!\n\n` +
+      `{{emoji.lightning}} <i>اضغط بالأسفل لفتح البث المباشر للنزال:</i>`,
     friend_request_msg:
       `{{emoji.handshake}} <b>SFIDA ARENA • طلب صداقة!</b>\n\n` +
       `أرسل لك <b>{senderName}</b> طلب صداقة على Sfida Arena!\n\n` +
