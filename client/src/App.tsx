@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Swords } from 'lucide-react';
 import { Arena } from './pages/Arena.js';
 import { ReferralDashboard } from './pages/ReferralDashboard.js';
 import { Profile } from './pages/Profile.js';
@@ -91,10 +92,29 @@ export const App: React.FC = () => {
   const { userId, username, firstName, lastName, fullName, displayName, photoUrl } = useTelegram();
   const { userAddress } = useTonClashContract();
 
-  // Maintenance and Admin status state
-  const [isMaintenance, setIsMaintenance] = useState<boolean>(false);
-  const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState<string>('');
+  // Maintenance and Admin status state with instant synchronous localStorage hydration
+  const [isMaintenance, setIsMaintenance] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sfidabot_maintenance_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isUserAdmin, setIsUserAdmin] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sfidabot_is_admin') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string>(() => {
+    try {
+      return localStorage.getItem('sfidabot_maintenance_msg') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [isSystemChecked, setIsSystemChecked] = useState<boolean>(false);
 
   const checkSystemStatus = React.useCallback(async () => {
     try {
@@ -104,19 +124,40 @@ export const App: React.FC = () => {
       const res = await fetch(`${serverUrl}/api/system/status?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setIsMaintenance(!!data.maintenance);
-        setIsUserAdmin(!!data.isAdmin);
-        setMaintenanceMessage(data.message || '');
+        const maintenanceActive = !!data.maintenance;
+        const adminActive = !!data.isAdmin;
+        const msg = data.message || '';
+
+        setIsMaintenance(maintenanceActive);
+        setIsUserAdmin(adminActive);
+        setMaintenanceMessage(msg);
+
+        try {
+          localStorage.setItem('sfidabot_maintenance_mode', maintenanceActive ? 'true' : 'false');
+          localStorage.setItem('sfidabot_is_admin', adminActive ? 'true' : 'false');
+          if (msg) localStorage.setItem('sfidabot_maintenance_msg', msg);
+          else localStorage.removeItem('sfidabot_maintenance_msg');
+        } catch {}
       }
     } catch (err) {
       console.warn('[App] System status check error:', err);
+    } finally {
+      setIsSystemChecked(true);
     }
   }, [userId]);
 
   useEffect(() => {
     checkSystemStatus();
+    // Safety fallback: ensure loading gate unlocks after 2000ms even if network hangs
+    const safetyTimer = setTimeout(() => {
+      setIsSystemChecked(true);
+    }, 2000);
+
     const interval = setInterval(checkSystemStatus, 12000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(safetyTimer);
+      clearInterval(interval);
+    };
   }, [checkSystemStatus]);
 
   // In-bot balance state synced from localStorage / server
@@ -378,8 +419,30 @@ export const App: React.FC = () => {
     document.body.scrollTop = 0;
   }, [activeTab]);
 
+  // 1. If maintenance is active and user is not admin, immediately render MaintenanceScreen (no Home flash!)
   if (isMaintenance && !isUserAdmin) {
     return <MaintenanceScreen customMessage={maintenanceMessage} onRetry={checkSystemStatus} />;
+  }
+
+  // 2. Initial boot gate: do NOT render Home or allow user actions until system status is verified
+  if (!isSystemChecked) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#0e1015] flex flex-col items-center justify-center select-none font-sans">
+        <div className="relative flex flex-col items-center space-y-4 animate-in fade-in duration-150">
+          <div className="relative flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 via-purple-600/20 to-cyan-500/20 border border-white/10 p-0.5 flex items-center justify-center shadow-xl shadow-cyan-500/10">
+              <div className="w-full h-full rounded-[14px] bg-[#0e1015] flex items-center justify-center">
+                <Swords className="w-8 h-8 text-cyan-400 animate-pulse" />
+              </div>
+            </div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-cyan-400 animate-ping opacity-75" />
+          </div>
+          <span className="text-[11px] font-heading font-black tracking-widest text-slate-400 uppercase">
+            SFIDA ARENA
+          </span>
+        </div>
+      </div>
+    );
   }
 
   return (

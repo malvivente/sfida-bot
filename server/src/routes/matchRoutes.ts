@@ -267,6 +267,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'playerAAddress or telegramUserId is required' });
     }
 
+    if (dbService.isMaintenanceMode() && !dbService.isBotAdmin(body.telegramUserId)) {
+      return reply.status(503).send({
+        success: false,
+        error: 'MAINTENANCE_MODE',
+        message: dbService.getMaintenanceMessage() || 'Piattaforma in manutenzione programmata.',
+      });
+    }
+
     const matchId = BigInt(Date.now() % 1000000000);
     const wagerNano = body.wagerAmountNano ? BigInt(body.wagerAmountNano) : 1000000000n;
     const wagerGram = Number(wagerNano) / 1e9;
@@ -479,6 +487,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     if (!body.playerBAddress) {
       return reply.status(400).send({ error: 'playerBAddress is required' });
+    }
+
+    if (dbService.isMaintenanceMode() && !dbService.isBotAdmin(body.telegramUserId)) {
+      return reply.status(503).send({
+        success: false,
+        error: 'MAINTENANCE_MODE',
+        message: dbService.getMaintenanceMessage() || 'Piattaforma in manutenzione programmata.',
+      });
     }
 
     const room = roomManager.getRoom(id);
@@ -720,6 +736,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     if (!body.target) {
       return reply.status(400).send({ error: 'TARGET_REQUIRED', message: 'Target is required (A, B, or X).' });
+    }
+
+    if (dbService.isMaintenanceMode() && !dbService.isBotAdmin(body.telegramId)) {
+      return reply.status(503).send({
+        success: false,
+        error: 'MAINTENANCE_MODE',
+        message: dbService.getMaintenanceMessage() || 'Piattaforma in manutenzione programmata.',
+      });
     }
 
     const room = roomManager.getRoom(id);

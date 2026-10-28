@@ -45,6 +45,16 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
     const firstName = query.firstName || query.first_name || '';
     const photoUrl = query.photoUrl ? decodeURIComponent(query.photoUrl) : '';
 
+    if (dbService.isMaintenanceMode() && !dbService.isBotAdmin(telegramId)) {
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        code: 'MAINTENANCE_MODE',
+        message: dbService.getMaintenanceMessage() || 'Piattaforma in manutenzione programmata.',
+      }));
+      ws.close(1008, 'Maintenance mode');
+      return;
+    }
+
     const isAuthorizedParticipant = room.isPlayerParticipant(wallet, telegramId);
 
     if (role === 'player' || isAuthorizedParticipant) {
