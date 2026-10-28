@@ -11,27 +11,6 @@ interface CrashGameProps {
   onUpdateBalance: (delta: number) => void;
 }
 
-interface SimulatedPlayer {
-  id: string;
-  name: string;
-  avatar: string;
-  bet: number;
-  cashoutTarget: number;
-  cashedOutAt?: number;
-  isHero?: boolean;
-}
-
-const SIMULATED_PLAYERS_POOL = [
-  { name: 'Marco_99', avatar: '🦁', baseBet: 2.0 },
-  { name: 'CryptoWhale', avatar: '🐋', baseBet: 15.0 },
-  { name: 'Elena_K', avatar: '🦊', baseBet: 1.0 },
-  { name: 'TonSniper', avatar: '🎯', baseBet: 5.0 },
-  { name: 'Davide_B', avatar: '⚡', baseBet: 3.5 },
-  { name: 'Satoshi_7', avatar: '👑', baseBet: 10.0 },
-  { name: 'Alex_Roma', avatar: '🐺', baseBet: 1.5 },
-  { name: 'Luna_Ton', avatar: '🌙', baseBet: 4.0 },
-];
-
 const CYCLE_MS = 45000; // 45 seconds total round cycle
 const BETTING_WINDOW_MS = 30000; // 30 seconds betting window
 
@@ -40,7 +19,7 @@ function getCrashPointForRound(roundId: number): number {
   const seed = (roundId * 9301 + 49297) % 233280;
   const rand = seed / 233280;
 
-  // Casino house edge distribution: 10% instant crash (< 1.2x), 60% standard (1.2x - 3.5x), 30% high flyer
+  // Casino house edge distribution: 12% instant crash (< 1.2x), 60% standard (1.2x - 3.5x), 28% high flyer
   if (rand < 0.12) {
     return parseFloat((1.05 + rand * 1.2).toFixed(2));
   } else if (rand < 0.72) {
@@ -86,29 +65,6 @@ export const CrashGame: React.FC<CrashGameProps> = ({
   const currentRoundId = Math.floor(Date.now() / CYCLE_MS);
   const targetCrash = useMemo(() => getCrashPointForRound(currentRoundId), [currentRoundId]);
 
-  // Seeded simulated players for the current round
-  const [roomPlayers, setRoomPlayers] = useState<SimulatedPlayer[]>([]);
-
-  useEffect(() => {
-    // Generate deterministic player list for currentRoundId
-    const seed = (currentRoundId * 1103515245 + 12345) % 2147483648;
-    const players: SimulatedPlayer[] = SIMULATED_PLAYERS_POOL.map((p, i) => {
-      const pSeed = (seed + i * 37) % 1000;
-      const willCashout = pSeed % 100 < 75;
-      const target = willCashout
-        ? parseFloat((1.1 + (pSeed / 1000) * Math.max(0.2, targetCrash - 1.1)).toFixed(2))
-        : 999;
-      return {
-        id: `sim-${i}-${currentRoundId}`,
-        name: p.name,
-        avatar: p.avatar,
-        bet: p.baseBet,
-        cashoutTarget: target,
-      };
-    });
-    setRoomPlayers(players);
-  }, [currentRoundId, targetCrash]);
-
   // Main synchronized wall-clock loop (runs every ~50ms)
   useEffect(() => {
     const timer = setInterval(() => {
@@ -139,16 +95,6 @@ export const CrashGame: React.FC<CrashGameProps> = ({
           // FLYING
           setPhase('FLYING');
           setCurrentMultiplier(mult);
-
-          // Update simulated cashouts
-          setRoomPlayers((prev) =>
-            prev.map((p) => {
-              if (!p.cashedOutAt && mult >= p.cashoutTarget && mult < crashPoint) {
-                return { ...p, cashedOutAt: p.cashoutTarget };
-              }
-              return p;
-            })
-          );
         }
       }
     }, 45);
@@ -246,9 +192,9 @@ export const CrashGame: React.FC<CrashGameProps> = ({
             ))}
           </div>
 
-          <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono font-bold">
-            <Users className="w-3 h-3 text-cyan-400" />
-            <span>{roomPlayers.length + 14} in stanza</span>
+          <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping mr-0.5" />
+            <span>ROUND #{currentRoundId % 10000}</span>
           </div>
         </div>
 
@@ -279,8 +225,8 @@ export const CrashGame: React.FC<CrashGameProps> = ({
 
               <span className="text-[10px] text-slate-400 font-sans">
                 {hasActiveHeroBet
-                  ? 'Puntata confermata per questo volo!'
-                  : 'Piazza la tua puntata prima che l\'aereo decolli'}
+                  ? (t('casino.betPlaced') || 'Puntata confermata per questo volo!')
+                  : (t('casino.placeBetPrompt') || 'Piazza la tua puntata prima che l\'aereo decolli')}
               </span>
             </div>
           )}
@@ -331,7 +277,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                 </span>
                 {heroCashedOut && (
                   <span className="mt-1 px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold text-xs uppercase animate-in zoom-in-95">
-                    HAI INCASSATO A {heroBet?.cashedOutAt?.toFixed(2)}x!
+                    {t('casino.cashedOut') || 'INCASSATI'}: {heroBet?.cashedOutAt?.toFixed(2)}x!
                   </span>
                 )}
               </div>
@@ -342,13 +288,13 @@ export const CrashGame: React.FC<CrashGameProps> = ({
           {phase === 'CRASHED' && (
             <div className="z-10 flex flex-col items-center space-y-1 animate-in zoom-in-95 duration-150">
               <span className="text-base font-heading font-black text-rose-500 uppercase tracking-widest drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]">
-                VOLATO VIA!
+                {t('casino.crashed') || 'VOLATO VIA!'}
               </span>
               <span className="text-5xl sm:text-6xl font-mono font-black text-rose-500">
                 @{crashedAt?.toFixed(2)}x
               </span>
               <span className="text-[11px] font-sans text-slate-400 pt-1">
-                Nuovo volo tra pochi secondi...
+                {t('casino.takingOffIn') || 'Prossimo volo tra pochi secondi...'}
               </span>
             </div>
           )}
@@ -377,7 +323,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                   disabled={currentBalance < parsedWager}
                   className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
                 >
-                  PUNTA ({parsedWager} G)
+                  {t('casino.placeBet') || 'PUNTA'} ({parsedWager} G)
                 </button>
               </div>
             ) : (
@@ -385,11 +331,11 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-heading font-bold text-emerald-300">
-                    Puntata confermata: {heroBet?.amount} GRAM
+                    {t('casino.betPlaced') || 'Puntata confermata'}: {heroBet?.amount} GRAM
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-emerald-400 uppercase font-bold">
-                  IN VOLO TRA {countdownSec}S
+                  {t('casino.takingOffIn') || 'IN VOLO TRA'} {countdownSec}S
                 </span>
               </div>
             )
@@ -402,106 +348,88 @@ export const CrashGame: React.FC<CrashGameProps> = ({
               >
                 <Trophy className="w-5 h-5" />
                 <span>
-                  INCASSA ORA (+{parseFloat(((heroBet?.amount || 1) * currentMultiplier).toFixed(2))} GRAM)
+                  {t('casino.cashout') || 'INCASSA ORA'} (+{parseFloat(((heroBet?.amount || 1) * currentMultiplier).toFixed(2))} GRAM)
                 </span>
               </button>
             ) : (
               <div className="w-full py-2.5 text-center text-xs font-mono font-bold text-slate-400 bg-black/40 rounded-2xl border border-white/10">
                 {heroCashedOut
-                  ? `INCASSO RIUSCITO (+${parseFloat(((heroBet?.amount || 1) * (heroBet?.cashedOutAt || 1)).toFixed(2))} GRAM)`
-                  : 'VOLO IN CORSO - PUNTATE CHIUSE'}
+                  ? `${t('casino.cashoutSuccess') || 'INCASSO RIUSCITO'} (+${parseFloat(((heroBet?.amount || 1) * (heroBet?.cashedOutAt || 1)).toFixed(2))} GRAM)`
+                  : (t('casino.roundActive') || 'VOLO IN CORSO - PUNTATE CHIUSE')}
               </div>
             )
           ) : (
             <div className="w-full py-2.5 text-center text-xs font-mono font-bold text-rose-400 bg-rose-950/30 rounded-2xl border border-rose-500/30">
-              ROUND TERMINATO
+              {t('casino.crashed') || 'ROUND TERMINATO'}
             </div>
           )}
         </div>
       </div>
 
-      {/* Live Multiplayer Active Players Table */}
+      {/* Real Player Bet Overview Card (NO FAKE PLAYERS) */}
       <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Users className="w-4 h-4 text-cyan-400" />
+            <span className="text-base">✈️</span>
             <span className="text-xs font-heading font-black text-white uppercase tracking-wider">
-              SCOMMESSE IN STANZA ({roomPlayers.length + (hasActiveHeroBet ? 1 : 0)})
+              {t('casino.myBetStatus') || 'DETTAGLI TUA SCOMMESSA'}
             </span>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">MULTIPLAYER LIVE</span>
+          <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase">
+            {phase === 'BETTING'
+              ? (t('casino.waitingBets') || 'FASE DI PUNTATA')
+              : phase === 'FLYING'
+              ? (t('casino.flying') || 'IN VOLO')
+              : (t('casino.crashed') || 'TERMINATO')}
+          </span>
         </div>
 
-        <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
-          {hasActiveHeroBet && (
-            <div className="flex items-center justify-between p-2 rounded-xl border bg-amber-500/10 border-amber-400/50">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm">⭐</span>
-                <span className="text-xs font-heading font-bold text-amber-300">
-                  Tu (Player)
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <span className="text-xs font-mono text-slate-300">
-                  {heroBet?.amount} G
-                </span>
-                {heroCashedOut ? (
-                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-mono font-bold text-[10px] flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    <span>@{heroBet?.cashedOutAt?.toFixed(2)}x</span>
-                  </span>
-                ) : phase === 'CRASHED' ? (
-                  <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-mono font-bold text-[10px]">
-                    CRASH
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono text-cyan-400 animate-pulse">
-                    IN VOLO...
-                  </span>
-                )}
-              </div>
+        {hasActiveHeroBet ? (
+          <div className="p-3 rounded-2xl border bg-black/30 border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-sans">
+                {t('casino.wager') || 'Puntata'}:
+              </span>
+              <span className="text-xs font-mono font-bold text-white">
+                {heroBet?.amount.toFixed(2)} GRAM
+              </span>
             </div>
-          )}
 
-          {roomPlayers.map((p) => (
-            <div
-              key={p.id}
-              className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                p.cashedOutAt
-                  ? 'bg-emerald-950/20 border-emerald-500/30'
-                  : 'bg-black/30 border-white/5'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <span className="text-sm">{p.avatar}</span>
-                <span className="text-xs font-heading font-bold text-slate-200">
-                  {p.name}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-sans">
+                {t('casino.status') || 'Stato'}:
+              </span>
+              {heroCashedOut ? (
+                <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-mono font-bold text-xs flex items-center space-x-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {t('casino.cashedOut') || 'Incassato a'} @{heroBet?.cashedOutAt?.toFixed(2)}x (+{parseFloat(((heroBet?.amount || 0) * (heroBet?.cashedOutAt || 1)).toFixed(2))} G)
+                  </span>
                 </span>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <span className="text-xs font-mono text-slate-400">
-                  {p.bet.toFixed(1)} G
+              ) : phase === 'CRASHED' ? (
+                <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-mono font-bold text-xs">
+                  {t('casino.lost') || 'Perso (Crash)'}
                 </span>
-
-                {p.cashedOutAt ? (
-                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-mono font-bold text-[10px] flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    <span>@{p.cashedOutAt.toFixed(2)}x</span>
-                  </span>
-                ) : phase === 'CRASHED' ? (
-                  <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-mono font-bold text-[10px]">
-                    CRASH
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono text-cyan-400 animate-pulse">
-                    IN VOLO...
-                  </span>
-                )}
-              </div>
+              ) : phase === 'FLYING' ? (
+                <span className="text-xs font-mono text-cyan-300 font-bold animate-pulse">
+                  {t('casino.flying') || 'In volo...'} (+{parseFloat(((heroBet?.amount || 0) * currentMultiplier).toFixed(2))} G)
+                </span>
+              ) : (
+                <span className="text-xs font-mono text-amber-300 font-bold">
+                  {t('casino.betPlaced') || 'Pronto per il decollo'}
+                </span>
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="p-3 rounded-2xl border bg-black/20 border-white/5 text-center">
+            <p className="text-xs text-slate-400 font-sans">
+              {phase === 'BETTING'
+                ? (t('casino.placeBetPrompt') || 'Non hai puntate attive per questo round. Inserisci l\'importo e clicca Punta!')
+                : (t('casino.roundActive') || 'Round in corso. Attendi il prossimo intervallo per piazzare la puntata.')}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

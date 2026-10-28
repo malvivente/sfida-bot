@@ -427,19 +427,38 @@ export const App: React.FC = () => {
   // 2. Initial boot gate: do NOT render Home or allow user actions until system status is verified
   if (!isSystemChecked) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0e1015] flex flex-col items-center justify-center select-none font-sans">
-        <div className="relative flex flex-col items-center space-y-4 animate-in fade-in duration-150">
+      <div className="fixed inset-0 z-50 bg-[#07090e] flex flex-col items-center justify-end pb-16 select-none font-sans overflow-hidden">
+        {/* Splash Image Background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-300"
+          style={{ backgroundImage: `url('/splash.jpg')` }}
+        >
+          {/* Subtle Cyber Vignette Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#07090e] via-[#07090e]/40 to-[#07090e]/60" />
+        </div>
+
+        {/* Themed Cyber Gold/Cyan Spinner & Loading Indicator */}
+        <div className="relative z-10 flex flex-col items-center space-y-4 animate-in fade-in duration-300">
           <div className="relative flex items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 via-purple-600/20 to-cyan-500/20 border border-white/10 p-0.5 flex items-center justify-center shadow-xl shadow-cyan-500/10">
-              <div className="w-full h-full rounded-[14px] bg-[#0e1015] flex items-center justify-center">
-                <Swords className="w-8 h-8 text-cyan-400 animate-pulse" />
-              </div>
-            </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-cyan-400 animate-ping opacity-75" />
+            {/* Outer rotating glowing ring */}
+            <div className="w-16 h-16 rounded-full border-2 border-transparent border-t-amber-400 border-r-cyan-400 animate-spin" />
+            {/* Inner reverse rotating glowing ring */}
+            <div className="absolute w-11 h-11 rounded-full border-2 border-transparent border-b-cyan-400 border-l-amber-400 animate-[spin_1.5s_linear_infinite_reverse]" />
+            {/* Glowing core */}
+            <div className="absolute w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-cyan-400 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.8)]" />
           </div>
-          <span className="text-[11px] font-heading font-black tracking-widest text-slate-400 uppercase">
-            SFIDA ARENA
-          </span>
+
+          <div className="flex flex-col items-center space-y-1.5">
+            <span className="text-xs font-heading font-black tracking-widest text-white uppercase drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+              SFIDA ARENA
+            </span>
+            <div className="w-36 h-1 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-amber-400 animate-[pulse_1.2s_ease-in-out_infinite]" />
+            </div>
+            <span className="text-[10px] font-mono text-cyan-300/80 tracking-wider uppercase">
+              {t('common.loading') || 'CARICAMENTO...'}
+            </span>
+          </div>
         </div>
       </div>
     );

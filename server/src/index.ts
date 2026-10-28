@@ -11,6 +11,7 @@ import { matchRoutes } from './routes/matchRoutes.js';
 import { profileRoutes } from './routes/profileRoutes.js';
 import { affiliateRoutes } from './routes/affiliateRoutes.js';
 import { promoCodeRoutes } from './routes/promoCodeRoutes.js';
+import { raffleRoutes } from './routes/raffleRoutes.js';
 import { createTelegramBot } from './bot/index.js';
 import { signerService } from './services/signer.js';
 import { depositWatcher } from './services/depositWatcher.js';
@@ -96,6 +97,7 @@ async function main() {
   await fastify.register(profileRoutes);
   await fastify.register(affiliateRoutes);
   await fastify.register(promoCodeRoutes);
+  await fastify.register(raffleRoutes);
   depositWatcher.start();
 
   // Initialize Telegram Bot

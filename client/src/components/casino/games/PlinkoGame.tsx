@@ -307,7 +307,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
 
           {/* Difficulty Badge */}
           <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-[9px] font-heading font-black text-purple-300 uppercase tracking-wider border border-purple-400/30">
-            {config.label} ({config.rows} RIGHE)
+            {config.label} ({config.rows} {t('casino.rows') || 'RIGHE'})
           </span>
         </div>
 
@@ -348,12 +348,12 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-              MODALITÀ DI RISCHIO
+              {t('casino.riskMode') || 'MODALITÀ DI RISCHIO'}
             </span>
             {activeBallsCount > 0 && (
               <span className="flex items-center space-x-1 text-[10px] text-amber-400 font-bold uppercase">
                 <Lock className="w-3 h-3" />
-                <span>BLOCCATO IN GIOCO ({activeBallsCount})</span>
+                <span>{t('casino.lockedDuringDrops') || 'BLOCCATO IN GIOCO'} ({activeBallsCount})</span>
               </span>
             )}
           </div>
@@ -387,7 +387,9 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
         {/* Wager Presets & Input */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-heading font-bold text-slate-300">PUNTATA PER PALLINA</span>
+            <span className="font-heading font-bold text-slate-300">
+              {t('casino.wagerPerBall') || 'PUNTATA PER PALLINA'}
+            </span>
             <span className="font-mono text-purple-400 font-bold">
               MAX: {multipliers[0]}x ({parseFloat((parsedWager * multipliers[0]).toFixed(2))} G)
             </span>
@@ -432,7 +434,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(168,85,247,0.4)] active:scale-95 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Play className="w-4 h-4 fill-current" />
-          <span>LANCIA PALLINA ({parsedWager.toFixed(2)} G)</span>
+          <span>{t('casino.dropBall') || 'LANCIA PALLINA'} ({parsedWager.toFixed(2)} G)</span>
         </button>
       </div>
     </div>

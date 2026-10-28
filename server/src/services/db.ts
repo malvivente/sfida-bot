@@ -110,12 +110,40 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
   timestamp: number;
   details?: string;
+}
+
+export interface StoredRaffle {
+  id: string;
+  title: string;
+  badge?: string;
+  prizeGram: number;
+  ticketPriceGram: number;
+  totalTickets: number; // tickets sold so far
+  maxTickets?: number;
+  endsAtEpoch: number;
+  createdAt: number;
+  isFeatured: boolean;
+  status: 'ACTIVE' | 'ENDED' | 'CANCELLED';
+  color?: string;
+  winnerUserId?: string;
+  winnerUsername?: string;
+  winnerTicketNumber?: number;
+  drawnAt?: number;
+}
+
+export interface StoredRaffleTicket {
+  id: string;
+  raffleId: string;
+  userId: string; // strictly Telegram user ID
+  username?: string;
+  ticketNumber: number;
+  purchasedAt: number;
 }
 
 export interface FriendshipRecord {
@@ -278,6 +306,10 @@ export class DatabaseService {
   private promoCodesFilePath: string;
   private promoRedemptionsFilePath: string;
   private systemFilePath: string;
+  private rafflesFilePath: string;
+  private raffleTicketsFilePath: string;
+  private raffles: Map<string, StoredRaffle> = new Map();
+  private raffleTickets: StoredRaffleTicket[] = [];
   private systemSettings: SystemSettings;
   private initialized: boolean = false;
 
@@ -294,6 +326,8 @@ export class DatabaseService {
     this.promoCodesFilePath = path.join(this.dataDir, 'promocodes.json');
     this.promoRedemptionsFilePath = path.join(this.dataDir, 'promocode_redemptions.json');
     this.systemFilePath = path.join(this.dataDir, 'system.json');
+    this.rafflesFilePath = path.join(this.dataDir, 'raffles.json');
+    this.raffleTicketsFilePath = path.join(this.dataDir, 'raffle_tickets.json');
 
     const defaultAdmin = String(process.env.ADMIN_TELEGRAM_ID || '1052287650').trim();
     this.systemSettings = {
@@ -524,6 +558,34 @@ export class DatabaseService {
         }
       } else {
         this.persistPromoCodes();
+      }
+
+      if (fs.existsSync(this.rafflesFilePath)) {
+        try {
+          const rawRaffles = fs.readFileSync(this.rafflesFilePath, 'utf-8');
+          const list: StoredRaffle[] = JSON.parse(rawRaffles);
+          this.raffles.clear();
+          for (const r of list) {
+            this.raffles.set(r.id, r);
+          }
+          console.log(`[DatabaseService] Loaded ${this.raffles.size} raffles.`);
+        } catch (e) {
+          console.warn('[DatabaseService] Error loading raffles.json:', e);
+        }
+      } else {
+        this.persistRaffles();
+      }
+
+      if (fs.existsSync(this.raffleTicketsFilePath)) {
+        try {
+          const rawTickets = fs.readFileSync(this.raffleTicketsFilePath, 'utf-8');
+          this.raffleTickets = JSON.parse(rawTickets);
+          console.log(`[DatabaseService] Loaded ${this.raffleTickets.length} raffle tickets.`);
+        } catch (e) {
+          console.warn('[DatabaseService] Error loading raffle_tickets.json:', e);
+        }
+      } else {
+        this.persistRaffles();
       }
 
       this.initialized = true;
@@ -1178,7 +1240,7 @@ export class DatabaseService {
   public async creditUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND',
+    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN',
     details?: string,
     telegramId?: string
   ): Promise<UserAccount> {
@@ -1218,7 +1280,7 @@ export class DatabaseService {
   public async debitUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'PROMO_CREATE',
+    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'PROMO_CREATE' | 'RAFFLE_TICKET',
     details?: string,
     telegramId?: string
   ): Promise<{ success: boolean; account?: UserAccount; error?: string }> {
@@ -2636,6 +2698,240 @@ export class DatabaseService {
     this.persistPromoCodes();
     console.log(`[DatabaseService] PromoCode ${promo.code} redeemed by ${params.displayName || cleanTg || params.userWallet} (+${awardStr} GRAM)`);
     return { success: true, gramAwarded: awardStr, promoCode: promo };
+  }
+
+  public persistRaffles() {
+    try {
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+      const list = Array.from(this.raffles.values());
+      fs.writeFileSync(this.rafflesFilePath, JSON.stringify(list, null, 2), 'utf-8');
+      fs.writeFileSync(this.raffleTicketsFilePath, JSON.stringify(this.raffleTickets, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[DatabaseService] Failed to persist raffles to file:', err);
+    }
+  }
+
+  public getRaffles(): StoredRaffle[] {
+    return Array.from(this.raffles.values());
+  }
+
+  public getActiveRaffles(): StoredRaffle[] {
+    return Array.from(this.raffles.values()).filter((r) => r.status === 'ACTIVE');
+  }
+
+  public getRaffleById(raffleId: string): StoredRaffle | undefined {
+    return this.raffles.get(raffleId);
+  }
+
+  public createRaffle(options: {
+    title: string;
+    prizeGram: number;
+    ticketPriceGram: number;
+    durationHours: number;
+    isFeatured?: boolean;
+    badge?: string;
+  }): StoredRaffle {
+    const id = `raffle_${Date.now()}`;
+    const endsAtEpoch = Date.now() + Math.max(0.1, options.durationHours) * 3600 * 1000;
+
+    // If this raffle is set as featured, reset featured flag on other active raffles
+    if (options.isFeatured) {
+      for (const r of this.raffles.values()) {
+        r.isFeatured = false;
+      }
+    }
+
+    const raffle: StoredRaffle = {
+      id,
+      title: options.title.trim(),
+      badge: options.badge || (options.ticketPriceGram === 0 ? '100% GRATIS' : 'MONTEPREMI RECORD'),
+      prizeGram: Math.max(0.1, options.prizeGram),
+      ticketPriceGram: Math.max(0, options.ticketPriceGram),
+      totalTickets: 0,
+      endsAtEpoch,
+      createdAt: Date.now(),
+      isFeatured: Boolean(options.isFeatured),
+      status: 'ACTIVE',
+      color: options.ticketPriceGram === 0
+        ? 'from-emerald-900/60 via-[#121c18] to-[#0e1018]'
+        : options.isFeatured
+        ? 'from-purple-900/60 via-[#181326] to-[#0e1018]'
+        : 'from-amber-900/60 via-[#1c1612] to-[#0e1018]',
+    };
+
+    this.raffles.set(id, raffle);
+    this.persistRaffles();
+    console.log(`[DatabaseService] Created raffle ${id} ("${raffle.title}") - Prize: ${raffle.prizeGram} G, Ticket: ${raffle.ticketPriceGram} G, Featured: ${raffle.isFeatured}`);
+    return raffle;
+  }
+
+  public setFeaturedRaffle(raffleId: string): boolean {
+    const target = this.raffles.get(raffleId);
+    if (!target) return false;
+
+    for (const r of this.raffles.values()) {
+      r.isFeatured = r.id === raffleId;
+    }
+
+    this.persistRaffles();
+    console.log(`[DatabaseService] Raffle ${raffleId} set as featured.`);
+    return true;
+  }
+
+  public async buyRaffleTickets(
+    raffleId: string,
+    userId: string,
+    quantity: number,
+    username?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    ticketNumbers?: number[];
+    newBalance?: string;
+  }> {
+    const cleanUserId = String(userId).trim();
+    if (!cleanUserId) {
+      return { success: false, error: 'User ID is required' };
+    }
+
+    const qty = Math.max(1, Math.floor(quantity));
+    const raffle = this.raffles.get(raffleId);
+    if (!raffle) {
+      return { success: false, error: 'Raffle non trovata' };
+    }
+
+    if (raffle.status !== 'ACTIVE') {
+      return { success: false, error: 'Raffle non più attiva' };
+    }
+
+    if (Date.now() >= raffle.endsAtEpoch) {
+      return { success: false, error: 'Questa raffle è terminata' };
+    }
+
+    const totalCost = parseFloat((raffle.ticketPriceGram * qty).toFixed(2));
+
+    if (totalCost > 0) {
+      const debitRes = await this.debitUserBalance(
+        '',
+        totalCost.toFixed(2),
+        'RAFFLE_TICKET',
+        `Acquisto ${qty} biglietti per Raffle: ${raffle.title}`,
+        cleanUserId
+      );
+
+      if (!debitRes.success) {
+        return { success: false, error: 'Saldo insufficiente per acquistare i biglietti' };
+      }
+    }
+
+    const ticketNumbers: number[] = [];
+    const startNum = raffle.totalTickets + 1;
+
+    for (let i = 0; i < qty; i++) {
+      const num = startNum + i;
+      ticketNumbers.push(num);
+      this.raffleTickets.push({
+        id: `tkt_${raffle.id}_${num}`,
+        raffleId: raffle.id,
+        userId: cleanUserId,
+        username: username || undefined,
+        ticketNumber: num,
+        purchasedAt: Date.now(),
+      });
+    }
+
+    raffle.totalTickets += qty;
+    this.persistRaffles();
+
+    const userAcc = await this.getUserAccount(undefined, cleanUserId);
+    const newBal = userAcc.balanceGram || '0.00';
+
+    console.log(`[DatabaseService] User ${cleanUserId} purchased ${qty} tickets for raffle ${raffle.id} (Cost: ${totalCost} G, Remaining: ${newBal} G)`);
+    return { success: true, ticketNumbers, newBalance: newBal };
+  }
+
+  public async endRaffle(raffleId: string): Promise<{
+    success: boolean;
+    error?: string;
+    winner?: {
+      userId: string;
+      username?: string;
+      prizeGram: number;
+      ticketNumber: number;
+    };
+  }> {
+    const raffle = this.raffles.get(raffleId);
+    if (!raffle) {
+      return { success: false, error: 'Raffle non trovata' };
+    }
+
+    if (raffle.status !== 'ACTIVE') {
+      return { success: false, error: 'La raffle è già conclusa o archiviata' };
+    }
+
+    const tickets = this.raffleTickets.filter((t) => t.raffleId === raffleId);
+
+    if (tickets.length === 0) {
+      raffle.status = 'ENDED';
+      raffle.drawnAt = Date.now();
+      this.persistRaffles();
+      console.log(`[DatabaseService] Raffle ${raffleId} ended with 0 tickets sold.`);
+      return { success: true };
+    }
+
+    // Pick random winning ticket
+    const winningTicket = tickets[Math.floor(Math.random() * tickets.length)];
+
+    // Credit prize directly to winner's balance
+    await this.creditUserBalance(
+      '',
+      raffle.prizeGram.toFixed(2),
+      'RAFFLE_WIN',
+      `Vittoria Raffle: ${raffle.title} (Biglietto #${winningTicket.ticketNumber})`,
+      winningTicket.userId
+    );
+
+    raffle.status = 'ENDED';
+    raffle.winnerUserId = winningTicket.userId;
+    raffle.winnerUsername = winningTicket.username;
+    raffle.winnerTicketNumber = winningTicket.ticketNumber;
+    raffle.drawnAt = Date.now();
+
+    this.persistRaffles();
+    console.log(`[DatabaseService] Raffle ${raffleId} drawn! Winner: User ${winningTicket.userId} (${winningTicket.username || 'anon'}) - Ticket #${winningTicket.ticketNumber} won ${raffle.prizeGram} GRAM!`);
+
+    return {
+      success: true,
+      winner: {
+        userId: winningTicket.userId,
+        username: winningTicket.username,
+        prizeGram: raffle.prizeGram,
+        ticketNumber: winningTicket.ticketNumber,
+      },
+    };
+  }
+
+  public getUserRaffleTickets(userId: string): {
+    tickets: StoredRaffleTicket[];
+    raffles: Record<string, StoredRaffle>;
+  } {
+    const cleanUserId = String(userId).trim();
+    const userTickets = this.raffleTickets.filter((t) => t.userId === cleanUserId);
+    const rafflesMap: Record<string, StoredRaffle> = {};
+
+    for (const t of userTickets) {
+      if (!rafflesMap[t.raffleId]) {
+        const r = this.raffles.get(t.raffleId);
+        if (r) rafflesMap[t.raffleId] = r;
+      }
+    }
+
+    return {
+      tickets: userTickets,
+      raffles: rafflesMap,
+    };
   }
 }
 

@@ -243,48 +243,56 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
     }
   }, []);
 
+  const handleGameEvent = useCallback((ev: any) => {
+    if (!ev || ev.ts === lastEventTsRef.current) return;
+    lastEventTsRef.current = ev.ts;
+
+    if (ev.type === 'KICK') {
+      spawnBurst(ev.x, ev.y, ev.side === 'A' ? '#22D3EE' : '#FB923C', 12, 1.0);
+    } else if (ev.type === 'HEADER') {
+      spawnBurst(ev.x, ev.y, '#FACC15', 12, 0.95);
+    } else if (ev.type === 'SUPER_SHOT') {
+      spawnBurst(ev.x, ev.y, '#F97316', 32, 1.8);
+      screenShakeRef.current = 12;
+      floatingBannerRef.current = {
+        text: t('headsoccer.superShotBanner') || 'SUPER SHOT!',
+        color: '#FB923C',
+        expiresAt: Date.now() + 1100,
+      };
+      if (role === 'player') triggerImpact('heavy');
+    } else if (ev.type === 'CROSSBAR') {
+      spawnBurst(ev.x, ev.y, '#E2E8F0', 18, 1.2);
+      screenShakeRef.current = 8;
+      floatingBannerRef.current = {
+        text: t('headsoccer.crossbarBanner') || 'CROSSBAR!',
+        color: '#38BDF8',
+        expiresAt: Date.now() + 950,
+      };
+      if (role === 'player') triggerImpact('medium');
+    } else if (ev.type === 'GOAL') {
+      spawnBurst(ev.x, ev.y, '#10B981', 32, 1.7);
+      spawnBurst(ARENA_W / 2, ARENA_H / 2, '#FACC15', 28, 1.6);
+      screenShakeRef.current = 16;
+      if (role === 'player') triggerNotification('success');
+    }
+  }, [role, spawnBurst, t, triggerImpact, triggerNotification]);
+
   useEffect(() => {
-    if (gameData) latestGameDataRef.current = gameData;
-  }, [gameData]);
+    if (gameData) {
+      latestGameDataRef.current = gameData;
+      if (gameData.lastEvent) {
+        handleGameEvent(gameData.lastEvent);
+      }
+    }
+  }, [gameData, handleGameEvent]);
 
   // Direct socket tick subscription: updates physics targets & triggers sfx/particles with ZERO React re-render overhead
   useEffect(() => {
     if (!onSubscribeTick) return;
     const unsub = onSubscribeTick((freshData) => {
       latestGameDataRef.current = freshData;
-
-      const ev = freshData.lastEvent;
-      if (ev && ev.ts !== lastEventTsRef.current) {
-        lastEventTsRef.current = ev.ts;
-
-        if (ev.type === 'KICK') {
-          spawnBurst(ev.x, ev.y, ev.side === 'A' ? '#22D3EE' : '#FB923C', 10, 0.9);
-        } else if (ev.type === 'HEADER') {
-          spawnBurst(ev.x, ev.y, '#FACC15', 12, 0.95);
-        } else if (ev.type === 'SUPER_SHOT') {
-          spawnBurst(ev.x, ev.y, '#F97316', 24, 1.5);
-          screenShakeRef.current = 10;
-          floatingBannerRef.current = {
-            text: t('headsoccer.superShotBanner'),
-            color: '#FB923C',
-            expiresAt: Date.now() + 1100,
-          };
-          if (role === 'player') triggerImpact('heavy');
-        } else if (ev.type === 'CROSSBAR') {
-          spawnBurst(ev.x, ev.y, '#E2E8F0', 18, 1.2);
-          screenShakeRef.current = 8;
-          floatingBannerRef.current = {
-            text: t('headsoccer.crossbarBanner'),
-            color: '#38BDF8',
-            expiresAt: Date.now() + 950,
-          };
-          if (role === 'player') triggerImpact('medium');
-        } else if (ev.type === 'GOAL') {
-          spawnBurst(ev.x, ev.y, '#10B981', 32, 1.7);
-          spawnBurst(ARENA_W / 2, ARENA_H / 2, '#FACC15', 28, 1.6);
-          screenShakeRef.current = 16;
-          if (role === 'player') triggerNotification('success');
-        }
+      if (freshData.lastEvent) {
+        handleGameEvent(freshData.lastEvent);
       }
     });
     return unsub;

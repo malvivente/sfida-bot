@@ -32,6 +32,12 @@ import {
   handleDelAdminCommand,
   handleListAdminsCommand,
 } from './adminMaintenance.js';
+import {
+  handleCreateRaffleCommand,
+  handleSetFeaturedRaffleCommand,
+  handleEndRaffleCommand,
+  handleListRafflesCommand,
+} from './adminRaffle.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
 import { signerService } from '../services/signer.js';
@@ -332,6 +338,20 @@ export function createTelegramBot(token?: string): Bot {
   });
   bot.command(['listadmins', 'admins'], async (ctx) => {
     await handleListAdminsCommand(ctx);
+  });
+
+  // Admin Raffle Commands
+  bot.command(['create_raffle', 'createraffle'], async (ctx) => {
+    await handleCreateRaffleCommand(ctx);
+  });
+  bot.command(['set_featured_raffle', 'setfeaturedraffle', 'featured_raffle'], async (ctx) => {
+    await handleSetFeaturedRaffleCommand(ctx);
+  });
+  bot.command(['end_raffle', 'endraffle'], async (ctx) => {
+    await handleEndRaffleCommand(ctx);
+  });
+  bot.command(['list_raffles', 'listraffles', 'raffles'], async (ctx) => {
+    await handleListRafflesCommand(ctx);
   });
 
   // User Balance Commands (/bal, /balance, /saldo)

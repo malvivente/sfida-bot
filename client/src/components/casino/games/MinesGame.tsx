@@ -135,12 +135,12 @@ export const MinesGame: React.FC<MinesGameProps> = ({
         <div className="w-full flex items-center justify-between pb-3 border-b border-white/10 mb-3 text-xs font-heading font-extrabold">
           <div className="flex items-center space-x-1.5 text-emerald-400">
             <Gem className="w-4 h-4" />
-            <span>GEMME: {diamondsFound} / {25 - minesCount}</span>
+            <span>{t('casino.gemsFound') || 'GEMME'}: {diamondsFound} / {25 - minesCount}</span>
           </div>
 
           <div className="flex items-center space-x-1.5 text-rose-400">
             <Bomb className="w-4 h-4" />
-            <span>MINE: {minesCount}</span>
+            <span>{t('casino.mines') || 'MINE'}: {minesCount}</span>
           </div>
         </div>
 
@@ -180,12 +180,12 @@ export const MinesGame: React.FC<MinesGameProps> = ({
         {/* Dynamic status feedback */}
         {gameOverResult === 'WON' && (
           <div className="mt-3 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-heading font-black uppercase tracking-wider animate-in zoom-in-95">
-            🏆 INCASSO COMPLETATO: +{currentPayout} GRAM!
+            🏆 {t('casino.cashoutSuccess') || 'INCASSO COMPLETATO'}: +{currentPayout} GRAM!
           </div>
         )}
         {gameOverResult === 'LOST' && (
           <div className="mt-3 px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-heading font-black uppercase tracking-wider animate-in zoom-in-95">
-            💥 BOOM! HAI COLPITO UNA MINA
+            {t('casino.exploded') || '💥 BOOM! HAI COLPITO UNA MINA'}
           </div>
         )}
       </div>
@@ -195,9 +195,9 @@ export const MinesGame: React.FC<MinesGameProps> = ({
         {/* Wager row */}
         <div>
           <div className="flex items-center justify-between text-xs font-heading font-extrabold uppercase text-slate-300 mb-1.5">
-            <span>IMPORTO PUNTATA</span>
+            <span>{t('casino.wager') || 'IMPORTO PUNTATA'}</span>
             <span className="text-[11px] font-mono text-emerald-400">
-              SALDO: {currentBalance.toFixed(2)} {isDemoMode ? 'CHIP' : 'GRAM'}
+              {t('common.balance') || 'SALDO'}: {currentBalance.toFixed(2)} {isDemoMode ? 'CHIP' : 'GRAM'}
             </span>
           </div>
 
@@ -240,7 +240,7 @@ export const MinesGame: React.FC<MinesGameProps> = ({
         {/* Mines Count Selector */}
         <div>
           <span className="text-[10px] font-heading font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-            NUMERO DI MINE ({minesCount})
+            {t('casino.minesCount') || 'NUMERO DI MINE'} ({minesCount})
           </span>
           <div className="grid grid-cols-5 gap-1.5">
             {[1, 3, 5, 10, 15].map((m) => (
@@ -274,7 +274,7 @@ export const MinesGame: React.FC<MinesGameProps> = ({
           >
             <Trophy className="w-5 h-5 animate-bounce" />
             <span>
-              INCASSA ORA {diamondsFound > 0 ? `(${currentPayout} GRAM • ${currentMultiplier.toFixed(2)}x)` : '(SCOPRI ALMENO 1 GEMMA)'}
+              {t('casino.cashout') || 'INCASSA ORA'} {diamondsFound > 0 ? `(${currentPayout} GRAM • ${currentMultiplier.toFixed(2)}x)` : `(${t('casino.nextTile') || 'SCOPRI ALMENO 1 GEMMA'})`}
             </span>
           </button>
         ) : (
@@ -285,7 +285,7 @@ export const MinesGame: React.FC<MinesGameProps> = ({
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-600 hover:from-emerald-300 hover:to-teal-500 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center space-x-2"
           >
             <Gem className="w-5 h-5" />
-            <span>INIZIA PARTITA ({parsedWager} GRAM)</span>
+            <span>{t('casino.startRound') || 'INIZIA PARTITA'} ({parsedWager} GRAM)</span>
           </button>
         )}
       </div>

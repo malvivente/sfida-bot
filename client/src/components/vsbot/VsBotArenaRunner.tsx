@@ -860,9 +860,10 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     timeRemainingMs: 60000,
     isOvertime: false,
     countdownSec: 0,
-    playerA: { x: 200, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
-    playerB: { x: 600, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
-    ball: { x: 400, y: 240, vx: 0, vy: 0, radius: 20 },
+    playerA: { x: 200, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, kickTimer: 0, superCharge: 30, superActive: false },
+    playerB: { x: 600, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, kickTimer: 0, superCharge: 30, superActive: false },
+    ball: { x: 400, y: 240, vx: 0, vy: 0, radius: 20, isSuperShot: false, superShotTimer: 0 },
+    lastEvent: null,
   });
 
   const hsInputRef = useRef<{ left: boolean; right: boolean; jump: boolean; kick: boolean; super: boolean }>({
@@ -885,9 +886,10 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       timeRemainingMs: 60000,
       isOvertime: false,
       countdownSec: 0,
-      playerA: { x: 200, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
-      playerB: { x: 600, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
-      ball: { x: 400, y: 240, vx: 0, vy: 0, radius: 20 },
+      playerA: { x: 200, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, kickTimer: 0, superCharge: 30, superActive: false },
+      playerB: { x: 600, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, kickTimer: 0, superCharge: 30, superActive: false },
+      ball: { x: 400, y: 240, vx: 0, vy: 0, radius: 20, isSuperShot: false, superShotTimer: 0 },
+      lastEvent: null,
     });
     hsInputRef.current = { left: false, right: false, jump: false, kick: false, super: false };
   };
@@ -914,6 +916,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         let pA = { ...prev.playerA };
         let pB = { ...prev.playerB };
         let ball = { ...prev.ball };
+        let lastEvent = prev.lastEvent;
 
         // Passive Super Charge progression over time (reaches 100% in ~10s)
         pA.superCharge = Math.min(100, pA.superCharge + 0.35);
@@ -950,13 +953,15 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           pA.isGrounded = true;
         }
 
-        // Kick impulse
+        // Kick trigger: sets kickTimer to 7 frames (~230ms) for visible sprite animation & collision window
         if (input.kick) {
-          pA.isKicking = true;
-          hsInputRef.current.kick = false; // Immediately consume kick impulse
-        } else {
-          pA.isKicking = false;
+          pA.kickTimer = 7;
+          hsInputRef.current.kick = false;
+          triggerImpact('light');
+        } else if (pA.kickTimer > 0) {
+          pA.kickTimer -= 1;
         }
+        pA.isKicking = pA.kickTimer > 0;
 
         // 2. Bot B Autonomous AI (defensive + offensive)
         const targetX = Math.max(420, Math.min(720, ball.x + 20));
@@ -977,14 +982,28 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           pB.vy = 0;
           pB.isGrounded = true;
         }
-        pB.isKicking = distB < 65 && Math.random() > 0.3;
+
+        // Bot B kicks when ball is in range
+        if (distB < 65 && Math.random() > 0.3) {
+          pB.kickTimer = 7;
+        } else if (pB.kickTimer > 0) {
+          pB.kickTimer -= 1;
+        }
+        pB.isKicking = pB.kickTimer > 0;
 
         // Bot B Super Shot Activation
         if (pB.superCharge >= 100 && distB < 110) {
           pB.superActive = true;
         }
 
-        // 3. Ball Physics
+        // 3. Ball Physics & Super Shot Timer
+        if (ball.superShotTimer > 0) {
+          ball.superShotTimer -= 1;
+          if (ball.superShotTimer <= 0) {
+            ball.isSuperShot = false;
+          }
+        }
+
         ball.vy += 0.55;
         ball.vx *= 0.99;
         ball.x += ball.vx;
@@ -1011,39 +1030,53 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           }
         }
 
-        // Collision: Player A with ball
+        // Collision: Player A with ball (generous 68px radius when kicking)
         const distA = Math.hypot(pA.x - ball.x, pA.y - ball.y);
-        if (distA < 52) {
+        const contactLimitA = pA.isKicking ? 68 : 52;
+        if (distA < contactLimitA) {
           if (pA.superActive) {
-            // Unstoppable Super Shot Rocket!
-            ball.vx = 22.0;
+            // Unstoppable Flaming Rocket Super Shot!
+            ball.isSuperShot = true;
+            ball.superShotTimer = 45;
+            ball.vx = 26.0;
             ball.vy = -6.0;
             pA.superActive = false;
             pA.superCharge = 0;
+            lastEvent = { type: 'SUPER_SHOT', x: ball.x, y: ball.y, ts: Date.now() };
             triggerImpact('heavy');
             triggerNotification('success');
           } else {
-            const kickBoost = pA.isKicking ? 1.7 : 1.1;
-            ball.vx = (ball.x > pA.x ? 9.5 : -6.0) * kickBoost;
+            const kickBoost = pA.isKicking ? 1.85 : 1.1;
+            ball.vx = (ball.x > pA.x ? 12.0 : -7.0) * kickBoost;
             ball.vy = -8.5 * kickBoost;
             pA.superCharge = Math.min(100, pA.superCharge + 12);
+            if (pA.isKicking) {
+              lastEvent = { type: 'KICK', x: ball.x, y: ball.y, side: 'A', ts: Date.now() };
+            }
           }
         }
 
         // Collision: Bot B with ball
-        if (distB < 52) {
+        const contactLimitB = pB.isKicking ? 68 : 52;
+        if (distB < contactLimitB) {
           if (pB.superActive) {
             // Bot Super Shot
-            ball.vx = -22.0;
+            ball.isSuperShot = true;
+            ball.superShotTimer = 45;
+            ball.vx = -26.0;
             ball.vy = -6.0;
             pB.superActive = false;
             pB.superCharge = 0;
+            lastEvent = { type: 'SUPER_SHOT', x: ball.x, y: ball.y, ts: Date.now() };
             triggerImpact('heavy');
           } else {
-            const kickBoost = pB.isKicking ? 1.7 : 1.1;
-            ball.vx = (ball.x < pB.x ? -9.5 : 6.0) * kickBoost;
+            const kickBoost = pB.isKicking ? 1.85 : 1.1;
+            ball.vx = (ball.x < pB.x ? -12.0 : 7.0) * kickBoost;
             ball.vy = -8.5 * kickBoost;
             pB.superCharge = Math.min(100, pB.superCharge + 12);
+            if (pB.isKicking) {
+              lastEvent = { type: 'KICK', x: ball.x, y: ball.y, side: 'B', ts: Date.now() };
+            }
           }
         }
 
@@ -1052,13 +1085,15 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         let scoreB = prev.scoreB;
         if (ball.x < 55 && ball.y >= 235) {
           scoreB += 1;
-          ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20 };
+          ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20, isSuperShot: false, superShotTimer: 0 };
           pA.superCharge = Math.min(100, pA.superCharge + 35); // Conceding boosts super charge
+          lastEvent = { type: 'GOAL', x: ball.x, y: ball.y, ts: Date.now() };
           triggerImpact('heavy');
         } else if (ball.x > 745 && ball.y >= 235) {
           scoreA += 1;
-          ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20 };
+          ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20, isSuperShot: false, superShotTimer: 0 };
           pB.superCharge = Math.min(100, pB.superCharge + 35);
+          lastEvent = { type: 'GOAL', x: ball.x, y: ball.y, ts: Date.now() };
           triggerImpact('heavy');
         }
 
@@ -1070,6 +1105,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           playerA: pA,
           playerB: pB,
           ball,
+          lastEvent,
         };
       });
     }, 33);

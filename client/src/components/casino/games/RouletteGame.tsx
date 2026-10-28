@@ -302,11 +302,11 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
             {lastWinAmount ? (
               <span className="px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5">
                 <Trophy className="w-4 h-4" />
-                <span>VITTORIA! INCASSO: +{lastWinAmount} GRAM!</span>
+                <span>{t('casino.rouletteWin') || 'VITTORIA! INCASSO:'} +{lastWinAmount} GRAM!</span>
               </span>
             ) : (
               <span className="px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-400 text-rose-300 font-heading font-bold text-xs uppercase tracking-wider">
-                NON VINCENTE ({winningResult.number} {winningResult.color.toUpperCase()})
+                {t('casino.notWinning') || 'NON VINCENTE'} ({winningResult.number} {winningResult.color.toUpperCase()})
               </span>
             )}
           </div>
@@ -318,7 +318,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
         {/* Betting Types */}
         <div className="space-y-1.5">
           <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-            TIPO DI SCOMMESSA
+            {t('casino.betType') || 'TIPO DI SCOMMESSA'}
           </span>
           <div className="grid grid-cols-3 gap-1.5">
             <button
@@ -330,7 +330,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
                   : 'bg-black/40 text-slate-400 border border-white/5'
               }`}
             >
-              🔴 ROSSO (1.95x)
+              🔴 {t('casino.red') || 'ROSSO'} (1.95x)
             </button>
 
             <button
@@ -342,7 +342,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
                   : 'bg-black/40 text-slate-400 border border-white/5'
               }`}
             >
-              ⚫ NERO (1.95x)
+              ⚫ {t('casino.black') || 'NERO'} (1.95x)
             </button>
 
             <button
@@ -354,7 +354,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
                   : 'bg-black/40 text-slate-400 border border-white/5'
               }`}
             >
-              PARI (1.95x)
+              {t('casino.even') || 'PARI'} (1.95x)
             </button>
 
             <button
@@ -366,7 +366,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
                   : 'bg-black/40 text-slate-400 border border-white/5'
               }`}
             >
-              DISPARI (1.95x)
+              {t('casino.odd') || 'DISPARI'} (1.95x)
             </button>
 
             <button
@@ -378,7 +378,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
                   : 'bg-black/40 text-slate-400 border border-white/5'
               }`}
             >
-              1-18 (1.95x)
+              {t('casino.low') || '1-18 (BASSO)'} (1.95x)
             </button>
 
             <button
@@ -390,7 +390,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
                   : 'bg-black/40 text-slate-400 border border-white/5'
               }`}
             >
-              NUMERO PIENO (35x)
+              {t('casino.straight') || 'NUMERO PIENO'} (35x)
             </button>
           </div>
         </div>
@@ -399,7 +399,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
         {selectedBetType === 'NUMBER' && (
           <div className="space-y-1.5 animate-in zoom-in-95">
             <span className="text-xs font-heading font-bold text-amber-300">
-              SCEGLI NUMERO: #{selectedNumber}
+              {t('casino.winningNumber') || 'SCEGLI NUMERO'}: #{selectedNumber}
             </span>
             <div className="grid grid-cols-7 gap-1 max-h-28 overflow-y-auto no-scrollbar p-1 bg-black/40 rounded-xl border border-white/10">
               {Array.from({ length: 37 }).map((_, n) => (
@@ -427,9 +427,9 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
         {/* Wager Presets & Input */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-heading font-bold text-slate-300">PUNTATA IN GRAM</span>
+            <span className="font-heading font-bold text-slate-300">{t('casino.wager') || 'PUNTATA IN GRAM'}</span>
             <span className="font-mono text-amber-300 font-bold">
-              POTENZIALE VINCITA: +
+              {t('casino.potentialPayout') || 'POTENZIALE VINCITA'}: +
               {parseFloat(
                 (parsedWager * (selectedBetType === 'NUMBER' ? 35.0 : 1.95)).toFixed(2)
               )}{' '}
@@ -484,8 +484,8 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
           <Disc className={`w-5 h-5 ${isSpinning ? 'animate-spin' : ''}`} />
           <span>
             {isSpinning
-              ? 'LA ROULETTE GIRA...'
-              : `GIRA LA ROULETTE (${parsedWager} GRAM)`}
+              ? (t('casino.spinning') || 'LA ROULETTE GIRA...')
+              : `${t('casino.spin') || 'GIRA LA ROULETTE'} (${parsedWager} GRAM)`}
           </span>
         </button>
       </div>
