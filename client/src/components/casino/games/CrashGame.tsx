@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plane, Trophy, Users, Zap, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Plane, Trophy, Users, CheckCircle2, Clock } from 'lucide-react';
 import { useHaptics } from '../../../hooks/useHaptics.js';
 import { useI18n } from '../../../i18n/index.js';
 import { GramIcon } from '../../GramIcon.js';
-import { generateCrashPoint, recordCasinoOutcome } from '../casinoEngine.js';
+import { recordCasinoOutcome } from '../casinoEngine.js';
 
 interface CrashGameProps {
   currentBalance: number;
@@ -11,11 +11,12 @@ interface CrashGameProps {
   onUpdateBalance: (delta: number) => void;
 }
 
-interface SimulatedPlayerBet {
+interface SimulatedPlayer {
   id: string;
   name: string;
   avatar: string;
   bet: number;
+  cashoutTarget: number;
   cashedOutAt?: number;
   isHero?: boolean;
 }
@@ -31,6 +32,24 @@ const SIMULATED_PLAYERS_POOL = [
   { name: 'Luna_Ton', avatar: '🌙', baseBet: 4.0 },
 ];
 
+const CYCLE_MS = 45000; // 45 seconds total round cycle
+const BETTING_WINDOW_MS = 30000; // 30 seconds betting window
+
+// Deterministic crash point derived from global roundId so it remains identical across page refreshes
+function getCrashPointForRound(roundId: number): number {
+  const seed = (roundId * 9301 + 49297) % 233280;
+  const rand = seed / 233280;
+
+  // Casino house edge distribution: 10% instant crash (< 1.2x), 60% standard (1.2x - 3.5x), 30% high flyer
+  if (rand < 0.12) {
+    return parseFloat((1.05 + rand * 1.2).toFixed(2));
+  } else if (rand < 0.72) {
+    return parseFloat((1.2 + rand * 2.8).toFixed(2));
+  } else {
+    return parseFloat((3.2 + rand * 8.5).toFixed(2));
+  }
+}
+
 export const CrashGame: React.FC<CrashGameProps> = ({
   currentBalance,
   isDemoMode,
@@ -40,137 +59,122 @@ export const CrashGame: React.FC<CrashGameProps> = ({
   const { t } = useI18n();
 
   const [wager, setWager] = useState<string>('1.0');
-  const [hasHeroBet, setHasHeroBet] = useState<boolean>(false);
-  const [heroBetAmount, setHeroBetAmount] = useState<number>(1.0);
-  const [heroCashedOutAt, setHeroCashedOutAt] = useState<number | null>(null);
-
-  // Shared round state
   const [phase, setPhase] = useState<'BETTING' | 'FLYING' | 'CRASHED'>('BETTING');
-  const [bettingCountdown, setBettingCountdown] = useState<number>(30);
+  const [countdownSec, setCountdownSec] = useState<number>(30);
   const [currentMultiplier, setCurrentMultiplier] = useState<number>(1.0);
   const [crashedAt, setCrashedAt] = useState<number | null>(null);
-  const [crashHistory, setCrashHistory] = useState<number[]>([1.92, 4.15, 1.12, 12.4, 2.08, 1.45, 3.20]);
-  const [activeBets, setActiveBets] = useState<SimulatedPlayerBet[]>([]);
+  const [crashHistory, setCrashHistory] = useState<number[]>([1.92, 4.15, 1.12, 12.4, 2.08, 1.45]);
 
-  const crashPointRef = useRef<number>(2.0);
-  const animFrameRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
+  // Persistent Hero Bet State
+  const [heroBet, setHeroBet] = useState<{
+    roundId: number;
+    amount: number;
+    cashedOutAt: number | null;
+  } | null>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_crash_user_bet');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const currentRoundId = Math.floor(Date.now() / CYCLE_MS);
+        if (parsed.roundId === currentRoundId) return parsed;
+      }
+    } catch {}
+    return null;
+  });
 
   const parsedWager = Math.max(0.1, parseFloat(wager) || 0.1);
+  const currentRoundId = Math.floor(Date.now() / CYCLE_MS);
+  const targetCrash = useMemo(() => getCrashPointForRound(currentRoundId), [currentRoundId]);
 
-  // Generate simulated round participants
-  const initRoundBets = () => {
-    const selected = [...SIMULATED_PLAYERS_POOL]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 5 + Math.floor(Math.random() * 3))
-      .map((p, idx) => ({
-        id: `sim-${idx}-${Date.now()}`,
+  // Seeded simulated players for the current round
+  const [roomPlayers, setRoomPlayers] = useState<SimulatedPlayer[]>([]);
+
+  useEffect(() => {
+    // Generate deterministic player list for currentRoundId
+    const seed = (currentRoundId * 1103515245 + 12345) % 2147483648;
+    const players: SimulatedPlayer[] = SIMULATED_PLAYERS_POOL.map((p, i) => {
+      const pSeed = (seed + i * 37) % 1000;
+      const willCashout = pSeed % 100 < 75;
+      const target = willCashout
+        ? parseFloat((1.1 + (pSeed / 1000) * Math.max(0.2, targetCrash - 1.1)).toFixed(2))
+        : 999;
+      return {
+        id: `sim-${i}-${currentRoundId}`,
         name: p.name,
         avatar: p.avatar,
-        bet: parseFloat((p.baseBet * (0.8 + Math.random() * 0.6)).toFixed(1)),
-      }));
+        bet: p.baseBet,
+        cashoutTarget: target,
+      };
+    });
+    setRoomPlayers(players);
+  }, [currentRoundId, targetCrash]);
 
-    setActiveBets(selected);
-  };
-
-  // 30-Second Betting Countdown Cycle
+  // Main synchronized wall-clock loop (runs every ~50ms)
   useEffect(() => {
-    if (phase !== 'BETTING') return;
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const roundId = Math.floor(now / CYCLE_MS);
+      const msInRound = now % CYCLE_MS;
+      const crashPoint = getCrashPointForRound(roundId);
 
-    initRoundBets();
-    setHasHeroBet(false);
-    setHeroCashedOutAt(null);
-    setCrashedAt(null);
-    setCurrentMultiplier(1.0);
-    setBettingCountdown(30);
+      if (msInRound < BETTING_WINDOW_MS) {
+        // 1. BETTING PHASE (0s - 30s)
+        setPhase('BETTING');
+        const remainingSec = Math.max(1, Math.ceil((BETTING_WINDOW_MS - msInRound) / 1000));
+        setCountdownSec(remainingSec);
+        setCurrentMultiplier(1.0);
+        setCrashedAt(null);
+      } else {
+        // 2. FLIGHT OR CRASH PHASE (30s - 45s)
+        const elapsedFlightSec = (msInRound - BETTING_WINDOW_MS) / 1000;
+        // Parabolic exponential acceleration curve
+        const mult = parseFloat(Math.pow(Math.E, 0.084 * Math.pow(elapsedFlightSec, 1.14)).toFixed(2));
 
-    const interval = setInterval(() => {
-      setBettingCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          startFlight();
-          return 0;
+        if (mult >= crashPoint) {
+          // CRASHED
+          setPhase('CRASHED');
+          setCurrentMultiplier(crashPoint);
+          setCrashedAt(crashPoint);
+        } else {
+          // FLYING
+          setPhase('FLYING');
+          setCurrentMultiplier(mult);
+
+          // Update simulated cashouts
+          setRoomPlayers((prev) =>
+            prev.map((p) => {
+              if (!p.cashedOutAt && mult >= p.cashoutTarget && mult < crashPoint) {
+                return { ...p, cashedOutAt: p.cashoutTarget };
+              }
+              return p;
+            })
+          );
         }
-        return prev - 1;
-      });
-    }, 1000);
+      }
+    }, 45);
 
-    return () => clearInterval(interval);
-  }, [phase]);
-
-  // Clean animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
+    return () => clearInterval(timer);
   }, []);
 
-  // Launch Flight
-  const startFlight = () => {
-    const targetCrash = generateCrashPoint();
-    crashPointRef.current = targetCrash;
-    setPhase('FLYING');
-    setCurrentMultiplier(1.0);
-    startTimeRef.current = performance.now();
+  // Update crash history when round ID advances
+  const lastRoundRef = useRef<number>(currentRoundId);
+  useEffect(() => {
+    if (currentRoundId !== lastRoundRef.current) {
+      const prevCrash = getCrashPointForRound(lastRoundRef.current);
+      setCrashHistory((prev) => [prevCrash, ...prev.slice(0, 6)]);
+      lastRoundRef.current = currentRoundId;
 
-    // Assign cashout targets to simulated players
-    setActiveBets((prev) =>
-      prev.map((b) => {
-        // 70% of bots will attempt cashout below targetCrash; 30% will crash
-        const willCashout = Math.random() < 0.75;
-        const botTarget = willCashout
-          ? parseFloat((1.1 + Math.random() * Math.max(0.2, targetCrash - 1.15)).toFixed(2))
-          : 999;
-        return {
-          ...b,
-          botCashoutTarget: botTarget,
-        } as any;
-      })
-    );
+      // Clean expired hero bet
+      setHeroBet(null);
+      try {
+        localStorage.removeItem('sfidabot_crash_user_bet');
+      } catch {}
+    }
+  }, [currentRoundId]);
 
-    const loop = (now: number) => {
-      const elapsedSec = (now - startTimeRef.current) / 1000;
-      // Smooth parabolic acceleration
-      const mult = parseFloat(Math.pow(Math.E, 0.082 * Math.pow(elapsedSec, 1.14)).toFixed(2));
-
-      // Check simulated players cashout
-      setActiveBets((prev) =>
-        prev.map((b: any) => {
-          if (!b.cashedOutAt && b.botCashoutTarget && mult >= b.botCashoutTarget && mult < crashPointRef.current) {
-            return { ...b, cashedOutAt: b.botCashoutTarget };
-          }
-          return b;
-        })
-      );
-
-      if (mult >= crashPointRef.current) {
-        // CRASHED!
-        const finalCrash = crashPointRef.current;
-        setCurrentMultiplier(finalCrash);
-        setCrashedAt(finalCrash);
-        setPhase('CRASHED');
-        triggerNotification('error');
-
-        setCrashHistory((prev) => [finalCrash, ...prev.slice(0, 7)]);
-
-        // 3.5-second cooldown after crash, then restart 30-second betting countdown
-        setTimeout(() => {
-          setPhase('BETTING');
-        }, 3500);
-
-        return;
-      }
-
-      setCurrentMultiplier(mult);
-      animFrameRef.current = requestAnimationFrame(loop);
-    };
-
-    animFrameRef.current = requestAnimationFrame(loop);
-  };
-
-  // User places bet for current round
+  // Place persistent bet during 30s window (CANNOT BE WITHDRAWN)
   const handlePlaceBet = () => {
-    if (phase !== 'BETTING' || hasHeroBet) return;
+    if (phase !== 'BETTING' || heroBet) return;
     if (currentBalance < parsedWager) {
       triggerNotification('error');
       return;
@@ -178,54 +182,47 @@ export const CrashGame: React.FC<CrashGameProps> = ({
 
     triggerImpact('heavy');
     onUpdateBalance(-parsedWager);
-    setHeroBetAmount(parsedWager);
-    setHasHeroBet(true);
     recordCasinoOutcome(false, -parsedWager);
 
-    // Add hero to active bets list
-    setActiveBets((prev) => [
-      {
-        id: 'hero-bet',
-        name: 'Tu (Player)',
-        avatar: '⭐',
-        bet: parsedWager,
-        isHero: true,
-      },
-      ...prev,
-    ]);
+    const newBet = {
+      roundId: currentRoundId,
+      amount: parsedWager,
+      cashedOutAt: null,
+    };
+
+    setHeroBet(newBet);
+    try {
+      localStorage.setItem('sfidabot_crash_user_bet', JSON.stringify(newBet));
+    } catch {}
   };
 
-  // User cancels bet during 30s countdown
-  const handleCancelBet = () => {
-    if (phase !== 'BETTING' || !hasHeroBet) return;
-    triggerImpact('light');
-    onUpdateBalance(heroBetAmount);
-    setHasHeroBet(false);
-    setActiveBets((prev) => prev.filter((b) => !b.isHero));
-  };
-
-  // User hits Cashout
+  // Cashout during flight
   const handleCashout = () => {
-    if (phase !== 'FLYING' || !hasHeroBet || heroCashedOutAt) return;
+    if (phase !== 'FLYING' || !heroBet || heroBet.cashedOutAt) return;
+
     triggerImpact('heavy');
     triggerNotification('success');
 
     const mult = currentMultiplier;
-    const payout = parseFloat((heroBetAmount * mult).toFixed(2));
-    setHeroCashedOutAt(mult);
+    const payout = parseFloat((heroBet.amount * mult).toFixed(2));
+
+    const updated = { ...heroBet, cashedOutAt: mult };
+    setHeroBet(updated);
+    try {
+      localStorage.setItem('sfidabot_crash_user_bet', JSON.stringify(updated));
+    } catch {}
 
     onUpdateBalance(payout);
-    recordCasinoOutcome(true, payout - heroBetAmount);
-
-    setActiveBets((prev) =>
-      prev.map((b) => (b.isHero ? { ...b, cashedOutAt: mult } : b))
-    );
+    recordCasinoOutcome(true, payout - heroBet.amount);
   };
 
-  // Flight progress percentage for canvas / SVG (capped at 100%)
+  const hasActiveHeroBet = Boolean(heroBet && heroBet.roundId === currentRoundId);
+  const heroCashedOut = Boolean(hasActiveHeroBet && heroBet?.cashedOutAt);
+
+  // SVG Parabolic flight coordinates
   const flightProgress = Math.min(1, Math.max(0, (currentMultiplier - 1) / 5));
-  const planeX = 20 + flightProgress * 230;
-  const planeY = 160 - Math.pow(flightProgress, 0.85) * 125;
+  const planeX = 20 + flightProgress * 235;
+  const planeY = 160 - Math.pow(flightProgress, 0.82) * 125;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
@@ -251,7 +248,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
 
           <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono font-bold">
             <Users className="w-3 h-3 text-cyan-400" />
-            <span>{activeBets.length + 12} live</span>
+            <span>{roomPlayers.length + 14} in stanza</span>
           </div>
         </div>
 
@@ -269,20 +266,20 @@ export const CrashGame: React.FC<CrashGameProps> = ({
               </div>
 
               <div className="text-5xl font-mono font-black text-white tracking-tight">
-                {bettingCountdown}s
+                {countdownSec}s
               </div>
 
               {/* Animated Progress Bar */}
               <div className="w-48 h-2 rounded-full bg-slate-800 overflow-hidden border border-white/10">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-all duration-1000 ease-linear"
-                  style={{ width: `${(bettingCountdown / 30) * 100}%` }}
+                  className="h-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-all duration-300 ease-linear"
+                  style={{ width: `${(countdownSec / 30) * 100}%` }}
                 />
               </div>
 
               <span className="text-[10px] text-slate-400 font-sans">
-                {hasHeroBet
-                  ? 'Puntata confermata! In attesa del decollo...'
+                {hasActiveHeroBet
+                  ? 'Puntata confermata per questo volo!'
                   : 'Piazza la tua puntata prima che l\'aereo decolli'}
               </span>
             </div>
@@ -291,7 +288,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
           {/* PHASE 2: FLYING */}
           {phase === 'FLYING' && (
             <>
-              {/* Flight Path SVG with Smooth Curve and Red Jet */}
+              {/* Flight Path SVG */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                 <defs>
                   <linearGradient id="flightGradient" x1="0%" y1="100%" x2="100%" y2="0%">
@@ -299,12 +296,10 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                     <stop offset="100%" stopColor="rgba(244, 63, 94, 0.35)" />
                   </linearGradient>
                 </defs>
-                {/* Curved Fill Area under plane */}
                 <path
                   d={`M 20 160 Q ${planeX * 0.4} 160, ${planeX} ${planeY} L ${planeX} 160 Z`}
                   fill="url(#flightGradient)"
                 />
-                {/* Glowing Trail Line */}
                 <path
                   d={`M 20 160 Q ${planeX * 0.4} 160, ${planeX} ${planeY}`}
                   fill="none"
@@ -314,7 +309,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                 />
               </svg>
 
-              {/* The Supersonic Red Jet */}
+              {/* Supersonic Red Jet */}
               <div
                 className="absolute z-10 transition-transform duration-75"
                 style={{
@@ -325,7 +320,6 @@ export const CrashGame: React.FC<CrashGameProps> = ({
               >
                 <div className="relative">
                   <Plane className="w-8 h-8 text-rose-500 fill-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.9)]" />
-                  {/* Jet Flame Exhaust Trail */}
                   <span className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-4 h-1.5 rounded-full bg-gradient-to-l from-amber-400 to-transparent animate-pulse" />
                 </div>
               </div>
@@ -335,16 +329,16 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                 <span className="text-5xl sm:text-6xl font-mono font-black text-white tracking-tight drop-shadow-[0_0_25px_rgba(255,255,255,0.4)]">
                   {currentMultiplier.toFixed(2)}x
                 </span>
-                {heroCashedOutAt && (
+                {heroCashedOut && (
                   <span className="mt-1 px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold text-xs uppercase animate-in zoom-in-95">
-                    HAI INCASSATO A {heroCashedOutAt.toFixed(2)}x!
+                    HAI INCASSATO A {heroBet?.cashedOutAt?.toFixed(2)}x!
                   </span>
                 )}
               </div>
             </>
           )}
 
-          {/* PHASE 3: CRASHED / VOLATO VIA */}
+          {/* PHASE 3: CRASHED */}
           {phase === 'CRASHED' && (
             <div className="z-10 flex flex-col items-center space-y-1 animate-in zoom-in-95 duration-150">
               <span className="text-base font-heading font-black text-rose-500 uppercase tracking-widest drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]">
@@ -354,7 +348,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                 @{crashedAt?.toFixed(2)}x
               </span>
               <span className="text-[11px] font-sans text-slate-400 pt-1">
-                Nuovo round in partenza tra pochi secondi...
+                Nuovo volo tra pochi secondi...
               </span>
             </div>
           )}
@@ -363,7 +357,7 @@ export const CrashGame: React.FC<CrashGameProps> = ({
         {/* Bottom Interactive Betting / Cashout Bar */}
         <div className="pt-2 border-t border-white/10 z-20">
           {phase === 'BETTING' ? (
-            !hasHeroBet ? (
+            !hasActiveHeroBet ? (
               <div className="flex items-center space-x-2">
                 <div className="relative flex-1">
                   <input
@@ -387,24 +381,20 @@ export const CrashGame: React.FC<CrashGameProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center justify-between p-2 rounded-2xl bg-emerald-950/40 border border-emerald-500/40">
+              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40">
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-heading font-bold text-emerald-300">
-                    Puntata: {heroBetAmount} GRAM
+                    Puntata confermata: {heroBet?.amount} GRAM
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCancelBet}
-                  className="px-3 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-heading font-bold text-[11px] uppercase tracking-wider"
-                >
-                  ANNULLA
-                </button>
+                <span className="text-[10px] font-mono text-emerald-400 uppercase font-bold">
+                  IN VOLO TRA {countdownSec}S
+                </span>
               </div>
             )
           ) : phase === 'FLYING' ? (
-            hasHeroBet && !heroCashedOutAt ? (
+            hasActiveHeroBet && !heroCashedOut ? (
               <button
                 type="button"
                 onClick={handleCashout}
@@ -412,13 +402,13 @@ export const CrashGame: React.FC<CrashGameProps> = ({
               >
                 <Trophy className="w-5 h-5" />
                 <span>
-                  INCASSA ORA (+{(heroBetAmount * currentMultiplier).toFixed(2)} GRAM)
+                  INCASSA ORA (+{parseFloat(((heroBet?.amount || 1) * currentMultiplier).toFixed(2))} GRAM)
                 </span>
               </button>
             ) : (
               <div className="w-full py-2.5 text-center text-xs font-mono font-bold text-slate-400 bg-black/40 rounded-2xl border border-white/10">
-                {heroCashedOutAt
-                  ? `INCASSO RIUSCITO (+${(heroBetAmount * heroCashedOutAt).toFixed(2)} GRAM)`
+                {heroCashedOut
+                  ? `INCASSO RIUSCITO (+${parseFloat(((heroBet?.amount || 1) * (heroBet?.cashedOutAt || 1)).toFixed(2))} GRAM)`
                   : 'VOLO IN CORSO - PUNTATE CHIUSE'}
               </div>
             )
@@ -436,44 +426,68 @@ export const CrashGame: React.FC<CrashGameProps> = ({
           <div className="flex items-center space-x-2">
             <Users className="w-4 h-4 text-cyan-400" />
             <span className="text-xs font-heading font-black text-white uppercase tracking-wider">
-              SCOMMESSE IN STANZA ({activeBets.length})
+              SCOMMESSE IN STANZA ({roomPlayers.length + (hasActiveHeroBet ? 1 : 0)})
             </span>
           </div>
           <span className="text-[10px] font-mono text-slate-400">MULTIPLAYER LIVE</span>
         </div>
 
         <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
-          {activeBets.map((b) => (
+          {hasActiveHeroBet && (
+            <div className="flex items-center justify-between p-2 rounded-xl border bg-amber-500/10 border-amber-400/50">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm">⭐</span>
+                <span className="text-xs font-heading font-bold text-amber-300">
+                  Tu (Player)
+                </span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="text-xs font-mono text-slate-300">
+                  {heroBet?.amount} G
+                </span>
+                {heroCashedOut ? (
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-mono font-bold text-[10px] flex items-center space-x-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    <span>@{heroBet?.cashedOutAt?.toFixed(2)}x</span>
+                  </span>
+                ) : phase === 'CRASHED' ? (
+                  <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-mono font-bold text-[10px]">
+                    CRASH
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono text-cyan-400 animate-pulse">
+                    IN VOLO...
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {roomPlayers.map((p) => (
             <div
-              key={b.id}
+              key={p.id}
               className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                b.isHero
-                  ? 'bg-amber-500/10 border-amber-400/50'
-                  : b.cashedOutAt
+                p.cashedOutAt
                   ? 'bg-emerald-950/20 border-emerald-500/30'
                   : 'bg-black/30 border-white/5'
               }`}
             >
               <div className="flex items-center space-x-2">
-                <span className="text-sm">{b.avatar}</span>
-                <span
-                  className={`text-xs font-heading font-bold ${
-                    b.isHero ? 'text-amber-300' : 'text-slate-200'
-                  }`}
-                >
-                  {b.name}
+                <span className="text-sm">{p.avatar}</span>
+                <span className="text-xs font-heading font-bold text-slate-200">
+                  {p.name}
                 </span>
               </div>
 
               <div className="flex items-center space-x-3">
                 <span className="text-xs font-mono text-slate-400">
-                  {b.bet.toFixed(1)} G
+                  {p.bet.toFixed(1)} G
                 </span>
 
-                {b.cashedOutAt ? (
+                {p.cashedOutAt ? (
                   <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-mono font-bold text-[10px] flex items-center space-x-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    <span>@{b.cashedOutAt.toFixed(2)}x</span>
+                    <span>@{p.cashedOutAt.toFixed(2)}x</span>
                   </span>
                 ) : phase === 'CRASHED' ? (
                   <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-mono font-bold text-[10px]">

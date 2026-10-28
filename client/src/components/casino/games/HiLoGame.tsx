@@ -142,23 +142,23 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
 
         {/* Top History */}
 
-        {/* Live Card Render */}
+        {/* Classic White Playing Card */}
         <div className="flex items-center space-x-3 my-3">
           <div
-            className={`w-24 h-36 rounded-2xl p-2.5 flex flex-col justify-between shadow-2xl border-2 transition-all ${
+            className={`w-28 h-40 rounded-2xl p-3 flex flex-col justify-between shadow-[0_10px_35px_rgba(0,0,0,0.6)] border-2 transition-all bg-white ${
               isRedSuit(currentCard.suit)
-                ? 'bg-gradient-to-b from-rose-950/60 to-black border-rose-500/60 text-rose-400'
-                : 'bg-gradient-to-b from-slate-900 to-black border-slate-400/40 text-slate-100'
+                ? 'text-rose-600 border-rose-200 shadow-rose-950/30'
+                : 'text-slate-950 border-slate-300 shadow-slate-900/30'
             }`}
           >
             <div className="flex justify-between items-start">
-              <span className="text-xl font-mono font-black">{currentCard.rank}</span>
-              <span className="text-xl">{currentCard.suit}</span>
+              <span className="text-2xl font-mono font-black leading-none">{currentCard.rank}</span>
+              <span className="text-xl leading-none">{currentCard.suit}</span>
             </div>
-            <div className="text-center text-4xl">{currentCard.suit}</div>
+            <div className="text-center text-5xl font-black">{currentCard.suit}</div>
             <div className="flex justify-between items-end rotate-180">
-              <span className="text-xl font-mono font-black">{currentCard.rank}</span>
-              <span className="text-xl">{currentCard.suit}</span>
+              <span className="text-2xl font-mono font-black leading-none">{currentCard.rank}</span>
+              <span className="text-xl leading-none">{currentCard.suit}</span>
             </div>
           </div>
         </div>

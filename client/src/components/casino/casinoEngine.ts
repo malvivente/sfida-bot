@@ -175,7 +175,12 @@ export function getRouletteNumberColor(num: number): 'green' | 'red' | 'black' {
   return ROULETTE_RED_NUMBERS.includes(num) ? 'red' : 'black';
 }
 
-export function spinRoulette(): { number: number; color: 'green' | 'red' | 'black' } {
+export interface RouletteOutcome {
+  number: number;
+  color: 'green' | 'red' | 'black';
+}
+
+export function spinRoulette(): RouletteOutcome {
   const randIndex = Math.floor(Math.random() * ROULETTE_NUMBERS.length);
   const number = ROULETTE_NUMBERS[randIndex];
   const color = getRouletteNumberColor(number);

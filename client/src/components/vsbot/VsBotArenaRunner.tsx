@@ -186,7 +186,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   const [bjStandA, setBjStandA] = useState(false);
   const [bjStandB, setBjStandB] = useState(false);
 
-  const initBlackjack = (starter: 'A' | 'B') => {
+  const initBlackjack = () => {
     const d = createDeck();
     const cA1 = d.pop()!;
     const cB1 = d.pop()!;
@@ -199,6 +199,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     setBjHandB(handB);
     setBjStandA(false);
     setBjStandB(false);
+    setBjTurn('A'); // Player always plays first!
 
     // Natural 21 check
     const scoreA = calculateBlackjackScore(handA);
@@ -207,73 +208,67 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       setTimeout(() => {
         evaluateBlackjackWinner(scoreA, scoreB);
       }, 900);
-      return;
     }
-    setBjTurn(starter);
   };
 
   const handleBlackjackHit = (player: 'A' | 'B' = 'A') => {
-    if (bjTurn !== player || (player === 'A' && bjStandA) || (player === 'B' && bjStandB)) return;
+    if (player !== 'A' || bjTurn !== 'A' || bjStandA) return;
     const newDeck = [...bjDeck];
     const newCard = newDeck.pop();
     if (!newCard) return;
 
-    if (player === 'A') {
-      const newHand = [...bjHandA, newCard];
-      setBjDeck(newDeck);
-      setBjHandA(newHand);
-      const score = calculateBlackjackScore(newHand);
-      if (score > 21) {
-        // Player busts! Bot wins
-        setBjTurn('FINISHED');
-        setWinnerSide('B');
-        setRoomState('MATCH_SETTLED');
-        triggerNotification('error');
-      } else {
-        setTurnTimeLeft(15);
-      }
-    } else {
-      const newHand = [...bjHandB, newCard];
-      setBjDeck(newDeck);
-      setBjHandB(newHand);
-      const score = calculateBlackjackScore(newHand);
-      if (score > 21) {
-        // Bot busts! Player wins
-        setBjTurn('FINISHED');
-        setWinnerSide('A');
-        setRoomState('MATCH_SETTLED');
-        triggerNotification('success');
-      } else {
-        setTurnTimeLeft(15);
-      }
+    const newHand = [...bjHandA, newCard];
+    setBjDeck(newDeck);
+    setBjHandA(newHand);
+    const score = calculateBlackjackScore(newHand);
+    if (score > 21) {
+      // Player busts! Dealer/Bot wins immediately
+      setBjTurn('FINISHED');
+      setWinnerSide('B');
+      setRoomState('MATCH_SETTLED');
+      triggerNotification('error');
+    } else if (score === 21) {
+      // Automatically stand on 21
+      handleBlackjackStand('A');
     }
   };
 
   const handleBlackjackStand = (player: 'A' | 'B' = 'A') => {
-    if (bjTurn !== player) return;
-    if (player === 'A') {
-      setBjStandA(true);
-      if (bjStandB) {
-        // Both stand: evaluate winner
-        evaluateBlackjackWinner(calculateBlackjackScore(bjHandA), calculateBlackjackScore(bjHandB));
-      } else {
-        setBjTurn('B');
-        setTurnTimeLeft(15);
+    if (player !== 'A' || bjTurn !== 'A') return;
+    setBjStandA(true);
+    setBjTurn('B'); // Player stands, now dealer plays!
+
+    setTimeout(() => {
+      let currentDeck = [...bjDeck];
+      let currentHandB = [...bjHandB];
+      let bScore = calculateBlackjackScore(currentHandB);
+
+      // Dealer hits until score >= 17
+      while (bScore < 17 && currentDeck.length > 0) {
+        const card = currentDeck.pop()!;
+        currentHandB.push(card);
+        bScore = calculateBlackjackScore(currentHandB);
       }
-    } else {
+
+      setBjDeck(currentDeck);
+      setBjHandB(currentHandB);
       setBjStandB(true);
-      if (bjStandA) {
-        evaluateBlackjackWinner(calculateBlackjackScore(bjHandA), calculateBlackjackScore(bjHandB));
-      } else {
-        setBjTurn('A');
-        setTurnTimeLeft(15);
-      }
-    }
+      setBjTurn('FINISHED');
+
+      const aScore = calculateBlackjackScore(bjHandA);
+      evaluateBlackjackWinner(aScore, bScore);
+    }, 850);
   };
 
   const evaluateBlackjackWinner = (scoreA: number, scoreB: number) => {
     setBjTurn('FINISHED');
-    if (scoreA > scoreB) {
+    if (scoreA > 21) {
+      setWinnerSide('B');
+      triggerNotification('error');
+    } else if (scoreB > 21) {
+      setWinnerSide('A');
+      triggerNotification('success');
+    } else if (scoreA > scoreB) {
       setWinnerSide('A');
       triggerNotification('success');
     } else if (scoreB > scoreA) {
@@ -281,25 +276,10 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       triggerNotification('error');
     } else {
       setWinnerSide('A'); // Push goes to player in practice
+      triggerNotification('success');
     }
     setRoomState('MATCH_SETTLED');
   };
-
-  // Bot AI for Blackjack: Dealer standard (hits < 17, stands >= 17)
-  useEffect(() => {
-    if (gameType !== 'blackjack' || roomState !== 'GAME_ACTIVE' || bjTurn !== 'B') return;
-
-    const timer = setTimeout(() => {
-      const botScore = calculateBlackjackScore(bjHandB);
-      if (botScore < 17) {
-        handleBlackjackHit('B');
-      } else {
-        handleBlackjackStand('B');
-      }
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [gameType, roomState, bjTurn, bjHandB, bjDeck, bjStandA]);
 
   // ==========================================
   // --- 3. CONNECT 4 (CONNECT4 ROOM REPLICA) ---
@@ -430,8 +410,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   const generateShells = (): Array<'LIVE' | 'BLANK'> =>
     (['LIVE', 'BLANK', 'LIVE', 'BLANK'] as Array<'LIVE' | 'BLANK'>).sort(() => Math.random() - 0.5);
 
-  const [shotgunHpA, setShotgunHpA] = useState<number>(3);
-  const [shotgunHpB, setShotgunHpB] = useState<number>(3);
+  const [shotgunHpA, setShotgunHpA] = useState<number>(5);
+  const [shotgunHpB, setShotgunHpB] = useState<number>(5);
   const [shotgunShells, setShotgunShells] = useState<Array<'LIVE' | 'BLANK'>>(generateShells);
   const [shotgunTurn, setShotgunTurn] = useState<'A' | 'B'>('A');
   const [shotgunSaw, setShotgunSaw] = useState<boolean>(false);
@@ -442,8 +422,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   const [shotgunLastAction, setShotgunLastAction] = useState<any>(undefined);
 
   const initShotgun = (starter: 'A' | 'B') => {
-    setShotgunHpA(3);
-    setShotgunHpB(3);
+    setShotgunHpA(5);
+    setShotgunHpB(5);
     setShotgunShells(generateShells());
     setShotgunTurn(starter);
     setShotgunSaw(false);
@@ -604,8 +584,10 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   // ==========================================
   const [bridgeCurrentA, setBridgeCurrentA] = useState<number>(0);
   const [bridgeCurrentB, setBridgeCurrentB] = useState<number>(0);
+  const [bridgeLivesA, setBridgeLivesA] = useState<number>(3);
+  const [bridgeLivesB, setBridgeLivesB] = useState<number>(3);
   const [bridgeSafePath, setBridgeSafePath] = useState<Array<'LEFT' | 'RIGHT'>>(() =>
-    Array(8).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT'))
+    Array(12).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT'))
   );
   const [bridgeRevealed, setBridgeRevealed] = useState<Record<number, 'LEFT' | 'RIGHT'>>({});
   const [bridgeTurn, setBridgeTurn] = useState<'A' | 'B'>('A');
@@ -613,13 +595,15 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   const initBridge = (starter: 'A' | 'B') => {
     setBridgeCurrentA(0);
     setBridgeCurrentB(0);
-    setBridgeSafePath(Array(8).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT')));
+    setBridgeLivesA(3);
+    setBridgeLivesB(3);
+    setBridgeSafePath(Array(12).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT')));
     setBridgeRevealed({});
     setBridgeTurn(starter);
   };
 
   const handleBridgeStep = (choice: 'LEFT' | 'RIGHT', stepper: 'A' | 'B' = 'A') => {
-    if (bridgeTurn !== stepper) return;
+    if (bridgeTurn !== stepper || roomState !== 'GAME_ACTIVE') return;
     const step = stepper === 'A' ? bridgeCurrentA : bridgeCurrentB;
     const isSafe = bridgeSafePath[step] === choice;
 
@@ -628,23 +612,45 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       const next = step + 1;
       if (stepper === 'A') {
         setBridgeCurrentA(next);
-        if (next >= 6) {
+        if (next >= 8) {
           setWinnerSide('A');
           setRoomState('MATCH_SETTLED');
           triggerNotification('success');
+          return;
         }
       } else {
         setBridgeCurrentB(next);
-        if (next >= 6) {
+        if (next >= 8) {
           setWinnerSide('B');
           setRoomState('MATCH_SETTLED');
           triggerNotification('error');
+          return;
         }
       }
+      setBridgeTurn(stepper === 'A' ? 'B' : 'A');
       setTurnTimeLeft(15);
     } else {
-      // Shatters! Turn passes to opponent
+      // Fragile glass shatters! Loses 1 life (starts with 3 lives like PVP)
       setBridgeRevealed((p) => ({ ...p, [step]: choice === 'LEFT' ? 'RIGHT' : 'LEFT' }));
+      if (stepper === 'A') {
+        const nextLives = bridgeLivesA - 1;
+        setBridgeLivesA(nextLives);
+        if (nextLives <= 0) {
+          setWinnerSide('B');
+          setRoomState('MATCH_SETTLED');
+          triggerNotification('error');
+          return;
+        }
+      } else {
+        const nextLives = bridgeLivesB - 1;
+        setBridgeLivesB(nextLives);
+        if (nextLives <= 0) {
+          setWinnerSide('A');
+          setRoomState('MATCH_SETTLED');
+          triggerNotification('success');
+          return;
+        }
+      }
       setBridgeTurn(stepper === 'A' ? 'B' : 'A');
       setTurnTimeLeft(15);
     }
@@ -658,29 +664,184 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       handleBridgeStep(choice, 'B');
     }, 1200);
     return () => clearTimeout(timer);
-  }, [gameType, roomState, bridgeTurn, bridgeCurrentB, bridgeRevealed]);
+  }, [gameType, roomState, bridgeTurn, bridgeCurrentB, bridgeRevealed, bridgeLivesA, bridgeLivesB]);
 
   // ==========================================
-  // --- 6. HEAD SOCCER (SOCCER ROOM REPLICA) ---
+  // --- 6. HEAD SOCCER (REAL-TIME ARCADE REPLICA) ---
   // ==========================================
   const [hsState, setHsState] = useState<any>({
+    phase: 'PLAYING',
     scoreA: 0,
     scoreB: 0,
-    timeRemainingMs: 45000,
-    pA: { x: 180, y: 358, vx: 0, vy: 0, superCharge: 0 },
-    pB: { x: 620, y: 358, vx: 0, vy: 0, superCharge: 0 },
-    ball: { x: 400, y: 200, vx: 0, vy: 0 },
+    timeRemainingMs: 60000,
+    isOvertime: false,
+    countdownSec: 0,
+    playerA: { x: 200, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
+    playerB: { x: 600, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
+    ball: { x: 400, y: 240, vx: 0, vy: 0, radius: 20 },
+  });
+
+  const hsInputRef = useRef<{ left: boolean; right: boolean; jump: boolean; kick: boolean; super: boolean }>({
+    left: false,
+    right: false,
+    jump: false,
+    kick: false,
+    super: false,
   });
 
   const handleHeadSoccerInput = useCallback((inp: any) => {
-    setHsState((prev: any) => {
-      const pAx = Math.max(100, Math.min(380, prev.pA.x + (inp.left ? -6 : inp.right ? 6 : 0)));
-      return {
-        ...prev,
-        pA: { ...prev.pA, x: pAx },
-      };
-    });
+    hsInputRef.current = { ...hsInputRef.current, ...inp };
   }, []);
+
+  const initHeadSoccer = () => {
+    setHsState({
+      phase: 'PLAYING',
+      scoreA: 0,
+      scoreB: 0,
+      timeRemainingMs: 60000,
+      isOvertime: false,
+      countdownSec: 0,
+      playerA: { x: 200, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
+      playerB: { x: 600, y: 358, vx: 0, vy: 0, isGrounded: true, isKicking: false, superCharge: 20, superActive: false },
+      ball: { x: 400, y: 240, vx: 0, vy: 0, radius: 20 },
+    });
+    hsInputRef.current = { left: false, right: false, jump: false, kick: false, super: false };
+  };
+
+  // Real-time 30 FPS Head Soccer physics simulation
+  useEffect(() => {
+    if (gameType !== 'headsoccer' || roomState !== 'GAME_ACTIVE') return;
+
+    const interval = setInterval(() => {
+      setHsState((prev: any) => {
+        if (!prev || prev.timeRemainingMs <= 0) return prev;
+
+        const newTime = Math.max(0, prev.timeRemainingMs - 33);
+        if (newTime <= 0) {
+          const winSide = prev.scoreA > prev.scoreB ? 'A' : prev.scoreB > prev.scoreA ? 'B' : 'A';
+          setWinnerSide(winSide);
+          setRoomState('MATCH_SETTLED');
+          if (winSide === 'A') triggerNotification('success');
+          else triggerNotification('error');
+          return { ...prev, timeRemainingMs: 0 };
+        }
+
+        const input = hsInputRef.current;
+        let pA = { ...prev.playerA };
+        let pB = { ...prev.playerB };
+        let ball = { ...prev.ball };
+
+        // 1. Player A movement
+        if (input.left) pA.vx = -6.5;
+        else if (input.right) pA.vx = 6.5;
+        else pA.vx *= 0.8;
+
+        if (input.jump && pA.isGrounded) {
+          pA.vy = -13.5;
+          pA.isGrounded = false;
+        }
+        pA.vy += 0.8;
+        pA.x = Math.max(80, Math.min(380, pA.x + pA.vx));
+        pA.y += pA.vy;
+        if (pA.y >= 358) {
+          pA.y = 358;
+          pA.vy = 0;
+          pA.isGrounded = true;
+        }
+        pA.isKicking = Boolean(input.kick);
+
+        // 2. Bot B Autonomous AI (defensive + offensive)
+        const targetX = Math.max(420, Math.min(720, ball.x + 20));
+        if (pB.x < targetX - 10) pB.vx = 5.2;
+        else if (pB.x > targetX + 10) pB.vx = -5.2;
+        else pB.vx *= 0.8;
+
+        const distB = Math.hypot(pB.x - ball.x, pB.y - ball.y);
+        if (distB < 120 && ball.y < 300 && pB.isGrounded && Math.random() > 0.4) {
+          pB.vy = -13;
+          pB.isGrounded = false;
+        }
+        pB.vy += 0.8;
+        pB.x = Math.max(420, Math.min(720, pB.x + pB.vx));
+        pB.y += pB.vy;
+        if (pB.y >= 358) {
+          pB.y = 358;
+          pB.vy = 0;
+          pB.isGrounded = true;
+        }
+        pB.isKicking = distB < 65 && Math.random() > 0.3;
+
+        // 3. Ball Physics
+        ball.vy += 0.55;
+        ball.vx *= 0.99;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        // Ground bounce
+        if (ball.y >= 370) {
+          ball.y = 370;
+          ball.vy = -ball.vy * 0.75;
+          ball.vx *= 0.96;
+        }
+
+        // Left/Right pitch bounce
+        if (ball.x <= 62) {
+          if (ball.y < 235) {
+            ball.x = 62;
+            ball.vx = Math.abs(ball.vx) * 0.8;
+          }
+        }
+        if (ball.x >= 738) {
+          if (ball.y < 235) {
+            ball.x = 738;
+            ball.vx = -Math.abs(ball.vx) * 0.8;
+          }
+        }
+
+        // Collision: Player A with ball
+        const distA = Math.hypot(pA.x - ball.x, pA.y - ball.y);
+        if (distA < 52) {
+          const kickBoost = pA.isKicking ? 1.7 : 1.1;
+          ball.vx = (ball.x > pA.x ? 9 : -6) * kickBoost;
+          ball.vy = -8 * kickBoost;
+          pA.superCharge = Math.min(100, pA.superCharge + 5);
+        }
+
+        // Collision: Bot B with ball
+        if (distB < 52) {
+          const kickBoost = pB.isKicking ? 1.7 : 1.1;
+          ball.vx = (ball.x < pB.x ? -9 : 6) * kickBoost;
+          ball.vy = -8 * kickBoost;
+          pB.superCharge = Math.min(100, pB.superCharge + 5);
+        }
+
+        // 4. Goal Detection
+        let scoreA = prev.scoreA;
+        let scoreB = prev.scoreB;
+        if (ball.x < 55 && ball.y >= 235) {
+          scoreB += 1;
+          ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20 };
+          triggerImpact('heavy');
+        } else if (ball.x > 745 && ball.y >= 235) {
+          scoreA += 1;
+          ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20 };
+          triggerImpact('heavy');
+        }
+
+        return {
+          ...prev,
+          scoreA,
+          scoreB,
+          timeRemainingMs: newTime,
+          playerA: pA,
+          playerB: pB,
+          ball,
+        };
+      });
+    }, 33);
+
+    return () => clearInterval(interval);
+  }, [gameType, roomState]);
 
   // ==========================================
   // --- 7. POKER (POKER ROOM REPLICA) ---
@@ -764,18 +925,27 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     };
 
     setCoinToss(tossData);
-    setShowCoinToss(true);
     setWinnerSide(null);
-    setRoomState('READY_CHECK');
     setTurnTimeLeft(15);
     setMatchId(Date.now());
 
-    if (gameType === 'roulette') initRoulette(starter);
-    if (gameType === 'blackjack') initBlackjack(starter);
-    if (gameType === 'connect4') initConnect4(starter);
-    if (gameType === 'shotgun') initShotgun(starter);
-    if (gameType === 'bridge') initBridge(starter);
-    if (gameType === 'poker') initPoker();
+    if (gameType === 'headsoccer') {
+      setShowCoinToss(false);
+      setRoomState('GAME_ACTIVE');
+      initHeadSoccer();
+    } else if (gameType === 'blackjack') {
+      setShowCoinToss(false);
+      setRoomState('GAME_ACTIVE');
+      initBlackjack();
+    } else {
+      setShowCoinToss(true);
+      setRoomState('READY_CHECK');
+      if (gameType === 'roulette') initRoulette(starter);
+      if (gameType === 'connect4') initConnect4(starter);
+      if (gameType === 'shotgun') initShotgun(starter);
+      if (gameType === 'bridge') initBridge(starter);
+      if (gameType === 'poker') initPoker();
+    }
   }, [gameType, playerName, botName]);
 
   useEffect(() => {
@@ -840,8 +1010,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         </div>
       </div>
 
-      {/* Active Turn Clock Indicator */}
-      {roomState === 'GAME_ACTIVE' && (
+      {/* Active Turn Clock Indicator (Hidden for Head Soccer real-time match) */}
+      {roomState === 'GAME_ACTIVE' && gameType !== 'headsoccer' && (
         <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-[#141724] border border-white/10 text-xs">
           <div className="flex items-center space-x-2">
             <span
@@ -959,7 +1129,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             gameData={{
               hpA: shotgunHpA,
               hpB: shotgunHpB,
-              maxHp: 3,
+              maxHp: 5,
               currentTurn: shotgunTurn,
               liveCount: shotgunShells.filter((s) => s === 'LIVE').length,
               blankCount: shotgunShells.filter((s) => s === 'BLANK').length,
@@ -991,13 +1161,13 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         {gameType === 'bridge' && (
           <GlassBridgeArena
             gameData={{
-              totalSteps: 6,
+              totalSteps: 10,
               currentStepA: bridgeCurrentA,
               currentStepB: bridgeCurrentB,
               activeStep: Math.max(bridgeCurrentA, bridgeCurrentB),
               currentTurn: bridgeTurn,
-              livesA: 1,
-              livesB: 1,
+              livesA: bridgeLivesA,
+              livesB: bridgeLivesB,
               revealedSteps: bridgeRevealed,
               coinToss: coinToss || undefined,
             } as any}

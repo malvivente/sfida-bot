@@ -162,27 +162,6 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
         </div>
       </div>
 
-      {/* Main Title Banner (shown when in lobby) */}
-      {!activeGame && (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-950/40 via-purple-950/20 to-black border border-white/10 p-4 shadow-xl">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-heading font-black text-[9px] uppercase tracking-wider inline-block">
-                {t('casino.title') || 'SFIDA CASINO ORIGINALS'}
-              </span>
-              <h2 className="text-base font-heading font-black text-white uppercase tracking-wider">
-                Tavoli & Giochi Arcade
-              </h2>
-              <p className="text-[11px] text-slate-400">
-                {t('casino.subtitle') || 'Tavoli e giochi arcade con pagamenti istantanei in GRAM.'}
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Dices className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ======================================================== */}
       {/* 1. CASINO CARDS LOBBY VIEW (CLEAN AESTHETIC RICH CARDS)  */}
