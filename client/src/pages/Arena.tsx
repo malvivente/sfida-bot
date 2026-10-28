@@ -167,6 +167,16 @@ export const Arena: React.FC<ArenaProps> = ({
     fetchUserBalance();
   }, [userAddress, userId, serverUrl]);
 
+  useEffect(() => {
+    const handleCustomBalanceUpdate = (e: any) => {
+      if (e.detail?.balance) {
+        setUserBalance((prev) => (prev ? { ...prev, balanceGram: e.detail.balance } : null));
+      }
+    };
+    window.addEventListener('sfida_balance_updated', handleCustomBalanceUpdate);
+    return () => window.removeEventListener('sfida_balance_updated', handleCustomBalanceUpdate);
+  }, []);
+
   // Persistent match feed: restored from localStorage and/or synced with backend API
   const [matches, setMatches] = useState<MatchData[]>(() => {
     try {
@@ -1895,6 +1905,9 @@ export const Arena: React.FC<ArenaProps> = ({
           userAddress={userAddress}
           onOpenWallet={openWalletModal}
           userBalanceGram={availableBalanceGram}
+          onBalanceUpdated={(newBal) => {
+            setUserBalance((prev) => (prev ? { ...prev, balanceGram: newBal } : null));
+          }}
           creationFeeGram={feeConfigData?.creationFeeGram || 0.05}
           joinFeeGram={feeConfigData?.joinFeeGram || 0.05}
           initialInviteCode={initialInviteCode}

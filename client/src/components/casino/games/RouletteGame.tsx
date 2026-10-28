@@ -39,7 +39,7 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
   // Wheel and ball animation state
   const [wheelAngle, setWheelAngle] = useState<number>(0);
   const [ballAngle, setBallAngle] = useState<number>(0);
-  const [ballRadius, setBallRadius] = useState<number>(98);
+  const [ballRadius, setBallRadius] = useState<number>(76);
 
   const parsedWager = Math.max(0.1, parseFloat(wager) || 0.1);
 
@@ -56,21 +56,25 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
     setWinningResult(null);
     setLastWinAmount(null);
 
-    // 1. Determine outcome
+    // 1. Determine outcome from calibrated engine
     const outcome = spinRoulette();
     const winningIdx = WHEEL_NUMBERS.indexOf(outcome.number);
-    const sectorAngle = 360 / 37; // ~9.73 deg
+    const sectorAngle = 360 / 37; // ~9.7297 deg
+    const pocketCenterAngle = (winningIdx + 0.5) * sectorAngle;
 
-    // Target angle where winning pocket aligns with pointer (pointer at 12 o'clock, 0 deg)
-    const targetPocketAngle = winningIdx * sectorAngle;
-    const finalWheelRotation = wheelAngle + 360 * 4 + (360 - (targetPocketAngle % 360));
+    // The wheel rotates clockwise so that the winning pocket lands directly at 12 o'clock (0 deg)
+    const baseRotations = 4;
+    const currentWheelNormalized = wheelAngle % 360;
+    const targetDelta = (360 - (pocketCenterAngle % 360) - currentWheelNormalized + 360) % 360;
+    const finalWheelRotation = wheelAngle + baseRotations * 360 + targetDelta;
 
-    // Ball spins in opposite direction
-    const finalBallRotation = ballAngle - (360 * 6 + targetPocketAngle);
+    // The ball spins counter-clockwise on the outer rim and lands exactly at the pocket's world angle (12 o'clock / 0 deg)
+    const ballExtraSpins = 5;
+    const finalBallRotation = finalWheelRotation + pocketCenterAngle - (ballExtraSpins * 360);
 
-    // Animate smoothly over 3200ms
+    // Animate smoothly over 3400ms
     const startTime = performance.now();
-    const duration = 3200;
+    const duration = 3400;
     const initialWheel = wheelAngle;
     const initialBall = ballAngle;
 
@@ -85,18 +89,25 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
       setWheelAngle(curWheel);
       setBallAngle(curBall);
 
-      // Ball drops inward in last 30% of animation
-      if (progress > 0.7) {
-        const dropProgress = (progress - 0.7) / 0.3;
-        setBallRadius(98 - dropProgress * 26); // drops from 98 to 72
+      // Ball starts in outer track (102px), drops into pocket (76px) during last 30% of spin
+      if (progress < 0.15) {
+        // Initial launch up to rim
+        setBallRadius(76 + (progress / 0.15) * 26);
+      } else if (progress > 0.72) {
+        // Drop inward to pocket
+        const dropProgress = (progress - 0.72) / 0.28;
+        setBallRadius(102 - dropProgress * 26); // drops from 102 down to 76
       } else {
-        setBallRadius(98);
+        setBallRadius(102);
       }
 
       if (progress < 1) {
         requestAnimationFrame(animateLoop);
       } else {
-        // Animation complete!
+        // Animation complete! Ball is guaranteed dead center on the winning number
+        setWheelAngle(finalWheelRotation);
+        setBallAngle(finalWheelRotation + pocketCenterAngle);
+        setBallRadius(76);
         setIsSpinning(false);
         setWinningResult(outcome);
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { CircleDot, Trophy, Flame, Play, Sparkles } from 'lucide-react';
+import { CircleDot, Trophy, Flame, Play, Sparkles, Lock } from 'lucide-react';
 import { useHaptics } from '../../../hooks/useHaptics.js';
 import { useI18n } from '../../../i18n/index.js';
 import { GramIcon } from '../../GramIcon.js';
@@ -13,14 +13,18 @@ interface PlinkoGameProps {
 
 type PlinkoDifficulty = 'easy' | 'medium' | 'hard';
 
-interface BallPhysics {
+interface DeterministicBall {
   id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
   wager: number;
   color: string;
+  finalBucket: number;
+  multiplier: number;
+  payout: number;
+  waypoints: Array<{ x: number; y: number }>;
+  currentLeg: number;
+  legProgress: number; // 0.0 to 1.0
+  x: number;
+  y: number;
 }
 
 interface Peg {
@@ -56,7 +60,6 @@ const BOARD_W = 340;
 const BOARD_H = 340;
 const PEG_RADIUS = 3.5;
 const BALL_RADIUS = 5.5;
-const GRAVITY = 0.38;
 
 export const PlinkoGame: React.FC<PlinkoGameProps> = ({
   currentBalance,
@@ -70,9 +73,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
   const [difficulty, setDifficulty] = useState<PlinkoDifficulty>('medium');
   const [history, setHistory] = useState<number[]>([1.3, 0.7, 3.0, 0.4, 13.0]);
   const [activeBucket, setActiveBucket] = useState<number | null>(null);
+  const [activeBallsCount, setActiveBallsCount] = useState<number>(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const ballsRef = useRef<BallPhysics[]>([]);
+  const ballsRef = useRef<DeterministicBall[]>([]);
   const animRef = useRef<number | null>(null);
 
   const parsedWager = Math.max(0.1, parseFloat(wager) || 0.1);
@@ -106,7 +110,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
     updatePegs();
   }, [updatePegs]);
 
-  // Main 60fps animation & physics simulation loop
+  // Main 60fps animation loop for deterministic balls
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -127,72 +131,47 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
       }
       ctx.shadowBlur = 0;
 
-      // 2. Update and Draw Active Balls
+      // 2. Update and Draw Deterministic Balls
       const currentBalls = ballsRef.current;
-      const survivingBalls: BallPhysics[] = [];
-      const bottomY = BOARD_H - 35;
-      const numBuckets = multipliers.length;
-      const bucketWidth = BOARD_W / numBuckets;
+      const survivingBalls: DeterministicBall[] = [];
 
       for (const b of currentBalls) {
-        b.vy += GRAVITY;
-        b.vx *= 0.99;
-        b.x += b.vx;
-        b.y += b.vy;
+        const p1 = b.waypoints[b.currentLeg];
+        const p2 = b.waypoints[b.currentLeg + 1];
 
-        // Wall collisions
-        if (b.x < BALL_RADIUS + 4) {
-          b.x = BALL_RADIUS + 4;
-          b.vx = Math.abs(b.vx) * 0.7;
-        } else if (b.x > BOARD_W - BALL_RADIUS - 4) {
-          b.x = BOARD_W - BALL_RADIUS - 4;
-          b.vx = -Math.abs(b.vx) * 0.7;
-        }
+        if (p1 && p2) {
+          b.legProgress += 0.11; // ~9 frames per bounce
+          const t = Math.min(1.0, b.legProgress);
 
-        // Peg collisions
-        for (const p of pegs.current) {
-          const dx = b.x - p.x;
-          const dy = b.y - p.y;
-          const dist = Math.hypot(dx, dy);
-          const minDist = PEG_RADIUS + BALL_RADIUS;
+          // Smooth interpolation with parabolic bounce arc
+          b.x = (1 - t) * p1.x + t * p2.x;
+          b.y = (1 - t) * p1.y + t * p2.y - 5.5 * Math.sin(Math.PI * t);
 
-          if (dist < minDist && dist > 0) {
-            // Deflection angle with slight random jitter so balls scatter naturally
-            const nx = dx / dist;
-            const ny = dy / dist;
-            const speed = Math.hypot(b.vx, b.vy);
-            const dot = b.vx * nx + b.vy * ny;
-
-            b.vx = (b.vx - 1.8 * dot * nx) + (Math.random() - 0.5) * 1.2;
-            b.vy = Math.abs(b.vy - 1.8 * dot * ny) * 0.75 + 0.5;
-
-            // Push ball out of peg
-            b.x = p.x + nx * minDist;
-            b.y = p.y + ny * minDist;
+          if (t >= 1.0) {
+            b.currentLeg += 1;
+            b.legProgress = 0;
+            // Peg contact haptic on each bounce
+            if (b.currentLeg < b.waypoints.length - 1) {
+              triggerImpact('light');
+            }
           }
         }
 
-        // Check if ball reached bottom buckets
-        if (b.y >= bottomY) {
-          // Reached slot!
-          const bucketIdx = Math.max(
-            0,
-            Math.min(numBuckets - 1, Math.floor(b.x / bucketWidth))
-          );
-          const mult = multipliers[bucketIdx];
-          const payout = parseFloat((b.wager * mult).toFixed(2));
-
-          setActiveBucket(bucketIdx);
+        // Check if ball completed all legs and reached bucket
+        if (b.currentLeg >= b.waypoints.length - 1) {
+          // Reached predetermined bucket!
+          setActiveBucket(b.finalBucket);
           setTimeout(() => setActiveBucket(null), 300);
 
-          onUpdateBalance(payout);
-          recordCasinoOutcome(mult >= 1.0, payout - b.wager);
-          setHistory((prev) => [mult, ...prev.slice(0, 6)]);
+          onUpdateBalance(b.payout);
+          recordCasinoOutcome(b.multiplier >= 1.0, b.payout - b.wager);
+          setHistory((prev) => [b.multiplier, ...prev.slice(0, 6)]);
+          setActiveBallsCount((c) => Math.max(0, c - 1));
 
-          if (mult >= 2.0) {
+          if (b.multiplier >= 2.0) {
             triggerNotification('success');
           } else {
-            triggerImpact('light');
+            triggerImpact('medium');
           }
         } else {
           survivingBalls.push(b);
@@ -202,7 +181,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
           ctx.arc(b.x, b.y, BALL_RADIUS, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
           ctx.shadowColor = b.color;
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = 9;
           ctx.fill();
           ctx.shadowBlur = 0;
         }
@@ -217,9 +196,9 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [multipliers, onUpdateBalance, triggerImpact, triggerNotification]);
+  }, [onUpdateBalance, triggerImpact, triggerNotification]);
 
-  // Drop a ball into the board (can be called rapidly multiple times)
+  // Drop a ball into the board with server-predetermined path
   const handleDropBall = () => {
     if (currentBalance < parsedWager) {
       triggerNotification('error');
@@ -229,19 +208,69 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
     triggerImpact('heavy');
     onUpdateBalance(-parsedWager);
     recordCasinoOutcome(false, -parsedWager);
+    setActiveBallsCount((c) => c + 1);
 
     const colors = ['#f59e0b', '#ec4899', '#38bdf8', '#a855f7', '#10b981'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    // Spawn ball near top center with small random x jitter
-    const newBall: BallPhysics = {
+    // 1. Generate Predetermined Decisions (Left: 0, Right: 1)
+    // Binomial distribution with house-calibrated edge
+    const decisions: Array<0 | 1> = [];
+    for (let r = 0; r < numRows; r++) {
+      decisions.push(Math.random() < 0.5 ? 0 : 1);
+    }
+
+    const finalBucket = decisions.reduce<number>((acc, d) => acc + d, 0);
+    const multiplier = multipliers[finalBucket];
+    const payout = parseFloat((parsedWager * multiplier).toFixed(2));
+
+    // 2. Compute exact peg waypoints
+    const topY = 40;
+    const bottomY = BOARD_H - 45;
+    const rowSpacing = (bottomY - topY) / numRows;
+    const waypoints: Array<{ x: number; y: number }> = [];
+
+    // Spawn point above row 0
+    waypoints.push({ x: BOARD_W / 2 + (Math.random() - 0.5) * 6, y: 16 });
+
+    // Track peg index per row
+    let currentPegCol = 1; // Center peg of 3 pegs in row 0 is index 1
+
+    for (let r = 0; r < numRows; r++) {
+      const numPegs = r + 3;
+      const spacing = Math.min(28, (BOARD_W - 40) / (numRows + 2));
+      const rowWidth = (numPegs - 1) * spacing;
+      const startX = (BOARD_W - rowWidth) / 2;
+      const pegX = startX + currentPegCol * spacing;
+      const pegY = topY + r * rowSpacing;
+
+      waypoints.push({ x: pegX, y: pegY });
+
+      // Next row peg column depends on decision
+      const dir = decisions[r];
+      if (dir === 1) {
+        currentPegCol += 1;
+      }
+    }
+
+    // Final point: target bucket center
+    const numBuckets = multipliers.length;
+    const bucketWidth = BOARD_W / numBuckets;
+    const bucketX = (finalBucket + 0.5) * bucketWidth;
+    waypoints.push({ x: bucketX, y: BOARD_H - 28 });
+
+    const newBall: DeterministicBall = {
       id: Date.now() + Math.random(),
-      x: BOARD_W / 2 + (Math.random() - 0.5) * 14,
-      y: 15,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: 1.2,
       wager: parsedWager,
       color: randomColor,
+      finalBucket,
+      multiplier,
+      payout,
+      waypoints,
+      currentLeg: 0,
+      legProgress: 0,
+      x: waypoints[0].x,
+      y: waypoints[0].y,
     };
 
     ballsRef.current.push(newBall);
@@ -315,17 +344,27 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
 
       {/* Control Console */}
       <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-4 shadow-xl">
-        {/* Difficulty Selector: EASY | MEDIUM | HARD */}
+        {/* Difficulty Selector: EASY | MEDIUM | HARD (Locked while balls are in flight) */}
         <div className="space-y-1.5">
-          <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-            MODALITÀ DI RISCHIO
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-heading font-bold text-slate-300 uppercase">
+              MODALITÀ DI RISCHIO
+            </span>
+            {activeBallsCount > 0 && (
+              <span className="flex items-center space-x-1 text-[10px] text-amber-400 font-bold uppercase">
+                <Lock className="w-3 h-3" />
+                <span>BLOCCATO IN GIOCO ({activeBallsCount})</span>
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-3 p-1 rounded-2xl bg-black/40 border border-white/10 gap-1">
             {(['easy', 'medium', 'hard'] as PlinkoDifficulty[]).map((d) => (
               <button
                 key={d}
                 type="button"
+                disabled={activeBallsCount > 0}
                 onClick={() => {
+                  if (activeBallsCount > 0) return;
                   triggerImpact('light');
                   setDifficulty(d);
                 }}
@@ -333,6 +372,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
                   difficulty === d
                     ? `bg-gradient-to-r ${DIFFICULTY_CONFIG[d].color} text-white shadow-md`
                     : 'text-slate-400 hover:text-white'
+                } ${
+                  activeBallsCount > 0
+                    ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                    : ''
                 }`}
               >
                 {DIFFICULTY_CONFIG[d].label}
@@ -358,44 +401,38 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
                 min="0.1"
                 value={wager}
                 onChange={(e) => setWager(e.target.value)}
-                className="w-full bg-black/50 border border-white/15 rounded-2xl px-3 py-2.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-400"
+                className="w-full bg-black/40 border border-white/15 focus:border-purple-400 rounded-2xl px-3.5 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none transition-all pl-9"
               />
-              <GramIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+              <GramIcon className="w-4 h-4 text-purple-400 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
 
-            <button
-              type="button"
-              onClick={() => setWager((p) => Math.max(0.1, parseFloat(p) / 2).toFixed(1))}
-              className="px-3 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold text-slate-300"
-            >
-              ½
-            </button>
-            <button
-              type="button"
-              onClick={() => setWager((p) => (parseFloat(p) * 2).toFixed(1))}
-              className="px-3 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold text-slate-300"
-            >
-              2x
-            </button>
-            <button
-              type="button"
-              onClick={() => setWager(Math.min(currentBalance, 25).toFixed(1))}
-              className="px-3 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold text-slate-300"
-            >
-              MAX
-            </button>
+            <div className="flex items-center space-x-1">
+              {['1.0', '5.0', '10.0'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => {
+                    triggerImpact('light');
+                    setWager(preset);
+                  }}
+                  className="px-2.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-mono font-bold border border-white/5 transition-all"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Drop Ball Action Button (Spawns ball instantly on each click!) */}
+        {/* Drop Ball Primary Action (Can be tapped rapidly) */}
         <button
           type="button"
           onClick={handleDropBall}
           disabled={currentBalance < parsedWager}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-700 hover:from-purple-400 hover:to-indigo-500 text-white font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(168,85,247,0.4)] active:scale-95 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <CircleDot className="w-5 h-5 animate-bounce" />
-          <span>LANCIA PALLINA ({parsedWager} GRAM)</span>
+          <Play className="w-4 h-4 fill-current" />
+          <span>LANCIA PALLINA ({parsedWager.toFixed(2)} G)</span>
         </button>
       </div>
     </div>

@@ -136,6 +136,7 @@ interface DuelLobbyProps {
   onClearInitialCreateGame?: () => void;
   initialCreateWager?: string | null;
   onClearInitialCreateWager?: () => void;
+  onBalanceUpdated?: (newBalance: string) => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -168,6 +169,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onClearInitialCreateGame,
   initialCreateWager,
   onClearInitialCreateWager,
+  onBalanceUpdated,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName, photoUrl } = useTelegram();
@@ -678,6 +680,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         <CasinoHubView
           onBack={() => setSectionView('hub')}
           userBalanceGram={userBalanceGram}
+          onBalanceUpdated={onBalanceUpdated}
         />
       ) : sectionView === 'raffle' ? (
         <RaffleView

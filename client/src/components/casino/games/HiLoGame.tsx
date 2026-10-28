@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, ArrowDown, ArrowUp, RefreshCw, Trophy, ShieldCheck, Zap } from 'lucide-react';
+import { Layers, ArrowDown, ArrowUp, RefreshCw, Trophy, ShieldCheck, Zap, XCircle } from 'lucide-react';
 import { useHaptics } from '../../../hooks/useHaptics.js';
 import { useI18n } from '../../../i18n/index.js';
 import { GramIcon } from '../../GramIcon.js';
@@ -33,6 +33,12 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
   const [cardHistory, setCardHistory] = useState<HiLoCard[]>([
     { suit: '♠', rank: '7' },
   ]);
+  const [resultBanner, setResultBanner] = useState<{
+    type: 'win' | 'loss';
+    text: string;
+    amount?: number;
+    multiplier?: number;
+  } | null>(null);
 
   const parsedWager = Math.max(0.1, parseFloat(wager) || 0.1);
   const suits: Array<'♠' | '♥' | '♦' | '♣'> = ['♠', '♥', '♦', '♣'];
@@ -54,6 +60,7 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
     }
 
     triggerImpact('heavy');
+    setResultBanner(null);
     onUpdateBalance(-parsedWager);
 
     const initial = getRandomCard();
@@ -94,6 +101,11 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
       triggerNotification('error');
       setInRound(false);
       recordCasinoOutcome(false, -parsedWager);
+      setResultBanner({
+        type: 'loss',
+        text: `PERSO! -${parsedWager.toFixed(2)} G`,
+        amount: parsedWager,
+      });
     }
   };
 
@@ -114,6 +126,12 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
     const payout = currentPayout;
     onUpdateBalance(payout);
     recordCasinoOutcome(true, payout - parsedWager);
+    setResultBanner({
+      type: 'win',
+      text: `CASHED OUT! +${payout.toFixed(2)} G!`,
+      amount: payout,
+      multiplier: currentMultiplier,
+    });
     setInRound(false);
   };
 
@@ -168,6 +186,23 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
           <span>•</span>
           <span>MOLTIPLICATORE: <strong className="text-emerald-400">{currentMultiplier.toFixed(2)}x</strong></span>
         </div>
+
+        {/* Dynamic Cashout / Loss Banner */}
+        {resultBanner && (
+          <div className="mt-2.5 animate-in zoom-in-95 duration-200">
+            {resultBanner.type === 'win' ? (
+              <div className="px-4 py-1.5 rounded-full bg-emerald-500/25 border-2 border-emerald-400 text-emerald-300 font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-[0_0_20px_rgba(16,185,129,0.35)]">
+                <Trophy className="w-4 h-4 text-emerald-400" />
+                <span>{resultBanner.text}</span>
+              </div>
+            ) : (
+              <div className="px-4 py-1.5 rounded-full bg-rose-500/25 border-2 border-rose-500 text-rose-300 font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-[0_0_20px_rgba(244,63,94,0.35)]">
+                <XCircle className="w-4 h-4 text-rose-400" />
+                <span>{resultBanner.text}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Control Console */}

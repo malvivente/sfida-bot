@@ -41,28 +41,38 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
   const [activeGame, setActiveGame] = useState<CasinoGameType | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [demoBalance, setDemoBalance] = useState<number>(100.0);
+  const [liveBalance, setLiveBalance] = useState<number>(() => parseFloat(userBalanceGram || '0'));
 
-  const realBalance = parseFloat(userBalanceGram || '0');
-  const currentBalance = isDemoMode ? demoBalance : realBalance;
+  // Keep liveBalance in sync when external balance prop changes
+  React.useEffect(() => {
+    if (userBalanceGram !== undefined) {
+      setLiveBalance(parseFloat(userBalanceGram || '0'));
+    }
+  }, [userBalanceGram]);
 
-  // Update balance delta helper
+  const currentBalance = isDemoMode ? demoBalance : liveBalance;
+
+  // Update balance delta helper - strictly updates running live balance
   const updateBalanceDelta = (delta: number) => {
     if (isDemoMode) {
       setDemoBalance((prev) => Math.max(0, parseFloat((prev + delta).toFixed(2))));
     } else {
-      const next = Math.max(0, parseFloat((realBalance + delta).toFixed(2)));
-      onBalanceUpdated?.(next.toFixed(2));
-      try {
-        const saved = localStorage.getItem('sfidabot_user_balance');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          parsed.balanceGram = next.toFixed(2);
-          localStorage.setItem('sfidabot_user_balance', JSON.stringify(parsed));
+      setLiveBalance((prev) => {
+        const next = Math.max(0, parseFloat((prev + delta).toFixed(2)));
+        onBalanceUpdated?.(next.toFixed(2));
+        try {
+          const saved = localStorage.getItem('sfidabot_user_balance');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            parsed.balanceGram = next.toFixed(2);
+            localStorage.setItem('sfidabot_user_balance', JSON.stringify(parsed));
+          }
           window.dispatchEvent(
             new CustomEvent('sfida_balance_updated', { detail: { balance: next.toFixed(2) } })
           );
-        }
-      } catch {}
+        } catch {}
+        return next;
+      });
     }
   };
 

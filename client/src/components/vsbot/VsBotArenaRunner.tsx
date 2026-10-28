@@ -915,15 +915,32 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         let pB = { ...prev.playerB };
         let ball = { ...prev.ball };
 
-        // 1. Player A movement
+        // Passive Super Charge progression over time (reaches 100% in ~10s)
+        pA.superCharge = Math.min(100, pA.superCharge + 0.35);
+        pB.superCharge = Math.min(100, pB.superCharge + 0.35);
+
+        // Super Shot Activation trigger from Player A
+        if (input.super) {
+          hsInputRef.current.super = false;
+          if (pA.superCharge >= 100) {
+            pA.superActive = true;
+            triggerImpact('heavy');
+          }
+        }
+
+        // 1. Player A movement & Single-Impulse Jump
         if (input.left) pA.vx = -6.5;
         else if (input.right) pA.vx = 6.5;
         else pA.vx *= 0.8;
 
-        if (input.jump && pA.isGrounded) {
-          pA.vy = -13.5;
-          pA.isGrounded = false;
+        if (input.jump) {
+          if (pA.isGrounded) {
+            pA.vy = -14.0;
+            pA.isGrounded = false;
+          }
+          hsInputRef.current.jump = false; // Immediately consume single jump impulse!
         }
+
         pA.vy += 0.8;
         pA.x = Math.max(80, Math.min(380, pA.x + pA.vx));
         pA.y += pA.vy;
@@ -932,7 +949,14 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           pA.vy = 0;
           pA.isGrounded = true;
         }
-        pA.isKicking = Boolean(input.kick);
+
+        // Kick impulse
+        if (input.kick) {
+          pA.isKicking = true;
+          hsInputRef.current.kick = false; // Immediately consume kick impulse
+        } else {
+          pA.isKicking = false;
+        }
 
         // 2. Bot B Autonomous AI (defensive + offensive)
         const targetX = Math.max(420, Math.min(720, ball.x + 20));
@@ -954,6 +978,11 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           pB.isGrounded = true;
         }
         pB.isKicking = distB < 65 && Math.random() > 0.3;
+
+        // Bot B Super Shot Activation
+        if (pB.superCharge >= 100 && distB < 110) {
+          pB.superActive = true;
+        }
 
         // 3. Ball Physics
         ball.vy += 0.55;
@@ -985,18 +1014,37 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         // Collision: Player A with ball
         const distA = Math.hypot(pA.x - ball.x, pA.y - ball.y);
         if (distA < 52) {
-          const kickBoost = pA.isKicking ? 1.7 : 1.1;
-          ball.vx = (ball.x > pA.x ? 9 : -6) * kickBoost;
-          ball.vy = -8 * kickBoost;
-          pA.superCharge = Math.min(100, pA.superCharge + 5);
+          if (pA.superActive) {
+            // Unstoppable Super Shot Rocket!
+            ball.vx = 22.0;
+            ball.vy = -6.0;
+            pA.superActive = false;
+            pA.superCharge = 0;
+            triggerImpact('heavy');
+            triggerNotification('success');
+          } else {
+            const kickBoost = pA.isKicking ? 1.7 : 1.1;
+            ball.vx = (ball.x > pA.x ? 9.5 : -6.0) * kickBoost;
+            ball.vy = -8.5 * kickBoost;
+            pA.superCharge = Math.min(100, pA.superCharge + 12);
+          }
         }
 
         // Collision: Bot B with ball
         if (distB < 52) {
-          const kickBoost = pB.isKicking ? 1.7 : 1.1;
-          ball.vx = (ball.x < pB.x ? -9 : 6) * kickBoost;
-          ball.vy = -8 * kickBoost;
-          pB.superCharge = Math.min(100, pB.superCharge + 5);
+          if (pB.superActive) {
+            // Bot Super Shot
+            ball.vx = -22.0;
+            ball.vy = -6.0;
+            pB.superActive = false;
+            pB.superCharge = 0;
+            triggerImpact('heavy');
+          } else {
+            const kickBoost = pB.isKicking ? 1.7 : 1.1;
+            ball.vx = (ball.x < pB.x ? -9.5 : 6.0) * kickBoost;
+            ball.vy = -8.5 * kickBoost;
+            pB.superCharge = Math.min(100, pB.superCharge + 12);
+          }
         }
 
         // 4. Goal Detection
@@ -1005,10 +1053,12 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         if (ball.x < 55 && ball.y >= 235) {
           scoreB += 1;
           ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20 };
+          pA.superCharge = Math.min(100, pA.superCharge + 35); // Conceding boosts super charge
           triggerImpact('heavy');
         } else if (ball.x > 745 && ball.y >= 235) {
           scoreA += 1;
           ball = { x: 400, y: 220, vx: 0, vy: 0, radius: 20 };
+          pB.superCharge = Math.min(100, pB.superCharge + 35);
           triggerImpact('heavy');
         }
 
