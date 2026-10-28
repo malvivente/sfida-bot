@@ -214,7 +214,7 @@ export const translations: Translations = {
   'profile.viewLeaderboard': { it: 'VEDI CLASSIFICA GLOBALE', en: 'VIEW GLOBAL LEADERBOARD' },
 
   // Leaderboard
-  'leaderboard.title': { it: 'CLASSIFICA CYBER', en: 'CYBER LEADERBOARD' },
+  'leaderboard.title': { it: 'CLASSIFICA', en: 'LEADERBOARD' },
   'leaderboard.subtitle': { it: 'I guerrieri d\'élite dell\'Arena Sfida', en: 'Top duelists of the cyber arena' },
   'leaderboard.backToArena': { it: '← Torna all\'Arena', en: '← Back to Arena' },
   'leaderboard.back': { it: '← Torna al Profilo', en: '← Back to Profile' },
