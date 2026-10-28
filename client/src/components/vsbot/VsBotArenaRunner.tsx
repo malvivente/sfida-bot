@@ -179,107 +179,291 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     return score;
   };
 
+  const calculateBustOdds = (score: number, deck: any[]) => {
+    if (score <= 11) return 0;
+    if (score >= 21) return 100;
+    const diff = 21 - score;
+    let bustingCards = 0;
+    for (const card of deck) {
+      const val = card.value === 'A' ? 1 : card.numericValue;
+      if (val > diff) bustingCards++;
+    }
+    return deck.length > 0 ? Math.round((bustingCards / deck.length) * 100) : 0;
+  };
+
   const [bjDeck, setBjDeck] = useState<any[]>(createDeck);
   const [bjHandA, setBjHandA] = useState<any[]>([]);
   const [bjHandB, setBjHandB] = useState<any[]>([]);
   const [bjTurn, setBjTurn] = useState<'A' | 'B' | 'FINISHED'>('A');
   const [bjStandA, setBjStandA] = useState(false);
   const [bjStandB, setBjStandB] = useState(false);
+  const [bjBustA, setBjBustA] = useState(false);
+  const [bjBustB, setBjBustB] = useState(false);
+  const [bjLastAction, setBjLastAction] = useState<{
+    player: 'A' | 'B';
+    action: 'HIT' | 'STAND';
+    cardDrawn?: any;
+    message: string;
+  } | undefined>(undefined);
 
-  const initBlackjack = () => {
+  const initBlackjack = (starter: 'A' | 'B') => {
     const d = createDeck();
     const cA1 = d.pop()!;
     const cB1 = d.pop()!;
-    const cA2 = d.pop()!;
-    const cB2 = d.pop()!;
-    const handA = [cA1, cA2];
-    const handB = [cB1, cB2];
+    const handA = [cA1];
+    const handB = [cB1];
     setBjDeck(d);
     setBjHandA(handA);
     setBjHandB(handB);
     setBjStandA(false);
     setBjStandB(false);
-    setBjTurn('A'); // Player always plays first!
+    setBjBustA(false);
+    setBjBustB(false);
+    setBjTurn(starter);
+    setTurnTimeLeft(15);
 
-    // Natural 21 check
-    const scoreA = calculateBlackjackScore(handA);
-    const scoreB = calculateBlackjackScore(handB);
-    if (scoreA === 21 || scoreB === 21) {
-      setTimeout(() => {
-        evaluateBlackjackWinner(scoreA, scoreB);
-      }, 900);
+    const firstPlayerName = starter === 'A' ? playerName : botName;
+    const initialScoreA = calculateBlackjackScore(handA);
+    const initialScoreB = calculateBlackjackScore(handB);
+
+    if (initialScoreA === 21 && initialScoreB === 21) {
+      setBjStandA(true);
+      setBjStandB(true);
+      setBjTurn('FINISHED');
+      setBjLastAction({
+        player: 'A',
+        action: 'STAND',
+        message: '🔥 Entrambi hanno servito 21 alla distribuzione! Parità assoluta!',
+      });
+      setTimeout(() => evaluateBlackjackWinner(initialScoreA, initialScoreB), 1000);
+    } else if (initialScoreA === 21) {
+      setBjStandA(true);
+      setBjTurn('B');
+      setBjLastAction({
+        player: 'A',
+        action: 'STAND',
+        message: `🔥 ${playerName} ha servito 21! Turno a ${botName}!`,
+      });
+    } else if (initialScoreB === 21) {
+      setBjStandB(true);
+      setBjTurn('A');
+      setBjLastAction({
+        player: 'B',
+        action: 'STAND',
+        message: `🔥 ${botName} ha servito 21! Turno a ${playerName}!`,
+      });
+    } else {
+      setBjLastAction({
+        player: starter,
+        action: 'STAND',
+        message: `🪙 Coin Toss: ${firstPlayerName} gioca per primo!`,
+      });
     }
   };
 
   const handleBlackjackHit = (player: 'A' | 'B' = 'A') => {
-    if (player !== 'A' || bjTurn !== 'A' || bjStandA) return;
-    const newDeck = [...bjDeck];
-    const newCard = newDeck.pop();
-    if (!newCard) return;
+    if (bjTurn !== player) return;
+    const isPlayerA = player === 'A';
+    if (isPlayerA && (bjStandA || bjBustA)) return;
+    if (!isPlayerA && (bjStandB || bjBustB)) return;
 
-    const newHand = [...bjHandA, newCard];
+    const newDeck = [...bjDeck];
+    const drawn = newDeck.pop();
+    if (!drawn) return;
+
+    const currentHand = isPlayerA ? [...bjHandA, drawn] : [...bjHandB, drawn];
+    const newScore = calculateBlackjackScore(currentHand);
+    const actingName = isPlayerA ? playerName : botName;
+    const opponentName = isPlayerA ? botName : playerName;
+    const opponentStand = isPlayerA ? bjStandB : bjStandA;
+    const opponentBust = isPlayerA ? bjBustB : bjBustA;
+    const opponentSide: 'A' | 'B' = isPlayerA ? 'B' : 'A';
+
     setBjDeck(newDeck);
-    setBjHandA(newHand);
-    const score = calculateBlackjackScore(newHand);
-    if (score > 21) {
-      // Player busts! Dealer/Bot wins immediately
-      setBjTurn('FINISHED');
-      setWinnerSide('B');
-      setRoomState('MATCH_SETTLED');
-      triggerNotification('error');
-    } else if (score === 21) {
-      // Automatically stand on 21
-      handleBlackjackStand('A');
+    if (isPlayerA) {
+      setBjHandA(currentHand);
+      triggerImpact('light');
+    } else {
+      setBjHandB(currentHand);
+    }
+
+    if (newScore > 21) {
+      if (isPlayerA) {
+        setBjBustA(true);
+        setBjStandA(true);
+      } else {
+        setBjBustB(true);
+        setBjStandB(true);
+      }
+
+      if (opponentStand || opponentBust) {
+        setBjTurn('FINISHED');
+        setBjLastAction({
+          player,
+          action: 'HIT',
+          cardDrawn: drawn,
+          message: `💥 ${actingName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${newScore}! Showdown!`,
+        });
+        const finalScoreA = isPlayerA ? newScore : calculateBlackjackScore(bjHandA);
+        const finalScoreB = isPlayerA ? calculateBlackjackScore(bjHandB) : newScore;
+        setTimeout(() => evaluateBlackjackWinner(finalScoreA, finalScoreB), 1200);
+      } else {
+        setBjTurn(opponentSide);
+        setTurnTimeLeft(15);
+        setBjLastAction({
+          player,
+          action: 'HIT',
+          cardDrawn: drawn,
+          message: `💥 ${actingName} ha pescato ${drawn.value}${drawn.suit} e SBALLATO con ${newScore}! Turno passa a ${opponentName}.`,
+        });
+      }
+    } else if (newScore === 21) {
+      if (isPlayerA) {
+        setBjStandA(true);
+      } else {
+        setBjStandB(true);
+      }
+
+      if (opponentStand || opponentBust) {
+        setBjTurn('FINISHED');
+        setBjLastAction({
+          player,
+          action: 'STAND',
+          cardDrawn: drawn,
+          message: `🔥 ${actingName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Showdown!`,
+        });
+        const finalScoreA = isPlayerA ? newScore : calculateBlackjackScore(bjHandA);
+        const finalScoreB = isPlayerA ? calculateBlackjackScore(bjHandB) : newScore;
+        setTimeout(() => evaluateBlackjackWinner(finalScoreA, finalScoreB), 1200);
+      } else {
+        setBjTurn(opponentSide);
+        setTurnTimeLeft(15);
+        setBjLastAction({
+          player,
+          action: 'STAND',
+          cardDrawn: drawn,
+          message: `🔥 ${actingName} ha pescato ${drawn.value}${drawn.suit} e raggiunto 21! Turno passa a ${opponentName}!`,
+        });
+      }
+    } else {
+      // Score < 21: Alternate turns if opponent hasn't finished
+      if (opponentStand || opponentBust) {
+        setBjTurn(player);
+        setTurnTimeLeft(15);
+        setBjLastAction({
+          player,
+          action: 'HIT',
+          cardDrawn: drawn,
+          message: `🃏 ${actingName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${newScore}). ${opponentName} ha concluso: Carta o Stai?`,
+        });
+      } else {
+        setBjTurn(opponentSide);
+        setTurnTimeLeft(15);
+        setBjLastAction({
+          player,
+          action: 'HIT',
+          cardDrawn: drawn,
+          message: `🃏 ${actingName} ha pescato ${drawn.value}${drawn.suit} (Totale: ${newScore}). Turno passa a ${opponentName}!`,
+        });
+      }
     }
   };
 
   const handleBlackjackStand = (player: 'A' | 'B' = 'A') => {
-    if (player !== 'A' || bjTurn !== 'A') return;
-    setBjStandA(true);
-    setBjTurn('B'); // Player stands, now dealer plays!
+    if (bjTurn !== player) return;
+    const isPlayerA = player === 'A';
+    const actingName = isPlayerA ? playerName : botName;
+    const opponentName = isPlayerA ? botName : playerName;
+    const opponentStand = isPlayerA ? bjStandB : bjStandA;
+    const opponentBust = isPlayerA ? bjBustB : bjBustA;
+    const opponentSide: 'A' | 'B' = isPlayerA ? 'B' : 'A';
+    const myScore = isPlayerA ? calculateBlackjackScore(bjHandA) : calculateBlackjackScore(bjHandB);
 
-    setTimeout(() => {
-      let currentDeck = [...bjDeck];
-      let currentHandB = [...bjHandB];
-      let bScore = calculateBlackjackScore(currentHandB);
-
-      // Dealer hits until score >= 17
-      while (bScore < 17 && currentDeck.length > 0) {
-        const card = currentDeck.pop()!;
-        currentHandB.push(card);
-        bScore = calculateBlackjackScore(currentHandB);
-      }
-
-      setBjDeck(currentDeck);
-      setBjHandB(currentHandB);
+    if (isPlayerA) {
+      setBjStandA(true);
+      triggerImpact('medium');
+    } else {
       setBjStandB(true);
-      setBjTurn('FINISHED');
+    }
 
-      const aScore = calculateBlackjackScore(bjHandA);
-      evaluateBlackjackWinner(aScore, bScore);
-    }, 850);
+    if (opponentStand || opponentBust) {
+      setBjTurn('FINISHED');
+      setBjLastAction({
+        player,
+        action: 'STAND',
+        message: `🛑 ${actingName} sta su ${myScore}. Entrambi hanno concluso, resa dei conti!`,
+      });
+      const finalScoreA = calculateBlackjackScore(bjHandA);
+      const finalScoreB = calculateBlackjackScore(bjHandB);
+      setTimeout(() => evaluateBlackjackWinner(finalScoreA, finalScoreB), 1200);
+    } else {
+      setBjTurn(opponentSide);
+      setTurnTimeLeft(15);
+      setBjLastAction({
+        player,
+        action: 'STAND',
+        message: `🛑 ${actingName} sta su ${myScore}. Turno passa a ${opponentName}!`,
+      });
+    }
   };
 
   const evaluateBlackjackWinner = (scoreA: number, scoreB: number) => {
     setBjTurn('FINISHED');
-    if (scoreA > 21) {
-      setWinnerSide('B');
-      triggerNotification('error');
-    } else if (scoreB > 21) {
-      setWinnerSide('A');
-      triggerNotification('success');
+    const bustA = scoreA > 21;
+    const bustB = scoreB > 21;
+
+    let winner: 'A' | 'B' = 'A';
+    if (bustA && !bustB) {
+      winner = 'B';
+    } else if (bustB && !bustA) {
+      winner = 'A';
+    } else if (bustA && bustB) {
+      winner = scoreA <= scoreB ? 'A' : 'B';
     } else if (scoreA > scoreB) {
-      setWinnerSide('A');
-      triggerNotification('success');
+      winner = 'A';
     } else if (scoreB > scoreA) {
-      setWinnerSide('B');
-      triggerNotification('error');
+      winner = 'B';
     } else {
-      setWinnerSide('A'); // Push goes to player in practice
+      winner = 'A';
+    }
+
+    setWinnerSide(winner);
+    if (winner === 'A') {
       triggerNotification('success');
+    } else {
+      triggerNotification('error');
     }
     setRoomState('MATCH_SETTLED');
   };
+
+  // Bot AI for Blackjack (Turn-based matching PvP)
+  useEffect(() => {
+    if (gameType !== 'blackjack' || roomState !== 'GAME_ACTIVE' || bjTurn !== 'B') return;
+
+    const timer = setTimeout(() => {
+      const bScore = calculateBlackjackScore(bjHandB);
+      const aScore = calculateBlackjackScore(bjHandA);
+      const isPlayerFinished = bjStandA || bjBustA;
+
+      if (bjBustA && bScore <= 21) {
+        handleBlackjackStand('B');
+        return;
+      }
+
+      if (isPlayerFinished && bScore > aScore && bScore <= 21) {
+        handleBlackjackStand('B');
+        return;
+      }
+
+      if (bScore >= 17) {
+        handleBlackjackStand('B');
+      } else {
+        handleBlackjackHit('B');
+      }
+    }, 1100);
+
+    return () => clearTimeout(timer);
+  }, [gameType, roomState, bjTurn, bjHandA, bjHandB, bjDeck, bjStandA, bjBustA]);
 
   // ==========================================
   // --- 3. CONNECT 4 (CONNECT4 ROOM REPLICA) ---
@@ -933,13 +1117,10 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       setShowCoinToss(false);
       setRoomState('GAME_ACTIVE');
       initHeadSoccer();
-    } else if (gameType === 'blackjack') {
-      setShowCoinToss(false);
-      setRoomState('GAME_ACTIVE');
-      initBlackjack();
     } else {
       setShowCoinToss(true);
       setRoomState('READY_CHECK');
+      if (gameType === 'blackjack') initBlackjack(starter);
       if (gameType === 'roulette') initRoulette(starter);
       if (gameType === 'connect4') initConnect4(starter);
       if (gameType === 'shotgun') initShotgun(starter);
@@ -1082,11 +1263,12 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
               currentTurn: bjTurn,
               standA: bjStandA,
               standB: bjStandB,
-              bustA: calculateBlackjackScore(bjHandA) > 21,
-              bustB: calculateBlackjackScore(bjHandB) > 21,
-              bustOddsPercentA: 0,
-              bustOddsPercentB: 0,
+              bustA: bjBustA,
+              bustB: bjBustB,
+              bustOddsPercentA: calculateBustOdds(calculateBlackjackScore(bjHandA), bjDeck),
+              bustOddsPercentB: calculateBustOdds(calculateBlackjackScore(bjHandB), bjDeck),
               coinToss: coinToss || undefined,
+              lastAction: bjLastAction,
             } as any}
             role="player"
             isPlayerTurn={bjTurn === 'A'}
@@ -1098,6 +1280,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             wagerTon="0.00"
             isCreator={true}
             isWinner={winnerSide === 'A'}
+            winnerSide={winnerSide}
             winnerName={winnerSide === 'A' ? playerName : botName}
             onReturnToLobby={onExit}
           />
