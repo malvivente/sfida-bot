@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Ticket, Trophy, Clock, Sparkles, CheckCircle2, ShieldCheck, Gift, Users, ChevronRight, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Ticket, Trophy, ShieldCheck } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { GramIcon } from '../GramIcon.js';
@@ -140,7 +140,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
     } catch {}
 
     triggerNotification('success');
-    setBuySuccessMsg(`Acquistati con successo ${selectedQuantity} biglietti!`);
+    setBuySuccessMsg(`+${selectedQuantity} Tickets!`);
     setTimeout(() => setBuySuccessMsg(null), 4000);
   };
 
@@ -157,12 +157,12 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{t('common.back') || 'Torna'}</span>
+          <span>{t('common.back')}</span>
         </button>
 
         <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-heading font-extrabold uppercase tracking-wider">
           <Ticket className="w-3.5 h-3.5" />
-          <span>{userTickets.length} BIGLIETTI ATTIVI</span>
+          <span>{userTickets.length} {t('raffle.activeTickets')}</span>
         </div>
       </div>
 
@@ -176,7 +176,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           <div className="flex items-center justify-between">
             <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-heading font-black text-[9.5px] uppercase tracking-wider flex items-center space-x-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-              <span>ESTRAZIONE IN CORSO</span>
+              <span>{t('raffle.drawInProgress')}</span>
             </span>
 
             <span className="text-[11px] font-mono text-purple-300 font-bold">
@@ -201,26 +201,26 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           <div className="grid grid-cols-4 gap-1.5 pt-1">
             <div className="p-2 rounded-xl bg-black/40 border border-white/10 text-center">
               <span className="text-base font-mono font-black text-white">{timeLeft.d}</span>
-              <span className="text-[9px] text-slate-400 block font-heading">GIORNI</span>
+              <span className="text-[9px] text-slate-400 block font-heading">{t('raffle.days')}</span>
             </div>
             <div className="p-2 rounded-xl bg-black/40 border border-white/10 text-center">
               <span className="text-base font-mono font-black text-white">{timeLeft.h}</span>
-              <span className="text-[9px] text-slate-400 block font-heading">ORE</span>
+              <span className="text-[9px] text-slate-400 block font-heading">{t('raffle.hours')}</span>
             </div>
             <div className="p-2 rounded-xl bg-black/40 border border-white/10 text-center">
               <span className="text-base font-mono font-black text-white">{timeLeft.m}</span>
-              <span className="text-[9px] text-slate-400 block font-heading">MIN</span>
+              <span className="text-[9px] text-slate-400 block font-heading">{t('raffle.minutes')}</span>
             </div>
             <div className="p-2 rounded-xl bg-black/40 border border-white/10 text-center">
               <span className="text-base font-mono font-black text-amber-400">{timeLeft.s}</span>
-              <span className="text-[9px] text-slate-400 block font-heading">SEC</span>
+              <span className="text-[9px] text-slate-400 block font-heading">{t('raffle.seconds')}</span>
             </div>
           </div>
 
           {/* Ticket Sold Progress */}
           <div className="space-y-1.5 pt-1">
             <div className="flex justify-between text-[11px] text-slate-300 font-mono">
-              <span>Biglietti venduti: 648 / 1,000</span>
+              <span>{t('raffle.ticketsSold')}: 648 / 1,000</span>
               <span className="text-purple-300 font-bold">64.8%</span>
             </div>
             <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden border border-white/10">
@@ -235,8 +235,8 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         {/* Quick Ticket Selector & Buy Action */}
         <div className="relative z-10 pt-2 border-t border-white/10 space-y-2.5">
           <div className="flex items-center justify-between text-xs text-slate-300 font-heading">
-            <span>SELEZIONA QUANTITÀ:</span>
-            <span className="text-amber-300 font-bold">TOTALE: {ticketCost.toFixed(2)} GRAM</span>
+            <span>{t('raffle.selectQuantity')}:</span>
+            <span className="text-amber-300 font-bold">{t('raffle.total')}: {ticketCost.toFixed(2)} GRAM</span>
           </div>
 
           <div className="grid grid-cols-4 gap-1.5">
@@ -266,7 +266,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-1.5"
           >
             <Ticket className="w-4 h-4" />
-            <span>ACQUISTA {selectedQuantity} BIGLIETTI ({ticketCost.toFixed(2)} GRAM)</span>
+            <span>{t('raffle.buyTickets')} ({ticketCost.toFixed(2)} GRAM)</span>
           </button>
 
           {buySuccessMsg && (
@@ -289,7 +289,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             activeTab === 'active' ? 'bg-purple-600 text-white font-black shadow-sm' : 'text-slate-400'
           }`}
         >
-          ATTIVE
+          {t('raffle.tabActive')}
         </button>
 
         <button
@@ -302,7 +302,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             activeTab === 'my_tickets' ? 'bg-purple-600 text-white font-black shadow-sm' : 'text-slate-400'
           }`}
         >
-          I MIEI ({userTickets.length})
+          {t('raffle.tabMyTickets')} ({userTickets.length})
         </button>
 
         <button
@@ -315,7 +315,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             activeTab === 'winners' ? 'bg-purple-600 text-white font-black shadow-sm' : 'text-slate-400'
           }`}
         >
-          VINCITORI
+          {t('raffle.tabWinners')}
         </button>
 
         <button
@@ -328,7 +328,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             activeTab === 'rules' ? 'bg-purple-600 text-white font-black shadow-sm' : 'text-slate-400'
           }`}
         >
-          REGOLE
+          {t('raffle.tabRules')}
         </button>
       </div>
 
@@ -345,7 +345,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                   {r.badge}
                 </span>
                 <span className="text-xs font-heading font-bold text-amber-300">
-                  {r.ticketPriceGram > 0 ? `${r.ticketPriceGram} GRAM` : 'GRATUITO'}
+                  {r.ticketPriceGram > 0 ? `${r.ticketPriceGram} GRAM` : t('raffle.free')}
                 </span>
               </div>
 
@@ -355,18 +355,18 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 </h4>
                 <div className="flex items-center space-x-1.5 text-amber-300 mt-1">
                   <GramIcon className="w-4 h-4 text-amber-400" />
-                  <span className="text-lg font-heading font-black">{r.prizeGram} GRAM IN PALIO</span>
+                  <span className="text-lg font-heading font-black">{r.prizeGram} GRAM</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[11px] text-slate-300">
-                <span>{r.soldTickets} / {r.totalTickets} venduti</span>
+                <span>{r.soldTickets} / {r.totalTickets} {t('raffle.ticketsSold')}</span>
                 <button
                   type="button"
                   onClick={() => triggerImpact('light')}
                   className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white font-heading font-bold text-[10px] uppercase"
                 >
-                  PARTECIPA
+                  {t('raffle.participate')}
                 </button>
               </div>
             </div>
@@ -379,16 +379,16 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <span className="text-xs font-heading font-bold text-white uppercase">
-              I TUOI BIGLIETTI ATTIVI
+              {t('raffle.activeTicketsTitle')}
             </span>
             <span className="text-xs text-purple-300 font-mono font-bold">
-              {userTickets.length} / 1,000 nel pool
+              {userTickets.length} / 1,000
             </span>
           </div>
 
           {userTickets.length === 0 ? (
             <div className="text-center py-6 text-slate-400 text-xs">
-              Non hai ancora nessun biglietto attivo. Acquistane uno per partecipare all'estrazione!
+              {t('raffle.noTickets')}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
@@ -401,7 +401,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                     <Ticket className="w-4 h-4 text-purple-400" />
                     <span className="font-mono font-bold text-xs text-white">{tkt}</span>
                   </div>
-                  <span className="text-[9px] text-emerald-400 font-bold uppercase">VALIDO</span>
+                  <span className="text-[9px] text-emerald-400 font-bold uppercase">{t('raffle.valid')}</span>
                 </div>
               ))}
             </div>
@@ -413,9 +413,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
       {activeTab === 'winners' && (
         <div className="space-y-2.5">
           {[
-            { id: 13, user: '@alessio_ton', tkt: '#TK-0349', prize: '850 GRAM', date: '24 Ottobre 2026' },
-            { id: 12, user: '@crypto_marco', tkt: '#TK-0911', prize: '1,200 GRAM', date: '17 Ottobre 2026' },
-            { id: 11, user: '@giulia_crypto', tkt: '#TK-0128', prize: '500 GRAM', date: '10 Ottobre 2026' },
+            { id: 13, user: '@alessio_ton', tkt: '#TK-0349', prize: '850 GRAM', date: '24 Oct 2026' },
+            { id: 12, user: '@crypto_marco', tkt: '#TK-0911', prize: '1,200 GRAM', date: '17 Oct 2026' },
+            { id: 11, user: '@giulia_crypto', tkt: '#TK-0128', prize: '500 GRAM', date: '10 Oct 2026' },
           ].map((w) => (
             <div
               key={w.id}
@@ -439,7 +439,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 <span className="text-xs font-heading font-black text-emerald-400">
                   +{w.prize}
                 </span>
-                <span className="text-[9px] text-slate-400 block uppercase">ACCREDITATO</span>
+                <span className="text-[9px] text-slate-400 block uppercase">{t('raffle.credited')}</span>
               </div>
             </div>
           ))}
@@ -451,17 +451,17 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3 text-xs text-slate-300 leading-relaxed font-sans">
           <div className="flex items-center space-x-2 text-white font-heading font-black text-sm uppercase">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>COME FUNZIONANO LE RAFFLE</span>
+            <span>{t('raffle.howItWorks')}</span>
           </div>
 
           <p>
-            1. <strong>Equità Provably Fair:</strong> L'estrazione del biglietto vincente avviene in modo trasparente e verificabile crittograficamente al termine del conto alla rovescia.
+            1. <strong>{t('raffle.rule1Title')}</strong> {t('raffle.rule1Desc')}
           </p>
           <p>
-            2. <strong>Accredito Istantaneo:</strong> Il montepremi in GRAM viene accreditato direttamente ed automaticamente sul saldo interno del vincitore entro 60 secondi dall'estrazione.
+            2. <strong>{t('raffle.rule2Title')}</strong> {t('raffle.rule2Desc')}
           </p>
           <p>
-            3. <strong>Più Biglietti = Maggiori Probabilità:</strong> Ogni biglietto acquistato rappresenta una quota aggiuntiva nel pool totale dell'estrazione.
+            3. <strong>{t('raffle.rule3Title')}</strong> {t('raffle.rule3Desc')}
           </p>
         </div>
       )}

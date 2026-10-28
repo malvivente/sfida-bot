@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Dices, Layers, Sparkles, TrendingUp, ArrowDown, ArrowUp, RefreshCw, Trophy, AlertCircle, ShieldCheck, Flame, Zap, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Dices, Layers, Sparkles, ArrowDown, ArrowUp, RefreshCw, Trophy } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { GramIcon } from '../GramIcon.js';
@@ -27,7 +27,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
   const realBalance = parseFloat(userBalanceGram || '0');
   const currentBalance = isDemoMode ? demoBalance : realBalance;
 
-  // Update real balance helper
+  // Update balance delta helper
   const updateBalanceDelta = (delta: number) => {
     if (isDemoMode) {
       setDemoBalance((prev) => Math.max(0, parseFloat((prev + delta).toFixed(2))));
@@ -222,7 +222,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{t('common.back') || 'Torna'}</span>
+          <span>{t('common.back')}</span>
         </button>
 
         <div className="flex items-center space-x-2">
@@ -239,7 +239,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                 : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
             }`}
           >
-            {isDemoMode ? '🟡 MODALITÀ DEMO' : '🟢 GRAM REALI'}
+            {isDemoMode ? t('casino.demoMode') : t('casino.realGram')}
           </button>
 
           <div className="flex items-center space-x-1 px-3 py-1 rounded-xl bg-black/40 border border-amber-400/30 text-amber-300 text-xs font-heading font-bold">
@@ -253,11 +253,11 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
       <div className="px-1 flex items-center justify-between">
         <div>
           <h2 className="text-base font-heading font-black text-white uppercase tracking-wider flex items-center space-x-2">
-            <Dices className="w-5 h-5 text-amber-400 animate-spin-slow" />
-            <span>SFIDA CASINO ORIGINALS</span>
+            <Dices className="w-5 h-5 text-amber-400" />
+            <span>{t('casino.title')}</span>
           </h2>
           <p className="text-[11px] text-slate-400 font-sans">
-            Giochi matematici Provably Fair ad alto rendimento.
+            {t('casino.subtitle')}
           </p>
         </div>
       </div>
@@ -278,7 +278,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
         >
           <Dices className="w-4 h-4" />
           <span className="text-xs font-heading uppercase tracking-wider">
-            DICE (DADO)
+            {t('casino.dice')}
           </span>
         </button>
 
@@ -296,7 +296,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
         >
           <Layers className="w-4 h-4" />
           <span className="text-xs font-heading uppercase tracking-wider">
-            HILO (ALTA/BASSA)
+            {t('casino.hilo')}
           </span>
         </button>
       </div>
@@ -309,7 +309,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           {/* Live Roll Visual Display Box */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#181a24] to-[#0f1118] border border-amber-500/30 p-5 shadow-2xl flex flex-col items-center justify-center min-h-[170px]">
             <div className="absolute top-3 left-3 flex items-center space-x-1.5">
-              <span className="text-[10px] text-slate-400 font-mono">CRONOLOGIA:</span>
+              <span className="text-[10px] text-slate-400 font-mono">{t('casino.history')}</span>
               <div className="flex items-center space-x-1">
                 {diceHistory.map((h, i) => (
                   <span
@@ -326,7 +326,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
 
             {/* Target condition indicator */}
             <div className="text-xs font-heading font-extrabold tracking-wider uppercase text-slate-400 mt-3 mb-1">
-              OBIETTIVO: <span className="text-amber-300">{diceMode === 'under' ? '<' : '>'} {diceTarget.toFixed(2)}</span>
+              {t('casino.target')}: <span className="text-amber-300">{diceMode === 'under' ? '<' : '>'} {diceTarget.toFixed(2)}</span>
             </div>
 
             {/* Number Roll Display */}
@@ -350,11 +350,11 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                 {diceWon ? (
                   <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-heading font-black text-xs uppercase tracking-wider flex items-center space-x-1">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>HAI VINTO +{dicePotentialPayout} GRAM!</span>
+                    <span>{t('casino.won')} +{dicePotentialPayout} GRAM!</span>
                   </span>
                 ) : (
                   <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-heading font-bold text-xs uppercase tracking-wider">
-                    NON RIUSCITO ({diceResult?.toFixed(2)})
+                    {t('casino.lost')} ({diceResult?.toFixed(2)})
                   </span>
                 )}
               </div>
@@ -365,7 +365,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                CONDIZIONE DI VINCITA
+                {t('casino.rollCondition')}
               </span>
               <div className="flex items-center space-x-1 bg-black/40 p-0.5 rounded-xl border border-white/10">
                 <button
@@ -378,7 +378,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                     diceMode === 'under' ? 'bg-amber-400 text-slate-950 shadow-sm' : 'text-slate-400'
                   }`}
                 >
-                  SOTTO (&lt;)
+                  {t('casino.rollUnder')}
                 </button>
                 <button
                   type="button"
@@ -390,7 +390,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                     diceMode === 'over' ? 'bg-amber-400 text-slate-950 shadow-sm' : 'text-slate-400'
                   }`}
                 >
-                  SOPRA (&gt;)
+                  {t('casino.rollOver')}
                 </button>
               </div>
             </div>
@@ -417,7 +417,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div className="p-2.5 rounded-2xl bg-black/30 border border-white/5 text-center">
                 <span className="text-[10px] font-heading text-slate-400 block uppercase">
-                  PROBABILITÀ
+                  {t('casino.winChance')}
                 </span>
                 <span className="text-base font-heading font-black text-white">
                   {diceWinChance.toFixed(2)}%
@@ -425,7 +425,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
               </div>
               <div className="p-2.5 rounded-2xl bg-black/30 border border-white/5 text-center">
                 <span className="text-[10px] font-heading text-slate-400 block uppercase">
-                  MOLTIPLICATORE
+                  {t('casino.multiplier')}
                 </span>
                 <span className="text-base font-heading font-black text-amber-300">
                   {diceMultiplier.toFixed(2)}x
@@ -438,10 +438,10 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                PUNTATA IN GRAM
+                {t('casino.wager')}
               </span>
               <span className="text-xs font-heading font-bold text-amber-300">
-                VINCITA: +{dicePotentialPayout} G
+                {t('casino.profit')}: +{dicePotentialPayout} G
               </span>
             </div>
 
@@ -483,7 +483,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
               disabled={diceRolling || currentBalance < parsedDiceWager}
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
             >
-              {diceRolling ? 'LANCIO IN CORSO...' : `LANCIA IL DADO (${parsedDiceWager} GRAM)`}
+              {diceRolling ? t('casino.rolling') : `${t('casino.rollBtn')} (${parsedDiceWager} GRAM)`}
             </button>
           </div>
         </div>
@@ -499,21 +499,21 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
             {/* Top Multiplier & Streak Tracker */}
             <div className="w-full flex items-center justify-between pb-3 border-b border-white/10">
               <div className="text-left">
-                <span className="text-[10px] text-slate-400 font-heading block uppercase">MOLTIPLICATORE</span>
+                <span className="text-[10px] text-slate-400 font-heading block uppercase">{t('casino.multiplier')}</span>
                 <span className="text-xl font-heading font-black text-amber-300">
                   {hiloMultiplier.toFixed(2)}x
                 </span>
               </div>
 
               <div className="text-center">
-                <span className="text-[10px] text-slate-400 font-heading block uppercase">SERIE CORRETTA</span>
+                <span className="text-[10px] text-slate-400 font-heading block uppercase">{t('casino.streak')}</span>
                 <span className="text-lg font-heading font-black text-white">
                   🔥 {hiloStreak}
                 </span>
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] text-slate-400 font-heading block uppercase">POTENZIALE VINCITA</span>
+                <span className="text-[10px] text-slate-400 font-heading block uppercase">{t('casino.potentialPayout')}</span>
                 <span className="text-xl font-heading font-black text-emerald-400">
                   {hiloCurrentPayout} G
                 </span>
@@ -545,7 +545,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
               {hiloGameOver && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="px-3 py-1 rounded-xl bg-rose-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg rotate-12 animate-pulse">
-                    BUST! PERSO
+                    {t('casino.bust')}
                   </span>
                 </div>
               )}
@@ -553,7 +553,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
               {hiloWonCashout && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="px-3 py-1 rounded-xl bg-emerald-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg -rotate-6">
-                    INCASSATI +{hiloWonCashout} G!
+                    {t('casino.cashedOut')} +{hiloWonCashout} G!
                   </span>
                 </div>
               )}
@@ -579,7 +579,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
             <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                  PUNTATA INIZIALE
+                  {t('casino.initialWager')}
                 </span>
                 <span className="text-xs font-mono text-slate-400">MIN: 0.10 G</span>
               </div>
@@ -615,7 +615,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                 disabled={currentBalance < parsedHiloWager}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
               >
-                DISTRIBUISCI CARTA ({parsedHiloWager} GRAM)
+                {t('casino.dealCard')} ({parsedHiloWager} GRAM)
               </button>
             </div>
           ) : (
@@ -628,7 +628,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                 >
                   <div className="flex items-center space-x-1">
                     <ArrowUp className="w-4 h-4" />
-                    <span>PIÙ ALTA O =</span>
+                    <span>{t('casino.higher')}</span>
                   </div>
                   <span className="text-[10px] font-mono opacity-80">+{higherMult}x</span>
                 </button>
@@ -640,7 +640,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                 >
                   <div className="flex items-center space-x-1">
                     <ArrowDown className="w-4 h-4" />
-                    <span>PIÙ BASSA O =</span>
+                    <span>{t('casino.lower')}</span>
                   </div>
                   <span className="text-[10px] font-mono opacity-80">+{lowerMult}x</span>
                 </button>
@@ -653,7 +653,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                   className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>SALTA CARTA</span>
+                  <span>{t('casino.skip')}</span>
                 </button>
 
                 <button
@@ -663,51 +663,13 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                   className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center space-x-1"
                 >
                   <Trophy className="w-3.5 h-3.5" />
-                  <span>INCASSA ({hiloCurrentPayout} G)</span>
+                  <span>{t('casino.cashout')} ({hiloCurrentPayout} G)</span>
                 </button>
               </div>
             </div>
           )}
         </div>
       )}
-
-      {/* ======================================================== */}
-      {/* 3. PROSSIMI GIOCHI CASINO TEASER                         */}
-      {/* ======================================================== */}
-      <div className="pt-2 space-y-2.5">
-        <div className="flex items-center space-x-2 px-1">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <h3 className="text-xs font-heading font-black text-white uppercase tracking-wider">
-            PROSSIMI GIOCHI CASINO IN ARRIVO
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-lg">🚀</span>
-            <h4 className="text-xs font-heading font-black text-white uppercase">CRASH / AVIATOR</h4>
-            <p className="text-[10px] text-slate-400">Moltiplicatore a razzo esponenziale con cash out tempestivo.</p>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-lg">💣</span>
-            <h4 className="text-xs font-heading font-black text-white uppercase">MINES</h4>
-            <p className="text-[10px] text-slate-400">Griglia 5x5 con gemme lucenti e mine nascoste.</p>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-lg">🔴</span>
-            <h4 className="text-xs font-heading font-black text-white uppercase">ROULETTE EUROPEA</h4>
-            <p className="text-[10px] text-slate-400">Tavolo classico Rosso/Nero, Dozzine e Numeri secchi.</p>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-lg">⚡</span>
-            <h4 className="text-xs font-heading font-black text-white uppercase">PLINKO</h4>
-            <p className="text-[10px] text-slate-400">Caduta su piramide a pioli con vasche moltiplicatrici.</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

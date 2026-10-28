@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Bot, Swords, Flame, Sparkles } from 'lucide-react';
+import { ArrowLeft, Bot } from 'lucide-react';
 import { GameType } from '../../types/index.js';
-import { GAMES_METADATA, QUICK_GAMES, STRATEGY_GAMES } from '../../config/gamesConfig.js';
-import { CardBackgroundArt } from '../CardBackgroundArt.js';
+import { GAMES_METADATA } from '../../config/gamesConfig.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { VsBotArenaRunner } from './VsBotArenaRunner.js';
@@ -15,6 +14,11 @@ interface VsBotHubViewProps {
     photoUrl?: string;
   };
 }
+
+// Exactly the 7 games selected for VS BOT (excluding split, chrono, cubecount)
+const BOT_GAMES: GameType[] = ['shotgun', 'roulette', 'blackjack', 'connect4', 'bridge', 'headsoccer', 'poker'];
+const BOT_QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'headsoccer'];
+const BOT_STRATEGY_GAMES: GameType[] = ['shotgun', 'connect4', 'poker'];
 
 export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile }) => {
   const { triggerImpact } = useHaptics();
@@ -33,12 +37,13 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
     );
   }
 
-  const allGames = Object.values(GAMES_METADATA);
-  const filteredGames = allGames.filter((g) => {
-    if (activeCategory === 'quick') return QUICK_GAMES.includes(g.id);
-    if (activeCategory === 'strategy') return STRATEGY_GAMES.includes(g.id);
-    return true;
-  });
+  const filteredGames = Object.values(GAMES_METADATA)
+    .filter((g) => BOT_GAMES.includes(g.id))
+    .filter((g) => {
+      if (activeCategory === 'quick') return BOT_QUICK_GAMES.includes(g.id);
+      if (activeCategory === 'strategy') return BOT_STRATEGY_GAMES.includes(g.id);
+      return true;
+    });
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 select-none pb-12 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
@@ -53,7 +58,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
           className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{t('common.back') || 'Torna'}</span>
+          <span>{t('common.back')}</span>
         </button>
 
         <div className="flex items-center space-x-2">
@@ -61,7 +66,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
             <Bot className="w-3.5 h-3.5" />
           </div>
           <h2 className="text-sm font-heading font-black text-white tracking-wider uppercase">
-            GIOCATORE VS BOT
+            {t('vsbot.title')}
           </h2>
         </div>
       </div>
@@ -72,14 +77,14 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
         <div className="relative z-10 space-y-1.5">
           <div className="flex items-center space-x-2">
             <span className="px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 font-heading font-black text-[9px] uppercase tracking-wider">
-              ALLENAMENTO LIBERO 100% GRATUITO
+              {t('vsbot.heroBadge')}
             </span>
           </div>
           <h3 className="text-base font-heading font-black text-white uppercase tracking-wide">
-            Sfida la CPU nei 10 Giochi Ufficiali
+            {t('vsbot.heroTitle')}
           </h3>
           <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-            Mettiti alla prova contro i bot intelligenti. Le stanze sono completamente private e invisibili agli altri, senza puntate né spettatori.
+            {t('vsbot.heroDesc')}
           </p>
         </div>
       </div>
@@ -99,7 +104,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
           }`}
         >
           <span className="text-[10px] font-heading uppercase tracking-wider block">
-            TUTTI (10)
+            {t('vsbot.tabAll')}
           </span>
         </button>
 
@@ -116,7 +121,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
           }`}
         >
           <span className="text-[10px] font-heading uppercase tracking-wider block">
-            RAPIDI (5)
+            {t('vsbot.tabQuick')}
           </span>
         </button>
 
@@ -133,7 +138,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
           }`}
         >
           <span className="text-[10px] font-heading uppercase tracking-wider block">
-            STRATEGIA (5)
+            {t('vsbot.tabStrategy')}
           </span>
         </button>
       </div>
@@ -156,7 +161,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
                     {game.badge}
                   </span>
                   <span className="text-[9px] text-slate-400 font-mono">
-                    VS CPU
+                    {t('vsbot.cpuOpponent')}
                   </span>
                 </div>
 
@@ -175,7 +180,7 @@ export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile 
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 group-hover:from-teal-400 group-hover:to-emerald-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md shrink-0 flex items-center space-x-1"
               >
                 <Bot className="w-3.5 h-3.5" />
-                <span>GIOCA</span>
+                <span>{t('vsbot.playBtn')}</span>
               </button>
             </div>
           </div>
