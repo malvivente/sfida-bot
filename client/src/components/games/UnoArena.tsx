@@ -18,7 +18,6 @@ import {
   User,
   ArrowLeft,
 } from 'lucide-react';
-import { CoinTossOverlay } from '../CoinTossOverlay.js';
 
 interface UnoArenaProps {
   gameData?: UnoState;
@@ -461,16 +460,6 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
       ) : (
         /* 4. ACTIVE UNO DUEL TABLE */
         <div className="space-y-4">
-          {/* Coin Toss Overlay on Start */}
-          {gameData?.coinToss && (
-            <CoinTossOverlay
-              coinToss={gameData.coinToss}
-              playerAName={playerAName}
-              playerBName={playerBName}
-              onComplete={() => {}}
-            />
-          )}
-
           {/* Opponent Hand Box */}
           <div className="p-3 rounded-2xl bg-[#141724] border border-white/10 flex items-center justify-between">
             <div className="flex items-center space-x-2">

@@ -403,7 +403,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                     <span>{t('raffle.registered')}</span>
                   </span>
                 ) : (
-                  <span className="text-slate-400">Non iscritto</span>
+                  <span className="text-slate-400">{t('raffle.notRegistered') || 'Non iscritto'}</span>
                 )
               ) : (
                 <span className="text-purple-300 font-bold">
@@ -591,7 +591,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 myTicketsFilter === 'active' ? 'bg-purple-600 text-white' : 'text-slate-400'
               }`}
             >
-              ATTIVI ({totalActiveInPossession})
+              {t('raffle.filterActive') || 'ATTIVI'} ({totalActiveInPossession})
             </button>
             <button
               type="button"
@@ -600,7 +600,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 myTicketsFilter === 'concluded' ? 'bg-purple-600 text-white' : 'text-slate-400'
               }`}
             >
-              CONCLUSI ({pastTickets.length + pastFreeEntries.length})
+              {t('raffle.filterConcluded') || 'CONCLUSI'} ({pastTickets.length + pastFreeEntries.length})
             </button>
             <button
               type="button"
@@ -609,7 +609,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 myTicketsFilter === 'all' ? 'bg-purple-600 text-white' : 'text-slate-400'
               }`}
             >
-              TUTTI ({myTickets.length + myFreeEntries.length})
+              {t('raffle.filterAll') || 'TUTTI'} ({myTickets.length + myFreeEntries.length})
             </button>
           </div>
 
@@ -731,9 +731,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
               (myTicketsFilter === 'all' && myTickets.length + myFreeEntries.length === 0)) && (
               <div className="text-center py-6 text-slate-400 text-xs">
                 {myTicketsFilter === 'active'
-                  ? 'Nessun biglietto o partecipazione attiva. Partecipa a una raffle per iniziare!'
+                  ? (t('raffle.noActiveTicketsMsg') || 'Nessun biglietto o partecipazione attiva. Partecipa a una raffle per iniziare!')
                   : myTicketsFilter === 'concluded'
-                  ? 'Nessun biglietto concluso o archiviato.'
+                  ? (t('raffle.noConcludedTicketsMsg') || 'Nessun biglietto concluso o archiviato.')
                   : t('raffle.noTickets')}
               </div>
             )}
@@ -766,7 +766,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                       {w.winnerUsername ? `@${w.winnerUsername}` : `ID: ${w.winnerUserId}`}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      {w.title} • {w.winnerTicketNumber ? `Ticket #${w.winnerTicketNumber}` : 'Estrazione Utente'}
+                      {w.title} • {w.winnerTicketNumber ? `Ticket #${w.winnerTicketNumber}` : (t('raffle.userDraw') || 'Estrazione Utente')}
                     </span>
                   </div>
                 </div>

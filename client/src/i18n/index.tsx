@@ -249,6 +249,14 @@ export const translations: Translations = {
   'raffle.freeEntryNotice': { it: 'Raffle gratuita: 1 sola registrazione per utente (senza biglietti numerati).', en: 'Free raffle: 1 registration per user (no numbered tickets).' },
   'raffle.freeDirectEntry': { it: 'Partecipazione Diretta Utente', en: 'Direct User Registration' },
   'raffle.expiredTickets': { it: 'BIGLIETTI CONCLUSI', en: 'CONCLUDED TICKETS' },
+  'raffle.notRegistered': { it: 'Non iscritto', en: 'Not registered' },
+  'raffle.filterActive': { it: 'ATTIVI', en: 'ACTIVE' },
+  'raffle.filterConcluded': { it: 'CONCLUSI', en: 'CONCLUDED' },
+  'raffle.filterAll': { it: 'TUTTI', en: 'ALL' },
+  'raffle.noActiveTicketsMsg': { it: 'Nessun biglietto o partecipazione attiva. Partecipa a una raffle per iniziare!', en: 'No active tickets or entries. Enter a raffle to participate!' },
+  'raffle.noConcludedTicketsMsg': { it: 'Nessun biglietto concluso o archiviato.', en: 'No concluded or archived tickets.' },
+  'raffle.userDraw': { it: 'Estrazione Utente', en: 'User Draw' },
+  'raffle.ticket': { it: 'BIGLIETTO', en: 'TICKET' },
 
   // UNO CARD DUEL
   'uno.title': { it: 'UNO CYBER DUEL', en: 'UNO CYBER DUEL' },
