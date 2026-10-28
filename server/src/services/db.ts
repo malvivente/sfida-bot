@@ -124,7 +124,8 @@ export interface StoredRaffle {
   badge?: string;
   prizeGram: number;
   ticketPriceGram: number;
-  totalTickets: number; // tickets sold so far
+  totalTickets: number; // tickets sold so far (or registered users for free raffles)
+  freeParticipants?: Array<{ userId: string; username?: string; registeredAt: number }>;
   maxTickets?: number;
   endsAtEpoch: number;
   createdAt: number;
@@ -2750,6 +2751,7 @@ export class DatabaseService {
       prizeGram: Math.max(0.1, options.prizeGram),
       ticketPriceGram: Math.max(0, options.ticketPriceGram),
       totalTickets: 0,
+      freeParticipants: [],
       endsAtEpoch,
       createdAt: Date.now(),
       isFeatured: Boolean(options.isFeatured),
@@ -2789,6 +2791,7 @@ export class DatabaseService {
     success: boolean;
     error?: string;
     ticketNumbers?: number[];
+    isFreeEntry?: boolean;
     newBalance?: string;
   }> {
     const cleanUserId = String(userId).trim();
@@ -2796,7 +2799,6 @@ export class DatabaseService {
       return { success: false, error: 'User ID is required' };
     }
 
-    const qty = Math.max(1, Math.floor(quantity));
     const raffle = this.raffles.get(raffleId);
     if (!raffle) {
       return { success: false, error: 'Raffle non trovata' };
@@ -2810,20 +2812,45 @@ export class DatabaseService {
       return { success: false, error: 'Questa raffle è terminata' };
     }
 
+    // 1. FREE RAFFLE: Directly register user (1 registration per user, no tickets)
+    if (raffle.ticketPriceGram === 0) {
+      if (!raffle.freeParticipants) {
+        raffle.freeParticipants = [];
+      }
+
+      const alreadyRegistered = raffle.freeParticipants.some((p) => p.userId === cleanUserId);
+      if (alreadyRegistered) {
+        return { success: false, error: 'Sei già registrato a questa raffle gratuita!' };
+      }
+
+      raffle.freeParticipants.push({
+        userId: cleanUserId,
+        username: username || undefined,
+        registeredAt: Date.now(),
+      });
+      raffle.totalTickets = raffle.freeParticipants.length;
+      this.persistRaffles();
+
+      const userAcc = await this.getUserAccount(undefined, cleanUserId);
+      const newBal = userAcc.balanceGram || '0.00';
+      console.log(`[DatabaseService] User ${cleanUserId} registered for free raffle ${raffle.id} ("${raffle.title}")`);
+      return { success: true, isFreeEntry: true, newBalance: newBal };
+    }
+
+    // 2. PAID RAFFLE: Purchase numbered tickets using balance
+    const qty = Math.max(1, Math.floor(quantity));
     const totalCost = parseFloat((raffle.ticketPriceGram * qty).toFixed(2));
 
-    if (totalCost > 0) {
-      const debitRes = await this.debitUserBalance(
-        '',
-        totalCost.toFixed(2),
-        'RAFFLE_TICKET',
-        `Acquisto ${qty} biglietti per Raffle: ${raffle.title}`,
-        cleanUserId
-      );
+    const debitRes = await this.debitUserBalance(
+      '',
+      totalCost.toFixed(2),
+      'RAFFLE_TICKET',
+      `Acquisto ${qty} biglietti per Raffle: ${raffle.title}`,
+      cleanUserId
+    );
 
-      if (!debitRes.success) {
-        return { success: false, error: 'Saldo insufficiente per acquistare i biglietti' };
-      }
+    if (!debitRes.success) {
+      return { success: false, error: 'Saldo insufficiente per acquistare i biglietti' };
     }
 
     const ticketNumbers: number[] = [];
@@ -2859,7 +2886,7 @@ export class DatabaseService {
       userId: string;
       username?: string;
       prizeGram: number;
-      ticketNumber: number;
+      ticketNumber?: number;
     };
   }> {
     const raffle = this.raffles.get(raffleId);
@@ -2871,6 +2898,47 @@ export class DatabaseService {
       return { success: false, error: 'La raffle è già conclusa o archiviata' };
     }
 
+    // 1. FREE RAFFLE DRAWING (draw directly from registered users)
+    if (raffle.ticketPriceGram === 0) {
+      const participants = raffle.freeParticipants || [];
+      if (participants.length === 0) {
+        raffle.status = 'ENDED';
+        raffle.drawnAt = Date.now();
+        this.persistRaffles();
+        console.log(`[DatabaseService] Free raffle ${raffleId} ended with 0 registered users.`);
+        return { success: true };
+      }
+
+      const winningParticipant = participants[Math.floor(Math.random() * participants.length)];
+
+      await this.creditUserBalance(
+        '',
+        raffle.prizeGram.toFixed(2),
+        'RAFFLE_WIN',
+        `Vittoria Raffle Gratuita: ${raffle.title}`,
+        winningParticipant.userId
+      );
+
+      raffle.status = 'ENDED';
+      raffle.winnerUserId = winningParticipant.userId;
+      raffle.winnerUsername = winningParticipant.username;
+      raffle.winnerTicketNumber = undefined;
+      raffle.drawnAt = Date.now();
+
+      this.persistRaffles();
+      console.log(`[DatabaseService] Free Raffle ${raffleId} drawn! Winner: User ${winningParticipant.userId} (${winningParticipant.username || 'anon'}) won ${raffle.prizeGram} GRAM!`);
+
+      return {
+        success: true,
+        winner: {
+          userId: winningParticipant.userId,
+          username: winningParticipant.username,
+          prizeGram: raffle.prizeGram,
+        },
+      };
+    }
+
+    // 2. PAID RAFFLE DRAWING (draw from purchased numbered tickets)
     const tickets = this.raffleTickets.filter((t) => t.raffleId === raffleId);
 
     if (tickets.length === 0) {
@@ -2915,6 +2983,7 @@ export class DatabaseService {
 
   public getUserRaffleTickets(userId: string): {
     tickets: StoredRaffleTicket[];
+    freeEntries: Array<{ raffleId: string; registeredAt: number }>;
     raffles: Record<string, StoredRaffle>;
   } {
     const cleanUserId = String(userId).trim();
@@ -2928,8 +2997,20 @@ export class DatabaseService {
       }
     }
 
+    const freeEntries: Array<{ raffleId: string; registeredAt: number }> = [];
+    for (const r of this.raffles.values()) {
+      const p = r.freeParticipants?.find((part) => part.userId === cleanUserId);
+      if (p) {
+        freeEntries.push({ raffleId: r.id, registeredAt: p.registeredAt });
+        if (!rafflesMap[r.id]) {
+          rafflesMap[r.id] = r;
+        }
+      }
+    }
+
     return {
       tickets: userTickets,
+      freeEntries,
       raffles: rafflesMap,
     };
   }

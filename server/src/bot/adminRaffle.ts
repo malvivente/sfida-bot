@@ -163,21 +163,22 @@ export async function handleEndRaffleCommand(ctx: Context): Promise<void> {
   }
 
   if (result.winner) {
+    const isFree = raffle.ticketPriceGram === 0;
     await ctx.reply(
       `🎉 <b>ESTRAZIONE COMPLETATA! ABBIAMO UN VINCITORE!</b> 🎉\n\n` +
       `🏷️ <b>Raffle:</b> ${raffle.title}\n` +
       `🏆 <b>Montepremi:</b> +${result.winner.prizeGram} GRAM\n` +
       `👤 <b>Vincitore (Telegram ID):</b> <code>${result.winner.userId}</code>\n` +
       `👤 <b>Username:</b> ${result.winner.username ? `@${result.winner.username}` : 'Nessuno'}\n` +
-      `🎟️ <b>Biglietto Vincente:</b> #${result.winner.ticketNumber}\n` +
-      `📊 <b>Biglietti Totali Venduti:</b> ${raffle.totalTickets}\n\n` +
+      (result.winner.ticketNumber ? `🎟️ <b>Biglietto Vincente:</b> #${result.winner.ticketNumber}\n` : `🎟️ <b>Modalità:</b> Estrazione Gratuita Diretta Utente\n`) +
+      `📊 <b>${isFree ? 'Partecipanti Totali Iscritti' : 'Biglietti Totali Venduti'}:</b> ${raffle.totalTickets}\n\n` +
       `💰 <i>Il premio di ${result.winner.prizeGram} GRAM è stato accreditato istantaneamente sul saldo interno del vincitore!</i>`,
       { parse_mode: 'HTML' }
     );
   } else {
     await ctx.reply(
       `🏁 <b>RAFFLE CHIUSA SENZA VINCITORE</b>\n\n` +
-      `La raffle <b>${raffle.title}</b> è stata chiusa ma non era stato acquistato alcun biglietto (0 partecipanti).`,
+      `La raffle <b>${raffle.title}</b> è stata chiusa ma non vi era alcun partecipante.`,
       { parse_mode: 'HTML' }
     );
   }
@@ -211,9 +212,9 @@ export async function handleListRafflesCommand(ctx: Context): Promise<void> {
     msg += `• <b>${r.title}</b> ${featuredTag}\n`;
     msg += `  🆔 <code>${r.id}</code> | ${statusIcon}\n`;
     msg += `  🏆 Premio: ${r.prizeGram} G | Prezzo: ${r.ticketPriceGram === 0 ? '0 G (Gratis)' : `${r.ticketPriceGram} G`}\n`;
-    msg += `  🎟️ Biglietti venduti: <b>${r.totalTickets}</b> | Scadenza: ${dateStr}\n`;
+    msg += `  📊 ${r.ticketPriceGram === 0 ? 'Partecipanti iscritti' : 'Biglietti venduti'}: <b>${r.totalTickets}</b> | Scadenza: ${dateStr}\n`;
     if (r.winnerUserId) {
-      msg += `  👑 Vincitore: ID <code>${r.winnerUserId}</code> (Ticket #${r.winnerTicketNumber})\n`;
+      msg += `  👑 Vincitore: ID <code>${r.winnerUserId}</code> ${r.winnerTicketNumber ? `(Ticket #${r.winnerTicketNumber})` : '(Estrazione Utente)'}\n`;
     }
     msg += `\n`;
   }

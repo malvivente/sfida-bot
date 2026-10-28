@@ -120,8 +120,8 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
   const [wildPickerCardIndex, setWildPickerCardIndex] = useState<number | null>(null);
 
   const isF2P = parseFloat(wagerTon || '0') === 0;
-  const isLobby = roomState === 'LOBBY' || (!gameData?.discardPileTop && roomState !== 'SETTLED');
-  const isSettled = roomState === 'SETTLED' || isWinner !== undefined;
+  const isSettled = roomState === 'MATCH_SETTLED' || roomState === 'SETTLED' || roomState === 'FORFEITED';
+  const isLobby = roomState === 'LOBBY' || (!gameData?.discardPileTop && !isSettled);
 
   const currentTurnSide = gameData?.currentTurn || 'A';
   const myTurn = role === 'player' && currentTurnSide === userSide;
@@ -171,13 +171,13 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="text-center space-y-3">
             <span className="text-xs font-heading font-black tracking-widest text-cyan-400 uppercase">
-              IL DUELLO STA PER INIZIARE
+              {t('uno.countdownStarting') || 'IL DUELLO STA PER INIZIARE'}
             </span>
             <div className="text-8xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 animate-pulse drop-shadow-[0_0_30px_rgba(251,191,36,0.8)]">
               {countdownSeconds}
             </div>
             <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-              PREPARATI A SCARTARE!
+              {t('uno.getReady') || 'PREPARATI A SCARTARE!'}
             </span>
           </div>
         </div>
@@ -199,16 +199,20 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
 
             <div>
               <h3 className="text-2xl font-heading font-black text-white uppercase tracking-wider">
-                {isWinner ? 'HAI VINTO IL DUELLO!' : 'DUELLO TERMINATO'}
+                {isWinner ? (t('uno.winTitle') || 'HAI VINTO IL DUELLO!') : (t('uno.overTitle') || 'DUELLO TERMINATO')}
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                {winnerName ? `Vincitore: ${winnerName}` : isWinner ? 'Tutte le carte scartate con successo!' : 'L\'avversario ha scartato prima tutte le carte.'}
+                {winnerName
+                  ? `${t('common.winner') || 'Vincitore'}: ${winnerName}`
+                  : isWinner
+                  ? (t('uno.winDesc') || 'Tutte le carte scartate con successo!')
+                  : (t('uno.loseDesc') || "L'avversario ha scartato prima tutte le carte.")}
               </p>
             </div>
 
             <div className="p-3 w-full rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
               <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                {isF2P ? 'MODALITÀ:' : 'MONTEPREMI:'}
+                {isF2P ? `${t('common.mode') || 'MODALITÀ'}:` : `${t('arena.prizePool') || 'MONTEPREMI'}:`}
               </span>
               {isF2P ? (
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold text-xs uppercase">
@@ -226,7 +230,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
             {rematchOffer?.status === 'PENDING' && !isRematchProposer && (
               <div className="w-full space-y-2 animate-in zoom-in-95">
                 <span className="text-xs text-cyan-300 font-heading font-bold uppercase block">
-                  L'avversario ha richiesto la rivincita!
+                  {t('uno.opponentRematchRequested') || "L'avversario ha richiesto la rivincita!"}
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -234,14 +238,14 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                     onClick={onAcceptRematch}
                     className="py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-heading font-black text-xs uppercase"
                   >
-                    Accetta
+                    {t('common.accept') || 'Accetta'}
                   </button>
                   <button
                     type="button"
                     onClick={onDeclineRematch}
                     className="py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-heading font-bold text-xs uppercase"
                   >
-                    Rifiuta
+                    {t('common.decline') || 'Rifiuta'}
                   </button>
                 </div>
               </div>
@@ -254,7 +258,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                 className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-heading font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>CHIEDI RIVINCITA</span>
+                <span>{t('uno.rematch') || 'CHIEDI RIVINCITA'}</span>
               </button>
             )}
 
@@ -264,7 +268,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
               onClick={onReturnToLobby}
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
             >
-              TORNA ALLA LOBBY
+              {t('uno.returnLobby') || 'TORNA ALLA LOBBY'}
             </button>
           </div>
         </div>
@@ -275,7 +279,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
         <div className="flex items-center space-x-2">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
           <span className="font-heading font-black text-white uppercase tracking-wider">
-            UNO CYBER DUEL
+            {t('uno.title') || 'UNO CYBER DUEL'}
           </span>
         </div>
 
@@ -324,7 +328,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                     : 'bg-white/5 text-slate-400 border border-white/10'
                 }`}
               >
-                {playerAReady ? 'PRONTO' : 'IN ATTESA'}
+                {playerAReady ? (t('arena.ready') || 'PRONTO') : (t('arena.waiting') || 'IN ATTESA')}
               </span>
             </div>
 
@@ -345,7 +349,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                 )}
               </div>
               <span className="text-xs font-heading font-black text-white truncate max-w-full">
-                {hasPlayerB ? playerBName : 'In attesa sfidante...'}
+                {hasPlayerB ? playerBName : (t('arena.waitingOpponentShort') || 'In attesa sfidante...')}
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[9px] font-heading font-black uppercase ${
@@ -354,7 +358,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                     : 'bg-white/5 text-slate-400 border border-white/10'
                 }`}
               >
-                {playerBReady ? 'PRONTO' : hasPlayerB ? 'IN ATTESA' : 'LIBERO'}
+                {playerBReady ? (t('arena.ready') || 'PRONTO') : hasPlayerB ? (t('arena.waiting') || 'IN ATTESA') : (t('arena.freeSlot') || 'LIBERO')}
               </span>
             </div>
           </div>
@@ -363,10 +367,10 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
           <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-center">
             <span className="text-xs text-slate-300 font-sans">
               {!hasPlayerB
-                ? 'Condividi il link o attendi che un avversario entri nella stanza.'
+                ? (t('uno.waitingLobbyDesc') || 'Condividi il link o attendi che un avversario entri nella stanza.')
                 : isReady
-                ? 'Sei pronto! In attesa che anche l\'avversario confermi...'
-                : 'Clicca su PRONTO PER IL DUELLO per avviare la partita!'}
+                ? (t('uno.waitingOpponentDesc') || "Sei pronto! In attesa che anche l'avversario confermi...")
+                : (t('uno.readyDesc') || 'Clicca su PRONTO PER IL DUELLO per avviare la partita!')}
             </span>
           </div>
 
@@ -391,7 +395,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                 {isReady ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
-                    <span>{t('arena.readyWaiting') || 'IN ATTESA DELL\'AVVERSARIO...'}</span>
+                    <span>{t('arena.readyWaiting') || "IN ATTESA DELL'AVVERSARIO..."}</span>
                   </>
                 ) : !hasPlayerB ? (
                   <span>{t('arena.waitingForOpponentBtn') || 'IN ATTESA DI UNO SFIDANTE...'}</span>
@@ -429,7 +433,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                       }}
                       className="w-full py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-rose-400 border border-rose-500/20 font-heading font-bold text-xs uppercase transition-all"
                     >
-                      ANNULLA PARTITA
+                      {t('uno.cancel') || 'ANNULLA PARTITA'}
                     </button>
                   )}
                 </div>
@@ -448,7 +452,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                   className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2"
                 >
                   <Swords className="w-4 h-4" />
-                  <span>ENTRA COME SFIDANTE</span>
+                  <span>{t('uno.enterChallenger') || 'ENTRA COME SFIDANTE'}</span>
                 </button>
               )}
             </div>
@@ -478,12 +482,12 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                   <span className="text-xs font-heading font-black text-white">{playerBName}</span>
                   {currentTurnSide !== userSide && (
                     <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-heading font-black animate-pulse">
-                      TURNO
+                      {t('uno.turn') || 'TURNO'}
                     </span>
                   )}
                 </div>
                 <span className="text-[10px] text-slate-400 font-sans">
-                  {opponentCardCount} carte rimaste
+                  {opponentCardCount} {t('uno.cardsLeft') || 'carte rimaste'}
                 </span>
               </div>
             </div>
@@ -500,7 +504,9 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
           <div className="relative rounded-3xl bg-gradient-to-b from-[#131622] to-[#0c0e16] border border-white/10 p-5 shadow-2xl flex flex-col items-center justify-center min-h-[220px]">
             {/* Active Color Orb */}
             <div className="absolute top-3 left-4 flex items-center space-x-2">
-              <span className="text-[10px] font-heading font-bold text-slate-400 uppercase">COLORE ATTIVO:</span>
+              <span className="text-[10px] font-heading font-bold text-slate-400 uppercase">
+                {t('uno.activeColor') || 'COLORE ATTIVO:'}
+              </span>
               <div className="flex items-center space-x-1.5">
                 <span
                   className={`w-3.5 h-3.5 rounded-full ${
@@ -523,7 +529,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
             <div className="absolute top-3 right-4 flex items-center space-x-1 text-xs font-heading font-bold">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
               <span className={myTurn ? 'text-emerald-400 animate-pulse font-black' : 'text-slate-400'}>
-                {myTurn ? 'IL TUO TURNO' : 'TURNO AVVERSARIO'}
+                {myTurn ? (t('uno.turn') || 'IL TUO TURNO') : (t('uno.opponentTurn') || 'TURNO AVVERSARIO')}
               </span>
             </div>
 
@@ -543,7 +549,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
               >
                 <Layers className="w-7 h-7 text-cyan-400 mb-1" />
                 <span className="text-[10px] font-heading font-black text-white uppercase text-center leading-tight">
-                  {myTurn ? 'PESCA CARTA' : 'MAZZO'}
+                  {myTurn ? (t('uno.drawCard') || 'PESCA CARTA') : (t('uno.deck') || 'MAZZO')}
                 </span>
               </button>
 
@@ -577,7 +583,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
           {wildPickerCardIndex !== null && (
             <div className="p-4 rounded-3xl bg-[#141724] border border-amber-400/50 shadow-2xl space-y-3 animate-in zoom-in-95">
               <span className="text-xs font-heading font-black text-white uppercase tracking-wider block text-center">
-                SCEGLI IL COLORE PER IL JOLLY
+                {t('uno.chooseColor') || 'SCEGLI IL COLORE PER IL JOLLY'}
               </span>
               <div className="grid grid-cols-4 gap-2">
                 {(['RED', 'BLUE', 'GREEN', 'YELLOW'] as UnoColor[]).map((col) => (
@@ -605,10 +611,10 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
           {/* Player Hand Cards */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-2 text-xs font-heading font-bold text-slate-300">
-              <span>LE TUE CARTE ({myHand.length})</span>
+              <span>{t('uno.yourCards') || 'LE TUE CARTE'} ({myHand.length})</span>
               {myHand.length === 1 && (
                 <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white font-black text-[10px] animate-bounce">
-                  HAI DETTO UNO!
+                  {t('uno.saidUno') || 'HAI DETTO UNO!'}
                 </span>
               )}
             </div>

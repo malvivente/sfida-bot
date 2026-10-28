@@ -212,6 +212,50 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [joiningMatchId, setJoiningMatchId] = useState<string | null>(null);
   const [pokerMaxPlayers, setPokerMaxPlayers] = useState<number>(2);
+  const [userRaffleTicketsCount, setUserRaffleTicketsCount] = useState<number>(0);
+
+  const effectiveUserId = React.useMemo(() => {
+    if (userId) return String(userId).trim();
+    try {
+      const saved = localStorage.getItem('sfidabot_user_id');
+      if (saved) return saved;
+    } catch {}
+    return '1052287650';
+  }, [userId]);
+
+  React.useEffect(() => {
+    const fetchUserRaffleTickets = async () => {
+      if (!effectiveUserId) return;
+      try {
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        const res = await fetch(`${serverUrl}/api/raffles/my-tickets?userId=${encodeURIComponent(effectiveUserId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            const now = Date.now();
+            const activeTickets = (data.tickets || []).filter((t: any) => {
+              const r = data.raffles?.[t.raffleId];
+              return r && r.status === 'ACTIVE' && r.endsAtEpoch > now;
+            }).length;
+            const activeFree = (data.freeEntries || []).filter((f: any) => {
+              const r = data.raffles?.[f.raffleId];
+              return r && r.status === 'ACTIVE' && r.endsAtEpoch > now;
+            }).length;
+            setUserRaffleTicketsCount(activeTickets + activeFree);
+          }
+        }
+      } catch {}
+    };
+
+    fetchUserRaffleTickets();
+    const handleRaffleUpdate = () => fetchUserRaffleTickets();
+    window.addEventListener('sfida_raffle_updated', handleRaffleUpdate);
+    const interval = setInterval(fetchUserRaffleTickets, 15000);
+    return () => {
+      window.removeEventListener('sfida_raffle_updated', handleRaffleUpdate);
+      clearInterval(interval);
+    };
+  }, [effectiveUserId]);
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -748,6 +792,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
               onOpenAffiliates={onOpenAffiliates}
               onOpenJackpotModal={onOpenJackpotModal}
               jackpotAmountGram={jackpotGram}
+              userRaffleTickets={userRaffleTicketsCount}
             />
           )}
 

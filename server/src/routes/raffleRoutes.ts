@@ -45,6 +45,7 @@ export async function raffleRoutes(fastify: FastifyInstance) {
       return reply.send({
         success: true,
         tickets: data.tickets,
+        freeEntries: data.freeEntries,
         raffles: data.raffles,
       });
     } catch (err: any) {
@@ -87,6 +88,7 @@ export async function raffleRoutes(fastify: FastifyInstance) {
 
       return reply.send({
         success: true,
+        isFreeEntry: result.isFreeEntry,
         ticketNumbers: result.ticketNumbers,
         newBalance: result.newBalance,
       });

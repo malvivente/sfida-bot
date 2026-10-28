@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ArrowLeft, Ticket, Trophy, ShieldCheck, X, Sparkles, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Ticket, Trophy, ShieldCheck, X, CheckCircle2, Clock } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { useTelegram } from '../../hooks/useTelegram.js';
@@ -18,6 +18,7 @@ export interface StoredRaffle {
   prizeGram: number;
   ticketPriceGram: number;
   totalTickets: number;
+  freeParticipants?: Array<{ userId: string; username?: string; registeredAt: number }>;
   maxTickets?: number;
   endsAtEpoch: number;
   createdAt: number;
@@ -37,6 +38,11 @@ export interface StoredRaffleTicket {
   username?: string;
   ticketNumber: number;
   purchasedAt: number;
+}
+
+export interface StoredFreeEntry {
+  raffleId: string;
+  registeredAt: number;
 }
 
 export const RaffleView: React.FC<RaffleViewProps> = ({
@@ -59,10 +65,12 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
   }, [userId]);
 
   const [activeTab, setActiveTab] = useState<'active' | 'my_tickets' | 'winners' | 'rules'>('active');
+  const [myTicketsFilter, setMyTicketsFilter] = useState<'all' | 'active' | 'concluded'>('active');
   const [raffles, setRaffles] = useState<StoredRaffle[]>([]);
   const [featuredRaffle, setFeaturedRaffle] = useState<StoredRaffle | null>(null);
   const [pastWinners, setPastWinners] = useState<StoredRaffle[]>([]);
   const [myTickets, setMyTickets] = useState<StoredRaffleTicket[]>([]);
+  const [myFreeEntries, setMyFreeEntries] = useState<StoredFreeEntry[]>([]);
   const [myRafflesMap, setMyRafflesMap] = useState<Record<string, StoredRaffle>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -93,7 +101,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
     }
   }, [serverUrl]);
 
-  // Fetch user tickets
+  // Fetch user tickets and free entries
   const fetchMyTickets = useCallback(async () => {
     if (!effectiveUserId) return;
     try {
@@ -102,6 +110,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         const data = await res.json();
         if (data.success) {
           setMyTickets(data.tickets || []);
+          setMyFreeEntries(data.freeEntries || []);
           setMyRafflesMap(data.raffles || {});
         }
       }
@@ -139,6 +148,53 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
   const heroRaffle = featuredRaffle || raffles[0] || null;
   const heroTime = heroRaffle ? calculateTimeLeft(heroRaffle.endsAtEpoch) : null;
 
+  // Active tickets: strictly tickets for raffles that are currently ACTIVE and not expired
+  const activeTickets = useMemo(() => {
+    return myTickets.filter((tkt) => {
+      const r = myRafflesMap[tkt.raffleId] || raffles.find((item) => item.id === tkt.raffleId);
+      return r && r.status === 'ACTIVE' && r.endsAtEpoch > now;
+    });
+  }, [myTickets, myRafflesMap, raffles, now]);
+
+  // Concluded/Past tickets: tickets whose raffle ended or expired
+  const pastTickets = useMemo(() => {
+    return myTickets.filter((tkt) => {
+      const r = myRafflesMap[tkt.raffleId] || raffles.find((item) => item.id === tkt.raffleId);
+      return !r || r.status !== 'ACTIVE' || r.endsAtEpoch <= now;
+    });
+  }, [myTickets, myRafflesMap, raffles, now]);
+
+  // Active free entries
+  const activeFreeEntries = useMemo(() => {
+    return myFreeEntries.filter((fe) => {
+      const r = myRafflesMap[fe.raffleId] || raffles.find((item) => item.id === fe.raffleId);
+      return r && r.status === 'ACTIVE' && r.endsAtEpoch > now;
+    });
+  }, [myFreeEntries, myRafflesMap, raffles, now]);
+
+  // Concluded free entries
+  const pastFreeEntries = useMemo(() => {
+    return myFreeEntries.filter((fe) => {
+      const r = myRafflesMap[fe.raffleId] || raffles.find((item) => item.id === fe.raffleId);
+      return !r || r.status !== 'ACTIVE' || r.endsAtEpoch <= now;
+    });
+  }, [myFreeEntries, myRafflesMap, raffles, now]);
+
+  // Total active in user possession
+  const totalActiveInPossession = activeTickets.length + activeFreeEntries.length;
+
+  // Check if user is registered in a free raffle
+  const isUserRegisteredInFreeRaffle = (raffleId: string) => {
+    if (myFreeEntries.some((fe) => fe.raffleId === raffleId)) return true;
+    const r = myRafflesMap[raffleId] || raffles.find((item) => item.id === raffleId);
+    return Boolean(r?.freeParticipants?.some((p) => String(p.userId) === String(effectiveUserId)));
+  };
+
+  // Count user's tickets in a given paid raffle
+  const getUserTicketsForRaffle = (raffleId: string) => {
+    return myTickets.filter((t) => t.raffleId === raffleId).length;
+  };
+
   // Open participation modal for a specific raffle
   const handleOpenModal = (r: StoredRaffle) => {
     triggerImpact('light');
@@ -155,15 +211,17 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
 
   // Ticket cost in modal
   const modalTicketPrice = modalRaffle?.ticketPriceGram ?? 0;
+  const isModalFree = modalTicketPrice === 0;
   const modalTotalCost = parseFloat((modalTicketPrice * selectedQuantity).toFixed(2));
   const currentBalNum = parseFloat(userBalanceGram || '0');
-  const canAfford = currentBalNum >= modalTotalCost;
+  const canAfford = isModalFree || currentBalNum >= modalTotalCost;
+  const isModalAlreadyRegistered = modalRaffle && isModalFree ? isUserRegisteredInFreeRaffle(modalRaffle.id) : false;
 
-  // Perform purchase
+  // Perform purchase or free registration
   const handleConfirmPurchase = async () => {
     if (!modalRaffle || isBuying) return;
 
-    if (!canAfford) {
+    if (!isModalFree && !canAfford) {
       triggerNotification('error');
       setBuyFeedback({
         type: 'error',
@@ -183,7 +241,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         body: JSON.stringify({
           raffleId: modalRaffle.id,
           userId: effectiveUserId,
-          quantity: selectedQuantity,
+          quantity: isModalFree ? 1 : selectedQuantity,
           username: username || displayName || undefined,
         }),
       });
@@ -209,12 +267,22 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           } catch {}
         }
 
-        const numbersStr = data.ticketNumbers ? data.ticketNumbers.map((n: number) => `#TK-${n}`).join(', ') : '';
-        const ticketWord = selectedQuantity === 1 ? (t('raffle.ticketAssigned') || 'biglietto assegnato') : (t('raffle.ticketsAssigned') || 'biglietti assegnati');
-        setBuyFeedback({
-          type: 'success',
-          message: `${t('raffle.buySuccess') || 'Acquisto riuscito!'} ${selectedQuantity} ${ticketWord}: ${numbersStr}`,
-        });
+        // Notify lobby banner that ticket counts changed
+        window.dispatchEvent(new CustomEvent('sfida_raffle_updated'));
+
+        if (data.isFreeEntry || isModalFree) {
+          setBuyFeedback({
+            type: 'success',
+            message: t('raffle.freeEntryRegistered') || 'Iscrizione gratuita completata! Sei registrato per l\'estrazione.',
+          });
+        } else {
+          const numbersStr = data.ticketNumbers ? data.ticketNumbers.map((n: number) => `#TK-${n}`).join(', ') : '';
+          const ticketWord = selectedQuantity === 1 ? (t('raffle.ticketAssigned') || 'biglietto assegnato') : (t('raffle.ticketsAssigned') || 'biglietti assegnati');
+          setBuyFeedback({
+            type: 'success',
+            message: `${t('raffle.buySuccess') || 'Acquisto riuscito!'} ${selectedQuantity} ${ticketWord}: ${numbersStr}`,
+          });
+        }
 
         // Re-fetch data
         fetchRaffles();
@@ -223,7 +291,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         triggerNotification('error');
         setBuyFeedback({
           type: 'error',
-          message: data.error || (t('raffle.buyError') || 'Errore durante l\'acquisto del biglietto'),
+          message: data.error || (t('raffle.buyError') || 'Errore durante la registrazione'),
         });
       }
     } catch (err: any) {
@@ -235,11 +303,6 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
     } finally {
       setIsBuying(false);
     }
-  };
-
-  // Count user's tickets in a given raffle
-  const getUserTicketsForRaffle = (raffleId: string) => {
-    return myTickets.filter((t) => t.raffleId === raffleId).length;
   };
 
   return (
@@ -258,9 +321,10 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           <span>{t('common.back')}</span>
         </button>
 
+        {/* Counter of active tickets & entries currently in possession */}
         <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-heading font-extrabold uppercase tracking-wider">
-          <Ticket className="w-3.5 h-3.5" />
-          <span>{myTickets.length} {t('raffle.activeTickets')}</span>
+          <Ticket className="w-3.5 h-3.5 text-amber-300" />
+          <span>{totalActiveInPossession} {t('raffle.activeTickets')}</span>
         </div>
       </div>
 
@@ -318,12 +382,34 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
               </div>
             )}
 
-            {/* Ticket Sold Info */}
+            {/* Info and User Status */}
             <div className="flex items-center justify-between text-xs text-slate-300 font-mono pt-1">
-              <span>{t('raffle.ticketsSold')}: <b>{heroRaffle.totalTickets}</b></span>
-              <span className="text-purple-300 font-bold">
-                {getUserTicketsForRaffle(heroRaffle.id)} {t('raffle.tabMyTickets').toLowerCase()}
+              <span>
+                {heroRaffle.ticketPriceGram === 0 ? (
+                  <>
+                    {t('raffle.participants')}: <b>{heroRaffle.freeParticipants?.length || heroRaffle.totalTickets}</b>
+                  </>
+                ) : (
+                  <>
+                    {t('raffle.ticketsSold')}: <b>{heroRaffle.totalTickets}</b>
+                  </>
+                )}
               </span>
+
+              {heroRaffle.ticketPriceGram === 0 ? (
+                isUserRegisteredInFreeRaffle(heroRaffle.id) ? (
+                  <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{t('raffle.registered')}</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Non iscritto</span>
+                )
+              ) : (
+                <span className="text-purple-300 font-bold">
+                  {getUserTicketsForRaffle(heroRaffle.id)} {t('raffle.yours') || 'tuoi'}
+                </span>
+              )}
             </div>
 
             {/* Action button to open detailed entry modal */}
@@ -333,7 +419,11 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
               className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center justify-center space-x-1.5"
             >
               <Ticket className="w-4 h-4" />
-              <span>{t('raffle.participate')} ({heroRaffle.ticketPriceGram === 0 ? t('raffle.free') : `${heroRaffle.ticketPriceGram} GRAM`})</span>
+              <span>
+                {heroRaffle.ticketPriceGram === 0
+                  ? (isUserRegisteredInFreeRaffle(heroRaffle.id) ? t('raffle.alreadyRegistered') : t('raffle.enterFree'))
+                  : `${t('raffle.participate')} (${heroRaffle.ticketPriceGram} GRAM)`}
+              </span>
             </button>
           </div>
         </div>
@@ -364,7 +454,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             activeTab === 'my_tickets' ? 'bg-purple-600 text-white font-black shadow-sm' : 'text-slate-400'
           }`}
         >
-          {t('raffle.tabMyTickets')} ({myTickets.length})
+          {t('raffle.tabMyTickets')} ({totalActiveInPossession})
         </button>
 
         <button
@@ -401,12 +491,14 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             <div className="p-8 text-center rounded-3xl bg-[#141724] border border-white/10 space-y-2">
               <Ticket className="w-8 h-8 text-slate-500 mx-auto" />
               <p className="text-xs text-slate-400 font-sans">
-                {t('raffle.noActiveRaffles') || 'Nessuna raffle attiva al momento. L\'amministratore ne aprirà una a breve!'}
+                {t('raffle.noActiveRaffles') || 'Nessuna raffle attiva al momento.'}
               </p>
             </div>
           ) : (
             raffles.map((r) => {
               const rTime = calculateTimeLeft(r.endsAtEpoch);
+              const isFree = r.ticketPriceGram === 0;
+              const isReg = isFree ? isUserRegisteredInFreeRaffle(r.id) : false;
               const userTktCount = getUserTicketsForRaffle(r.id);
 
               return (
@@ -416,10 +508,10 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="px-2 py-0.5 rounded-md bg-white/10 text-white font-heading font-black text-[9px] uppercase tracking-wider">
-                      {r.badge || (r.ticketPriceGram === 0 ? (t('raffle.freeBadge') || 'GRATUITA') : (t('raffle.activeBadge') || 'ATTIVA'))}
+                      {r.badge || (isFree ? (t('raffle.freeBadge') || 'GRATUITA') : (t('raffle.activeBadge') || 'ATTIVA'))}
                     </span>
                     <span className="text-xs font-heading font-bold text-amber-300">
-                      {r.ticketPriceGram > 0 ? `${r.ticketPriceGram} GRAM` : t('raffle.free')}
+                      {isFree ? t('raffle.free') : `${r.ticketPriceGram} GRAM`}
                     </span>
                   </div>
 
@@ -441,19 +533,34 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
 
                   <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[11px] text-slate-300">
                     <span>
-                      {r.totalTickets} {t('raffle.ticketsSold')}
-                      {userTktCount > 0 && (
-                        <span className="text-purple-300 font-bold ml-1">
-                          ({userTktCount} {t('raffle.yours') || 'tuoi'})
+                      {isFree ? (
+                        <span>
+                          {r.freeParticipants?.length || r.totalTickets} {t('raffle.participants')}
+                          {isReg && (
+                            <span className="text-emerald-400 font-bold ml-1">
+                              (✓ {t('raffle.registered')})
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span>
+                          {r.totalTickets} {t('raffle.ticketsSold')}{' '}
+                          <span className="text-purple-300 font-bold ml-1">
+                            ({userTktCount} {t('raffle.yours') || 'tuoi'})
+                          </span>
                         </span>
                       )}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleOpenModal(r)}
-                      className="px-3 py-1 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-heading font-bold text-[10px] uppercase shadow-md active:scale-95 transition-all"
+                      className={`px-3 py-1 rounded-xl font-heading font-bold text-[10px] uppercase shadow-md active:scale-95 transition-all ${
+                        isFree && isReg
+                          ? 'bg-emerald-900/50 border border-emerald-500/40 text-emerald-300'
+                          : 'bg-purple-600 hover:bg-purple-500 text-white'
+                      }`}
                     >
-                      {t('raffle.participate')}
+                      {isFree && isReg ? t('raffle.alreadyRegistered') : t('raffle.participate')}
                     </button>
                   </div>
                 </div>
@@ -463,26 +570,112 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         </div>
       )}
 
-      {/* Tab 2: My Tickets (Associated strictly with Telegram userId) */}
+      {/* Tab 2: My Tickets & Entries (Clearly separates active from concluded) */}
       {activeTab === 'my_tickets' && (
         <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <span className="text-xs font-heading font-bold text-white uppercase">
-              {t('raffle.activeTicketsTitle')}
+              {t('raffle.tabMyTickets')}
             </span>
             <span className="text-xs text-purple-300 font-mono font-bold uppercase">
-              {myTickets.length} {t('raffle.totalTicketsCount') || 'BIGLIETTI TOTALI'}
+              {totalActiveInPossession} {t('raffle.activeTickets')}
             </span>
           </div>
 
-          {myTickets.length === 0 ? (
-            <div className="text-center py-6 text-slate-400 text-xs">
-              {t('raffle.noTickets')}
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto no-scrollbar">
-              {myTickets.map((tkt) => {
+          {/* Subfilter: Active vs Concluded */}
+          <div className="grid grid-cols-3 gap-1 p-0.5 bg-black/40 rounded-xl border border-white/5 text-[10px] font-heading font-bold">
+            <button
+              type="button"
+              onClick={() => setMyTicketsFilter('active')}
+              className={`py-1.5 rounded-lg text-center transition-all ${
+                myTicketsFilter === 'active' ? 'bg-purple-600 text-white' : 'text-slate-400'
+              }`}
+            >
+              ATTIVI ({totalActiveInPossession})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMyTicketsFilter('concluded')}
+              className={`py-1.5 rounded-lg text-center transition-all ${
+                myTicketsFilter === 'concluded' ? 'bg-purple-600 text-white' : 'text-slate-400'
+              }`}
+            >
+              CONCLUSI ({pastTickets.length + pastFreeEntries.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMyTicketsFilter('all')}
+              className={`py-1.5 rounded-lg text-center transition-all ${
+                myTicketsFilter === 'all' ? 'bg-purple-600 text-white' : 'text-slate-400'
+              }`}
+            >
+              TUTTI ({myTickets.length + myFreeEntries.length})
+            </button>
+          </div>
+
+          {/* Content display */}
+          <div className="space-y-2 max-h-80 overflow-y-auto no-scrollbar pt-1">
+            {/* Free Entries Display */}
+            {(myTicketsFilter === 'all' || myTicketsFilter === 'active' ? activeFreeEntries : [])
+              .concat(myTicketsFilter === 'all' || myTicketsFilter === 'concluded' ? pastFreeEntries : [])
+              .map((fe) => {
+                const raffleInfo = myRafflesMap[fe.raffleId] || raffles.find((r) => r.id === fe.raffleId);
+                const isActive = raffleInfo && raffleInfo.status === 'ACTIVE' && raffleInfo.endsAtEpoch > now;
+                const isWon = raffleInfo?.winnerUserId === effectiveUserId;
+
+                return (
+                  <div
+                    key={`free_${fe.raffleId}`}
+                    className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                      isWon
+                        ? 'bg-amber-500/20 border-amber-400/50'
+                        : isActive
+                        ? 'bg-emerald-950/20 border-emerald-500/40'
+                        : 'bg-black/40 border-white/10 opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-heading font-black text-xs text-white block">
+                          {t('raffle.freeDirectEntry')}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-sans block truncate max-w-[170px]">
+                          {raffleInfo?.title || 'Sfida Free Raffle'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      {isWon ? (
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-500/30 text-amber-300 text-[10px] font-heading font-black uppercase tracking-wider">
+                          🏆 {t('raffle.wonBadge') || 'VINTO!'}
+                        </span>
+                      ) : isActive ? (
+                        <span className="text-[10px] text-emerald-400 font-mono font-bold uppercase">
+                          🟢 {t('raffle.valid')}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-mono font-bold uppercase">
+                          🏁 {t('raffle.notWon') || 'NON ESTRATTO'}
+                        </span>
+                      )}
+                      <span className="text-[9px] text-slate-500 block font-mono">
+                        {new Date(fe.registeredAt).toLocaleDateString('it-IT')}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+            {/* Paid Numbered Tickets Display */}
+            {(myTicketsFilter === 'all' || myTicketsFilter === 'active' ? activeTickets : [])
+              .concat(myTicketsFilter === 'all' || myTicketsFilter === 'concluded' ? pastTickets : [])
+              .map((tkt) => {
                 const raffleInfo = myRafflesMap[tkt.raffleId] || raffles.find((r) => r.id === tkt.raffleId);
+                const isActive = raffleInfo && raffleInfo.status === 'ACTIVE' && raffleInfo.endsAtEpoch > now;
                 const isWon = raffleInfo?.winnerTicketNumber === tkt.ticketNumber;
 
                 return (
@@ -491,7 +684,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                     className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
                       isWon
                         ? 'bg-amber-500/20 border-amber-400/50'
-                        : 'bg-black/40 border-purple-500/30'
+                        : isActive
+                        ? 'bg-black/40 border-purple-500/40'
+                        : 'bg-black/20 border-white/10 opacity-70'
                     }`}
                   >
                     <div className="flex items-center space-x-2.5">
@@ -513,9 +708,13 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                         <span className="px-2 py-0.5 rounded-lg bg-amber-500/30 text-amber-300 text-[10px] font-heading font-black uppercase tracking-wider">
                           🏆 {t('raffle.wonBadge') || 'VINTO!'}
                         </span>
-                      ) : (
+                      ) : isActive ? (
                         <span className="text-[10px] text-emerald-400 font-mono font-bold uppercase">
-                          {t('raffle.valid')}
+                          🟢 {t('raffle.valid')}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-mono font-bold uppercase">
+                          🏁 {t('raffle.notWon') || 'NON ESTRATTO'}
                         </span>
                       )}
                       <span className="text-[9px] text-slate-500 block font-mono">
@@ -525,8 +724,20 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                   </div>
                 );
               })}
-            </div>
-          )}
+
+            {/* Empty State */}
+            {((myTicketsFilter === 'active' && totalActiveInPossession === 0) ||
+              (myTicketsFilter === 'concluded' && pastTickets.length + pastFreeEntries.length === 0) ||
+              (myTicketsFilter === 'all' && myTickets.length + myFreeEntries.length === 0)) && (
+              <div className="text-center py-6 text-slate-400 text-xs">
+                {myTicketsFilter === 'active'
+                  ? 'Nessun biglietto o partecipazione attiva. Partecipa a una raffle per iniziare!'
+                  : myTicketsFilter === 'concluded'
+                  ? 'Nessun biglietto concluso o archiviato.'
+                  : t('raffle.noTickets')}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -537,7 +748,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             <div className="p-8 text-center rounded-3xl bg-[#141724] border border-white/10 space-y-2">
               <Trophy className="w-8 h-8 text-slate-500 mx-auto" />
               <p className="text-xs text-slate-400 font-sans">
-                {t('raffle.noPastWinners') || 'Nessuna estrazione completata finora. I vincitori appariranno qui!'}
+                {t('raffle.noPastWinners') || 'Nessuna estrazione completata finora.'}
               </p>
             </div>
           ) : (
@@ -555,7 +766,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                       {w.winnerUsername ? `@${w.winnerUsername}` : `ID: ${w.winnerUserId}`}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      {w.title} • Ticket #{w.winnerTicketNumber}
+                      {w.title} • {w.winnerTicketNumber ? `Ticket #${w.winnerTicketNumber}` : 'Estrazione Utente'}
                     </span>
                   </div>
                 </div>
@@ -632,57 +843,81 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                   {t('raffle.ticketPrice') || 'PREZZO BIGLIETTO'}
                 </span>
                 <span className="text-sm font-heading font-black text-white">
-                  {modalRaffle.ticketPriceGram === 0 ? t('raffle.free') : `${modalRaffle.ticketPriceGram} GRAM`}
+                  {isModalFree ? t('raffle.free') : `${modalRaffle.ticketPriceGram} GRAM`}
                 </span>
               </div>
             </div>
 
-            {/* Quantity Selector */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300 font-heading">
-                <span>{t('raffle.selectQuantity')}:</span>
-                <span className="text-amber-300 font-bold">
-                  {t('raffle.total')}: {modalTotalCost.toFixed(2)} GRAM
+            {/* Mode: Free vs Paid */}
+            {isModalFree ? (
+              /* Free Raffle Entry Notice */
+              <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 text-center space-y-1">
+                <span className="text-xs font-heading font-black text-emerald-400 uppercase tracking-wide block">
+                  {t('raffle.freeRegistration')}
                 </span>
+                <p className="text-[11px] text-slate-300 font-sans">
+                  {t('raffle.freeEntryNotice')}
+                </p>
               </div>
+            ) : (
+              /* Quantity Selector for Paid Raffle */
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-heading">
+                  <span>{t('raffle.selectQuantity')}:</span>
+                  <span className="text-amber-300 font-bold">
+                    {t('raffle.total')}: {modalTotalCost.toFixed(2)} GRAM
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-4 gap-1.5">
-                {[1, 5, 10, 25].map((qty) => (
-                  <button
-                    key={qty}
-                    type="button"
-                    onClick={() => {
-                      triggerImpact('light');
-                      setSelectedQuantity(qty);
-                    }}
-                    className={`py-2 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all border ${
-                      selectedQuantity === qty
-                        ? 'bg-purple-600 border-purple-400 text-white shadow-md'
-                        : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {qty} {qty === 1 ? 'TKT' : 'TKTS'}
-                  </button>
-                ))}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[1, 5, 10, 25].map((qty) => (
+                    <button
+                      key={qty}
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        setSelectedQuantity(qty);
+                      }}
+                      className={`py-2 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all border ${
+                        selectedQuantity === qty
+                          ? 'bg-purple-600 border-purple-400 text-white shadow-md'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {qty} {qty === 1 ? 'TKT' : 'TKTS'}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Buy Action Button */}
-            <button
-              type="button"
-              disabled={isBuying || !canAfford}
-              onClick={handleConfirmPurchase}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center space-x-2"
-            >
-              <Ticket className="w-4 h-4" />
-              <span>
-                {isBuying
-                  ? (t('raffle.buying') || 'ACQUISTO IN CORSO...')
-                  : modalTotalCost === 0
-                  ? (t('raffle.enterFree') || 'PARTECIPA GRATUITAMENTE')
-                  : `${t('raffle.buyTickets')} (${modalTotalCost.toFixed(2)} GRAM)`}
-              </span>
-            </button>
+            {/* Action Button */}
+            {isModalFree && isModalAlreadyRegistered ? (
+              <button
+                type="button"
+                disabled
+                className="w-full py-4 rounded-2xl bg-emerald-900/40 border border-emerald-500/40 text-emerald-300 font-heading font-black text-sm uppercase tracking-wider cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>{t('raffle.alreadyRegistered')}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isBuying || (!isModalFree && !canAfford)}
+                onClick={handleConfirmPurchase}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center space-x-2"
+              >
+                <Ticket className="w-4 h-4" />
+                <span>
+                  {isBuying
+                    ? (t('raffle.buying') || 'ELABORAZIONE...')
+                    : isModalFree
+                    ? (t('raffle.enterFree') || 'PARTECIPA GRATUITAMENTE')
+                    : `${t('raffle.buyTickets')} (${modalTotalCost.toFixed(2)} GRAM)`}
+                </span>
+              </button>
+            )}
 
             {/* Feedback alert */}
             {buyFeedback && (
