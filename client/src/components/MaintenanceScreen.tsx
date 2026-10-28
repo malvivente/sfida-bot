@@ -99,7 +99,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
           <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
         </a>
         <p className="text-[10px] text-slate-500 font-mono tracking-wider">
-          SFIDA PLATFORM ENGINE • 2026
+          SFIDA • 2026
         </p>
       </div>
     </div>
