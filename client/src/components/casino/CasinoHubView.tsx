@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Dices, Layers, Rocket, Bomb, CircleDot, Disc, Sparkles, ShieldCheck, Trophy, Flame } from 'lucide-react';
+import { ArrowLeft, Dices, Layers, Rocket, Bomb, CircleDot, Disc, Sparkles } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { GramIcon } from '../GramIcon.js';
+import { CasinoCardArt, CasinoArtType } from './CasinoCardArt.js';
 
 // Modular Casino Games
 import { CrashGame } from './games/CrashGame.js';
@@ -22,15 +23,11 @@ export type CasinoGameType = 'crash' | 'mines' | 'plinko' | 'roulette' | 'dice' 
 
 interface CasinoCardData {
   id: CasinoGameType;
-  title: string;
-  tagline: string;
-  badge: string;
-  badgeColor: string;
-  rtp: string;
+  titleKey: string;
+  taglineKey: string;
   gradient: string;
   borderColor: string;
   icon: React.ReactNode;
-  placeholderArt: string;
 }
 
 export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
@@ -61,7 +58,9 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           const parsed = JSON.parse(saved);
           parsed.balanceGram = next.toFixed(2);
           localStorage.setItem('sfidabot_user_balance', JSON.stringify(parsed));
-          window.dispatchEvent(new CustomEvent('sfida_balance_updated', { detail: { balance: next.toFixed(2) } }));
+          window.dispatchEvent(
+            new CustomEvent('sfida_balance_updated', { detail: { balance: next.toFixed(2) } })
+          );
         }
       } catch {}
     }
@@ -70,75 +69,51 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
   const CASINO_GAMES: CasinoCardData[] = [
     {
       id: 'crash',
-      title: 'Crash / Aviator',
-      tagline: 'Moltiplicatore a razzo esponenziale in salita rapida',
-      badge: '🔥 PIÙ GIOCATO',
-      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40',
-      rtp: '96.0% RTP',
-      gradient: 'from-cyan-950/40 via-teal-950/20 to-black',
-      borderColor: 'border-cyan-500/40 hover:border-cyan-400',
-      icon: <Rocket className="w-5 h-5 text-cyan-400" />,
-      placeholderArt: '🚀',
+      titleKey: 'casino.crashTitle',
+      taglineKey: 'casino.crashDesc',
+      gradient: 'from-[#0e1628] via-[#090e1a] to-black',
+      borderColor: 'border-rose-500/30 hover:border-rose-400',
+      icon: <Rocket className="w-4 h-4 text-rose-400" />,
     },
     {
       id: 'mines',
-      title: 'Mines',
-      tagline: 'Griglia 5x5 con 25 tessere, gemme luccicanti e mine',
-      badge: '💎 TOP STRATEGY',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
-      rtp: '96.0% RTP',
-      gradient: 'from-emerald-950/40 via-teal-950/20 to-black',
-      borderColor: 'border-emerald-500/40 hover:border-emerald-400',
-      icon: <Bomb className="w-5 h-5 text-emerald-400" />,
-      placeholderArt: '💣',
+      titleKey: 'casino.minesTitle',
+      taglineKey: 'casino.minesDesc',
+      gradient: 'from-[#06241a] via-[#04140e] to-black',
+      borderColor: 'border-emerald-500/30 hover:border-emerald-400',
+      icon: <Bomb className="w-4 h-4 text-emerald-400" />,
     },
     {
       id: 'plinko',
-      title: 'Plinko',
-      tagline: 'Piramide a pioli con caduta a rimbalzi e vaschette',
-      badge: '⚡ CASINO ARCADE',
-      badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-400/40',
-      rtp: '96.0% RTP',
-      gradient: 'from-purple-950/40 via-indigo-950/20 to-black',
-      borderColor: 'border-purple-500/40 hover:border-purple-400',
-      icon: <CircleDot className="w-5 h-5 text-purple-400" />,
-      placeholderArt: '⚡',
+      titleKey: 'casino.plinkoTitle',
+      taglineKey: 'casino.plinkoDesc',
+      gradient: 'from-[#1e0d33] via-[#0f071a] to-black',
+      borderColor: 'border-purple-500/30 hover:border-purple-400',
+      icon: <CircleDot className="w-4 h-4 text-purple-400" />,
     },
     {
       id: 'roulette',
-      title: 'Roulette Europea',
-      tagline: 'Tavolo classico a 37 numeri con green zero e rosso/nero',
-      badge: '👑 CLASSIC 37',
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
-      rtp: '97.3% RTP',
-      gradient: 'from-amber-950/40 via-orange-950/20 to-black',
-      borderColor: 'border-amber-500/40 hover:border-amber-400',
-      icon: <Disc className="w-5 h-5 text-amber-400" />,
-      placeholderArt: '🎡',
+      titleKey: 'casino.rouletteTitle',
+      taglineKey: 'casino.rouletteDesc',
+      gradient: 'from-[#2a1707] via-[#140b03] to-black',
+      borderColor: 'border-amber-500/30 hover:border-amber-400',
+      icon: <Disc className="w-4 h-4 text-amber-400" />,
     },
     {
       id: 'dice',
-      title: 'Dice (Dado)',
-      tagline: 'Lancio matematico con slider probabilità e payout istantaneo',
-      badge: '🎲 PROVABLY FAIR',
-      badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40',
-      rtp: '96.0% RTP',
-      gradient: 'from-yellow-950/40 via-amber-950/20 to-black',
-      borderColor: 'border-yellow-500/40 hover:border-yellow-400',
-      icon: <Dices className="w-5 h-5 text-yellow-400" />,
-      placeholderArt: '🎲',
+      titleKey: 'casino.diceTitle',
+      taglineKey: 'casino.diceDesc',
+      gradient: 'from-[#2b2106] via-[#140f03] to-black',
+      borderColor: 'border-yellow-500/30 hover:border-yellow-400',
+      icon: <Dices className="w-4 h-4 text-yellow-400" />,
     },
     {
       id: 'hilo',
-      title: 'HiLo (Alta/Bassa)',
-      tagline: 'Previsione carta successiva con moltiplicatori a catena',
-      badge: '🃏 CARD GAME',
-      badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-400/40',
-      rtp: '96.0% RTP',
-      gradient: 'from-rose-950/40 via-pink-950/20 to-black',
-      borderColor: 'border-rose-500/40 hover:border-rose-400',
-      icon: <Layers className="w-5 h-5 text-rose-400" />,
-      placeholderArt: '🃏',
+      titleKey: 'casino.hiloTitle',
+      taglineKey: 'casino.hiloDesc',
+      gradient: 'from-[#2a0815] via-[#14040a] to-black',
+      borderColor: 'border-pink-500/30 hover:border-pink-400',
+      icon: <Layers className="w-4 h-4 text-pink-400" />,
     },
   ];
 
@@ -159,7 +134,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{activeGame ? 'Lobby Casino' : t('common.back')}</span>
+          <span>{activeGame ? t('casino.lobby') || 'Lobby Casino' : t('common.back') || 'Torna'}</span>
         </button>
 
         {/* Balance & Demo Toggle */}
@@ -176,7 +151,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                 : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
             }`}
           >
-            {isDemoMode ? t('casino.demoMode') : t('casino.realGram')}
+            {isDemoMode ? t('casino.demoMode') || 'MODALITÀ DEMO' : t('casino.realGram') || 'GRAM REALI'}
           </button>
 
           <div className="flex items-center space-x-1 px-3 py-1 rounded-xl bg-black/40 border border-amber-400/30 text-amber-300 text-xs font-heading font-bold">
@@ -189,34 +164,28 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
 
       {/* Main Title Banner (shown when in lobby) */}
       {!activeGame && (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-950/30 via-purple-950/30 to-black border border-amber-500/30 p-4 shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-950/40 via-purple-950/20 to-black border border-white/10 p-4 shadow-xl">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <div className="flex items-center space-x-2">
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-heading font-black text-[9px] uppercase tracking-wider">
-                  SFIDA CASINO ORIGINALS
-                </span>
-                <span className="flex items-center space-x-1 text-[10px] font-mono text-emerald-400 font-bold">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>PROVABLY FAIR</span>
-                </span>
-              </div>
+              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-heading font-black text-[9px] uppercase tracking-wider inline-block">
+                {t('casino.title') || 'SFIDA CASINO ORIGINALS'}
+              </span>
               <h2 className="text-base font-heading font-black text-white uppercase tracking-wider">
-                Tavoli & Giochi del Banco
+                Tavoli & Giochi Arcade
               </h2>
-              <p className="text-[11px] text-slate-300">
-                Scegli un gioco per iniziare. Algoritmi crittografici certificati e pagamenti immediati.
+              <p className="text-[11px] text-slate-400">
+                {t('casino.subtitle') || 'Tavoli e giochi arcade con pagamenti istantanei in GRAM.'}
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Dices className="w-7 h-7" />
+              <Dices className="w-6 h-6" />
             </div>
           </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* 1. CASINO CARDS LOBBY VIEW (MODULAR GRID - NO SPACE ISSUE) */}
+      {/* 1. CASINO CARDS LOBBY VIEW (CLEAN AESTHETIC RICH CARDS)  */}
       {/* ======================================================== */}
       {!activeGame ? (
         <div className="grid grid-cols-2 gap-3">
@@ -224,34 +193,24 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
             <div
               key={game.id}
               onClick={() => {
-                triggerImpact('light');
+                triggerImpact('medium');
                 setActiveGame(game.id);
               }}
-              className={`group relative overflow-hidden rounded-3xl bg-gradient-to-b ${game.gradient} border ${game.borderColor} p-3.5 shadow-xl transition-all duration-200 active:scale-95 cursor-pointer flex flex-col justify-between min-h-[195px]`}
+              className={`group relative overflow-hidden rounded-3xl bg-gradient-to-b ${game.gradient} border ${game.borderColor} p-3.5 shadow-xl transition-all duration-200 active:scale-95 cursor-pointer flex flex-col justify-between min-h-[205px]`}
             >
-              {/* Card Top: Badge & RTP */}
-              <div className="flex items-center justify-between w-full">
-                <span className={`px-2 py-0.5 rounded-md border text-[8.5px] font-heading font-black uppercase tracking-wider ${game.badgeColor}`}>
-                  {game.badge}
-                </span>
-                <span className="text-[9px] font-mono text-slate-400 font-bold">
-                  {game.rtp}
-                </span>
-              </div>
-
-              {/* Placeholder Art Box (customizable / replaceable by user) */}
-              <div className="my-2.5 w-full h-16 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition-transform duration-200">
-                <span>{game.placeholderArt}</span>
+              {/* Card Illustration Banner */}
+              <div className="w-full h-24 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-inner group-hover:scale-105 transition-transform duration-300 relative">
+                <CasinoCardArt type={game.id} />
               </div>
 
               {/* Title & Tagline */}
-              <div className="space-y-0.5">
+              <div className="space-y-1 pt-2">
                 <h3 className="text-xs font-heading font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
                   {game.icon}
-                  <span className="truncate">{game.title}</span>
+                  <span className="truncate">{t(game.titleKey) || game.id.toUpperCase()}</span>
                 </h3>
-                <p className="text-[9.5px] text-slate-400 line-clamp-2 leading-tight">
-                  {game.tagline}
+                <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
+                  {t(game.taglineKey)}
                 </p>
               </div>
 
@@ -262,7 +221,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
                   className="w-full py-1.5 rounded-xl bg-white/10 group-hover:bg-gradient-to-r group-hover:from-amber-400 group-hover:to-yellow-500 group-hover:text-slate-950 text-white font-heading font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 shadow-sm"
                 >
                   <Sparkles className="w-3 h-3" />
-                  <span>GIOCA ORA</span>
+                  <span>{t('casino.playNow') || 'GIOCA ORA'}</span>
                 </button>
               </div>
             </div>
@@ -276,16 +235,12 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           {/* Active Game Header Bar */}
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center space-x-2">
-              <span className="text-lg">
-                {CASINO_GAMES.find((g) => g.id === activeGame)?.placeholderArt}
+              <span className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-white">
+                {CASINO_GAMES.find((g) => g.id === activeGame)?.icon}
               </span>
               <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                {CASINO_GAMES.find((g) => g.id === activeGame)?.title}
+                {t(CASINO_GAMES.find((g) => g.id === activeGame)?.titleKey || '')}
               </h3>
-            </div>
-            <div className="flex items-center space-x-1 text-[10px] font-mono text-emerald-400">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>{CASINO_GAMES.find((g) => g.id === activeGame)?.rtp}</span>
             </div>
           </div>
 

@@ -188,14 +188,28 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
 
   const initBlackjack = (starter: 'A' | 'B') => {
     const d = createDeck();
-    const cA = d.pop()!;
-    const cB = d.pop()!;
+    const cA1 = d.pop()!;
+    const cB1 = d.pop()!;
+    const cA2 = d.pop()!;
+    const cB2 = d.pop()!;
+    const handA = [cA1, cA2];
+    const handB = [cB1, cB2];
     setBjDeck(d);
-    setBjHandA([cA]);
-    setBjHandB([cB]);
-    setBjTurn(starter);
+    setBjHandA(handA);
+    setBjHandB(handB);
     setBjStandA(false);
     setBjStandB(false);
+
+    // Natural 21 check
+    const scoreA = calculateBlackjackScore(handA);
+    const scoreB = calculateBlackjackScore(handB);
+    if (scoreA === 21 || scoreB === 21) {
+      setTimeout(() => {
+        evaluateBlackjackWinner(scoreA, scoreB);
+      }, 900);
+      return;
+    }
+    setBjTurn(starter);
   };
 
   const handleBlackjackHit = (player: 'A' | 'B' = 'A') => {
@@ -671,8 +685,25 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   // ==========================================
   // --- 7. POKER (POKER ROOM REPLICA) ---
   // ==========================================
-  const [pokerPot] = useState(100);
+  const [pokerPot, setPokerPot] = useState(100);
   const [pokerTurn, setPokerTurn] = useState<'A' | 'B'>('A');
+  const [pokerPhase, setPokerPhase] = useState<'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN'>('FLOP');
+  const [pokerCommunityCards, setPokerCommunityCards] = useState<any[]>([
+    { suit: '♠', value: '10', numericValue: 10 },
+    { suit: '♥', value: 'J', numericValue: 11 },
+    { suit: '♦', value: 'Q', numericValue: 12 },
+  ]);
+
+  const initPoker = () => {
+    setPokerPot(100);
+    setPokerPhase('FLOP');
+    setPokerTurn('A');
+    setPokerCommunityCards([
+      { suit: '♠', value: '10', numericValue: 10 },
+      { suit: '♥', value: 'J', numericValue: 11 },
+      { suit: '♦', value: 'Q', numericValue: 12 },
+    ]);
+  };
 
   const handlePokerAction = (action: string) => {
     if (action === 'fold') {
@@ -681,13 +712,42 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       triggerNotification('error');
     } else {
       setPokerTurn('B');
-      setTimeout(() => {
+      setTurnTimeLeft(15);
+    }
+  };
+
+  // Bot AI for Poker: responds and advances betting rounds
+  useEffect(() => {
+    if (gameType !== 'poker' || roomState !== 'GAME_ACTIVE' || pokerTurn !== 'B') return;
+
+    const timer = setTimeout(() => {
+      if (pokerPhase === 'FLOP') {
+        setPokerPhase('TURN');
+        setPokerCommunityCards((prev) => [
+          ...prev,
+          { suit: '♣', value: '4', numericValue: 4 },
+        ]);
+        setPokerTurn('A');
+        setTurnTimeLeft(15);
+      } else if (pokerPhase === 'TURN') {
+        setPokerPhase('RIVER');
+        setPokerCommunityCards((prev) => [
+          ...prev,
+          { suit: '♥', value: 'A', numericValue: 14 },
+        ]);
+        setPokerTurn('A');
+        setTurnTimeLeft(15);
+      } else {
+        // Showdown
+        setPokerPhase('SHOWDOWN');
         setWinnerSide('A');
         setRoomState('MATCH_SETTLED');
         triggerNotification('success');
-      }, 1100);
-    }
-  };
+      }
+    }, 1300);
+
+    return () => clearTimeout(timer);
+  }, [gameType, roomState, pokerTurn, pokerPhase]);
 
   // --- Initial Start & Coin Toss Orchestration ---
   const startNewMatch = useCallback(() => {
@@ -715,6 +775,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     if (gameType === 'connect4') initConnect4(starter);
     if (gameType === 'shotgun') initShotgun(starter);
     if (gameType === 'bridge') initBridge(starter);
+    if (gameType === 'poker') initPoker();
   }, [gameType, playerName, botName]);
 
   useEffect(() => {
@@ -973,20 +1034,45 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         {gameType === 'poker' && (
           <PokerArena
             gameData={{
-              phase: 'FLOP',
+              phase: pokerPhase,
               pot: pokerPot,
               currentTurn: pokerTurn === 'A' ? 0 : 1,
+              activeSeat: pokerTurn === 'A' ? 0 : 1,
+              dealerSeat: 0,
+              currentBet: 50,
+              minRaise: 50,
               seats: [
-                { seatIndex: 0, playerName, chips: 500, currentBet: 50, isFolded: false },
-                { seatIndex: 1, playerName: botName, chips: 500, currentBet: 50, isFolded: false },
+                {
+                  seatIndex: 0,
+                  username: playerName,
+                  chips: 500,
+                  currentBet: 50,
+                  hasFolded: false,
+                  isConnected: true,
+                  cards: [
+                    { suit: '♠', value: 'A', numericValue: 14 },
+                    { suit: '♥', value: 'K', numericValue: 13 },
+                  ],
+                },
+                {
+                  seatIndex: 1,
+                  username: botName,
+                  chips: 500,
+                  currentBet: 50,
+                  hasFolded: false,
+                  isConnected: true,
+                  cards: [
+                    { suit: '♦', value: 'Q', numericValue: 12 },
+                    { suit: '♣', value: 'J', numericValue: 11 },
+                  ],
+                },
               ],
-              communityCards: [
-                { suit: '♠', value: '10', numericValue: 10 },
-                { suit: '♥', value: 'J', numericValue: 11 },
-                { suit: '♦', value: 'Q', numericValue: 12 },
-              ],
+              communityCards: pokerCommunityCards,
+              turnTimeRemaining: turnTimeLeft,
             } as any}
-            role="player"
+            role="PLAYER_A"
+            userSide="A"
+            opponentConnected={true}
             isPlayerTurn={pokerTurn === 'A'}
             onAction={handlePokerAction}
             playerAName={playerName}

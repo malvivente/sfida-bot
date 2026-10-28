@@ -457,7 +457,7 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
           const gd = latestGameDataRef.current;
           const rs = renderStateRef.current;
 
-          if (gd) {
+          if (gd && gd.playerA && gd.playerB && gd.ball) {
             const isLocalPlayer = role === 'player' && roomState === 'GAME_ACTIVE' && gd.phase === 'PLAYING';
             const isUserA = userSide === 'A';
             const isUserB = userSide === 'B';
@@ -832,13 +832,13 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
           };
 
           // 4. Draw Player A (Left, Cyan)
-          const pASuperCharged = (gd?.playerA.superCharge ?? 0) >= 100;
-          const pASuperActive = Boolean(gd?.playerA.superActive);
+          const pASuperCharged = (gd?.playerA?.superCharge ?? 0) >= 100;
+          const pASuperActive = Boolean(gd?.playerA?.superActive);
           drawChibiPlayer(ctx, 'A', rs.pAx, rs.pAy, rs.pAkick, isMovingA, pASuperActive, pASuperCharged, now);
 
           // 5. Draw Player B (Right, Orange)
-          const pBSuperCharged = (gd?.playerB.superCharge ?? 0) >= 100;
-          const pBSuperActive = Boolean(gd?.playerB.superActive);
+          const pBSuperCharged = (gd?.playerB?.superCharge ?? 0) >= 100;
+          const pBSuperActive = Boolean(gd?.playerB?.superActive);
           drawChibiPlayer(ctx, 'B', rs.pBx, rs.pBy, rs.pBkick, isMovingB, pBSuperActive, pBSuperCharged, now);
 
           // "YOU" Floating Marker above active player's character
@@ -1142,11 +1142,11 @@ const HeadSoccerArenaComponent: React.FC<HeadSoccerArenaProps> = ({
   const seconds = timeRemainingSec % 60;
   const formattedClock = `${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
 
-  const superChargeA = Math.round(gameData?.playerA.superCharge ?? 0);
-  const superChargeB = Math.round(gameData?.playerB.superCharge ?? 0);
+  const superChargeA = Math.round(gameData?.playerA?.superCharge ?? 0);
+  const superChargeB = Math.round(gameData?.playerB?.superCharge ?? 0);
   const mySuperCharge = userSide === 'A' ? superChargeA : superChargeB;
   const mySuperActive = Boolean(
-    userSide === 'A' ? gameData?.playerA.superActive : gameData?.playerB.superActive
+    userSide === 'A' ? gameData?.playerA?.superActive : gameData?.playerB?.superActive
   );
   const mySuperCanArm = mySuperCharge >= 100 || mySuperActive;
   const mySuperReady = mySuperCanArm;

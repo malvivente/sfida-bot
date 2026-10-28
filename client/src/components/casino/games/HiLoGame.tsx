@@ -140,10 +140,7 @@ export const HiLoGame: React.FC<HiLoGameProps> = ({
           </div>
         </div>
 
-        <div className="absolute top-3 right-3 flex items-center space-x-1 text-[10px] font-mono text-amber-400">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>RTP 96.0%</span>
-        </div>
+        {/* Top History */}
 
         {/* Live Card Render */}
         <div className="flex items-center space-x-3 my-3">

@@ -99,11 +99,6 @@ export const RouletteGame: React.FC<RouletteGameProps> = ({
             <Disc className="w-4 h-4" />
             <span>ROULETTE EUROPEA (37 NUMERI)</span>
           </div>
-
-          <div className="flex items-center space-x-1 text-slate-400 font-mono text-[10px]">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span>RTP 97.3% (HOUSE 2.7%)</span>
-          </div>
         </div>
 
         {/* Wheel Display Animation */}

@@ -111,11 +111,6 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({
             <CircleDot className="w-4 h-4" />
             <span>PIRAMIDE A PIOLI (8 FILE)</span>
           </div>
-
-          <div className="flex items-center space-x-1 text-slate-400 font-mono text-[10px]">
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-            <span>RTP 96.0%</span>
-          </div>
         </div>
 
         {/* Pegboard Canvas/SVG */}
