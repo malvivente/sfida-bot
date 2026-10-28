@@ -21,6 +21,9 @@ interface EpicBannersProps {
   onJoinMatch?: (match: MatchData) => void;
   onSelectGame?: (gameType: GameType) => void;
   onOpenPlayHub?: (section?: 'all' | 'quick' | 'strategy') => void;
+  onOpenVsBot?: () => void;
+  onOpenCasino?: () => void;
+  onOpenRaffle?: () => void;
   onOpenSpectate?: () => void;
   onOpenAffiliates?: () => void;
   onOpenJackpotModal?: () => void;
@@ -166,6 +169,9 @@ const NotchedCard: React.FC<NotchedCardProps> = ({
 export const EpicBanners: React.FC<EpicBannersProps> = ({
   matches = [],
   onOpenPlayHub,
+  onOpenVsBot,
+  onOpenCasino,
+  onOpenRaffle,
   onOpenSpectate,
   onOpenJackpotModal,
   jackpotAmountGram = '5.00',
@@ -262,7 +268,11 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         <div
           onClick={() => {
             triggerImpact('medium');
-            setActivePlaceholder('bot');
+            if (onOpenVsBot) {
+              onOpenVsBot();
+            } else {
+              setActivePlaceholder('bot');
+            }
           }}
           className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#10b981] via-[#059669] to-[#047857] shadow-lg cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
         >
@@ -288,7 +298,11 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         <div
           onClick={() => {
             triggerImpact('medium');
-            setActivePlaceholder('casino');
+            if (onOpenCasino) {
+              onOpenCasino();
+            } else {
+              setActivePlaceholder('casino');
+            }
           }}
           className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#f59e0b] via-[#ea580c] to-[#d97706] shadow-lg cursor-pointer group active:scale-[0.98] transition-all min-h-[165px] sm:min-h-[180px] flex flex-col justify-end select-none"
         >
@@ -352,7 +366,11 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
         minHeightClass="min-h-[145px] sm:min-h-[155px]"
         onClick={() => {
           triggerImpact('medium');
-          setActivePlaceholder('raffle');
+          if (onOpenRaffle) {
+            onOpenRaffle();
+          } else {
+            setActivePlaceholder('raffle');
+          }
         }}
       >
         {/* Ambient Glow */}

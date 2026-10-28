@@ -16,6 +16,9 @@ import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
 import { EpicBanners } from './EpicBanners.js';
 import { LiveActivityTicker } from './LiveActivityTicker.js';
 import { PlayHubView } from './PlayHubView.js';
+import { VsBotHubView } from './vsbot/VsBotHubView.js';
+import { CasinoHubView } from './casino/CasinoHubView.js';
+import { RaffleView } from './raffle/RaffleView.js';
 import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
 
@@ -167,7 +170,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   onClearInitialCreateWager,
 }) => {
   const { triggerImpact } = useHaptics();
-  const { botUsername, userId, username, fullName, displayName } = useTelegram();
+  const { botUsername, userId, username, fullName, displayName, photoUrl } = useTelegram();
   const { t } = useI18n();
   const { isFullscreen, topInset } = useTelegramViewport();
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
@@ -201,7 +204,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
-  const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp'>('hub');
+  const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp' | 'vs_bot' | 'casino' | 'raffle'>('hub');
   const [playHubSection, setPlayHubSection] = useState<'all' | 'quick' | 'strategy'>('all');
   const [previousView, setPreviousView] = useState<'hub' | 'play_hub'>('hub');
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
@@ -661,7 +664,26 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         );
       })}
 
-      {sectionView === 'play_hub' ? (
+      {sectionView === 'vs_bot' ? (
+        <VsBotHubView
+          onBack={() => setSectionView('hub')}
+          userProfile={{
+            displayName: displayName || fullName || username,
+            username,
+            photoUrl,
+          }}
+        />
+      ) : sectionView === 'casino' ? (
+        <CasinoHubView
+          onBack={() => setSectionView('hub')}
+          userBalanceGram={userBalanceGram}
+        />
+      ) : sectionView === 'raffle' ? (
+        <RaffleView
+          onBack={() => setSectionView('hub')}
+          userBalanceGram={userBalanceGram}
+        />
+      ) : sectionView === 'play_hub' ? (
         <PlayHubView
           onBack={() => setSectionView('hub')}
           matches={matches}
@@ -715,6 +737,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 setPlayHubSection(sec || 'all');
                 setSectionView('play_hub');
               }}
+              onOpenVsBot={() => setSectionView('vs_bot')}
+              onOpenCasino={() => setSectionView('casino')}
+              onOpenRaffle={() => setSectionView('raffle')}
               onOpenSpectate={onOpenSpectate}
               onOpenAffiliates={onOpenAffiliates}
               onOpenJackpotModal={onOpenJackpotModal}
@@ -737,14 +762,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handleOpenModal()}
-              className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-heading font-bold rounded-xl text-xs uppercase tracking-wider shadow-epic-purple active:scale-95 transition-all flex items-center space-x-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t('lobby.create')}</span>
-            </button>
-
             {onRefreshMatches && (
               <button
                 onClick={() => {
@@ -1139,13 +1156,6 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
                   {t('lobby.noDuelsDesc')}
                 </p>
-                <button
-                  onClick={() => handleOpenModal()}
-                  className="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-bold rounded-2xl text-xs uppercase tracking-wider shadow-sm active:scale-95 transition-all inline-flex items-center space-x-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{t('lobby.createDuelBtn')}</span>
-                </button>
               </>
             )}
           </div>
