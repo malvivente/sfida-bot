@@ -167,7 +167,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
       triggerNotification('error');
       setBuyFeedback({
         type: 'error',
-        message: `${t('casino.insufficientBalance') || 'Saldo insufficiente!'} (${currentBalNum.toFixed(2)} / ${modalTotalCost.toFixed(2)} GRAM)`,
+        message: `${t('raffle.insufficientBalance') || 'Saldo insufficiente!'} (${currentBalNum.toFixed(2)} / ${modalTotalCost.toFixed(2)} GRAM)`,
       });
       return;
     }
@@ -210,9 +210,10 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         }
 
         const numbersStr = data.ticketNumbers ? data.ticketNumbers.map((n: number) => `#TK-${n}`).join(', ') : '';
+        const ticketWord = selectedQuantity === 1 ? (t('raffle.ticketAssigned') || 'biglietto assegnato') : (t('raffle.ticketsAssigned') || 'biglietti assegnati');
         setBuyFeedback({
           type: 'success',
-          message: `Acquisto riuscito! ${selectedQuantity} ${selectedQuantity === 1 ? 'biglietto assegnato' : 'biglietti assegnati'}: ${numbersStr}`,
+          message: `${t('raffle.buySuccess') || 'Acquisto riuscito!'} ${selectedQuantity} ${ticketWord}: ${numbersStr}`,
         });
 
         // Re-fetch data
@@ -222,14 +223,14 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         triggerNotification('error');
         setBuyFeedback({
           type: 'error',
-          message: data.error || 'Errore durante l\'acquisto del biglietto',
+          message: data.error || (t('raffle.buyError') || 'Errore durante l\'acquisto del biglietto'),
         });
       }
     } catch (err: any) {
       triggerNotification('error');
       setBuyFeedback({
         type: 'error',
-        message: 'Errore di connessione al server',
+        message: t('raffle.connError') || 'Errore di connessione al server',
       });
     } finally {
       setIsBuying(false);
@@ -400,7 +401,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             <div className="p-8 text-center rounded-3xl bg-[#141724] border border-white/10 space-y-2">
               <Ticket className="w-8 h-8 text-slate-500 mx-auto" />
               <p className="text-xs text-slate-400 font-sans">
-                Nessuna raffle attiva al momento. L'amministratore ne aprirà una a breve!
+                {t('raffle.noActiveRaffles') || 'Nessuna raffle attiva al momento. L\'amministratore ne aprirà una a breve!'}
               </p>
             </div>
           ) : (
@@ -415,7 +416,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="px-2 py-0.5 rounded-md bg-white/10 text-white font-heading font-black text-[9px] uppercase tracking-wider">
-                      {r.badge || (r.ticketPriceGram === 0 ? 'GRATUITA' : 'ATTIVA')}
+                      {r.badge || (r.ticketPriceGram === 0 ? (t('raffle.freeBadge') || 'GRATUITA') : (t('raffle.activeBadge') || 'ATTIVA'))}
                     </span>
                     <span className="text-xs font-heading font-bold text-amber-300">
                       {r.ticketPriceGram > 0 ? `${r.ticketPriceGram} GRAM` : t('raffle.free')}
@@ -443,7 +444,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                       {r.totalTickets} {t('raffle.ticketsSold')}
                       {userTktCount > 0 && (
                         <span className="text-purple-300 font-bold ml-1">
-                          ({userTktCount} tuoi)
+                          ({userTktCount} {t('raffle.yours') || 'tuoi'})
                         </span>
                       )}
                     </span>
@@ -469,8 +470,8 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             <span className="text-xs font-heading font-bold text-white uppercase">
               {t('raffle.activeTicketsTitle')}
             </span>
-            <span className="text-xs text-purple-300 font-mono font-bold">
-              {myTickets.length} BIGLIETTI TOTALI
+            <span className="text-xs text-purple-300 font-mono font-bold uppercase">
+              {myTickets.length} {t('raffle.totalTicketsCount') || 'BIGLIETTI TOTALI'}
             </span>
           </div>
 
@@ -510,7 +511,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
                     <div className="text-right">
                       {isWon ? (
                         <span className="px-2 py-0.5 rounded-lg bg-amber-500/30 text-amber-300 text-[10px] font-heading font-black uppercase tracking-wider">
-                          🏆 VINTO!
+                          🏆 {t('raffle.wonBadge') || 'VINTO!'}
                         </span>
                       ) : (
                         <span className="text-[10px] text-emerald-400 font-mono font-bold uppercase">
@@ -536,7 +537,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             <div className="p-8 text-center rounded-3xl bg-[#141724] border border-white/10 space-y-2">
               <Trophy className="w-8 h-8 text-slate-500 mx-auto" />
               <p className="text-xs text-slate-400 font-sans">
-                Nessuna estrazione completata finora. I vincitori appariranno qui!
+                {t('raffle.noPastWinners') || 'Nessuna estrazione completata finora. I vincitori appariranno qui!'}
               </p>
             </div>
           ) : (
@@ -618,7 +619,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
             <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-slate-400 font-heading uppercase block">
-                  MONTEPREMI IN PALIO
+                  {t('raffle.prizePool') || 'MONTEPREMI IN PALIO'}
                 </span>
                 <div className="flex items-center space-x-1 text-amber-400 font-heading font-black text-xl">
                   <GramIcon className="w-5 h-5" />
@@ -628,7 +629,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
 
               <div className="text-right">
                 <span className="text-[10px] text-slate-400 font-heading uppercase block">
-                  PREZZO BIGLIETTO
+                  {t('raffle.ticketPrice') || 'PREZZO BIGLIETTO'}
                 </span>
                 <span className="text-sm font-heading font-black text-white">
                   {modalRaffle.ticketPriceGram === 0 ? t('raffle.free') : `${modalRaffle.ticketPriceGram} GRAM`}
@@ -676,9 +677,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
               <Ticket className="w-4 h-4" />
               <span>
                 {isBuying
-                  ? 'ACQUISTO IN CORSO...'
+                  ? (t('raffle.buying') || 'ACQUISTO IN CORSO...')
                   : modalTotalCost === 0
-                  ? 'PARTECIPA GRATUITAMENTE'
+                  ? (t('raffle.enterFree') || 'PARTECIPA GRATUITAMENTE')
                   : `${t('raffle.buyTickets')} (${modalTotalCost.toFixed(2)} GRAM)`}
               </span>
             </button>

@@ -110,7 +110,7 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN' | 'CASINO_BET' | 'CASINO_WIN';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
@@ -1240,7 +1240,7 @@ export class DatabaseService {
   public async creditUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN',
+    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN' | 'CASINO_WIN',
     details?: string,
     telegramId?: string
   ): Promise<UserAccount> {
@@ -1280,7 +1280,7 @@ export class DatabaseService {
   public async debitUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'PROMO_CREATE' | 'RAFFLE_TICKET',
+    type: 'WITHDRAW' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'PROMO_CREATE' | 'RAFFLE_TICKET' | 'CASINO_BET',
     details?: string,
     telegramId?: string
   ): Promise<{ success: boolean; account?: UserAccount; error?: string }> {

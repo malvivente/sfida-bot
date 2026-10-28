@@ -1775,6 +1775,9 @@ export const Arena: React.FC<ArenaProps> = ({
               onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
               isRematchProposer={isRematchProposer}
               userSide={userSide}
+              hasPlayerB={hasPlayerB}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
             />
           ) : (
             <RussianRouletteArena

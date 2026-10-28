@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Dices, Layers, Rocket, Bomb, CircleDot, Disc, Sparkles } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
+import { useTelegram } from '../../hooks/useTelegram.js';
 import { GramIcon } from '../GramIcon.js';
 import { CasinoCardArt, CasinoArtType } from './CasinoCardArt.js';
 
@@ -38,6 +39,16 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
+  const { userId } = useTelegram();
+  const effectiveUserId = React.useMemo(() => {
+    if (userId) return String(userId).trim();
+    try {
+      const saved = localStorage.getItem('sfidabot_user_id');
+      if (saved) return saved;
+    } catch {}
+    return '1052287650';
+  }, [userId]);
+
   const [activeGame, setActiveGame] = useState<CasinoGameType | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [demoBalance, setDemoBalance] = useState<number>(100.0);
@@ -52,7 +63,7 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
 
   const currentBalance = isDemoMode ? demoBalance : liveBalance;
 
-  // Update balance delta helper - strictly updates running live balance
+  // Update balance delta helper - strictly updates running live balance and syncs with backend
   const updateBalanceDelta = (delta: number) => {
     if (isDemoMode) {
       setDemoBalance((prev) => Math.max(0, parseFloat((prev + delta).toFixed(2))));
@@ -71,6 +82,28 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
             new CustomEvent('sfida_balance_updated', { detail: { balance: next.toFixed(2) } })
           );
         } catch {}
+
+        // Synchronize with backend server so 6-second polling doesn't revert balance
+        const serverUrl = (import.meta as any).env?.VITE_SERVER_URL || '';
+        fetch(`${serverUrl}/api/casino/balance-delta`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: effectiveUserId,
+            delta,
+            game: activeGame || 'casino',
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.success && data.balanceGram !== undefined) {
+              const serverBal = parseFloat(data.balanceGram);
+              setLiveBalance(serverBal);
+              onBalanceUpdated?.(data.balanceGram);
+            }
+          })
+          .catch((err) => console.warn('[CasinoHubView] Balance delta sync warning:', err));
+
         return next;
       });
     }
