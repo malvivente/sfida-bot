@@ -69,5 +69,11 @@ export const GAMES_CONFIG = {
     startingChips: 1000,
     turnTimeoutSeconds: 15,
   },
+  uno: {
+    name: 'UNO Card Duel',
+    description: '1v1 Cyber UNO duello a carte. Colori, salta turno, inverti, +2, +4 Jolly e grido finale UNO! Giocabile F2P (gratis) o con scommessa.',
+    initialHandSize: 7,
+    turnTimeoutSeconds: 15,
+  },
 } as const;
 

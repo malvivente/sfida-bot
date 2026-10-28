@@ -59,6 +59,9 @@ export function parseGameType(raw?: string): { type: GameType; title: string } |
   if (clean.includes('soccer') || clean.includes('head') || clean.includes('calcio') || clean === 'hs') {
     return { type: 'headsoccer', title: 'Head Soccer' };
   }
+  if (clean.includes('uno')) {
+    return { type: 'uno', title: 'UNO Card Duel' };
+  }
   if (clean.includes('roulette') || clean.includes('russian') || clean === 'rr' || clean.includes('russa')) {
     return { type: 'roulette', title: 'Russian Roulette' };
   }

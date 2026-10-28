@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Flame, ArrowRight, Zap, Target, Info } from 'lucide-react';
+import { ArrowLeft, Flame, ArrowRight, Zap, Target, Info, Sparkles, Trophy, Gamepad2 } from 'lucide-react';
 import { GameType, MatchData } from '../types/index.js';
 import { CardBackgroundArt } from './CardBackgroundArt.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 import { GameRulesModal } from './GameRulesModal.js';
+import { GAMES_METADATA, F2P_GAMES } from '../config/gamesConfig.js';
 
 interface PlayHubViewProps {
   onBack: () => void;
@@ -12,7 +13,7 @@ interface PlayHubViewProps {
   onSelectGame: (gameType: GameType) => void;
   onNavigateToDuels?: (gameType?: string) => void;
   onCreateMatchForGame: (gameType: GameType) => void;
-  initialSection?: 'all' | 'quick' | 'strategy';
+  initialSection?: 'all' | 'f2p';
 }
 
 export const PlayHubView: React.FC<PlayHubViewProps> = ({
@@ -25,12 +26,12 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
-  const [activeCategory, setActiveCategory] = useState<'all' | 'quick' | 'strategy'>(initialSection);
+  const [activeCategory, setActiveCategory] = useState<'all' | 'f2p'>(initialSection === 'f2p' ? 'f2p' : 'all');
   const [selectedRulesGame, setSelectedRulesGame] = useState<GameType | null>(null);
 
   useEffect(() => {
     if (initialSection) {
-      setActiveCategory(initialSection);
+      setActiveCategory(initialSection === 'f2p' ? 'f2p' : 'all');
     }
   }, [initialSection]);
 
@@ -38,6 +39,26 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
   const getOpenRoomsCount = (type: GameType) => {
     return matches.filter((m) => m.gameType === type && m.state === 'LOBBY' && (!m.playerB || (m.gameType === 'poker' && (m.currentPlayers || 1) < (m.maxPlayers || 2)))).length;
   };
+
+  // Ordered games list for display
+  const allGameKeys: GameType[] = [
+    'uno',
+    'headsoccer',
+    'shotgun',
+    'roulette',
+    'blackjack',
+    'connect4',
+    'poker',
+    'bridge',
+    'chrono',
+    'split',
+    'cubecount',
+  ];
+
+  const displayedGames = allGameKeys.filter((g) => {
+    if (activeCategory === 'f2p') return F2P_GAMES.includes(g);
+    return true;
+  });
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 select-none pb-8 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
@@ -52,7 +73,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
           className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{t('common.back') || 'Torna'}</span>
+          <span>{t('common.back')}</span>
         </button>
 
         <h2 className="text-sm font-heading font-black text-white tracking-wider uppercase">
@@ -60,130 +81,100 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
         </h2>
       </div>
 
-      {/* Category Filter Switcher Tabs */}
-      <div className="grid grid-cols-3 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1 items-stretch">
+      {/* Category Filter Switcher: ALL vs FREE TO PLAY (F2P) */}
+      <div className="grid grid-cols-2 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1 items-stretch">
         <button
           type="button"
           onClick={() => {
             triggerImpact('light');
             setActiveCategory('all');
           }}
-          style={{ outline: 'none' }}
-          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] active:scale-95 transition-all border ${
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none active:scale-95 transition-all border ${
             activeCategory === 'all'
               ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm border-white/20'
               : 'border-transparent text-slate-400 hover:text-white'
           }`}
         >
-          <span className="text-[9.5px] sm:text-[11px] font-heading font-black uppercase tracking-tight sm:tracking-wider leading-tight block truncate max-w-full">
+          <span className="text-[11px] font-heading font-black uppercase tracking-wider block">
             {t('playHub.allGamesLabel')}
           </span>
-          <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
-            (10)
+          <span className="text-[9.5px] font-heading font-bold opacity-80 block">
+            ({allGameKeys.length})
           </span>
         </button>
+
         <button
           type="button"
           onClick={() => {
             triggerImpact('light');
-            setActiveCategory('quick');
+            setActiveCategory('f2p');
           }}
-          style={{ outline: 'none' }}
-          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] active:scale-95 transition-all border ${
-            activeCategory === 'quick'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm border-white/20'
+          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none active:scale-95 transition-all border ${
+            activeCategory === 'f2p'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-sm border-emerald-400 font-black'
               : 'border-transparent text-slate-400 hover:text-white'
           }`}
         >
-          <span className="text-[9.5px] sm:text-[11px] font-heading font-black uppercase tracking-tight sm:tracking-wider leading-tight block truncate max-w-full">
-            {t('playHub.quickMatchLabel')}
+          <span className="text-[11px] font-heading font-black uppercase tracking-wider block flex items-center space-x-1">
+            <Gamepad2 className="w-3.5 h-3.5" />
+            <span>FREE TO PLAY (F2P)</span>
           </span>
-          <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
-            (5)
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            triggerImpact('light');
-            setActiveCategory('strategy');
-          }}
-          style={{ outline: 'none' }}
-          className={`h-full min-h-[46px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-center select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] active:scale-95 transition-all border ${
-            activeCategory === 'strategy'
-              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-sm border-white/20'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <span className="text-[9.5px] sm:text-[11px] font-heading font-black uppercase tracking-tight sm:tracking-wider leading-tight block truncate max-w-full">
-            {t('playHub.strategyLabel')}
-          </span>
-          <span className="text-[9px] font-heading font-bold opacity-80 leading-tight block">
-            {t('playHub.strategyCount')}
+          <span className="text-[9.5px] font-heading font-bold opacity-90 block">
+            (2 GIOCHI)
           </span>
         </button>
       </div>
 
-      {/* ============================================================= */}
-      {/* SECTION 1: TATTICA & STRATEGIA (GIOCHI LUNGHI • 2-3 MINUTI)    */}
-      {/* ============================================================= */}
-      {(activeCategory === 'all' || activeCategory === 'strategy') && (
-      <div className="space-y-3">
-        <div className="px-1 flex flex-col">
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-            <h3 className="text-sm font-heading font-black text-white tracking-wide uppercase">
-              {t('playHub.strategySection')}
-            </h3>
-          </div>
-          <p className="text-[11px] text-slate-400 font-sans mt-0.5">
-            {t('playHub.strategySub')}
-          </p>
+      {/* Header Info */}
+      <div className="px-1 flex flex-col">
+        <div className="flex items-center space-x-2">
+          <span className={`w-2.5 h-2.5 rounded-full ${activeCategory === 'f2p' ? 'bg-emerald-400' : 'bg-purple-500'} animate-pulse`} />
+          <h3 className="text-sm font-heading font-black text-white tracking-wide uppercase">
+            {activeCategory === 'f2p' ? 'GIOCHI CON MODALITÀ GRATUITA (F2P)' : 'TUTTI I GIOCHI PVP'}
+          </h3>
         </div>
+        <p className="text-[11px] text-slate-400 font-sans mt-0.5">
+          {activeCategory === 'f2p'
+            ? 'Gioca gratis senza scommettere oppure scegli di puntare Gram per vincere il piatto.'
+            : 'Scegli la tua disciplina, crea una stanza o affronta altri giocatori in tempo reale.'}
+        </p>
+      </div>
 
-        {/* Hero Card: Cyber Shotgun (Buckshot Roulette) */}
+      {/* Hero Card 1: UNO CARD DUEL (When in F2P or at top of list) */}
+      {displayedGames.includes('uno') && (
         <div
           onClick={() => {
             triggerImpact('medium');
-            onCreateMatchForGame('shotgun');
+            onCreateMatchForGame('uno');
           }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-rose-700 to-amber-800 bg-origin-border p-4 sm:p-5 shadow-xl border border-white/15 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-rose-600 to-red-800 bg-origin-border p-4 sm:p-5 shadow-xl border border-amber-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
         >
-          {/* Rules info button */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               triggerImpact('light');
-              setSelectedRulesGame('shotgun');
+              setSelectedRulesGame('uno');
             }}
             className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-            title={t('gameRules.infoTooltip')}
+            title="Regole del gioco"
           >
             <Info className="w-3.5 h-3.5" />
           </button>
 
-          <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-red-400/25 blur-2xl pointer-events-none" />
-
-          {/* 2D Minimal Graphic in Background */}
-          <CardBackgroundArt
-            type="shotgun"
-            className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 w-38 sm:w-46 max-h-[85%] h-auto opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none object-contain"
-          />
-
           <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1.5 max-w-[68%]">
-              <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white text-red-600 text-[10px] font-heading font-black tracking-wide shadow-sm">
-                <Flame className="w-3 h-3 fill-red-500 text-red-500" />
-                <span>{t('playHub.newGame')}</span>
+            <div className="space-y-1.5 max-w-[70%]">
+              <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-950 text-[10px] font-heading font-black tracking-wide shadow-sm">
+                <Gamepad2 className="w-3 h-3" />
+                <span>FREE TO PLAY & SCOMMESSE</span>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
-                CYBER SHOTGUN
+                UNO CARD DUEL
               </h3>
 
-              <p className="text-xs text-red-100/90 font-medium leading-tight">
-                {t('playHub.shotgunDesc')}
+              <p className="text-xs text-amber-100/90 font-medium leading-tight">
+                Duello 1v1 con carte a 4 colori: Salta, Inverti, +2, +4 Jolly e grido finale UNO! Giocabile 100% gratis o con scommessa Gram.
               </p>
 
               <div className="pt-1 flex items-center space-x-2">
@@ -192,540 +183,162 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     triggerImpact('medium');
-                    onCreateMatchForGame('shotgun');
+                    onCreateMatchForGame('uno');
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-white text-red-700 hover:bg-red-50 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
+                  className="px-3.5 py-1.5 rounded-xl bg-white text-slate-950 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
                 >
-                  <span>{t('playHub.playNow')}</span>
+                  <span>GIOCA ORA</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
                 <span className="px-2.5 py-1 rounded-xl bg-white/20 text-white text-[10px] font-bold">
-                  {t('playHub.openRooms', { count: getOpenRoomsCount('shotgun') })}
+                  {getOpenRoomsCount('uno')} stanze
                 </span>
               </div>
+            </div>
+
+            <div className="w-20 h-24 rounded-2xl bg-black/40 border-2 border-amber-300/40 p-2 flex flex-col justify-between items-center shadow-2xl group-hover:scale-105 transition-transform">
+              <span className="font-mono font-black text-xs text-amber-300">UNO</span>
+              <span className="text-3xl">🃏</span>
+              <span className="text-[9px] font-mono font-bold text-white uppercase">4 COLORS</span>
             </div>
           </div>
         </div>
-
-        {/* 2-Column Grid: Forza 4 & Split or Steal */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Card: Forza 4 (Connect 4) */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('connect4');
-            }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
-          >
-            {/* Rules info button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerImpact('light');
-                setSelectedRulesGame('connect4');
-              }}
-              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-              title={t('gameRules.infoTooltip')}
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="connect4"
-              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
-            />
-
-            <div className="relative z-10 space-y-1.5 pt-1">
-              <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                {t('playHub.badgeConnect4')}
-              </span>
-              <h4 className="text-base font-heading font-black text-white">
-                {t('playHub.titleConnect4')}
-              </h4>
-              <p className="text-[10px] text-blue-100 font-medium leading-tight line-clamp-3">
-                {t('playHub.connect4Desc')}
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/90">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('connect4') })}
-              </span>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card: Split or Steal */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('split');
-            }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-700 to-slate-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
-          >
-            {/* Rules info button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerImpact('light');
-                setSelectedRulesGame('split');
-              }}
-              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-              title={t('gameRules.infoTooltip')}
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-purple-400/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="split"
-              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
-            />
-
-            <div className="relative z-10 space-y-1.5 pt-1">
-              <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                {t('playHub.splitBadge')}
-              </span>
-              <h4 className="text-base font-heading font-black text-white">
-                SPLIT OR STEAL
-              </h4>
-              <p className="text-[10px] text-purple-100 font-medium leading-tight line-clamp-3">
-                {t('playHub.splitDesc')}
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/90">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('split') })}
-              </span>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card: Cube Count */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('cubecount');
-            }}
-            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-700 to-amber-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[110px]"
-          >
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="cubecount"
-              className="absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 w-24 sm:w-26 h-24 sm:h-26 max-h-[85%] opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none object-contain"
-            />
-
-            <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
-              <div className="space-y-1 min-w-0 max-w-[68%]">
-                <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                  {t('playHub.badgeCubeCount')}
-                </span>
-                <h4 className="text-base font-heading font-black text-white">
-                  CUBE COUNT
-                </h4>
-                <p className="text-[10px] text-amber-100 font-medium leading-tight line-clamp-1">
-                  {t('playHub.cubeCountDesc')}
-                </p>
-              </div>
-            </div>
-
-            <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch">
-              <div className="flex items-center space-x-1.5">
-                <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
-                  {t('playHub.openRooms', { count: getOpenRoomsCount('cubecount') })}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerImpact('light');
-                    setSelectedRulesGame('cubecount');
-                  }}
-                  className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-                  title={t('gameRules.infoTooltip')}
-                >
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform mt-auto">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
       )}
 
-      {/* ============================================================= */}
-      {/* SECTION 2: QUICK MATCH / QUICK PVP (PARTITE RAPIDE • 30-60S)   */}
-      {/* ============================================================= */}
-      {(activeCategory === 'all' || activeCategory === 'quick') && (
-      <div className="space-y-3 pt-2">
-        <div className="px-1 flex flex-col">
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-            <h3 className="text-sm font-heading font-black text-white tracking-wide uppercase">
-              {t('playHub.quickMatchSection')}
-            </h3>
-          </div>
-          <p className="text-[11px] text-slate-400 font-sans mt-0.5">
-            {t('playHub.quickMatchSub')}
-          </p>
-        </div>
-
-        {/* Grid of Quick Match & Reflex Games */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Card 1: Texas Hold'em Poker (Long / Wide Featured Card) */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('poker');
+      {/* Hero Card 2: HEAD SOCCER */}
+      {displayedGames.includes('headsoccer') && (
+        <div
+          onClick={() => {
+            triggerImpact('medium');
+            onCreateMatchForGame('headsoccer');
+          }}
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 bg-origin-border p-4 sm:p-5 shadow-xl border border-emerald-400/30 cursor-pointer active:scale-[0.99] transition-all group min-h-[145px]"
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerImpact('light');
+              setSelectedRulesGame('headsoccer');
             }}
-            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-emerald-800 to-slate-950 bg-origin-border p-4 border border-amber-400/30 hover:border-amber-400/60 shadow-lg hover:shadow-amber-900/25 cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[115px]"
+            className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+            title="Regole del gioco"
           >
-            {/* Ambient glows */}
-            <div className="absolute -right-4 -bottom-4 w-32 h-32 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
-            <div className="absolute left-1/3 -top-6 w-28 h-28 rounded-full bg-emerald-400/15 blur-2xl pointer-events-none" />
+            <Info className="w-3.5 h-3.5" />
+          </button>
 
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="poker"
-              className="absolute right-16 sm:right-22 top-1/2 -translate-y-1/2 w-26 sm:w-30 h-auto max-h-[82%] opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none drop-shadow-md object-contain"
-            />
-
-            <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
-              <div className="space-y-1 min-w-0 max-w-[62%] sm:max-w-[65%]">
-                <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                  {t('playHub.badgePoker')}
-                </span>
-                <h4 className="text-base font-heading font-black text-white">
-                  TEXAS HOLD'EM
-                </h4>
-                <p className="text-[10px] text-amber-100 font-medium leading-tight line-clamp-2">
-                  {t('playHub.pokerDesc')}
-                </p>
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="space-y-1.5 max-w-[70%]">
+              <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white text-emerald-700 text-[10px] font-heading font-black tracking-wide shadow-sm">
+                <Gamepad2 className="w-3 h-3 text-emerald-600" />
+                <span>FREE TO PLAY & SCOMMESSE</span>
               </div>
-            </div>
 
-            <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch">
-              <div className="flex items-center space-x-1.5">
-                <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
-                  {t('playHub.openRooms', { count: getOpenRoomsCount('poker') })}
-                </span>
+              <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
+                HEAD SOCCER
+              </h3>
+
+              <p className="text-xs text-emerald-100/90 font-medium leading-tight">
+                Calcio arcade 1v1 da 60s in stile handheld retro. Salti, colpi di testa, rovesciate e Super Shot infuocati!
+              </p>
+
+              <div className="pt-1 flex items-center space-x-2">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    triggerImpact('light');
-                    setSelectedRulesGame('poker');
+                    triggerImpact('medium');
+                    onCreateMatchForGame('headsoccer');
                   }}
-                  className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-                  title={t('gameRules.infoTooltip')}
+                  className="px-3.5 py-1.5 rounded-xl bg-white text-emerald-800 font-heading font-extrabold text-[11px] uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center space-x-1"
                 >
-                  <Info className="w-3.5 h-3.5" />
+                  <span>GIOCA ORA</span>
+                  <ArrowRight className="w-3 h-3" />
                 </button>
-              </div>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform mt-auto">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: Russian Roulette */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('roulette');
-            }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
-          >
-            {/* Rules info button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerImpact('light');
-                setSelectedRulesGame('roulette');
-              }}
-              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-              title={t('gameRules.infoTooltip')}
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="roulette"
-              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
-            />
-
-            <div className="relative z-10 space-y-1.5 pt-1">
-              <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                {t('playHub.badgeRoulette')}
-              </span>
-              <h4 className="text-base font-heading font-black text-white">
-                ROULETTE
-              </h4>
-              <p className="text-[10px] text-emerald-100 font-medium leading-tight line-clamp-3">
-                {t('playHub.rouletteDesc')}
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/90">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('roulette') })}
-              </span>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: Blackjack Face-Up */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('blackjack');
-            }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#e11d48] to-[#881337] bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
-          >
-            {/* Rules info button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerImpact('light');
-                setSelectedRulesGame('blackjack');
-              }}
-              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-              title={t('gameRules.infoTooltip')}
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-pink-500/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="blackjack"
-              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
-            />
-
-            <div className="relative z-10 space-y-1.5 pt-1">
-              <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                {t('playHub.badgeBlackjack')}
-              </span>
-              <h4 className="text-base font-heading font-black text-white">
-                BLACKJACK
-              </h4>
-              <p className="text-[10px] text-pink-100 font-medium leading-tight line-clamp-3">
-                {t('playHub.blackjackDesc')}
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/90">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('blackjack') })}
-              </span>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Glass Bridge */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('bridge');
-            }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0284c7] to-[#0c4a6e] bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
-          >
-            {/* Rules info button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerImpact('light');
-                setSelectedRulesGame('bridge');
-              }}
-              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-              title={t('gameRules.infoTooltip')}
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-sky-500/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="bridge"
-              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
-            />
-
-            <div className="relative z-10 space-y-1.5 pt-1">
-              <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                {t('playHub.badgeBridge')}
-              </span>
-              <h4 className="text-base font-heading font-black text-white">
-                GLASS BRIDGE
-              </h4>
-              <p className="text-[10px] text-sky-100 font-medium leading-tight line-clamp-3">
-                {t('playHub.bridgeDesc')}
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/90">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('bridge') })}
-              </span>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 4: Chrono Blind */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('chrono');
-            }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#d97706] to-[#78350f] bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]"
-          >
-            {/* Rules info button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerImpact('light');
-                setSelectedRulesGame('chrono');
-              }}
-              className="absolute top-3 right-3 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-              title={t('gameRules.infoTooltip')}
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="chrono"
-              className="absolute -right-2 top-8 w-24 h-24 opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
-            />
-
-            <div className="relative z-10 space-y-1.5 pt-1">
-              <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                {t('playHub.badgeChrono')}
-              </span>
-              <h4 className="text-base font-heading font-black text-white">
-                CHRONO BLIND
-              </h4>
-              <p className="text-[10px] text-amber-100 font-medium leading-tight line-clamp-3">
-                {t('playHub.chronoDesc')}
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-3 pt-2 border-t border-white/15 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/90">
-                {t('playHub.openRooms', { count: getOpenRoomsCount('chrono') })}
-              </span>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 5: Head Soccer 1v1 */}
-          <div
-            onClick={() => {
-              triggerImpact('medium');
-              onCreateMatchForGame('headsoccer');
-            }}
-            className="col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-900 bg-origin-border p-4 border border-white/15 shadow-lg cursor-pointer group active:scale-95 transition-all flex items-center justify-between min-h-[115px]"
-          >
-            <div className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full bg-emerald-400/20 blur-2xl pointer-events-none" />
-
-            {/* 2D Minimal Graphic in Background */}
-            <CardBackgroundArt
-              type="headsoccer"
-              className="absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 w-24 sm:w-26 h-24 sm:h-26 max-h-[85%] opacity-85 group-hover:scale-105 group-hover:opacity-100 transition-all duration-300 pointer-events-none object-contain"
-            />
-
-            <div className="relative z-10 flex items-center min-w-0 flex-1 pr-3">
-              <div className="space-y-1 min-w-0 max-w-[68%]">
-                <span className="text-[10px] font-heading font-black px-2 py-0.5 rounded-full bg-white/20 text-white inline-block">
-                  {t('playHub.badgeHeadSoccer')}
+                <span className="px-2.5 py-1 rounded-xl bg-white/20 text-white text-[10px] font-bold">
+                  {getOpenRoomsCount('headsoccer')} stanze
                 </span>
-                <h4 className="text-base font-heading font-black text-white">
-                  HEAD SOCCER
-                </h4>
-                <p className="text-[10px] text-emerald-100 font-medium leading-tight line-clamp-2">
-                  {t('playHub.headSoccerDesc')}
-                </p>
               </div>
             </div>
 
-            <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch">
-              <div className="flex items-center space-x-1.5">
-                <span className="px-2 py-0.5 rounded-xl bg-white/20 text-white text-[9px] font-bold">
-                  {t('playHub.openRooms', { count: getOpenRoomsCount('headsoccer') })}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerImpact('light');
-                    setSelectedRulesGame('headsoccer');
-                  }}
-                  className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-white/40 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
-                  title={t('gameRules.infoTooltip')}
-                >
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <span className="text-[11px] font-heading font-black text-white flex items-center space-x-0.5 group-hover:translate-x-0.5 transition-transform mt-auto">
-                <span>{t('playHub.playNow')}</span>
-                <ArrowRight className="w-3 h-3" />
-              </span>
+            <div className="w-20 h-24 rounded-2xl bg-black/40 border-2 border-emerald-400/40 p-2 flex flex-col justify-between items-center shadow-2xl group-hover:scale-105 transition-transform">
+              <span className="font-mono font-black text-xs text-emerald-300">1V1</span>
+              <span className="text-3xl">⚽</span>
+              <span className="text-[9px] font-mono font-bold text-white uppercase">60 SEC</span>
             </div>
           </div>
         </div>
-      </div>
       )}
 
-      {/* Dedicated Game-Specific Rules Modal */}
-      <GameRulesModal
-        isOpen={selectedRulesGame !== null}
-        onClose={() => setSelectedRulesGame(null)}
-        gameType={selectedRulesGame}
-        onPlayGame={(gType) => onCreateMatchForGame(gType)}
-      />
+      {/* Grid of Remaining Games (when in ALL mode) */}
+      {activeCategory === 'all' && (
+        <div className="grid grid-cols-2 gap-3">
+          {displayedGames
+            .filter((g) => g !== 'uno' && g !== 'headsoccer')
+            .map((gameKey) => {
+              const meta = GAMES_METADATA[gameKey];
+              if (!meta) return null;
+              const openCount = getOpenRoomsCount(gameKey);
+
+              return (
+                <div
+                  key={gameKey}
+                  onClick={() => {
+                    triggerImpact('medium');
+                    onCreateMatchForGame(gameKey);
+                  }}
+                  className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${meta.bgGradient} p-3.5 border ${meta.borderColor} shadow-lg cursor-pointer group active:scale-95 transition-all flex flex-col justify-between min-h-[175px]`}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerImpact('light');
+                      setSelectedRulesGame(gameKey);
+                    }}
+                    className="absolute top-2.5 right-2.5 z-20 w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 flex items-center justify-center text-white/90 hover:text-white transition-all active:scale-90 shadow-md backdrop-blur-sm"
+                    title="Regole"
+                  >
+                    <Info className="w-3 h-3" />
+                  </button>
+
+                  <div className="space-y-1">
+                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-heading font-black text-white/90 border border-white/10 uppercase tracking-wider inline-block">
+                      {meta.badge}
+                    </span>
+                    <h4 className="text-sm font-heading font-black text-white tracking-wide uppercase">
+                      {meta.title}
+                    </h4>
+                    <p className="text-[10px] text-slate-300 font-sans line-clamp-2 leading-tight">
+                      {meta.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-[9px] text-slate-400 font-mono">
+                      {openCount} stanze
+                    </span>
+                    <button
+                      type="button"
+                      className="px-2.5 py-1 rounded-xl bg-white/10 group-hover:bg-white group-hover:text-slate-950 text-white font-heading font-black text-[10px] uppercase tracking-wider transition-all"
+                    >
+                      GIOCA
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {/* Rules Modal */}
+      {selectedRulesGame && (
+        <GameRulesModal
+          gameType={selectedRulesGame}
+          isOpen={Boolean(selectedRulesGame)}
+          onClose={() => setSelectedRulesGame(null)}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker' | 'uno';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -595,4 +595,38 @@ export interface PokerState {
     walletAddress: string;
     totalPrizeGram: number;
   };
+}
+
+// --- UNO Types ---
+export type UnoColor = 'RED' | 'BLUE' | 'GREEN' | 'YELLOW';
+export type UnoCardType =
+  | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+  | 'SKIP' | 'REVERSE' | 'DRAW2'
+  | 'WILD' | 'WILD_DRAW4';
+
+export interface UnoCard {
+  id: string;
+  color: UnoColor | 'WILD';
+  type: UnoCardType;
+  value: number;
+}
+
+export interface UnoState {
+  currentTurn: 'A' | 'B';
+  discardPileTop: UnoCard;
+  currentColor: UnoColor;
+  drawPileCount: number;
+  handA: UnoCard[];
+  handB: UnoCard[];
+  handCountA: number;
+  handCountB: number;
+  unoCalledA: boolean;
+  unoCalledB: boolean;
+  lastAction?: {
+    player: 'A' | 'B';
+    type: 'PLAY' | 'DRAW' | 'PASS' | 'UNO_CALLED';
+    card?: UnoCard;
+    message: string;
+  };
+  coinToss?: CoinTossData;
 }

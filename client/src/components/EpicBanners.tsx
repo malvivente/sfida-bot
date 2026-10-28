@@ -17,10 +17,10 @@ import {
 
 interface EpicBannersProps {
   matches?: MatchData[];
-  onOpenCreateModal?: (defaultGame?: GameType, category?: 'all' | 'quick' | 'strategy') => void;
+  onOpenCreateModal?: (defaultGame?: GameType, category?: 'all' | 'f2p' | 'quick' | 'strategy') => void;
   onJoinMatch?: (match: MatchData) => void;
   onSelectGame?: (gameType: GameType) => void;
-  onOpenPlayHub?: (section?: 'all' | 'quick' | 'strategy') => void;
+  onOpenPlayHub?: (section?: 'all' | 'f2p' | 'quick' | 'strategy') => void;
   onOpenVsBot?: () => void;
   onOpenCasino?: () => void;
   onOpenRaffle?: () => void;

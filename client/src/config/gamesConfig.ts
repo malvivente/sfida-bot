@@ -123,9 +123,21 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-amber-500/50 hover:border-amber-400',
     bgGradient: 'from-amber-950/30 via-emerald-950/25 to-black/80',
   },
+  uno: {
+    id: 'uno',
+    title: 'UNO Card Duel',
+    badge: 'F2P & WAGER',
+    tagline: 'Cyber Card Duel · F2P o Scommessa · Salta, Inverti, +4',
+    description: 'Duello 1v1 con il celebre mazzo a 4 colori. Scarta per colore o numero, usa carte azione (+2, Salta, Inverti, +4 Jolly) e dichiara UNO prima dell\'avversario per vincere. Giocabile 100% Free to Play oppure con scommessa in Gram!',
+    spectatorAppeal: 'Suspense costante sui colori e colpi di scena con i +4 Jolly sul filo di lana!',
+    accentColor: 'text-amber-400',
+    borderColor: 'border-amber-500/50 hover:border-amber-400',
+    bgGradient: 'from-amber-950/35 via-rose-950/20 to-black/80',
+  },
 };
 
-export const QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'chrono', 'headsoccer'];
+export const F2P_GAMES: GameType[] = ['uno', 'headsoccer'];
+export const QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'chrono', 'headsoccer', 'uno'];
 export const STRATEGY_GAMES: GameType[] = ['split', 'shotgun', 'connect4', 'cubecount', 'poker'];
 
 

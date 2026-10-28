@@ -286,6 +286,24 @@ export const GameIcon: React.FC<GameIconProps> = ({ type, className = 'w-5 h-5',
         </svg>
       );
 
+    case 'uno':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+          style={style}
+        >
+          <rect x="3" y="3" width="12" height="17" rx="2.5" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.2" />
+          <rect x="9" y="5" width="12" height="17" rx="2.5" stroke="currentColor" strokeWidth="2" />
+          <circle cx="15" cy="13.5" r="3" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      );
+
     default:
       // Default: Crossed Swords
       return (

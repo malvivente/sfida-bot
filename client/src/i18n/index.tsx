@@ -1375,6 +1375,14 @@ export const translations: Translations = {
   'gameRules.headsoccer.r3': { it: 'Anti-Camping & Golden Goal: restare fermi dentro la propria porta troppo a lungo attiva una spinta automatica in avanti. In caso di pareggio allo scadere dei 60s, inizia il Golden Goal: chi segna per primo vince!', en: 'Anti-Camping & Golden Goal: camping inside your own goal mouth for too long nudges you forward. If tied at 0:00, Golden Goal Overtime begins: next goal wins!' },
   'gameRules.headsoccer.win': { it: 'Chi ha segnato più gol allo scadere del tempo (o segna il Golden Goal nei supplementari) vince il duello e incassa il 100% del montepremi.', en: 'Whoever leads at full time (or scores the Golden Goal in overtime) wins the duel and collects 100% of the prize pool.' },
 
+  'gameRules.uno.title': { it: 'UNO CARD DUEL', en: 'UNO CARD DUEL' },
+  'gameRules.uno.badge': { it: 'F2P O SCOMMESSA • 1V1 DUEL', en: 'F2P OR WAGER • 1V1 DUEL' },
+  'gameRules.uno.goal': { it: 'Scarta tutte le tue carte prima dell\'avversario abbinandole per colore, numero o usando le potenti carte speciali.', en: 'Discard all your cards before your opponent by matching color, number or playing powerful action cards.' },
+  'gameRules.uno.r1': { it: 'Ad ogni turno puoi giocare una carta dello stesso colore o valore della carta in cima al mazzo scarti, oppure una carta Jolly (Wild). Se non puoi giocare, pesca dal mazzo.', en: 'On your turn, play a card matching the active color or rank of the top discard, or play a Wild card. If you cannot play, draw from the pile.' },
+  'gameRules.uno.r2': { it: 'Carte Azione: Salta fa perdere il turno all\'avversario; Inverti agisce come Salta nel duello 1v1; +2 costringe l\'avversario a pescare 2 carte; +4 Jolly fa scegliere il colore e fa pescare 4 carte.', en: 'Action Cards: Skip skips opponent turn; Reverse acts as Skip in 1v1; +2 forces opponent to draw 2; +4 Wild chooses color and draws 4 cards.' },
+  'gameRules.uno.r3': { it: 'Regola UNO: quando ti rimane soltanto 1 carta in mano, viene proclamato automaticamente "UNO!" per avvisare l\'avversario dell\'imminente vittoria.', en: 'UNO Rule: when you have only 1 card left, "UNO!" is automatically shouted alerting your opponent.' },
+  'gameRules.uno.win': { it: 'Il primo giocatore che scarta tutte le carte dalla propria mano vince immediatamente la partita.', en: 'The first player to discard all cards from their hand immediately wins the match.' },
+
   'arena.waitingOpponentShort': { it: 'In attesa...', en: 'Waiting...' },
   'arena.victory': { it: 'VITTORIA!', en: 'VICTORY!' },
   'arena.defeat': { it: 'SCONFITTA', en: 'DEFEAT' },

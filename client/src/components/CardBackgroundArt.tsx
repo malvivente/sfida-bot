@@ -17,7 +17,8 @@ export type CardArtType =
   | 'bridge'
   | 'chrono'
   | 'headsoccer'
-  | 'poker';
+  | 'poker'
+  | 'uno';
 
 const CARD_IMAGE_MAP: Record<CardArtType, { webp: string; png: string }> = {
   menu_split: { webp: '/assets/cards/split_steal.webp', png: '/assets/cards/split_steal.png' },
@@ -37,6 +38,7 @@ const CARD_IMAGE_MAP: Record<CardArtType, { webp: string; png: string }> = {
   chrono: { webp: '/assets/cards/chrono_blind.webp', png: '/assets/cards/chrono_blind.png' },
   headsoccer: { webp: '/assets/cards/headsoccer.webp', png: '/assets/cards/headsoccer.png' },
   poker: { webp: '/assets/cards/poker.webp', png: '/assets/cards/poker.png' },
+  uno: { webp: '/assets/cards/blackjack.webp', png: '/assets/cards/blackjack.png' },
 };
 
 // Immediate background preloader so cards are instantly available from memory

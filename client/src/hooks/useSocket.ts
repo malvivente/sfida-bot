@@ -1085,6 +1085,18 @@ export function useSocket({
     [wallet, telegramId]
   );
 
+  const sendUnoPlayCard = useCallback((cardIndex: number, chosenColor?: any) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'UNO_PLAY_CARD', cardIndex, chosenColor }));
+    }
+  }, []);
+
+  const sendUnoDrawCard = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'UNO_DRAW_CARD' }));
+    }
+  }, []);
+
   return {
     isConnected,
     roomState,
@@ -1137,6 +1149,8 @@ export function useSocket({
     sendCubeCountSubmit,
     sendHeadSoccerInput,
     sendPokerAction,
+    sendUnoPlayCard,
+    sendUnoDrawCard,
     placeSpectatorBet,
     placedBet,
     betStatus,

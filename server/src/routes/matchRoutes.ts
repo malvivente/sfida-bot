@@ -276,14 +276,17 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     const matchId = BigInt(Date.now() % 1000000000);
-    const wagerNano = body.wagerAmountNano ? BigInt(body.wagerAmountNano) : 1000000000n;
+    const wagerNano = body.wagerAmountNano !== undefined ? BigInt(body.wagerAmountNano) : 1000000000n;
     const wagerGram = Number(wagerNano) / 1e9;
     const gameType = body.gameType || 'roulette';
 
     const { creationFeeGram, minWagerGram, minWagerSplitGram = 5.0 } = feeConfig.getConfig();
     const effectiveMinWager = gameType === 'split' ? minWagerSplitGram : minWagerGram;
 
-    if (wagerGram < effectiveMinWager) {
+    const isF2PAllowed = gameType === 'uno' || gameType === 'headsoccer';
+    const isF2P = isF2PAllowed && wagerGram === 0;
+
+    if (!isF2P && wagerGram < effectiveMinWager) {
       return reply.status(400).send({
         error: 'WAGER_TOO_LOW',
         message: gameType === 'split'
@@ -293,7 +296,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       });
     }
 
-    const totalRequired = wagerGram + creationFeeGram;
+    const totalRequired = isF2P ? 0 : (wagerGram + creationFeeGram);
 
     // Check Player A's internal balance
     const userAccount = await dbService.getUserAccount(
@@ -303,7 +306,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     );
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
-    if (currentBal < totalRequired) {
+    if (!isF2P && currentBal < totalRequired) {
       return reply.status(400).send({
         error: 'INSUFFICIENT_BALANCE',
         message: `Insufficient balance! You need ${totalRequired.toFixed(2)} GRAM (${wagerGram.toFixed(2)} GRAM wager + ${creationFeeGram.toFixed(2)} GRAM creation fee), but your balance is ${currentBal.toFixed(2)} GRAM.`,
@@ -315,24 +318,29 @@ export async function matchRoutes(fastify: FastifyInstance) {
       });
     }
 
-    // Debit wager and creation fee
-    await dbService.debitUserBalance(
-      effectivePlayerAddress,
-      wagerGram.toFixed(2),
-      'MATCH_BET',
-      `Wager for match #${matchId}`,
-      body.telegramUserId
-    );
-    await dbService.debitUserBalance(
-      effectivePlayerAddress,
-      creationFeeGram.toFixed(2),
-      'CREATION_FEE',
-      `Creation fee for match #${matchId}`,
-      body.telegramUserId
-    );
-
-    // Credit creation fee to Treasury
-    await dbService.creditTreasury(creationFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
+    // Debit wager and creation fee only if not F2P
+    if (!isF2P) {
+      if (wagerGram > 0) {
+        await dbService.debitUserBalance(
+          effectivePlayerAddress,
+          wagerGram.toFixed(2),
+          'MATCH_BET',
+          `Wager for match #${matchId}`,
+          body.telegramUserId
+        );
+      }
+      if (creationFeeGram > 0) {
+        await dbService.debitUserBalance(
+          effectivePlayerAddress,
+          creationFeeGram.toFixed(2),
+          'CREATION_FEE',
+          `Creation fee for match #${matchId}`,
+          body.telegramUserId
+        );
+        // Credit creation fee to Treasury
+        await dbService.creditTreasury(creationFeeGram.toFixed(2), 'CREATION_FEE', matchId.toString());
+      }
+    }
 
     // Resolve group affiliate if match is created with a group context
     let groupAdminAddress = body.groupAdminAddress;
@@ -616,7 +624,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
     const { joinFeeGram } = feeConfig.getConfig();
-    const totalRequired = wagerGram + joinFeeGram;
+    const isF2P = (room.gameType === 'uno' || room.gameType === 'headsoccer') && wagerGram === 0;
+    const totalRequired = isF2P ? 0 : (wagerGram + joinFeeGram);
 
     // Check Player B's balance
     const userAccount = await dbService.getUserAccount(
@@ -626,7 +635,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     );
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
-    if (currentBal < totalRequired) {
+    if (!isF2P && currentBal < totalRequired) {
       return reply.status(400).send({
         error: 'INSUFFICIENT_BALANCE',
         message: `Insufficient balance! You need ${totalRequired.toFixed(2)} GRAM (${wagerGram.toFixed(2)} GRAM wager + ${joinFeeGram.toFixed(2)} GRAM participation fee) to join, but your balance is ${currentBal.toFixed(2)} GRAM.`,
@@ -638,24 +647,28 @@ export async function matchRoutes(fastify: FastifyInstance) {
       });
     }
 
-    // Debit wager from Player B
-    await dbService.debitUserBalance(
-      body.playerBAddress,
-      wagerGram.toFixed(2),
-      'MATCH_BET',
-      `Wager for match #${id}`,
-      body.telegramUserId
-    );
-
-    // Debit join fee from Player B and credit to Treasury
-    await dbService.debitUserBalance(
-      body.playerBAddress,
-      joinFeeGram.toFixed(2),
-      'CREATION_FEE',
-      `Participation fee for match #${id}`,
-      body.telegramUserId
-    );
-    await dbService.creditTreasury(joinFeeGram.toFixed(2), 'CREATION_FEE', id);
+    // Debit wager and join fee only if not F2P
+    if (!isF2P) {
+      if (wagerGram > 0) {
+        await dbService.debitUserBalance(
+          body.playerBAddress,
+          wagerGram.toFixed(2),
+          'MATCH_BET',
+          `Wager for match #${id}`,
+          body.telegramUserId
+        );
+      }
+      if (joinFeeGram > 0) {
+        await dbService.debitUserBalance(
+          body.playerBAddress,
+          joinFeeGram.toFixed(2),
+          'CREATION_FEE',
+          `Participation fee for match #${id}`,
+          body.telegramUserId
+        );
+        await dbService.creditTreasury(joinFeeGram.toFixed(2), 'CREATION_FEE', id);
+      }
+    }
 
     // Assign player to room
     if (isMultiPoker && room.playerB) {

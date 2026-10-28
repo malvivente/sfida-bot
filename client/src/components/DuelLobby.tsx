@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Swords, Eye, Plus, Share2, Flame, AlertCircle, Loader2, Trash2, RefreshCw, ArrowDownLeft, Wallet, Lock, Globe, X, Trophy, Sparkles, Search, SlidersHorizontal, MessageSquare, ArrowLeft, Target, Users, Clock } from 'lucide-react';
 import { MatchData, GameType, FriendUser } from '../types/index.js';
-import { GAMES_METADATA, GameMetadata, QUICK_GAMES, STRATEGY_GAMES } from '../config/gamesConfig.js';
+import { GAMES_METADATA, GameMetadata, F2P_GAMES } from '../config/gamesConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GramIcon } from './GramIcon.js';
@@ -177,7 +177,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const modalBottomOffset = isFullscreen ? 24 : 12;
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [lockedGameType, setLockedGameType] = useState<GameType | null>(null);
-  const [createModalCategory, setCreateModalCategory] = useState<'all' | 'quick' | 'strategy'>('all');
+  const [createModalCategory, setCreateModalCategory] = useState<'all' | 'f2p'>('all');
   const [isPrivateRoom, setIsPrivateRoom] = useState(false);
   const [allowSpectators, setAllowSpectators] = useState<boolean>(true);
   const [wagerChoice, setWagerChoice] = useState<string>('1');
@@ -205,7 +205,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'bet_desc' | 'bet_asc'>('newest');
   const [showFiltersPanel, setShowFiltersPanel] = useState<boolean>(false);
   const [sectionView, setSectionView] = useState<'hub' | 'play_hub' | 'pvp' | 'vs_bot' | 'casino' | 'raffle'>('hub');
-  const [playHubSection, setPlayHubSection] = useState<'all' | 'quick' | 'strategy'>('all');
+  const [playHubSection, setPlayHubSection] = useState<'all' | 'f2p'>('all');
   const [previousView, setPreviousView] = useState<'hub' | 'play_hub'>('hub');
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [joiningMatchId, setJoiningMatchId] = useState<string | null>(null);
@@ -255,13 +255,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const effectiveMinWager = selectedGameType === 'split' ? 5.0 : GAME_CONFIG.MIN_WAGER;
   const parsedWager = parseFloat(wagerChoice || '0');
+  const isF2PSelected = (selectedGameType === 'uno' || selectedGameType === 'headsoccer') && parsedWager === 0;
   const isOverMax = parsedWager > GAME_CONFIG.MAX_WAGER;
-  const isBelowMin = parsedWager > 0 && parsedWager < effectiveMinWager;
+  const isBelowMin = !isF2PSelected && parsedWager < effectiveMinWager;
   const netWinnerPayout = (parsedWager * 2).toFixed(2);
   const currentBal = parseFloat(userBalanceGram || '0');
-  const totalRequired = parsedWager > 0 ? (parsedWager + creationFeeGram).toFixed(2) : '0.00';
-  const isInsufficient = parsedWager > 0 && currentBal < (parsedWager + creationFeeGram);
-  const missingAmount = parsedWager > 0 ? ((parsedWager + creationFeeGram) - currentBal).toFixed(2) : '0.00';
+  const totalRequired = isF2PSelected ? '0.00' : (parsedWager + creationFeeGram).toFixed(2);
+  const isInsufficient = !isF2PSelected && currentBal < (parsedWager + creationFeeGram);
+  const missingAmount = !isF2PSelected && isInsufficient ? ((parsedWager + creationFeeGram) - currentBal).toFixed(2) : '0.00';
 
   const getMatchInviteCode = (match: MatchData) => {
     if (match.inviteCode) return match.inviteCode;
@@ -279,7 +280,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
     lockGame: boolean = false,
     defaultWager?: string,
     targetOpponent?: string,
-    initialCategory?: 'all' | 'quick' | 'strategy'
+    initialCategory?: 'all' | 'f2p'
   ) => {
     onClearError?.();
     if (!userAddress && !userId) {
@@ -351,7 +352,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   }, []);
 
   const handleCreate = async () => {
-    if (parsedWager < effectiveMinWager || isOverMax || isSubmitting) return;
+    if ((!isF2PSelected && parsedWager < effectiveMinWager) || isOverMax || isSubmitting) return;
     if (isInsufficient) {
       triggerImpact('heavy');
       setShowCreateModal(false);
@@ -722,7 +723,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
           {showBanners && sectionView === 'hub' && (
             <EpicBanners
               matches={matches}
-              onOpenCreateModal={(g, cat) => handleOpenModal(g, Boolean(g), undefined, undefined, cat)}
+              onOpenCreateModal={(g, cat) => handleOpenModal(g, Boolean(g), undefined, undefined, cat === 'f2p' ? 'f2p' : 'all')}
               onJoinMatch={(m) => handleAttemptJoin(m, getMatchInviteCode(m))}
               onSelectGame={(g) => {
                 if (onNavigateToDuels) {
@@ -734,7 +735,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 }
               }}
               onOpenPlayHub={(sec) => {
-                setPlayHubSection(sec || 'all');
+                setPlayHubSection(sec === 'f2p' ? 'f2p' : 'all');
                 setSectionView('play_hub');
               }}
               onOpenVsBot={() => setSectionView('vs_bot')}
@@ -1594,54 +1595,37 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </label>
 
                     {/* Category Filter Switcher Tabs */}
-                    <div className="grid grid-cols-3 p-0.5 bg-black/60 border border-white/10 rounded-xl gap-0.5 self-start sm:self-auto">
+                    <div className="grid grid-cols-2 p-0.5 bg-black/60 border border-white/10 rounded-xl gap-0.5 self-start sm:self-auto">
                       <button
                         type="button"
                         onClick={() => {
                           triggerImpact('light');
                           setCreateModalCategory('all');
                         }}
-                        className={`py-1 px-2.5 rounded-lg text-center transition-all ${
+                        className={`py-1 px-3 rounded-lg text-center transition-all ${
                           createModalCategory === 'all'
                             ? 'bg-purple-600 text-white shadow-sm font-heading font-black text-[10px]'
                             : 'text-slate-400 hover:text-white font-heading font-bold text-[10px]'
                         }`}
                       >
-                        {t('playHub.allGamesLabel')} (10)
+                        {t('playHub.allGamesLabel')} (11)
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           triggerImpact('light');
-                          setCreateModalCategory('quick');
-                          if (!QUICK_GAMES.includes(selectedGameType)) {
-                            setSelectedGameType('roulette');
+                          setCreateModalCategory('f2p');
+                          if (!F2P_GAMES.includes(selectedGameType)) {
+                            setSelectedGameType('uno');
                           }
                         }}
-                        className={`py-1 px-2.5 rounded-lg text-center transition-all ${
-                          createModalCategory === 'quick'
-                            ? 'bg-cyan-500 text-white shadow-sm font-heading font-black text-[10px]'
+                        className={`py-1 px-3 rounded-lg text-center transition-all ${
+                          createModalCategory === 'f2p'
+                            ? 'bg-emerald-500 text-slate-950 shadow-sm font-heading font-black text-[10px]'
                             : 'text-slate-400 hover:text-white font-heading font-bold text-[10px]'
                         }`}
                       >
-                        {t('playHub.quickMatchLabel')} (5)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerImpact('light');
-                          setCreateModalCategory('strategy');
-                          if (!STRATEGY_GAMES.includes(selectedGameType)) {
-                            setSelectedGameType('split');
-                          }
-                        }}
-                        className={`py-1 px-2.5 rounded-lg text-center transition-all ${
-                          createModalCategory === 'strategy'
-                            ? 'bg-red-600 text-white shadow-sm font-heading font-black text-[10px]'
-                            : 'text-slate-400 hover:text-white font-heading font-bold text-[10px]'
-                        }`}
-                      >
-                        {t('playHub.strategyLabel')} (5)
+                        FREE TO PLAY (F2P) (2)
                       </button>
                     </div>
                   </div>
@@ -1649,8 +1633,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                   <div className="grid grid-cols-2 gap-1.5 max-h-[260px] overflow-y-auto pr-0.5 custom-scrollbar">
                     {(Object.values(GAMES_METADATA) as GameMetadata[])
                       .filter((game) => {
-                        if (createModalCategory === 'quick') return QUICK_GAMES.includes(game.id);
-                        if (createModalCategory === 'strategy') return STRATEGY_GAMES.includes(game.id);
+                        if (createModalCategory === 'f2p') return F2P_GAMES.includes(game.id);
                         return true;
                       })
                       .map((game) => {
@@ -1668,14 +1651,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                               }
                             }}
                             className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                              isSplit && createModalCategory !== 'strategy' ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
+                              isSplit && createModalCategory !== 'f2p' ? 'col-span-2 bg-gradient-to-r from-purple-950/40 via-yellow-950/20 to-purple-950/40' : ''
                             } ${
                               isSelected
                                 ? `bg-purple-950/60 border-2 border-purple-500/80 shadow-sm`
                                 : 'bg-white/[0.03] border-white/10 hover:border-white/20 opacity-70'
                             }`}
                           >
-                            {isSplit && createModalCategory !== 'strategy' ? (
+                            {isSplit && createModalCategory !== 'f2p' ? (
                               <div className="flex items-center justify-between w-full gap-2.5">
                                 {/* Left: Info */}
                                 <div className="flex-1 min-w-0">
@@ -1728,6 +1711,48 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                           </button>
                         );
                       })}
+                  </div>
+                </div>
+              )}
+
+              {/* F2P vs Wager Toggle for UNO & Head Soccer */}
+              {(selectedGameType === 'uno' || selectedGameType === 'headsoccer') && (
+                <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-400/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-heading font-black text-emerald-300 uppercase tracking-wider flex items-center space-x-1.5">
+                      <span>🎮 MODALITÀ DI GIOCO</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">F2P DISPONIBILE</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        setWagerChoice('0');
+                      }}
+                      className={`py-2 px-2.5 rounded-xl text-xs font-heading font-bold uppercase transition-all flex items-center justify-center space-x-1 border ${
+                        isF2PSelected
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md font-black'
+                          : 'bg-white/5 border-white/10 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <span>GRATIS (0 GRAM)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerImpact('light');
+                        if (parsedWager === 0) setWagerChoice('1');
+                      }}
+                      className={`py-2 px-2.5 rounded-xl text-xs font-heading font-bold uppercase transition-all flex items-center justify-center space-x-1 border ${
+                        !isF2PSelected
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black'
+                          : 'bg-white/5 border-white/10 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <span>SCOMMESSA GRAM</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -2137,9 +2162,9 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 <button
                   type="button"
                   onClick={handleCreate}
-                  disabled={!wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting}
+                  disabled={(!isF2PSelected && (!wagerChoice || parsedWager < effectiveMinWager)) || isOverMax || isSubmitting}
                   className={`flex-1 py-2.5 font-heading font-extrabold rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 ${
-                    !wagerChoice || parsedWager < effectiveMinWager || isOverMax || isSubmitting
+                    (!isF2PSelected && (!wagerChoice || parsedWager < effectiveMinWager)) || isOverMax || isSubmitting
                       ? 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-sm active:scale-95'
                   }`}
@@ -2149,6 +2174,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>{t('lobby.creatingEscrow')}</span>
                     </>
+                  ) : isF2PSelected ? (
+                    <span>CREA DUELLO GRATUITO (0 GRAM)</span>
                   ) : (
                     <span>{t('lobby.createDuelWithAmount', { amount: totalRequired })}</span>
                   )}

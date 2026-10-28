@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Dices, Layers, Sparkles, ArrowDown, ArrowUp, RefreshCw, Trophy } from 'lucide-react';
+import { ArrowLeft, Dices, Layers, Rocket, Bomb, CircleDot, Disc, Sparkles, ShieldCheck, Trophy, Flame } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { GramIcon } from '../GramIcon.js';
+
+// Modular Casino Games
+import { CrashGame } from './games/CrashGame.js';
+import { MinesGame } from './games/MinesGame.js';
+import { PlinkoGame } from './games/PlinkoGame.js';
+import { RouletteGame } from './games/RouletteGame.js';
+import { DiceGame } from './games/DiceGame.js';
+import { HiLoGame } from './games/HiLoGame.js';
 
 interface CasinoHubViewProps {
   onBack: () => void;
@@ -10,17 +18,30 @@ interface CasinoHubViewProps {
   onBalanceUpdated?: (newBalance: string) => void;
 }
 
-type CasinoGame = 'dice' | 'hilo';
+export type CasinoGameType = 'crash' | 'mines' | 'plinko' | 'roulette' | 'dice' | 'hilo';
+
+interface CasinoCardData {
+  id: CasinoGameType;
+  title: string;
+  tagline: string;
+  badge: string;
+  badgeColor: string;
+  rtp: string;
+  gradient: string;
+  borderColor: string;
+  icon: React.ReactNode;
+  placeholderArt: string;
+}
 
 export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
   onBack,
   userBalanceGram = '0.00',
   onBalanceUpdated,
 }) => {
-  const { triggerImpact, triggerNotification } = useHaptics();
+  const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
-  const [activeGame, setActiveGame] = useState<CasinoGame>('dice');
+  const [activeGame, setActiveGame] = useState<CasinoGameType | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [demoBalance, setDemoBalance] = useState<number>(100.0);
 
@@ -46,194 +67,110 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
     }
   };
 
-  // ==========================================
-  // --- 1. DICE LOGIC ---
-  // ==========================================
-  const [diceTarget, setDiceTarget] = useState<number>(50.0);
-  const [diceMode, setDiceMode] = useState<'under' | 'over'>('under');
-  const [diceWager, setDiceWager] = useState<string>('0.10');
-  const [diceRolling, setDiceRolling] = useState<boolean>(false);
-  const [diceResult, setDiceResult] = useState<number | null>(null);
-  const [diceWon, setDiceWon] = useState<boolean | null>(null);
-  const [diceHistory, setDiceHistory] = useState<Array<{ roll: number; won: boolean }>>([
-    { roll: 42.15, won: true },
-    { roll: 88.30, won: false },
-    { roll: 23.90, won: true },
-  ]);
-
-  const diceWinChance = diceMode === 'under' ? diceTarget : 100 - diceTarget;
-  const diceMultiplier = parseFloat((99 / Math.max(1, diceWinChance)).toFixed(2));
-  const parsedDiceWager = parseFloat(diceWager) || 0.1;
-  const dicePotentialPayout = parseFloat((parsedDiceWager * diceMultiplier).toFixed(2));
-
-  const handleRollDice = () => {
-    if (diceRolling) return;
-    if (currentBalance < parsedDiceWager) {
-      triggerNotification('warning');
-      return;
-    }
-
-    triggerImpact('heavy');
-    setDiceRolling(true);
-    setDiceWon(null);
-
-    // Deduct wager
-    updateBalanceDelta(-parsedDiceWager);
-
-    // Animate roll
-    let ticks = 0;
-    const interval = setInterval(() => {
-      ticks++;
-      setDiceResult(parseFloat((Math.random() * 100).toFixed(2)));
-      if (ticks > 8) {
-        clearInterval(interval);
-        const finalRoll = parseFloat((Math.random() * 99.99).toFixed(2));
-        setDiceResult(finalRoll);
-
-        const isWin = diceMode === 'under' ? finalRoll < diceTarget : finalRoll > diceTarget;
-        setDiceWon(isWin);
-        setDiceRolling(false);
-        setDiceHistory((prev) => [{ roll: finalRoll, won: isWin }, ...prev.slice(0, 5)]);
-
-        if (isWin) {
-          triggerNotification('success');
-          updateBalanceDelta(dicePotentialPayout);
-        } else {
-          triggerNotification('error');
-        }
-      }
-    }, 60);
-  };
-
-  // ==========================================
-  // --- 2. HILO LOGIC ---
-  // ==========================================
-  const CARD_SUITS = ['♠', '♥', '♦', '♣'] as const;
-  const CARD_VALUES = [
-    { label: '2', val: 2 },
-    { label: '3', val: 3 },
-    { label: '4', val: 4 },
-    { label: '5', val: 5 },
-    { label: '6', val: 6 },
-    { label: '7', val: 7 },
-    { label: '8', val: 8 },
-    { label: '9', val: 9 },
-    { label: '10', val: 10 },
-    { label: 'J', val: 11 },
-    { label: 'Q', val: 12 },
-    { label: 'K', val: 13 },
-    { label: 'A', val: 14 },
+  const CASINO_GAMES: CasinoCardData[] = [
+    {
+      id: 'crash',
+      title: 'Crash / Aviator',
+      tagline: 'Moltiplicatore a razzo esponenziale in salita rapida',
+      badge: '🔥 PIÙ GIOCATO',
+      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40',
+      rtp: '96.0% RTP',
+      gradient: 'from-cyan-950/40 via-teal-950/20 to-black',
+      borderColor: 'border-cyan-500/40 hover:border-cyan-400',
+      icon: <Rocket className="w-5 h-5 text-cyan-400" />,
+      placeholderArt: '🚀',
+    },
+    {
+      id: 'mines',
+      title: 'Mines',
+      tagline: 'Griglia 5x5 con 25 tessere, gemme luccicanti e mine',
+      badge: '💎 TOP STRATEGY',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
+      rtp: '96.0% RTP',
+      gradient: 'from-emerald-950/40 via-teal-950/20 to-black',
+      borderColor: 'border-emerald-500/40 hover:border-emerald-400',
+      icon: <Bomb className="w-5 h-5 text-emerald-400" />,
+      placeholderArt: '💣',
+    },
+    {
+      id: 'plinko',
+      title: 'Plinko',
+      tagline: 'Piramide a pioli con caduta a rimbalzi e vaschette',
+      badge: '⚡ CASINO ARCADE',
+      badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-400/40',
+      rtp: '96.0% RTP',
+      gradient: 'from-purple-950/40 via-indigo-950/20 to-black',
+      borderColor: 'border-purple-500/40 hover:border-purple-400',
+      icon: <CircleDot className="w-5 h-5 text-purple-400" />,
+      placeholderArt: '⚡',
+    },
+    {
+      id: 'roulette',
+      title: 'Roulette Europea',
+      tagline: 'Tavolo classico a 37 numeri con green zero e rosso/nero',
+      badge: '👑 CLASSIC 37',
+      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
+      rtp: '97.3% RTP',
+      gradient: 'from-amber-950/40 via-orange-950/20 to-black',
+      borderColor: 'border-amber-500/40 hover:border-amber-400',
+      icon: <Disc className="w-5 h-5 text-amber-400" />,
+      placeholderArt: '🎡',
+    },
+    {
+      id: 'dice',
+      title: 'Dice (Dado)',
+      tagline: 'Lancio matematico con slider probabilità e payout istantaneo',
+      badge: '🎲 PROVABLY FAIR',
+      badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40',
+      rtp: '96.0% RTP',
+      gradient: 'from-yellow-950/40 via-amber-950/20 to-black',
+      borderColor: 'border-yellow-500/40 hover:border-yellow-400',
+      icon: <Dices className="w-5 h-5 text-yellow-400" />,
+      placeholderArt: '🎲',
+    },
+    {
+      id: 'hilo',
+      title: 'HiLo (Alta/Bassa)',
+      tagline: 'Previsione carta successiva con moltiplicatori a catena',
+      badge: '🃏 CARD GAME',
+      badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-400/40',
+      rtp: '96.0% RTP',
+      gradient: 'from-rose-950/40 via-pink-950/20 to-black',
+      borderColor: 'border-rose-500/40 hover:border-rose-400',
+      icon: <Layers className="w-5 h-5 text-rose-400" />,
+      placeholderArt: '🃏',
+    },
   ];
-
-  const getRandomCard = () => {
-    const s = CARD_SUITS[Math.floor(Math.random() * CARD_SUITS.length)];
-    const v = CARD_VALUES[Math.floor(Math.random() * CARD_VALUES.length)];
-    return { ...v, suit: s };
-  };
-
-  const [hiloWager, setHiloWager] = useState<string>('0.20');
-  const [hiloActive, setHiloActive] = useState<boolean>(false);
-  const [hiloCurrentCard, setHiloCurrentCard] = useState<any>(getRandomCard);
-  const [hiloMultiplier, setHiloMultiplier] = useState<number>(1.0);
-  const [hiloStreak, setHiloStreak] = useState<number>(0);
-  const [hiloHistory, setHiloHistory] = useState<any[]>([]);
-  const [hiloGameOver, setHiloGameOver] = useState<boolean>(false);
-  const [hiloWonCashout, setHiloWonCashout] = useState<number | null>(null);
-
-  const parsedHiloWager = parseFloat(hiloWager) || 0.2;
-  const hiloCurrentPayout = parseFloat((parsedHiloWager * hiloMultiplier).toFixed(2));
-
-  // Multiplier calculations based on current card
-  const higherChance = (14 - hiloCurrentCard.val + 1) / 13;
-  const lowerChance = (hiloCurrentCard.val - 2 + 1) / 13;
-  const higherMult = parseFloat((1 / Math.max(0.1, higherChance) * 0.95).toFixed(2));
-  const lowerMult = parseFloat((1 / Math.max(0.1, lowerChance) * 0.95).toFixed(2));
-
-  const handleStartHilo = () => {
-    if (currentBalance < parsedHiloWager) {
-      triggerNotification('warning');
-      return;
-    }
-    triggerImpact('medium');
-    updateBalanceDelta(-parsedHiloWager);
-    const startCard = getRandomCard();
-    setHiloCurrentCard(startCard);
-    setHiloMultiplier(1.0);
-    setHiloStreak(0);
-    setHiloHistory([startCard]);
-    setHiloActive(true);
-    setHiloGameOver(false);
-    setHiloWonCashout(null);
-  };
-
-  const handleHiloGuess = (direction: 'higher' | 'lower') => {
-    if (!hiloActive || hiloGameOver) return;
-    triggerImpact('heavy');
-
-    const nextCard = getRandomCard();
-    const isHigher = nextCard.val >= hiloCurrentCard.val;
-    const isLower = nextCard.val <= hiloCurrentCard.val;
-    const correct = direction === 'higher' ? isHigher : isLower;
-
-    setHiloHistory((prev) => [nextCard, ...prev.slice(0, 6)]);
-    setHiloCurrentCard(nextCard);
-
-    if (correct) {
-      triggerNotification('success');
-      const stepMult = direction === 'higher' ? higherMult : lowerMult;
-      const nextTotMult = parseFloat((hiloMultiplier * stepMult).toFixed(2));
-      setHiloMultiplier(nextTotMult);
-      setHiloStreak((s) => s + 1);
-    } else {
-      triggerNotification('error');
-      setHiloGameOver(true);
-      setHiloActive(false);
-    }
-  };
-
-  const handleHiloSkip = () => {
-    if (!hiloActive || hiloGameOver) return;
-    triggerImpact('light');
-    const newCard = getRandomCard();
-    setHiloCurrentCard(newCard);
-    setHiloHistory((prev) => [newCard, ...prev.slice(0, 6)]);
-  };
-
-  const handleHiloCashout = () => {
-    if (!hiloActive || hiloGameOver || hiloStreak === 0) return;
-    triggerNotification('success');
-    const wonAmount = hiloCurrentPayout;
-    updateBalanceDelta(wonAmount);
-    setHiloWonCashout(wonAmount);
-    setHiloActive(false);
-    setHiloGameOver(false);
-  };
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4 select-none pb-12 animate-in fade-in slide-in-from-right-4 duration-200 font-sans">
-      {/* Top Header */}
+      {/* Top Header Row */}
       <div className="flex items-center justify-between px-1">
         <button
           type="button"
           onClick={() => {
             triggerImpact('light');
-            onBack();
+            if (activeGame !== null) {
+              setActiveGame(null); // Return to casino cards lobby
+            } else {
+              onBack(); // Return to home
+            }
           }}
           className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 text-xs font-heading font-bold active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{t('common.back')}</span>
+          <span>{activeGame ? 'Lobby Casino' : t('common.back')}</span>
         </button>
 
+        {/* Balance & Demo Toggle */}
         <div className="flex items-center space-x-2">
-          {/* Real vs Demo Balance Toggle */}
           <button
             type="button"
             onClick={() => {
               triggerImpact('light');
               setIsDemoMode(!isDemoMode);
             }}
-            className={`px-2.5 py-1 rounded-xl text-[10px] font-heading font-black tracking-wider uppercase border transition-all ${
+            className={`px-2.5 py-1 rounded-xl text-[10px] font-heading font-bold uppercase tracking-wider border transition-all active:scale-95 ${
               isDemoMode
                 ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-sm'
                 : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
@@ -243,430 +180,162 @@ export const CasinoHubView: React.FC<CasinoHubViewProps> = ({
           </button>
 
           <div className="flex items-center space-x-1 px-3 py-1 rounded-xl bg-black/40 border border-amber-400/30 text-amber-300 text-xs font-heading font-bold">
-            <GramIcon className="w-3.5 h-3.5 text-amber-400" />
+            <GramIcon className="w-3.5 h-3.5" />
             <span>{currentBalance.toFixed(2)}</span>
+            <span className="text-[9px] text-slate-400">{isDemoMode ? 'CHIP' : 'G'}</span>
           </div>
         </div>
       </div>
 
-      {/* Hero Brand Title */}
-      <div className="px-1 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-heading font-black text-white uppercase tracking-wider flex items-center space-x-2">
-            <Dices className="w-5 h-5 text-amber-400" />
-            <span>{t('casino.title')}</span>
-          </h2>
-          <p className="text-[11px] text-slate-400 font-sans">
-            {t('casino.subtitle')}
-          </p>
-        </div>
-      </div>
-
-      {/* Game Selector Switcher Tabs */}
-      <div className="grid grid-cols-2 p-1 bg-black/40 border border-white/10 rounded-2xl gap-1">
-        <button
-          type="button"
-          onClick={() => {
-            triggerImpact('light');
-            setActiveGame('dice');
-          }}
-          className={`py-2 px-3 rounded-xl text-center select-none active:scale-95 transition-all border flex items-center justify-center space-x-2 ${
-            activeGame === 'dice'
-              ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black shadow-md border-amber-400'
-              : 'border-transparent text-slate-400 hover:text-white font-bold'
-          }`}
-        >
-          <Dices className="w-4 h-4" />
-          <span className="text-xs font-heading uppercase tracking-wider">
-            {t('casino.dice')}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            triggerImpact('light');
-            setActiveGame('hilo');
-          }}
-          className={`py-2 px-3 rounded-xl text-center select-none active:scale-95 transition-all border flex items-center justify-center space-x-2 ${
-            activeGame === 'hilo'
-              ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black shadow-md border-amber-400'
-              : 'border-transparent text-slate-400 hover:text-white font-bold'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span className="text-xs font-heading uppercase tracking-wider">
-            {t('casino.hilo')}
-          </span>
-        </button>
-      </div>
-
-      {/* ======================================================== */}
-      {/* 1. DICE INTERACTIVE ARENA                                */}
-      {/* ======================================================== */}
-      {activeGame === 'dice' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Live Roll Visual Display Box */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#181a24] to-[#0f1118] border border-amber-500/30 p-5 shadow-2xl flex flex-col items-center justify-center min-h-[170px]">
-            <div className="absolute top-3 left-3 flex items-center space-x-1.5">
-              <span className="text-[10px] text-slate-400 font-mono">{t('casino.history')}</span>
-              <div className="flex items-center space-x-1">
-                {diceHistory.map((h, i) => (
-                  <span
-                    key={i}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
-                      h.won ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                    }`}
-                  >
-                    {h.roll.toFixed(1)}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Target condition indicator */}
-            <div className="text-xs font-heading font-extrabold tracking-wider uppercase text-slate-400 mt-3 mb-1">
-              {t('casino.target')}: <span className="text-amber-300">{diceMode === 'under' ? '<' : '>'} {diceTarget.toFixed(2)}</span>
-            </div>
-
-            {/* Number Roll Display */}
-            <div
-              className={`text-5xl sm:text-6xl font-mono font-black tracking-tight transition-transform duration-100 ${
-                diceRolling
-                  ? 'text-amber-400 scale-105 animate-pulse'
-                  : diceWon === true
-                  ? 'text-emerald-400 scale-110 drop-shadow-[0_0_20px_rgba(52,211,153,0.4)]'
-                  : diceWon === false
-                  ? 'text-rose-500 scale-100'
-                  : 'text-white'
-              }`}
-            >
-              {diceResult !== null ? diceResult.toFixed(2) : '50.00'}
-            </div>
-
-            {/* Outcome Tag */}
-            {diceWon !== null && !diceRolling && (
-              <div className="mt-2 animate-in zoom-in-95 duration-150">
-                {diceWon ? (
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-heading font-black text-xs uppercase tracking-wider flex items-center space-x-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{t('casino.won')} +{dicePotentialPayout} GRAM!</span>
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-heading font-bold text-xs uppercase tracking-wider">
-                    {t('casino.lost')} ({diceResult?.toFixed(2)})
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Dice Slider & Mode Switch */}
-          <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                {t('casino.rollCondition')}
-              </span>
-              <div className="flex items-center space-x-1 bg-black/40 p-0.5 rounded-xl border border-white/10">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerImpact('light');
-                    setDiceMode('under');
-                  }}
-                  className={`px-3 py-1 rounded-lg text-xs font-heading font-black uppercase transition-all ${
-                    diceMode === 'under' ? 'bg-amber-400 text-slate-950 shadow-sm' : 'text-slate-400'
-                  }`}
-                >
-                  {t('casino.rollUnder')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerImpact('light');
-                    setDiceMode('over');
-                  }}
-                  className={`px-3 py-1 rounded-lg text-xs font-heading font-black uppercase transition-all ${
-                    diceMode === 'over' ? 'bg-amber-400 text-slate-950 shadow-sm' : 'text-slate-400'
-                  }`}
-                >
-                  {t('casino.rollOver')}
-                </button>
-              </div>
-            </div>
-
-            {/* Slider */}
+      {/* Main Title Banner (shown when in lobby) */}
+      {!activeGame && (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-950/30 via-purple-950/30 to-black border border-amber-500/30 p-4 shadow-xl">
+          <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <input
-                type="range"
-                min="2"
-                max="98"
-                step="1"
-                value={diceTarget}
-                onChange={(e) => setDiceTarget(parseFloat(e.target.value))}
-                className="w-full accent-amber-400 h-2 bg-slate-800 rounded-lg cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                <span>2.00</span>
-                <span className="text-amber-300 font-bold">{diceTarget.toFixed(2)}</span>
-                <span>98.00</span>
-              </div>
-            </div>
-
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className="p-2.5 rounded-2xl bg-black/30 border border-white/5 text-center">
-                <span className="text-[10px] font-heading text-slate-400 block uppercase">
-                  {t('casino.winChance')}
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-heading font-black text-[9px] uppercase tracking-wider">
+                  SFIDA CASINO ORIGINALS
                 </span>
-                <span className="text-base font-heading font-black text-white">
-                  {diceWinChance.toFixed(2)}%
+                <span className="flex items-center space-x-1 text-[10px] font-mono text-emerald-400 font-bold">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>PROVABLY FAIR</span>
                 </span>
               </div>
-              <div className="p-2.5 rounded-2xl bg-black/30 border border-white/5 text-center">
-                <span className="text-[10px] font-heading text-slate-400 block uppercase">
-                  {t('casino.multiplier')}
-                </span>
-                <span className="text-base font-heading font-black text-amber-300">
-                  {diceMultiplier.toFixed(2)}x
-                </span>
-              </div>
+              <h2 className="text-base font-heading font-black text-white uppercase tracking-wider">
+                Tavoli & Giochi del Banco
+              </h2>
+              <p className="text-[11px] text-slate-300">
+                Scegli un gioco per iniziare. Algoritmi crittografici certificati e pagamenti immediati.
+              </p>
             </div>
-          </div>
-
-          {/* Wager Input & Roll Action */}
-          <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                {t('casino.wager')}
-              </span>
-              <span className="text-xs font-heading font-bold text-amber-300">
-                {t('casino.profit')}: +{dicePotentialPayout} G
-              </span>
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Dices className="w-7 h-7" />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="number"
-                step="0.05"
-                min="0.05"
-                value={diceWager}
-                onChange={(e) => setDiceWager(e.target.value)}
-                className="flex-1 bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:border-amber-400"
-              />
-              <button
-                type="button"
-                onClick={() => setDiceWager((prev) => (Math.max(0.05, parseFloat(prev) / 2)).toFixed(2))}
-                className="px-2.5 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-mono text-slate-300"
-              >
-                1/2
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiceWager((prev) => (parseFloat(prev) * 2).toFixed(2))}
-                className="px-2.5 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-mono text-slate-300"
-              >
-                2x
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiceWager(currentBalance.toFixed(2))}
-                className="px-2.5 py-2 bg-amber-500/20 border border-amber-400/30 rounded-xl text-xs font-mono text-amber-300 font-bold"
-              >
-                MAX
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleRollDice}
-              disabled={diceRolling || currentBalance < parsedDiceWager}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
-            >
-              {diceRolling ? t('casino.rolling') : `${t('casino.rollBtn')} (${parsedDiceWager} GRAM)`}
-            </button>
           </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* 2. HILO INTERACTIVE ARENA                                */}
+      {/* 1. CASINO CARDS LOBBY VIEW (MODULAR GRID - NO SPACE ISSUE) */}
       {/* ======================================================== */}
-      {activeGame === 'hilo' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Card Table Visual */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#181a24] to-[#0f1118] border border-amber-500/30 p-5 shadow-2xl flex flex-col items-center justify-center min-h-[220px]">
-            {/* Top Multiplier & Streak Tracker */}
-            <div className="w-full flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="text-left">
-                <span className="text-[10px] text-slate-400 font-heading block uppercase">{t('casino.multiplier')}</span>
-                <span className="text-xl font-heading font-black text-amber-300">
-                  {hiloMultiplier.toFixed(2)}x
+      {!activeGame ? (
+        <div className="grid grid-cols-2 gap-3">
+          {CASINO_GAMES.map((game) => (
+            <div
+              key={game.id}
+              onClick={() => {
+                triggerImpact('light');
+                setActiveGame(game.id);
+              }}
+              className={`group relative overflow-hidden rounded-3xl bg-gradient-to-b ${game.gradient} border ${game.borderColor} p-3.5 shadow-xl transition-all duration-200 active:scale-95 cursor-pointer flex flex-col justify-between min-h-[195px]`}
+            >
+              {/* Card Top: Badge & RTP */}
+              <div className="flex items-center justify-between w-full">
+                <span className={`px-2 py-0.5 rounded-md border text-[8.5px] font-heading font-black uppercase tracking-wider ${game.badgeColor}`}>
+                  {game.badge}
+                </span>
+                <span className="text-[9px] font-mono text-slate-400 font-bold">
+                  {game.rtp}
                 </span>
               </div>
 
-              <div className="text-center">
-                <span className="text-[10px] text-slate-400 font-heading block uppercase">{t('casino.streak')}</span>
-                <span className="text-lg font-heading font-black text-white">
-                  🔥 {hiloStreak}
-                </span>
+              {/* Placeholder Art Box (customizable / replaceable by user) */}
+              <div className="my-2.5 w-full h-16 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition-transform duration-200">
+                <span>{game.placeholderArt}</span>
               </div>
 
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 font-heading block uppercase">{t('casino.potentialPayout')}</span>
-                <span className="text-xl font-heading font-black text-emerald-400">
-                  {hiloCurrentPayout} G
-                </span>
-              </div>
-            </div>
-
-            {/* Current Playing Card */}
-            <div className="my-4 relative">
-              <div
-                className={`w-28 h-40 rounded-2xl bg-white border-2 border-slate-300 shadow-2xl flex flex-col justify-between p-3 select-none transform transition-transform duration-200 ${
-                  hiloGameOver ? 'opacity-40 grayscale rotate-6' : 'hover:scale-105'
-                }`}
-              >
-                <div className={`text-left font-mono font-black text-xl leading-none ${['♥', '♦'].includes(hiloCurrentCard.suit) ? 'text-red-600' : 'text-slate-900'}`}>
-                  {hiloCurrentCard.label}
-                  <div className="text-sm">{hiloCurrentCard.suit}</div>
-                </div>
-
-                <div className={`text-center font-mono font-black text-4xl ${['♥', '♦'].includes(hiloCurrentCard.suit) ? 'text-red-600' : 'text-slate-900'}`}>
-                  {hiloCurrentCard.suit}
-                </div>
-
-                <div className={`text-right font-mono font-black text-xl leading-none rotate-180 ${['♥', '♦'].includes(hiloCurrentCard.suit) ? 'text-red-600' : 'text-slate-900'}`}>
-                  {hiloCurrentCard.label}
-                  <div className="text-sm">{hiloCurrentCard.suit}</div>
-                </div>
+              {/* Title & Tagline */}
+              <div className="space-y-0.5">
+                <h3 className="text-xs font-heading font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                  {game.icon}
+                  <span className="truncate">{game.title}</span>
+                </h3>
+                <p className="text-[9.5px] text-slate-400 line-clamp-2 leading-tight">
+                  {game.tagline}
+                </p>
               </div>
 
-              {hiloGameOver && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="px-3 py-1 rounded-xl bg-rose-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg rotate-12 animate-pulse">
-                    {t('casino.bust')}
-                  </span>
-                </div>
-              )}
-
-              {hiloWonCashout && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="px-3 py-1 rounded-xl bg-emerald-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg -rotate-6">
-                    {t('casino.cashedOut')} +{hiloWonCashout} G!
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* History Strip */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto max-w-full px-2 py-1">
-              {hiloHistory.map((c, i) => (
-                <span
-                  key={i}
-                  className={`px-2 py-1 rounded-lg text-xs font-mono font-bold shrink-0 ${
-                    i === 0 ? 'bg-amber-400 text-slate-950' : 'bg-black/40 text-slate-300 border border-white/10'
-                  }`}
+              {/* Play Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  className="w-full py-1.5 rounded-xl bg-white/10 group-hover:bg-gradient-to-r group-hover:from-amber-400 group-hover:to-yellow-500 group-hover:text-slate-950 text-white font-heading font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 shadow-sm"
                 >
-                  {c.label}{c.suit}
-                </span>
-              ))}
+                  <Sparkles className="w-3 h-3" />
+                  <span>GIOCA ORA</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ======================================================== */
+        /* 2. DEDICATED CASINO GAME VIEW                            */
+        /* ======================================================== */
+        <div className="space-y-3">
+          {/* Active Game Header Bar */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">
+                {CASINO_GAMES.find((g) => g.id === activeGame)?.placeholderArt}
+              </span>
+              <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
+                {CASINO_GAMES.find((g) => g.id === activeGame)?.title}
+              </h3>
+            </div>
+            <div className="flex items-center space-x-1 text-[10px] font-mono text-emerald-400">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>{CASINO_GAMES.find((g) => g.id === activeGame)?.rtp}</span>
             </div>
           </div>
 
-          {/* HiLo Controls */}
-          {!hiloActive ? (
-            <div className="p-4 rounded-3xl bg-[#141724] border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                  {t('casino.initialWager')}
-                </span>
-                <span className="text-xs font-mono text-slate-400">MIN: 0.10 G</span>
-              </div>
+          {/* Mount Selected Game */}
+          {activeGame === 'crash' && (
+            <CrashGame
+              currentBalance={currentBalance}
+              isDemoMode={isDemoMode}
+              onUpdateBalance={updateBalanceDelta}
+            />
+          )}
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="number"
-                  step="0.05"
-                  min="0.05"
-                  value={hiloWager}
-                  onChange={(e) => setHiloWager(e.target.value)}
-                  className="flex-1 bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:border-amber-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => setHiloWager('0.20')}
-                  className="px-2.5 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-mono text-slate-300"
-                >
-                  0.20
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHiloWager('1.00')}
-                  className="px-2.5 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-mono text-slate-300"
-                >
-                  1.00
-                </button>
-              </div>
+          {activeGame === 'mines' && (
+            <MinesGame
+              currentBalance={currentBalance}
+              isDemoMode={isDemoMode}
+              onUpdateBalance={updateBalanceDelta}
+            />
+          )}
 
-              <button
-                type="button"
-                onClick={handleStartHilo}
-                disabled={currentBalance < parsedHiloWager}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              >
-                {t('casino.dealCard')} ({parsedHiloWager} GRAM)
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleHiloGuess('higher')}
-                  className="py-3 px-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex flex-col items-center justify-center space-y-0.5"
-                >
-                  <div className="flex items-center space-x-1">
-                    <ArrowUp className="w-4 h-4" />
-                    <span>{t('casino.higher')}</span>
-                  </div>
-                  <span className="text-[10px] font-mono opacity-80">+{higherMult}x</span>
-                </button>
+          {activeGame === 'plinko' && (
+            <PlinkoGame
+              currentBalance={currentBalance}
+              isDemoMode={isDemoMode}
+              onUpdateBalance={updateBalanceDelta}
+            />
+          )}
 
-                <button
-                  type="button"
-                  onClick={() => handleHiloGuess('lower')}
-                  className="py-3 px-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex flex-col items-center justify-center space-y-0.5"
-                >
-                  <div className="flex items-center space-x-1">
-                    <ArrowDown className="w-4 h-4" />
-                    <span>{t('casino.lower')}</span>
-                  </div>
-                  <span className="text-[10px] font-mono opacity-80">+{lowerMult}x</span>
-                </button>
-              </div>
+          {activeGame === 'roulette' && (
+            <RouletteGame
+              currentBalance={currentBalance}
+              isDemoMode={isDemoMode}
+              onUpdateBalance={updateBalanceDelta}
+            />
+          )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleHiloSkip}
-                  className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>{t('casino.skip')}</span>
-                </button>
+          {activeGame === 'dice' && (
+            <DiceGame
+              currentBalance={currentBalance}
+              isDemoMode={isDemoMode}
+              onUpdateBalance={updateBalanceDelta}
+            />
+          )}
 
-                <button
-                  type="button"
-                  onClick={handleHiloCashout}
-                  disabled={hiloStreak === 0}
-                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center space-x-1"
-                >
-                  <Trophy className="w-3.5 h-3.5" />
-                  <span>{t('casino.cashout')} ({hiloCurrentPayout} G)</span>
-                </button>
-              </div>
-            </div>
+          {activeGame === 'hilo' && (
+            <HiLoGame
+              currentBalance={currentBalance}
+              isDemoMode={isDemoMode}
+              onUpdateBalance={updateBalanceDelta}
+            />
           )}
         </div>
       )}
