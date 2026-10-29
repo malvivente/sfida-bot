@@ -36,8 +36,8 @@ export const GAMES_CONFIG = {
     jackpotStealBonusPercent: 20,
   },
   shotgun: {
-    name: 'Cyber Shotgun',
-    description: 'Buckshot roulette style cyber duel. 5 HP, 15s turn, tactical items (Saw, Ejector, Handcuffs, Inverter).',
+    name: 'Shotgun',
+    description: 'Buckshot roulette style duel. 5 HP, 15s turn, tactical items (Saw, Ejector, Handcuffs, Inverter).',
     initialHp: 5,
     turnTimeoutSeconds: 15,
   },
@@ -57,13 +57,13 @@ export const GAMES_CONFIG = {
   },
   headsoccer: {
     name: 'Head Soccer',
-    description: '1v1 Cyber Retro arcade soccer duel. 60 seconds, headers, bicycle kicks and Super Shots!',
+    description: '1v1 Arcade soccer duel. 60 seconds, headers, bicycle kicks and Super Shots!',
     matchDurationSeconds: 60,
     overtimeDurationSeconds: 30,
   },
   poker: {
     name: "Texas Hold'em Poker",
-    description: "2-5 Players Cyber Sit & Go. Hole cards, betting rounds (Pre-flop, Flop, Turn, River), and 15s action clock.",
+    description: "2-5 Players Sit & Go. Hole cards, betting rounds (Pre-flop, Flop, Turn, River), and 15s action clock.",
     minPlayers: 2,
     maxPlayers: 5,
     startingChips: 1000,
@@ -71,13 +71,13 @@ export const GAMES_CONFIG = {
   },
   uno: {
     name: 'UNO Card Duel',
-    description: '1v1 Cyber UNO duello a carte. Colori, salta turno, inverti, +2, +4 Jolly e grido finale UNO! Giocabile F2P (gratis) o con scommessa.',
+    description: 'Duello a carte 1v1-4p. Colori, salta turno, inverti, +2, +4 Jolly e grido finale UNO! Giocabile F2P (gratis) o con scommessa.',
     initialHandSize: 7,
     turnTimeoutSeconds: 15,
   },
   boxing: {
-    name: 'Cyber Boxing',
-    description: '1v1 Cyber Retro Boxing clash. Jabs, Hooks, Parries, Stamina guard and Super KO Uppercut! Playable F2P or with wager.',
+    name: 'Boxe',
+    description: '1v1 Boxing clash. Jabs, Hooks, Parries, Stamina guard and Super KO Uppercut! Playable F2P or with wager.',
     roundDurationSeconds: 60,
     initialHp: 100,
     initialStamina: 100,

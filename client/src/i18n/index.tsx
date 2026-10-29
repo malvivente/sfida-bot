@@ -23,7 +23,7 @@ export const translations: Translations = {
   'nav.leaderboardShort': { it: 'TOP', en: 'TOP' },
   'nav.affiliates': { it: 'AFFILIATI', en: 'AFFILIATES' },
   'nav.profile': { it: 'PROFILO', en: 'PROFILE' },
-  'nav.subtitle': { it: 'DUELLI CYBER PVP', en: 'CYBER PVP DUELS' },
+  'nav.subtitle': { it: 'DUELLI PVP 1V1', en: '1V1 PVP DUELS' },
 
   // Epic GUI Experience
   'epic.yourBalance': { it: 'Il tuo saldo', en: 'Your balance' },
@@ -259,7 +259,7 @@ export const translations: Translations = {
   'raffle.ticket': { it: 'BIGLIETTO', en: 'TICKET' },
 
   // UNO CARD DUEL
-  'uno.title': { it: 'UNO CYBER DUEL', en: 'UNO CYBER DUEL' },
+  'uno.title': { it: 'UNO', en: 'UNO' },
   'uno.turn': { it: 'IL TUO TURNO', en: 'YOUR TURN' },
   'uno.opponentTurn': { it: 'TURNO AVVERSARIO', en: 'OPPONENT TURN' },
   'uno.activeColor': { it: 'COLORE ATTIVO:', en: 'ACTIVE COLOR:' },
@@ -313,7 +313,7 @@ export const translations: Translations = {
   'epic.pvpHubBtn': { it: 'GIOCA QUICK MATCH', en: 'PLAY QUICK MATCH' },
   'epic.strategyTitle': { it: 'TATTICA & STRATEGIA', en: 'STRATEGY DUELS' },
   'epic.strategyTag': { it: 'DUELLI LUNGHI', en: 'DEEP TACTICS' },
-  'epic.strategyDesc': { it: 'Abilità mentale e calcolo delle probabilità: Cyber Shotgun, Forza 4 e Split or Steal.', en: 'Mental mastery & probability: Cyber Shotgun, Connect 4, and Split or Steal.' },
+  'epic.strategyDesc': { it: 'Abilità mentale e calcolo delle probabilità: Shotgun, Forza 4 e Split or Steal.', en: 'Mental mastery & probability: Shotgun, Connect 4, and Split or Steal.' },
   'epic.strategyBtn': { it: 'GIOCA STRATEGIA', en: 'PLAY STRATEGY' },
   'epic.spectateTitle': { it: 'SCOMMESSE & LIVE', en: 'SPECTATE & BET' },
   'epic.spectateBadge': { it: 'SPETTATORI LIVE', en: 'LIVE SPECTATE' },
@@ -437,7 +437,7 @@ export const translations: Translations = {
 
   // Leaderboard
   'leaderboard.title': { it: 'CLASSIFICA', en: 'LEADERBOARD' },
-  'leaderboard.subtitle': { it: 'I guerrieri d\'élite dell\'Arena Sfida', en: 'Top duelists of the cyber arena' },
+  'leaderboard.subtitle': { it: 'I guerrieri d\'élite dell\'Arena Sfida', en: 'Top duelists of the Sfida Arena' },
   'leaderboard.backToArena': { it: '← Torna all\'Arena', en: '← Back to Arena' },
   'leaderboard.back': { it: '← Torna al Profilo', en: '← Back to Profile' },
   'leaderboard.tabWins': { it: '🏆 Vittorie', en: '🏆 Victories' },
@@ -724,8 +724,8 @@ export const translations: Translations = {
   'coinToss.inFlight': { it: 'In volo...', en: 'Flipping...' },
   'coinToss.tapToContinue': { it: 'Tocca per continuare', en: 'Tap to continue' },
 
-  // Cyber Shotgun Arena Translations
-  'shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },
+  // Shotgun Arena Translations
+  'shotgun.title': { it: 'SHOTGUN', en: 'SHOTGUN' },
   'shotgun.liveShells': { it: 'Vere', en: 'Live' },
   'shotgun.blankShells': { it: 'A Salve', en: 'Blank' },
   'shotgun.inChamber': { it: 'Nel Caricatore', en: 'In Magazine' },
@@ -767,9 +767,9 @@ export const translations: Translations = {
   'shotgun.guideInverterDesc': { it: 'Inverte la cartuccia attualmente in canna: se era VERA diventa A SALVE; se era A SALVE diventa VERA. Trasforma colpi a salve in attacchi letali o colpi veri in turni extra sparandoti addosso in sicurezza!', en: 'Inverts the chambered round: Live becomes Blank, Blank becomes Live. Turn blanks into lethal attacks or live shells into safe extra turns by shooting yourself!' },
   'shotgun.guideGotIt': { it: 'HO CAPITO', en: 'GOT IT' },
   'shotgun.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
-  'shotgun.victoryDesc': { it: 'Sei sopravvissuto al Cyber Shotgun!', en: 'You survived Cyber Shotgun!' },
+  'shotgun.victoryDesc': { it: 'Sei sopravvissuto al duello con lo Shotgun!', en: 'You survived the Shotgun duel!' },
   'shotgun.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
-  'shotgun.defeatDesc': { it: 'Punti vita azzerati dal Cyber Shotgun.', en: 'HP depleted by Cyber Shotgun.' },
+  'shotgun.defeatDesc': { it: 'Punti vita azzerati dallo Shotgun.', en: 'HP depleted by the Shotgun.' },
 
   // Connect 4 Arena Translations
   'connect4.moves': { it: 'MOSSE', en: 'MOVES' },
@@ -1123,8 +1123,8 @@ export const translations: Translations = {
   'gameRules.close': { it: 'CHIUDI', en: 'CLOSE' },
   'gameRules.infoTooltip': { it: 'Regole del gioco', en: 'Game rules' },
 
-  // Cyber Shotgun
-  'gameRules.shotgun.title': { it: 'CYBER SHOTGUN', en: 'CYBER SHOTGUN' },
+  // Shotgun
+  'gameRules.shotgun.title': { it: 'SHOTGUN', en: 'SHOTGUN' },
   'gameRules.shotgun.badge': { it: 'DUELLO RUSSO 1V1', en: '1V1 TACTICAL DUEL' },
   'gameRules.shotgun.goal': { it: 'Sopravvivi al duello e azzera i 5 punti vita dell\'avversario prima che lui azzeri i tuoi.', en: 'Deplete the opponent\'s 5 HP before they eliminate you.' },
   'gameRules.shotgun.r1': { it: 'A ogni round il fucile viene caricato con una sequenza segreta di colpi veri (rossi, infliggono 1 danno) e a salve (blu, 0 danni).', en: 'Each round the shotgun is chambered with a secret sequence of live shells (red, 1 damage) and blanks (blue, 0 damage).' },
@@ -1557,10 +1557,10 @@ export const translations: Translations = {
   'headsoccer.dpadLabel': { it: 'MOVIMENTO', en: 'MOVEMENT' },
   'headsoccer.actionsLabel': { it: 'AZIONI', en: 'ACTIONS' },
 
-  // Cyber Boxing
+  // Boxing
   'playHub.badgeBoxing': { it: '1V1 BOXING CLASH', en: '1V1 BOXING CLASH' },
-  'playHub.boxingDesc': { it: 'Duello di boxe 1v1 sul ring: jab veloci, ganci, schivate perfette e Super K.O.!', en: '1v1 Cyber boxing ring clash: fast jabs, hooks, counter weaves and Super K.O.!' },
-  'boxing.title': { it: 'CYBER BOXING CLASH', en: 'CYBER BOXING CLASH' },
+  'playHub.boxingDesc': { it: 'Duello di boxe 1v1 sul ring: jab veloci, ganci, schivate perfette e Super K.O.!', en: '1v1 boxing ring clash: fast jabs, hooks, counter weaves and Super K.O.!' },
+  'boxing.title': { it: 'BOXE 1V1', en: 'BOXING 1V1' },
   'boxing.readyBtn': { it: 'SALI SUL RING!', en: 'ENTER THE RING!' },
   'boxing.waitingLobbyDesc': { it: 'Condividi il link per far salire uno sfidante sul ring.', en: 'Share the link to invite a challenger to the ring.' },
   'boxing.waitingOpponentDesc': { it: "Sei sul ring! In attesa che anche l'avversario indossi i guantoni...", en: 'You are in the ring! Waiting for opponent to glove up...' },
@@ -1578,7 +1578,7 @@ export const translations: Translations = {
   'boxing.loseDesc': { it: "L'avversario ha sferrato il colpo da K.O. decisivo.", en: 'Your opponent landed the decisive K.O. punch.' },
   'boxing.rematch': { it: 'CHIEDI RIVINCITA', en: 'REQUEST REMATCH' },
   'boxing.returnLobby': { it: 'TORNA ALLA LOBBY', en: 'RETURN TO LOBBY' },
-  'gameRules.boxing.title': { it: 'CYBER BOXING', en: 'CYBER BOXING' },
+  'gameRules.boxing.title': { it: 'BOXE', en: 'BOXING' },
   'gameRules.boxing.badge': { it: 'F2P O SCOMMESSA · 1V1 BOXING', en: 'F2P OR WAGER · 1V1 BOXING' },
   'gameRules.boxing.goal': { it: 'Metti al tappeto il tuo avversario con un K.O. o mantieni più salute allo scadere dei 60 secondi.', en: 'Knock out your opponent with a clean K.O. or hold more HP when the 60-second round expires.' },
   'gameRules.boxing.r1': { it: 'Controlli: usa SINISTRA/DESTRA per gestire la distanza sul ring. SCHIVA per schivare i colpi; tieni premuto GUARDIA per ridurre del 75% i danni assorbiti.', en: 'Controls: use LEFT/RIGHT to manage ring distance. WEAVE to dodge punches; hold GUARD to reduce incoming damage by 75%.' },

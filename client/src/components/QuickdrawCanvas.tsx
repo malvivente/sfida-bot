@@ -180,7 +180,7 @@ export const QuickdrawCanvas: React.FC<QuickdrawCanvasProps> = ({
 
         {/* Round Badge */}
         <div className="flex flex-col items-center shrink-0">
-          <span className="text-[10px] text-cyber-muted uppercase font-chakra tracking-widest">Cyber Duel</span>
+          <span className="text-[10px] text-cyber-muted uppercase font-chakra tracking-widest">Sfida 1v1</span>
           <span className="text-sm font-orbitron font-bold tracking-widest text-slate-200">
             {roomState === 'MATCH_SETTLED' ? 'FINAL' : `ROUND ${currentRound} / 3`}
           </span>

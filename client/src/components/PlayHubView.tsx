@@ -297,7 +297,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
-                  CYBER BOXING
+                  BOXE
                 </h3>
 
                 <p className="text-xs text-rose-100/90 font-medium leading-tight">
@@ -369,7 +369,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-heading font-black text-white tracking-wide drop-shadow-md">
-                  CYBER SHOTGUN
+                  SHOTGUN
                 </h3>
 
                 <p className="text-xs text-red-100/90 font-medium leading-tight">
@@ -957,7 +957,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
                     {t('playHub.badgeBoxing') || '1V1 BOXING CLASH'}
                   </span>
                   <h4 className="text-base font-heading font-black text-white">
-                    CYBER BOXING
+                    BOXE
                   </h4>
                   <p className="text-[10px] text-rose-100 font-medium leading-tight line-clamp-2">
                     {t('playHub.boxingDesc') || 'Duello di boxe 1v1 sul ring: jab veloci, ganci, schivate e Super K.O.!'}

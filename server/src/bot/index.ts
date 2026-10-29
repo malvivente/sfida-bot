@@ -456,7 +456,7 @@ export function createTelegramBot(token?: string): Bot {
       },
       {
         id: 'shotgun',
-        title: 'Cyber Shotgun',
+        title: 'Shotgun',
         icon: '💥',
         descIt: 'Buckshot roulette: 5 HP, cartucce e oggetti tattici',
         descEn: 'Buckshot roulette: 5 HP, shells & tactical items',
@@ -498,7 +498,7 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n` +
-        `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>@${botUser} shotgun 2</code> — Shotgun (2 GRAM)\n` +
         `• <code>@${botUser} connect4 1</code> — Forza 4 (1 GRAM)\n` +
         `• <code>@${botUser} cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
         `<i>Premi il pulsante qui sotto per aprire Sfida Arena:</i>`
@@ -511,7 +511,7 @@ export function createTelegramBot(token?: string): Bot {
         `• <code>@${botUser} bridge 1</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>@${botUser} chrono 1.5</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>@${botUser} split 5</code> — Split or Steal (min. 5 GRAM)\n` +
-        `• <code>@${botUser} shotgun 2</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>@${botUser} shotgun 2</code> — Shotgun (2 GRAM)\n` +
         `• <code>@${botUser} connect4 1</code> — Connect 4 (1 GRAM)\n` +
         `• <code>@${botUser} cubecount 1</code> — Cube Count (1 GRAM)\n\n` +
         `<i>Tap below to open Sfida Arena:</i>`;

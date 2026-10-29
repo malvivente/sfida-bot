@@ -48,7 +48,7 @@ export function parseGameType(raw?: string): { type: GameType; title: string } |
     return { type: 'split', title: 'Split or Steal' };
   }
   if (clean.includes('shotgun') || clean.includes('buckshot') || clean.includes('fucile') || clean.includes('pompa')) {
-    return { type: 'shotgun', title: 'Cyber Shotgun' };
+    return { type: 'shotgun', title: 'Shotgun' };
   }
   if (clean.includes('connect') || clean.includes('forza') || clean === 'f4' || clean.includes('4in') || clean.includes('four')) {
     return { type: 'connect4', title: 'Forza 4' };
@@ -136,7 +136,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel 1 bridge</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>/duel 1.5 chrono</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>/duel 5 split</code> — Split or Steal (min. 5 GRAM)\n` +
-        `• <code>/duel 2 shotgun</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>/duel 2 shotgun</code> — Shotgun (2 GRAM)\n` +
         `• <code>/duel 1 forza4</code> — Forza 4 (1 GRAM)\n` +
         `• <code>/duel 1 cubecount</code> — Cube Count (1 GRAM)\n\n` +
         `<i>Premi qui sotto per aprire Sfida Arena:</i>`
@@ -150,7 +150,7 @@ export async function handleGroupDuelCommand(ctx: Context): Promise<void> {
         `• <code>/duel 1 bridge</code> — Glass Bridge (1 GRAM)\n` +
         `• <code>/duel 1.5 chrono</code> — Chrono Blind (1.5 GRAM)\n` +
         `• <code>/duel 5 split</code> — Split or Steal (min. 5 GRAM)\n` +
-        `• <code>/duel 2 shotgun</code> — Cyber Shotgun (2 GRAM)\n` +
+        `• <code>/duel 2 shotgun</code> — Shotgun (2 GRAM)\n` +
         `• <code>/duel 1 connect4</code> — Connect 4 (1 GRAM)\n` +
         `• <code>/duel 1 cubecount</code> — Cube Count (1 GRAM)\n\n` +
         `<i>Tap below to open Sfida Arena:</i>`;

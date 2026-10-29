@@ -23,7 +23,7 @@ export default defineConfig({
           const origin = `${proto}://${host}`;
           const manifest = {
             url: origin,
-            name: 'Sfida Cyber Arena',
+            name: 'Sfida Arena',
             iconUrl: 'https://ton.org/download/ton_symbol.png',
             termsOfUseUrl: `${origin}`,
             privacyPolicyUrl: `${origin}`,

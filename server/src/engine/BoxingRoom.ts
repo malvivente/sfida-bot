@@ -120,7 +120,7 @@ export class BoxingRoom extends BaseGameRoom {
 
     this.broadcast({
       type: 'BOXING_START',
-      message: `Cyber Boxing started! Round 1!`,
+      message: `Boxing started! Round 1!`,
       gameData: this.getGamePayload(),
     });
     this.broadcastRoomState();

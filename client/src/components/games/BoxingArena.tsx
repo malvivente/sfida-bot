@@ -89,6 +89,46 @@ interface FloatingText {
   alpha: number;
 }
 
+interface BoxingSprites {
+  ringBg?: HTMLImageElement;
+  boxerAIdle?: HTMLImageElement;
+  boxerAJab?: HTMLImageElement;
+  boxerAHook?: HTMLImageElement;
+  boxerABlock?: HTMLImageElement;
+  boxerAHurt?: HTMLImageElement;
+  boxerBIdle?: HTMLImageElement;
+  boxerBJab?: HTMLImageElement;
+  boxerBHook?: HTMLImageElement;
+  boxerBBlock?: HTMLImageElement;
+  boxerBHurt?: HTMLImageElement;
+}
+
+const BOXING_SPRITE_PATHS = {
+  ringBg: '/assets/games/boxing/ring_bg.webp',
+  boxerAIdle: '/assets/games/boxing/boxer_a_idle.webp',
+  boxerAJab: '/assets/games/boxing/boxer_a_jab.webp',
+  boxerAHook: '/assets/games/boxing/boxer_a_hook.webp',
+  boxerABlock: '/assets/games/boxing/boxer_a_block.webp',
+  boxerAHurt: '/assets/games/boxing/boxer_a_hurt.webp',
+  boxerBIdle: '/assets/games/boxing/boxer_b_idle.webp',
+  boxerBJab: '/assets/games/boxing/boxer_b_jab.webp',
+  boxerBHook: '/assets/games/boxing/boxer_b_hook.webp',
+  boxerBBlock: '/assets/games/boxing/boxer_b_block.webp',
+  boxerBHurt: '/assets/games/boxing/boxer_b_hurt.webp',
+};
+
+const BOXING_SPRITE_CACHE: Record<string, HTMLImageElement> = {};
+
+function getOrLoadBoxingSprite(src: string): HTMLImageElement {
+  if (BOXING_SPRITE_CACHE[src]) {
+    return BOXING_SPRITE_CACHE[src];
+  }
+  const img = new Image();
+  img.src = src;
+  BOXING_SPRITE_CACHE[src] = img;
+  return img;
+}
+
 export const BoxingArena: React.FC<BoxingArenaProps> = ({
   gameData,
   role,
@@ -118,7 +158,19 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
   const { t } = useI18n();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const ringBgRef = useRef<HTMLImageElement | null>(null);
+  const spritesRef = useRef<BoxingSprites>({
+    ringBg: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.ringBg),
+    boxerAIdle: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAIdle),
+    boxerAJab: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAJab),
+    boxerAHook: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAHook),
+    boxerABlock: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerABlock),
+    boxerAHurt: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAHurt),
+    boxerBIdle: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBIdle),
+    boxerBJab: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBJab),
+    boxerBHook: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBHook),
+    boxerBBlock: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBBlock),
+    boxerBHurt: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBHurt),
+  });
 
   const [localState, setLocalState] = useState<BoxingState | undefined>(gameData);
   const particlesRef = useRef<CombatParticle[]>([]);
@@ -146,14 +198,6 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     if (gameData) setLocalState(gameData);
   }, [gameData]);
 
-  // Load Ring Background
-  useEffect(() => {
-    const img = new Image();
-    img.src = '/assets/boxing/ring_bg.png';
-    img.onload = () => {
-      ringBgRef.current = img;
-    };
-  }, []);
 
   // Process hit events for particles and floating text
   useEffect(() => {
@@ -307,32 +351,33 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       }
 
       // 1. Draw Ring Background
-      if (ringBgRef.current && ringBgRef.current.complete) {
-        ctx.drawImage(ringBgRef.current, 0, 0, ARENA_W, ARENA_H);
+      const bgImg = spritesRef.current.ringBg;
+      if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+        ctx.drawImage(bgImg, 0, 0, ARENA_W, ARENA_H);
       } else {
-        // Fallback procedural cyberpunk boxing ring
+        // Fallback classic boxing arena
         const grad = ctx.createLinearGradient(0, 0, 0, ARENA_H);
-        grad.addColorStop(0, '#0a0c16');
-        grad.addColorStop(0.6, '#11162b');
-        grad.addColorStop(1, '#080a14');
+        grad.addColorStop(0, '#020617');
+        grad.addColorStop(0.7, '#0f172a');
+        grad.addColorStop(1, '#1e293b');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
-        // Ring floor
-        ctx.fillStyle = '#1e243d';
-        ctx.fillRect(100, FLOOR_Y - 20, 600, 70);
-        ctx.strokeStyle = '#38bdf8';
+        // Ring canvas mat
+        ctx.fillStyle = '#242f42';
+        ctx.fillRect(70, FLOOR_Y - 45, 660, 115);
+        ctx.strokeStyle = '#334155';
         ctx.lineWidth = 2;
-        ctx.strokeRect(100, FLOOR_Y - 20, 600, 70);
+        ctx.strokeRect(70, FLOOR_Y - 45, 660, 115);
 
-        // Ropes
-        const ropeY = [230, 280, 330];
+        // Ropes (Red top, White middle, Blue bottom)
+        const ropeY = [190, 240, 290];
         ropeY.forEach((ry, idx) => {
-          ctx.strokeStyle = idx === 0 ? '#ef4444' : idx === 1 ? '#e2e8f0' : '#3b82f6';
-          ctx.lineWidth = 4;
+          ctx.strokeStyle = idx === 0 ? '#ef4444' : idx === 1 ? '#f8fafc' : '#3b82f6';
+          ctx.lineWidth = 5;
           ctx.beginPath();
-          ctx.moveTo(110, ry);
-          ctx.lineTo(690, ry);
+          ctx.moveTo(80, ry);
+          ctx.lineTo(720, ry);
           ctx.stroke();
         });
       }
@@ -413,255 +458,155 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [localState, playerAName, playerBName]);
 
-  // Stylized Retro-Arcade Chibi Boxer Drawer (Matches Head Soccer Aesthetic)
+  // Mascot Boxer Sprite Renderer (Exact Head Soccer Art Style)
   const drawBoxer = (ctx: CanvasRenderingContext2D, b: BoxerState, facingRight: boolean) => {
     ctx.save();
-    const x = b.x;
+    const isBlue = b.side === 'A';
+    let x = b.x;
     let y = FLOOR_Y;
     const dir = facingRight ? 1 : -1;
-    const isBlue = b.side === 'A';
-    const primaryColor = isBlue ? '#06b6d4' : '#f43f5e';
-    const secondaryColor = isBlue ? '#0284c7' : '#dc2626';
-    const headColor = isBlue ? '#38bdf8' : '#f87171';
-    const outlineColor = '#0f172a';
     const isMe = role === 'player' && userSide === b.side;
+    const primaryColor = isBlue ? '#38bdf8' : '#f87171';
 
-    // State Modifiers
-    if (b.isDodging) {
-      y += 28; // duck down
-    } else if (b.state === 'UPPERCUT') {
-      y -= 25; // launch leap
-    } else if (b.state === 'KNOCKED_DOWN') {
-      // Draw knocked down horizontal body
-      ctx.translate(x, FLOOR_Y - 12);
+    // 1. Handle Knocked Down (Rotated flat on the ring canvas with dizzy stars)
+    if (b.state === 'KNOCKED_DOWN') {
+      ctx.translate(x, FLOOR_Y - 14);
       ctx.rotate((dir * Math.PI) / 2);
-      ctx.fillStyle = primaryColor;
-      ctx.beginPath();
-      ctx.roundRect(-16, -35, 32, 70, 8);
-      ctx.fill();
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
-      // Head
-      ctx.beginPath();
-      ctx.arc(0, -50, 24, 0, Math.PI * 2);
-      ctx.fillStyle = headColor;
-      ctx.fill();
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
+      const hurtImg = isBlue ? spritesRef.current.boxerAHurt : spritesRef.current.boxerBHurt;
+      const targetH = 135;
+      if (hurtImg && hurtImg.complete && hurtImg.naturalWidth > 0) {
+        const targetW = targetH * (hurtImg.naturalWidth / hurtImg.naturalHeight);
+        ctx.drawImage(hurtImg, -targetW / 2, -targetH, targetW, targetH);
+      }
+      ctx.restore();
+
+      // Dizzy stars floating above knocked down boxer
+      const starsY = FLOOR_Y - 45;
+      const now = Date.now() / 250;
+      ctx.save();
+      for (let s = 0; s < 3; s++) {
+        const ang = now + (s * (Math.PI * 2)) / 3;
+        const sx = x + Math.cos(ang) * 24;
+        const sy = starsY + Math.sin(ang) * 8;
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
       ctx.restore();
       return;
     }
 
-    // Shadow on canvas
+    // 2. Ring Floor Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
-    ctx.ellipse(x, FLOOR_Y, b.isDodging ? 38 : 32, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, FLOOR_Y, b.isDodging ? 46 : 38, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Body Motion Recoil on Hurt
-    const hurtRecoil = b.state === 'HURT' ? -dir * 12 : 0;
+    // 3. Select Appropriate Sprite Image
+    let activeImg: HTMLImageElement | undefined;
+    let targetH = 138;
 
-    // 1. Boots & Legs
-    ctx.fillStyle = '#1e293b';
-    ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = 3;
-    // Back Boot
-    ctx.beginPath();
-    ctx.roundRect(x - 14 + hurtRecoil, y - 24, 12, 24, [0, 0, 4, 4]);
-    ctx.fill();
-    ctx.stroke();
-    // Front Boot
-    ctx.beginPath();
-    ctx.roundRect(x + 2 + hurtRecoil, y - 24, 12, 24, [0, 0, 4, 4]);
-    ctx.fill();
-    ctx.stroke();
-
-    // 2. Boxing Shorts
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(x - 17 + hurtRecoil, y - 52, 34, 30, [4, 4, 2, 2]);
-    ctx.fill();
-    ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-    // Waistband
-    ctx.fillStyle = primaryColor;
-    ctx.fillRect(x - 15 + hurtRecoil, y - 51, 30, 6);
-
-    // 3. Compact Muscular Torso
-    ctx.fillStyle = secondaryColor;
-    ctx.beginPath();
-    ctx.roundRect(x - 16 + hurtRecoil, y - 82, 32, 32, 6);
-    ctx.fill();
-    ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-
-    // Chest Emblem / Cyber Core
-    ctx.fillStyle = primaryColor;
-    ctx.beginPath();
-    ctx.arc(x + hurtRecoil, y - 66, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 4. Big Chibi Head (Radius 28, matching Head Soccer)
-    const headCenterY = y - 108;
-    ctx.fillStyle = headColor;
-    ctx.beginPath();
-    ctx.arc(x + hurtRecoil, headCenterY, 28, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-
-    // Head Specular Catchlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.beginPath();
-    ctx.arc(x + hurtRecoil - 10, headCenterY - 10, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cyber Visor / Headgear
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(x - 22 + hurtRecoil, headCenterY - 10, 44, 18, 5);
-    ctx.fill();
-    ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    // Glowing Visor Strip
-    ctx.fillStyle = primaryColor;
-    ctx.beginPath();
-    ctx.roundRect(x - 18 + hurtRecoil, headCenterY - 6, 36, 10, 3);
-    ctx.fill();
-
-    // 5. Oversized Boxing Gloves & Actions
-    const gloveRadius = 16;
-
-    if (b.isGuarding) {
-      // High Guard Shield Pose
-      ctx.fillStyle = secondaryColor;
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 3;
-      // Front Glove
-      ctx.beginPath();
-      ctx.arc(x + dir * 20 + hurtRecoil, headCenterY + 4, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      // Back Glove
-      ctx.beginPath();
-      ctx.arc(x + dir * 14 + hurtRecoil, headCenterY + 22, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Energy Shield Arc
-      ctx.strokeStyle = primaryColor;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(x + dir * 28 + hurtRecoil, headCenterY + 12, 34, -Math.PI / 2, Math.PI / 2, !facingRight);
-      ctx.stroke();
+    if (b.state === 'HURT') {
+      activeImg = isBlue ? spritesRef.current.boxerAHurt : spritesRef.current.boxerBHurt;
+      targetH = 138;
+    } else if (b.isGuarding) {
+      activeImg = isBlue ? spritesRef.current.boxerABlock : spritesRef.current.boxerBBlock;
+      targetH = 132;
     } else if (b.state === 'JAB') {
-      // Lead Jab Extended Straight
-      const punchExt = 62;
-      ctx.fillStyle = secondaryColor;
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 3;
-      // Rear glove guard
-      ctx.beginPath();
-      ctx.arc(x - dir * 12 + hurtRecoil, headCenterY + 14, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Speed Trail
-      ctx.strokeStyle = primaryColor;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(x + hurtRecoil, headCenterY - 2);
-      ctx.lineTo(x + dir * (punchExt - 12) + hurtRecoil, headCenterY - 2);
-      ctx.stroke();
-
-      // Extended glove
-      ctx.fillStyle = '#38bdf8';
-      ctx.beginPath();
-      ctx.arc(x + dir * punchExt + hurtRecoil, headCenterY - 2, gloveRadius + 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else if (b.state === 'HOOK') {
-      // Heavy Curved Hook
-      const hookExt = 52;
-      ctx.fillStyle = '#f59e0b';
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 3.5;
-      // Rear glove
-      ctx.beginPath();
-      ctx.arc(x - dir * 10 + hurtRecoil, headCenterY + 18, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Hook Arc Trail
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(x + hurtRecoil, headCenterY + 10, hookExt, -Math.PI / 3, Math.PI / 3, !facingRight);
-      ctx.stroke();
-
-      // Hook Fist
-      ctx.beginPath();
-      ctx.arc(x + dir * hookExt + hurtRecoil, headCenterY + 10, gloveRadius + 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else if (b.state === 'UPPERCUT') {
-      // Super Uppercut Skyward Thrust
-      ctx.fillStyle = '#fbbf24';
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 4;
-      // Glowing aura
-      ctx.beginPath();
-      ctx.arc(x + dir * 32 + hurtRecoil, headCenterY - 38, gloveRadius + 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Lightning arcs
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(x + dir * 15 + hurtRecoil, headCenterY + 10);
-      ctx.lineTo(x + dir * 32 + hurtRecoil, headCenterY - 38);
-      ctx.stroke();
+      activeImg = isBlue ? spritesRef.current.boxerAJab : spritesRef.current.boxerBJab;
+      targetH = 138;
+    } else if (b.state === 'HOOK' || b.state === 'UPPERCUT') {
+      activeImg = isBlue ? spritesRef.current.boxerAHook : spritesRef.current.boxerBHook;
+      targetH = 138;
     } else {
-      // Idle Bounce Stance
-      ctx.fillStyle = secondaryColor;
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = 3;
-      // Lead Glove
-      ctx.beginPath();
-      ctx.arc(x + dir * 18 + hurtRecoil, headCenterY + 12, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      // Rear Glove
-      ctx.beginPath();
-      ctx.arc(x - dir * 10 + hurtRecoil, headCenterY + 16, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      activeImg = isBlue ? spritesRef.current.boxerAIdle : spritesRef.current.boxerBIdle;
+      targetH = 138;
     }
 
-    // 6. "YOU" Marker above the active player's boxer
+    // 4. State Y-offset modifiers (Dodge ducking or leaping uppercut)
+    if (b.isDodging) {
+      y += 24; // duck down into weave
+    } else if (b.state === 'UPPERCUT') {
+      y -= 22; // leaping uppercut
+    }
+
+    // 5. Draw Sprite Image
+    if (activeImg && activeImg.complete && activeImg.naturalWidth > 0) {
+      const targetW = targetH * (activeImg.naturalWidth / activeImg.naturalHeight);
+      let offsetX = -targetW / 2;
+      // Precision hitbox center alignment for forward-extended punch sprites
+      if (b.state === 'JAB') {
+        offsetX = facingRight ? -targetW * 0.40 : -targetW * 0.60;
+      } else if (b.state === 'HOOK') {
+        offsetX = facingRight ? -targetW * 0.42 : -targetW * 0.58;
+      }
+      const offsetY = -targetH;
+
+      ctx.drawImage(activeImg, x + offsetX, y + offsetY, targetW, targetH);
+    } else {
+      // High-quality canvas fallback in exact Head Soccer mascot style
+      const headColor = isBlue ? '#38bdf8' : '#f87171';
+      const bodyColor = isBlue ? '#0284c7' : '#dc2626';
+
+      // Torso & shorts
+      ctx.fillStyle = bodyColor;
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.roundRect(x - 18, y - 55, 36, 45, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Big Round Mascot Head
+      ctx.fillStyle = headColor;
+      ctx.beginPath();
+      ctx.arc(x, y - 85, 32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Specular highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath();
+      ctx.ellipse(x - 10, y - 98, 9, 4, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Fierce Ninja Eyes
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      if (facingRight) {
+        ctx.moveTo(x + 2, y - 88);
+        ctx.lineTo(x + 16, y - 84);
+        ctx.lineTo(x + 12, y - 76);
+        ctx.lineTo(x, y - 80);
+      } else {
+        ctx.moveTo(x - 2, y - 88);
+        ctx.lineTo(x - 16, y - 84);
+        ctx.lineTo(x - 12, y - 76);
+        ctx.lineTo(x, y - 80);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 6. "YOU" Marker above active player boxer head
     if (isMe) {
-      const badgeY = headCenterY - 42;
-      ctx.save();
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      const badgeY = y - targetH - 12;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
       ctx.strokeStyle = primaryColor;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(x + hurtRecoil - 18, badgeY - 12, 36, 15, 4);
+      ctx.roundRect(x - 18, badgeY - 12, 36, 16, 4);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = primaryColor;
       ctx.font = '900 9px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('YOU', x + hurtRecoil, badgeY - 1);
-      ctx.restore();
+      ctx.fillText('YOU', x, badgeY);
     }
 
     ctx.restore();
@@ -745,7 +690,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
               <span className="font-heading font-black text-white uppercase tracking-wider">
-                {t('boxing.title') || 'CYBER BOXING CLASH'}
+                {t('boxing.title') || 'BOXE 1V1'}
               </span>
             </div>
             <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-heading font-black text-[10px]">
