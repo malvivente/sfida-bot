@@ -1295,13 +1295,13 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           }
         } else {
           const r = Math.random();
-          if (dist > 140) {
+          if (dist > 80) {
             pB.state = 'MOVE';
             pB.x = Math.max(140, pB.x - 4.2);
-          } else if (dist < 70 && r < 0.25) {
+          } else if (dist < 60 && r < 0.22) {
             pB.state = 'MOVE';
             pB.x = Math.min(660, pB.x + 3.8);
-          } else if (pB.superMeter >= 100 && dist <= 140) {
+          } else if (pB.superMeter >= 100 && dist <= 78) {
             pB.superMeter = 0;
             pB.state = 'UPPERCUT';
             pB.stateTicks = 16;
@@ -1316,12 +1316,12 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
               pB.state = 'BLOCK';
               pB.isGuarding = true;
             }
-          } else if (dist <= 130 && r < 0.12 && pB.stamina >= 20) {
+          } else if (dist <= 72 && r < 0.18 && pB.stamina >= 20) {
             pB.stamina -= 20;
             pB.state = 'HOOK';
             pB.stateTicks = 12;
             pB.isGuarding = false;
-          } else if (dist <= 145 && r < 0.25 && pB.stamina >= 10) {
+          } else if (dist <= 82 && r < 0.35 && pB.stamina >= 10) {
             pB.stamina -= 10;
             pB.state = 'JAB';
             pB.stateTicks = 7;
@@ -1341,7 +1341,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
 
         // Hit Detection: Player A hitting Bot B
         if ((pA.state === 'JAB' && pA.stateTicks === 3) || (pA.state === 'HOOK' && pA.stateTicks === 6) || (pA.state === 'UPPERCUT' && pA.stateTicks === 8)) {
-          const range = pA.state === 'UPPERCUT' ? 150 : pA.state === 'HOOK' ? 130 : 145;
+          const range = pA.state === 'UPPERCUT' ? 78 : pA.state === 'HOOK' ? 72 : 82;
           if (dist <= range && !pB.isDodging) {
             const isBlocked = pB.isGuarding && pB.stamina >= 10 && pA.state !== 'UPPERCUT';
             const baseDmg = pA.state === 'UPPERCUT' ? 38 : pA.state === 'HOOK' ? 18 : 8;
@@ -1368,7 +1368,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
 
         // Hit Detection: Bot B hitting Player A
         if ((pB.state === 'JAB' && pB.stateTicks === 3) || (pB.state === 'HOOK' && pB.stateTicks === 6) || (pB.state === 'UPPERCUT' && pB.stateTicks === 8)) {
-          const range = pB.state === 'UPPERCUT' ? 150 : pB.state === 'HOOK' ? 130 : 145;
+          const range = pB.state === 'UPPERCUT' ? 78 : pB.state === 'HOOK' ? 72 : 82;
           if (dist <= range && !pA.isDodging) {
             const isBlocked = pA.isGuarding && pA.stamina >= 10 && pB.state !== 'UPPERCUT';
             const baseDmg = pB.state === 'UPPERCUT' ? 38 : pB.state === 'HOOK' ? 18 : 8;
@@ -1772,6 +1772,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             onSubscribeTick={() => () => {}}
             playerAName={playerName}
             playerBName={botName}
+            playerAReady={true}
+            playerBReady={true}
+            hasPlayerB={true}
             roomState={roomState}
             wagerTon="0.00"
             isCreator={true}

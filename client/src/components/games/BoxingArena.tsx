@@ -139,6 +139,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
   playerBReady = false,
   isReady = false,
   onReady,
+  countdownSeconds,
   roomState,
   wagerTon,
   isWinner,
@@ -245,13 +246,13 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     let textColor = '#ffffff';
 
     if (hit.isBlocked) {
-      label = `🛡️ BLOCKED -${hit.damage}`;
+      label = `🛡️ ${t('boxing.blocked') || 'BLOCKED'} -${hit.damage}`;
       textColor = '#93c5fd';
     } else if (hit.type === 'COUNTER') {
-      label = `💥 COUNTER! -${hit.damage}`;
+      label = `💥 ${t('boxing.counter') || 'COUNTER!'} -${hit.damage}`;
       textColor = '#fef08a';
     } else if (hit.type === 'UPPERCUT') {
-      label = `⚡ SUPER K.O.! -${hit.damage}`;
+      label = `⚡ ${t('boxing.superKo') || 'SUPER K.O.!'} -${hit.damage}`;
       textColor = '#f59e0b';
     }
 
@@ -508,30 +509,30 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
 
     // 3. Select Appropriate Sprite Image
     let activeImg: HTMLImageElement | undefined;
-    let targetH = 138;
+    let targetH = 108;
 
     if (b.state === 'HURT') {
       activeImg = isBlue ? spritesRef.current.boxerAHurt : spritesRef.current.boxerBHurt;
-      targetH = 138;
+      targetH = 108;
     } else if (b.isGuarding) {
       activeImg = isBlue ? spritesRef.current.boxerABlock : spritesRef.current.boxerBBlock;
-      targetH = 132;
+      targetH = 98;
     } else if (b.state === 'JAB') {
       activeImg = isBlue ? spritesRef.current.boxerAJab : spritesRef.current.boxerBJab;
-      targetH = 138;
+      targetH = 108;
     } else if (b.state === 'HOOK' || b.state === 'UPPERCUT') {
       activeImg = isBlue ? spritesRef.current.boxerAHook : spritesRef.current.boxerBHook;
-      targetH = 138;
+      targetH = 108;
     } else {
       activeImg = isBlue ? spritesRef.current.boxerAIdle : spritesRef.current.boxerBIdle;
-      targetH = 138;
+      targetH = 108;
     }
 
     // 4. State Y-offset modifiers (Dodge ducking or leaping uppercut)
     if (b.isDodging) {
-      y += 24; // duck down into weave
+      y += 18; // duck down into weave
     } else if (b.state === 'UPPERCUT') {
-      y -= 22; // leaping uppercut
+      y -= 18; // leaping uppercut
     }
 
     // 5. Draw Sprite Image
@@ -547,6 +548,39 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       const offsetY = -targetH;
 
       ctx.drawImage(activeImg, x + offsetX, y + offsetY, targetW, targetH);
+
+      // Dynamic Punch Action Swoosh when striking (matching Head Soccer visual style)
+      if (b.state === 'JAB' || b.state === 'HOOK' || b.state === 'UPPERCUT') {
+        ctx.save();
+        ctx.beginPath();
+        const punchX = facingRight ? x + targetW * 0.45 : x - targetW * 0.45;
+        const punchY = y - targetH * (b.state === 'UPPERCUT' ? 0.65 : 0.48);
+
+        if (b.state === 'UPPERCUT') {
+          // Fiery upward arc for uppercut
+          ctx.arc(punchX, punchY + 14, 28, Math.PI * 0.3, Math.PI * 0.85, true);
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 4;
+        } else if (b.state === 'HOOK') {
+          // Curved powerful hook swoosh
+          if (facingRight) {
+            ctx.arc(punchX - 8, punchY, 24, -0.85, 0.85);
+          } else {
+            ctx.arc(punchX + 8, punchY, 24, Math.PI - 0.85, Math.PI + 0.85);
+          }
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = 3.5;
+        } else {
+          // Quick straight jab streak
+          ctx.moveTo(punchX - (facingRight ? 18 : -18), punchY);
+          ctx.lineTo(punchX + (facingRight ? 16 : -16), punchY);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.lineWidth = 3;
+        }
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+      }
     } else {
       // High-quality canvas fallback in exact Head Soccer mascot style
       const headColor = isBlue ? '#38bdf8' : '#f87171';
@@ -852,7 +886,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
               {/* Timer Center Clock */}
               <div className="px-4 flex flex-col items-center">
                 <span className="text-[10px] font-heading font-bold text-slate-400 uppercase">
-                  ROUND 1
+                  {t('boxing.round1') || 'ROUND 1'}
                 </span>
                 <div className="flex items-center space-x-1 text-base font-mono font-black text-amber-300">
                   <Clock className="w-4 h-4 text-amber-400" />
@@ -940,14 +974,35 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                   💥 K.O.!
                 </span>
                 <span className="text-xs font-heading font-bold text-white uppercase mt-1">
-                  KNOCKOUT DECISIVO
+                  {t('boxing.koDecisive') || 'KNOCKOUT DECISIVO'}
+                </span>
+              </div>
+            )}
+
+            {/* Betting Window Countdown Overlay inside Screen */}
+            {roomState === 'BETTING_WINDOW' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 p-4 text-center">
+                <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider animate-pulse flex items-center space-x-1 mb-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{t('arena.bettingWindowTitle') || 'FINESTRA SCOMMESSE'}</span>
+                </span>
+                <span className="text-5xl font-mono font-black text-white">
+                  00:
+                  {countdownSeconds !== null && countdownSeconds !== undefined
+                    ? countdownSeconds < 10
+                      ? `0${countdownSeconds}`
+                      : countdownSeconds
+                    : '20'}
+                </span>
+                <span className="text-xs text-slate-300 mt-2 font-medium">
+                  {t('boxing.bettingDesc') || 'Entrambi i pugili sono pronti! Il match sta per cominciare...'}
                 </span>
               </div>
             )}
           </div>
 
-          {/* 4. MOBILE CONTROLS (Only visible to player) */}
-          {role === 'player' && (
+          {/* 4. MOBILE CONTROLS (Only visible to player during match) */}
+          {role === 'player' && roomState !== 'BETTING_WINDOW' && (
             <div className="grid grid-cols-2 gap-3 pt-1 select-none touch-none">
               {/* Left Controls: Movement & Defense */}
               <div className="p-2.5 rounded-3xl bg-[#141724] border border-white/10 space-y-2 select-none touch-none">
@@ -1023,7 +1078,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                     }}
                     className="py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform touch-none select-none"
                   >
-                    🥊 JAB
+                    <span>🥊 {t('boxing.jab') || 'JAB'}</span>
                   </button>
 
                   {/* HOOK */}
@@ -1040,7 +1095,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                     }}
                     className="py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform touch-none select-none"
                   >
-                    💥 GANCIO
+                    <span>💥 {t('boxing.hook') || 'GANCIO'}</span>
                   </button>
                 </div>
 
@@ -1066,7 +1121,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                   }`}
                 >
                   <Zap className="w-4 h-4 fill-current" />
-                  <span>{currentSuper >= 100 ? (t('boxing.superReady') || '⚡ SUPER K.O. READY!') : 'SUPER K.O. (0%)'}</span>
+                  <span>{currentSuper >= 100 ? (t('boxing.superReady') || '⚡ SUPER K.O. PRONTO!') : `${t('boxing.superKo') || 'SUPER K.O.'} (${Math.round(currentSuper)}%)`}</span>
                 </button>
               </div>
             </div>

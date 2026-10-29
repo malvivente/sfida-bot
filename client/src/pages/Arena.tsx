@@ -1792,6 +1792,7 @@ export const Arena: React.FC<ArenaProps> = ({
               playerBReady={socketData.playerBReady}
               isReady={isCurrentUserReady}
               onReady={handleReady}
+              countdownSeconds={socketData.countdownSeconds}
               roomState={socketData.roomState}
               wagerTon={socketData.activeWagerTon || activeWagerTon}
               isCreator={isCurrentCreator}

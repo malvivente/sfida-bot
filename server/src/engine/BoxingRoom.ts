@@ -324,18 +324,18 @@ export class BoxingRoom extends BaseGameRoom {
 
     if (!isJabHitFrame && !isHookHitFrame && !isUppercutHitFrame) return;
 
-    let range = 145;
+    let range = 82;
     let baseDmg = 9;
     let hitType: BoxingHitEvent['type'] = 'JAB';
     let superGain = 12;
 
     if (attacker.state === 'HOOK') {
-      range = 130;
+      range = 72;
       baseDmg = 19;
       hitType = 'HOOK';
       superGain = 20;
     } else if (attacker.state === 'UPPERCUT') {
-      range = 150;
+      range = 78;
       baseDmg = 40;
       hitType = 'UPPERCUT';
       superGain = 0;
@@ -427,11 +427,8 @@ export class BoxingRoom extends BaseGameRoom {
   public handleGameAction(wallet: string, data: any) {
     if (this.state !== 'GAME_ACTIVE' || this.phase !== 'FIGHTING') return;
 
-    const side = this.isSameWallet(wallet, this.playerA.walletAddress)
-      ? 'A'
-      : (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress) ? 'B' : null);
-
-    if (!side) return;
+    const side = this.getPlayerSide(wallet);
+    if (side !== 'A' && side !== 'B') return;
 
     const inp = side === 'A' ? this.inputA : this.inputB;
 

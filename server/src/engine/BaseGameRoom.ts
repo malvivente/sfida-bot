@@ -728,8 +728,8 @@ export abstract class BaseGameRoom {
       this.bettingTimer = undefined;
     }
 
-    if (!this.allowSpectators) {
-      // Spectators not allowed for this private match: start match immediately!
+    if (!this.allowSpectators || this.config.wagerAmountNano === 0n) {
+      // Spectators not allowed or F2P (0 wager): start match immediately without betting delay!
       this.state = 'GAME_ACTIVE';
       this.onGameStart();
       return;
