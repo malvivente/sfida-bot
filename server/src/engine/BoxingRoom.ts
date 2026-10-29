@@ -1,12 +1,12 @@
 import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { BoxingState, BoxerState, BoxerAction, BoxingHitEvent, CoinTossData } from '../types/gameTypes.js';
+import { BoxingState, BoxerState, BoxingHitEvent, CoinTossData } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
 
 const ARENA_W = 800;
 const RING_MIN_X = 140;
 const RING_MAX_X = 660;
-const MIN_BOXER_DIST = 70;
-const MOVE_SPEED = 5.8;
+const MIN_BOXER_DIST = 55;
+const MOVE_SPEED = 6.4;
 
 const TICK_RATE_HZ = 30;
 const TICK_MS = Math.round(1000 / TICK_RATE_HZ); // 33ms
@@ -15,10 +15,10 @@ interface PlayerInput {
   left: boolean;
   right: boolean;
   block: boolean;
-  jabTrigger: boolean;
-  hookTrigger: boolean;
-  dodgeTrigger: boolean;
-  superTrigger: boolean;
+  jabBufferTicks: number;
+  hookBufferTicks: number;
+  dodgeBufferTicks: number;
+  superBufferTicks: number;
 }
 
 export class BoxingRoom extends BaseGameRoom {
@@ -36,20 +36,20 @@ export class BoxingRoom extends BaseGameRoom {
     left: false,
     right: false,
     block: false,
-    jabTrigger: false,
-    hookTrigger: false,
-    dodgeTrigger: false,
-    superTrigger: false,
+    jabBufferTicks: 0,
+    hookBufferTicks: 0,
+    dodgeBufferTicks: 0,
+    superBufferTicks: 0,
   };
 
   private inputB: PlayerInput = {
     left: false,
     right: false,
     block: false,
-    jabTrigger: false,
-    hookTrigger: false,
-    dodgeTrigger: false,
-    superTrigger: false,
+    jabBufferTicks: 0,
+    hookBufferTicks: 0,
+    dodgeBufferTicks: 0,
+    superBufferTicks: 0,
   };
 
   private loopInterval?: NodeJS.Timeout;
@@ -88,7 +88,7 @@ export class BoxingRoom extends BaseGameRoom {
   public getGamePayload(): BoxingState {
     return {
       phase: this.phase,
-      timeRemainingMs: this.timeRemainingMs,
+      timeRemainingMs: Math.max(0, Math.round(this.timeRemainingMs)),
       round: this.round,
       boxerA: this.boxerA,
       boxerB: this.boxerB,
@@ -123,8 +123,10 @@ export class BoxingRoom extends BaseGameRoom {
       message: `Cyber Boxing started! Round 1!`,
       gameData: this.getGamePayload(),
     });
+    this.broadcastRoomState();
 
     this.startPreMatchCountdown();
+    this.startPhysicsLoop();
   }
 
   private startPreMatchCountdown() {
@@ -136,7 +138,6 @@ export class BoxingRoom extends BaseGameRoom {
         clearInterval(this.countdownTimer);
         this.countdownTimer = undefined;
         this.phase = 'FIGHTING';
-        this.startPhysicsLoop();
       }
       this.broadcastRoomState();
     }, 1000);
@@ -151,17 +152,23 @@ export class BoxingRoom extends BaseGameRoom {
         this.cleanupGameTimers();
         return;
       }
-      this.stepCombat();
+
+      if (this.phase === 'FIGHTING') {
+        this.stepCombat();
+      }
+
       if (this.state !== 'GAME_ACTIVE') {
         this.cleanupGameTimers();
         return;
       }
+
       this.broadcast({
         type: 'BOXING_TICK',
         gameData: this.getGamePayload(),
       });
-      // Clear hit event so it triggers only once
-      if (this.lastHitEvent && this.phase === 'FIGHTING') {
+
+      // Clear one-shot hit event
+      if (this.lastHitEvent) {
         this.lastHitEvent = undefined;
       }
     }, TICK_MS);
@@ -171,8 +178,6 @@ export class BoxingRoom extends BaseGameRoom {
     const now = Date.now();
     const dtMs = Math.min(100, Math.max(10, now - this.lastTickEpoch));
     this.lastTickEpoch = now;
-
-    if (this.phase !== 'FIGHTING') return;
 
     // Decrement round timer
     this.timeRemainingMs = Math.max(0, this.timeRemainingMs - dtMs);
@@ -197,13 +202,19 @@ export class BoxingRoom extends BaseGameRoom {
   private updateBoxer(b: BoxerState, inp: PlayerInput, opponent: BoxerState) {
     // Passive stamina recovery
     if (b.state === 'IDLE' || b.state === 'MOVE') {
-      b.stamina = Math.min(100, b.stamina + 0.45); // ~14 stamina/s
+      b.stamina = Math.min(100, b.stamina + 0.6); // ~18 stamina/s
     } else if (b.state === 'BLOCK') {
-      b.stamina = Math.min(100, b.stamina + 0.1);
+      b.stamina = Math.min(100, b.stamina + 0.15);
     }
 
-    // Passive super meter slow tick (+1.5%/s)
-    b.superMeter = Math.min(100, b.superMeter + 0.05);
+    // Passive super meter charge (+2%/s)
+    b.superMeter = Math.min(100, b.superMeter + 0.07);
+
+    // Decrement input buffers
+    if (inp.jabBufferTicks > 0) inp.jabBufferTicks--;
+    if (inp.hookBufferTicks > 0) inp.hookBufferTicks--;
+    if (inp.dodgeBufferTicks > 0) inp.dodgeBufferTicks--;
+    if (inp.superBufferTicks > 0) inp.superBufferTicks--;
 
     // Decrement state ticks
     if (b.stateTicks > 0) {
@@ -212,10 +223,9 @@ export class BoxingRoom extends BaseGameRoom {
       this.processActionHitFrame(b, opponent);
 
       if (b.stateTicks <= 0) {
-        // Return to idle / block
         b.isDodging = false;
         b.isCounterVulnerable = false;
-        if (inp.block && b.stamina >= 10) {
+        if (inp.block && b.stamina >= 8) {
           b.state = 'BLOCK';
           b.isGuarding = true;
         } else {
@@ -223,60 +233,60 @@ export class BoxingRoom extends BaseGameRoom {
           b.isGuarding = false;
         }
       }
-      return; // Boxer is locked into animation
+      return; // Boxer locked in current animation
     }
 
-    // Handle new inputs when not locked
+    // Process buffered or active inputs
     // 1. Super KO Uppercut
-    if (inp.superTrigger && b.superMeter >= 100) {
-      inp.superTrigger = false;
+    if (inp.superBufferTicks > 0 && b.superMeter >= 100) {
+      inp.superBufferTicks = 0;
       b.superMeter = 0;
       b.state = 'UPPERCUT';
-      b.stateTicks = 16; // 16 ticks = ~528ms
+      b.stateTicks = 14;
       b.isGuarding = false;
       b.isDodging = false;
       return;
     }
 
     // 2. Dodge / Weave
-    if (inp.dodgeTrigger && b.stamina >= 15) {
-      inp.dodgeTrigger = false;
+    if (inp.dodgeBufferTicks > 0 && b.stamina >= 15) {
+      inp.dodgeBufferTicks = 0;
       b.stamina = Math.max(0, b.stamina - 15);
       b.state = 'DODGE';
-      b.stateTicks = 8; // ~264ms invulnerability window
+      b.stateTicks = 8;
       b.isDodging = true;
       b.isGuarding = false;
 
-      // Check if dodged during opponent's startup -> grant counter vulnerability on opponent!
+      // Counter window on opponent if dodging during their punch windup
       if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
         opponent.isCounterVulnerable = true;
       }
       return;
     }
 
-    // 3. Hook
-    if (inp.hookTrigger && b.stamina >= 20) {
-      inp.hookTrigger = false;
-      b.stamina = Math.max(0, b.stamina - 20);
+    // 3. Hook (Heavy body blow)
+    if (inp.hookBufferTicks > 0 && b.stamina >= 18) {
+      inp.hookBufferTicks = 0;
+      b.stamina = Math.max(0, b.stamina - 18);
       b.state = 'HOOK';
-      b.stateTicks = 12; // ~396ms
+      b.stateTicks = 9;
       b.isGuarding = false;
       b.isDodging = false;
       return;
     }
 
-    // 4. Jab
-    if (inp.jabTrigger && b.stamina >= 10) {
-      inp.jabTrigger = false;
-      b.stamina = Math.max(0, b.stamina - 10);
+    // 4. Jab (Fast head strike)
+    if (inp.jabBufferTicks > 0 && b.stamina >= 8) {
+      inp.jabBufferTicks = 0;
+      b.stamina = Math.max(0, b.stamina - 8);
       b.state = 'JAB';
-      b.stateTicks = 7; // ~231ms
+      b.stateTicks = 5;
       b.isGuarding = false;
       b.isDodging = false;
       return;
     }
 
-    // 5. Block
+    // 5. Block / Guard
     if (inp.block && b.stamina >= 8) {
       b.state = 'BLOCK';
       b.isGuarding = true;
@@ -294,7 +304,6 @@ export class BoxingRoom extends BaseGameRoom {
     if (moveDir !== 0) {
       b.state = 'MOVE';
       b.x += moveDir * MOVE_SPEED;
-      // Clamp within ring
       if (b.x < RING_MIN_X) b.x = RING_MIN_X;
       if (b.x > RING_MAX_X) b.x = RING_MAX_X;
     } else {
@@ -305,76 +314,63 @@ export class BoxingRoom extends BaseGameRoom {
   private processActionHitFrame(attacker: BoxerState, defender: BoxerState) {
     const dist = Math.abs(defender.x - attacker.x);
 
-    // Hit frame checks:
-    // JAB hits on tick 4 (stateTicks === 3)
-    // HOOK hits on tick 6 (stateTicks === 6)
-    // UPPERCUT hits on tick 8 (stateTicks === 8)
+    // Hit frames:
+    // JAB hits on tick 2 (stateTicks === 3)
+    // HOOK hits on tick 4 (stateTicks === 5)
+    // UPPERCUT hits on tick 7 (stateTicks === 7)
     const isJabHitFrame = attacker.state === 'JAB' && attacker.stateTicks === 3;
-    const isHookHitFrame = attacker.state === 'HOOK' && attacker.stateTicks === 6;
-    const isUppercutHitFrame = attacker.state === 'UPPERCUT' && attacker.stateTicks === 8;
+    const isHookHitFrame = attacker.state === 'HOOK' && attacker.stateTicks === 5;
+    const isUppercutHitFrame = attacker.state === 'UPPERCUT' && attacker.stateTicks === 7;
 
     if (!isJabHitFrame && !isHookHitFrame && !isUppercutHitFrame) return;
 
-    let range = 135;
-    let baseDmg = 8;
+    let range = 145;
+    let baseDmg = 9;
     let hitType: BoxingHitEvent['type'] = 'JAB';
-    let superGain = 10;
+    let superGain = 12;
 
     if (attacker.state === 'HOOK') {
-      range = 115;
-      baseDmg = 18;
+      range = 130;
+      baseDmg = 19;
       hitType = 'HOOK';
-      superGain = 18;
+      superGain = 20;
     } else if (attacker.state === 'UPPERCUT') {
-      range = 140;
-      baseDmg = 38;
+      range = 150;
+      baseDmg = 40;
       hitType = 'UPPERCUT';
       superGain = 0;
     }
 
-    // Distance check
-    if (dist > range) {
-      return; // Whiffed
-    }
+    if (dist > range) return;
+    if (defender.isDodging) return;
 
-    // Dodge check: if defender is dodging, punch whiffs completely!
-    if (defender.isDodging) {
-      return;
-    }
-
-    // Counter check: if defender was counter vulnerable, double damage and trigger CRIT!
     const isCrit = Boolean(defender.isCounterVulnerable);
     if (isCrit) {
       hitType = 'COUNTER';
       baseDmg = Math.round(baseDmg * 1.5);
     }
 
-    // Block check:
     const isBlocked = defender.isGuarding && defender.stamina >= 10 && attacker.state !== 'UPPERCUT';
     let finalDmg = baseDmg;
 
     if (isBlocked) {
       finalDmg = Math.max(2, Math.round(baseDmg * 0.22));
-      defender.stamina = Math.max(0, defender.stamina - (baseDmg * 0.8));
+      defender.stamina = Math.max(0, defender.stamina - (baseDmg * 0.7));
     } else {
-      // Full hit: defender flinches into HURT
       defender.state = 'HURT';
-      defender.stateTicks = attacker.state === 'UPPERCUT' ? 14 : isCrit ? 10 : 6;
+      defender.stateTicks = attacker.state === 'UPPERCUT' ? 12 : isCrit ? 8 : 4;
       defender.isGuarding = false;
       defender.isCounterVulnerable = false;
 
-      // Knockback away from attacker
       const pushDir = defender.side === 'B' ? 1 : -1;
-      const pushAmount = attacker.state === 'UPPERCUT' ? 36 : isCrit ? 22 : 12;
+      const pushAmount = attacker.state === 'UPPERCUT' ? 32 : isCrit ? 20 : 12;
       defender.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, defender.x + pushDir * pushAmount));
     }
 
-    // Deduct HP
     defender.hp = Math.max(0, defender.hp - finalDmg);
     attacker.superMeter = Math.min(100, attacker.superMeter + superGain);
     attacker.consecutiveHits += 1;
 
-    // Create hit event for broadcast
     this.lastHitEvent = {
       id: `hit_${Date.now()}_${Math.random()}`,
       attacker: attacker.side,
@@ -386,7 +382,6 @@ export class BoxingRoom extends BaseGameRoom {
       timestamp: Date.now(),
     };
 
-    // Check Knockdown / KO
     if (defender.hp <= 0) {
       this.triggerKnockdown(attacker.side, defender.side);
     }
@@ -410,7 +405,7 @@ export class BoxingRoom extends BaseGameRoom {
       this.phase = 'MATCH_OVER';
       this.broadcastRoomState();
       this.settleMatch(winnerWallet);
-    }, 2800);
+    }, 2500);
   }
 
   private onTimerExpired() {
@@ -422,7 +417,6 @@ export class BoxingRoom extends BaseGameRoom {
     } else if (this.boxerB.hp > this.boxerA.hp && this.playerB) {
       winnerWallet = this.playerB.walletAddress;
     } else {
-      // Tie breaker: higher stamina or random
       winnerWallet = this.boxerA.stamina >= this.boxerB.stamina ? this.playerA.walletAddress : (this.playerB?.walletAddress || this.playerA.walletAddress);
     }
 
@@ -445,10 +439,10 @@ export class BoxingRoom extends BaseGameRoom {
       if (typeof data.left === 'boolean') inp.left = data.left;
       if (typeof data.right === 'boolean') inp.right = data.right;
       if (typeof data.block === 'boolean') inp.block = data.block;
-      if (data.jab) inp.jabTrigger = true;
-      if (data.hook) inp.hookTrigger = true;
-      if (data.dodge) inp.dodgeTrigger = true;
-      if (data.super) inp.superTrigger = true;
+      if (data.jab) inp.jabBufferTicks = 8;
+      if (data.hook) inp.hookBufferTicks = 8;
+      if (data.dodge) inp.dodgeBufferTicks = 8;
+      if (data.super) inp.superBufferTicks = 8;
     }
   }
 

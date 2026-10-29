@@ -186,7 +186,7 @@ export const EpicBanners: React.FC<EpicBannersProps> = ({
   const openPvpCount = matches.filter(
     (m) =>
       m.state === 'LOBBY' &&
-      (!m.playerB || (m.gameType === 'poker' && (m.currentPlayers || 1) < (m.maxPlayers || 2)))
+      (!m.playerB || ((m.gameType === 'poker' || m.gameType === 'uno') && (m.currentPlayers || 1) < (m.maxPlayers || (m.gameType === 'poker' ? 4 : 2))))
   ).length;
   const activePvpMatches = matches.filter((m) => m.state === 'GAME_ACTIVE' || m.state === 'LOBBY').length;
   const pvpPlayerBadge = openPvpCount > 0 ? openPvpCount : activePvpMatches;

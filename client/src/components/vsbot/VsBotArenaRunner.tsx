@@ -890,7 +890,19 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     lastHitEvent: null,
   });
 
-  const boxingInputRef = useRef<{ left: boolean; right: boolean; block: boolean; jab: boolean; hook: boolean; dodge: boolean; super: boolean }>({
+  const boxingInputRef = useRef<{
+    left: boolean;
+    right: boolean;
+    block: boolean;
+    jab: boolean;
+    hook: boolean;
+    dodge: boolean;
+    super: boolean;
+    jabBufferTicks: number;
+    hookBufferTicks: number;
+    dodgeBufferTicks: number;
+    superBufferTicks: number;
+  }>({
     left: false,
     right: false,
     block: false,
@@ -898,10 +910,22 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     hook: false,
     dodge: false,
     super: false,
+    jabBufferTicks: 0,
+    hookBufferTicks: 0,
+    dodgeBufferTicks: 0,
+    superBufferTicks: 0,
   });
 
   const handleBoxingInput = useCallback((inp: any) => {
-    boxingInputRef.current = { ...boxingInputRef.current, ...inp };
+    const cur = boxingInputRef.current;
+    boxingInputRef.current = {
+      ...cur,
+      ...inp,
+      jabBufferTicks: inp.jab ? 8 : (inp.jab === false ? 0 : cur.jabBufferTicks),
+      hookBufferTicks: inp.hook ? 8 : (inp.hook === false ? 0 : cur.hookBufferTicks),
+      dodgeBufferTicks: inp.dodge ? 8 : (inp.dodge === false ? 0 : cur.dodgeBufferTicks),
+      superBufferTicks: inp.super ? 8 : (inp.super === false ? 0 : cur.superBufferTicks),
+    };
   }, []);
 
   const initBoxing = () => {
@@ -914,7 +938,19 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       boxerB: { side: 'B', name: botName, x: 540, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
       lastHitEvent: null,
     });
-    boxingInputRef.current = { left: false, right: false, block: false, jab: false, hook: false, dodge: false, super: false };
+    boxingInputRef.current = {
+      left: false,
+      right: false,
+      block: false,
+      jab: false,
+      hook: false,
+      dodge: false,
+      super: false,
+      jabBufferTicks: 0,
+      hookBufferTicks: 0,
+      dodgeBufferTicks: 0,
+      superBufferTicks: 0,
+    };
   };
 
   const initHeadSoccer = () => {
@@ -1181,6 +1217,12 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         pA.superMeter = Math.min(100, pA.superMeter + 0.1);
         pB.superMeter = Math.min(100, pB.superMeter + 0.1);
 
+        // Input Buffers decrement
+        if (inp.jabBufferTicks > 0) inp.jabBufferTicks--;
+        if (inp.hookBufferTicks > 0) inp.hookBufferTicks--;
+        if (inp.dodgeBufferTicks > 0) inp.dodgeBufferTicks--;
+        if (inp.superBufferTicks > 0) inp.superBufferTicks--;
+
         // Update Player A stateTicks
         if (pA.stateTicks > 0) {
           pA.stateTicks--;
@@ -1190,28 +1232,37 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             pA.isGuarding = inp.block;
           }
         } else {
-          // Handle Player A input
-          if (inp.super && pA.superMeter >= 100) {
+          // Handle Player A input (buffer-aware)
+          const wantSuper = inp.super || inp.superBufferTicks > 0;
+          const wantDodge = inp.dodge || inp.dodgeBufferTicks > 0;
+          const wantHook = inp.hook || inp.hookBufferTicks > 0;
+          const wantJab = inp.jab || inp.jabBufferTicks > 0;
+
+          if (wantSuper && pA.superMeter >= 100) {
             inp.super = false;
+            inp.superBufferTicks = 0;
             pA.superMeter = 0;
             pA.state = 'UPPERCUT';
             pA.stateTicks = 16;
             pA.isGuarding = false;
-          } else if (inp.dodge && pA.stamina >= 15) {
+          } else if (wantDodge && pA.stamina >= 15) {
             inp.dodge = false;
+            inp.dodgeBufferTicks = 0;
             pA.stamina -= 15;
             pA.state = 'DODGE';
             pA.stateTicks = 8;
             pA.isDodging = true;
             pA.isGuarding = false;
-          } else if (inp.hook && pA.stamina >= 20) {
+          } else if (wantHook && pA.stamina >= 20) {
             inp.hook = false;
+            inp.hookBufferTicks = 0;
             pA.stamina -= 20;
             pA.state = 'HOOK';
             pA.stateTicks = 12;
             pA.isGuarding = false;
-          } else if (inp.jab && pA.stamina >= 10) {
+          } else if (wantJab && pA.stamina >= 10) {
             inp.jab = false;
+            inp.jabBufferTicks = 0;
             pA.stamina -= 10;
             pA.state = 'JAB';
             pA.stateTicks = 7;
@@ -1244,13 +1295,13 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           }
         } else {
           const r = Math.random();
-          if (dist > 135) {
+          if (dist > 140) {
             pB.state = 'MOVE';
             pB.x = Math.max(140, pB.x - 4.2);
-          } else if (dist < 80 && r < 0.25) {
+          } else if (dist < 70 && r < 0.25) {
             pB.state = 'MOVE';
             pB.x = Math.min(660, pB.x + 3.8);
-          } else if (pB.superMeter >= 100 && dist <= 135) {
+          } else if (pB.superMeter >= 100 && dist <= 140) {
             pB.superMeter = 0;
             pB.state = 'UPPERCUT';
             pB.stateTicks = 16;
@@ -1265,12 +1316,12 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
               pB.state = 'BLOCK';
               pB.isGuarding = true;
             }
-          } else if (dist <= 125 && r < 0.12 && pB.stamina >= 20) {
+          } else if (dist <= 130 && r < 0.12 && pB.stamina >= 20) {
             pB.stamina -= 20;
             pB.state = 'HOOK';
             pB.stateTicks = 12;
             pB.isGuarding = false;
-          } else if (dist <= 135 && r < 0.25 && pB.stamina >= 10) {
+          } else if (dist <= 145 && r < 0.25 && pB.stamina >= 10) {
             pB.stamina -= 10;
             pB.state = 'JAB';
             pB.stateTicks = 7;
@@ -1281,16 +1332,16 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           }
         }
 
-        // Distance constraint
-        if (pA.x + 70 > pB.x) {
+        // Distance constraint (min 55px so hits connect smoothly)
+        if (pA.x + 55 > pB.x) {
           const mid = (pA.x + pB.x) / 2;
-          pA.x = mid - 35;
-          pB.x = mid + 35;
+          pA.x = mid - 27.5;
+          pB.x = mid + 27.5;
         }
 
         // Hit Detection: Player A hitting Bot B
         if ((pA.state === 'JAB' && pA.stateTicks === 3) || (pA.state === 'HOOK' && pA.stateTicks === 6) || (pA.state === 'UPPERCUT' && pA.stateTicks === 8)) {
-          const range = pA.state === 'HOOK' ? 115 : 135;
+          const range = pA.state === 'UPPERCUT' ? 150 : pA.state === 'HOOK' ? 130 : 145;
           if (dist <= range && !pB.isDodging) {
             const isBlocked = pB.isGuarding && pB.stamina >= 10 && pA.state !== 'UPPERCUT';
             const baseDmg = pA.state === 'UPPERCUT' ? 38 : pA.state === 'HOOK' ? 18 : 8;
@@ -1317,7 +1368,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
 
         // Hit Detection: Bot B hitting Player A
         if ((pB.state === 'JAB' && pB.stateTicks === 3) || (pB.state === 'HOOK' && pB.stateTicks === 6) || (pB.state === 'UPPERCUT' && pB.stateTicks === 8)) {
-          const range = pB.state === 'HOOK' ? 115 : 135;
+          const range = pB.state === 'UPPERCUT' ? 150 : pB.state === 'HOOK' ? 130 : 145;
           if (dist <= range && !pA.isDodging) {
             const isBlocked = pA.isGuarding && pA.stamina >= 10 && pB.state !== 'UPPERCUT';
             const baseDmg = pB.state === 'UPPERCUT' ? 38 : pB.state === 'HOOK' ? 18 : 8;

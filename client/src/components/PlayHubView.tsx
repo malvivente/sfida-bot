@@ -42,7 +42,7 @@ export const PlayHubView: React.FC<PlayHubViewProps> = ({
       (m) =>
         m.gameType === type &&
         m.state === 'LOBBY' &&
-        (!m.playerB || (m.gameType === 'poker' && (m.currentPlayers || 1) < (m.maxPlayers || 2)))
+        (!m.playerB || ((m.gameType === 'poker' || m.gameType === 'uno') && (m.currentPlayers || 1) < (m.maxPlayers || (m.gameType === 'poker' ? 4 : 2))))
     ).length;
   };
 

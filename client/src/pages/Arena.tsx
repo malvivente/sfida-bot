@@ -930,8 +930,7 @@ export const Arena: React.FC<ArenaProps> = ({
     effectiveGameType === 'shotgun' ||
     effectiveGameType === 'connect4' ||
     effectiveGameType === 'blackjack' ||
-    effectiveGameType === 'bridge' ||
-    effectiveGameType === 'uno'
+    effectiveGameType === 'bridge'
   );
 
   // Trigger Coin Toss once per match/round when a turn-based game starts

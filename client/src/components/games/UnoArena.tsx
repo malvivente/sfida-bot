@@ -220,7 +220,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
 
   const isF2P = parseFloat(wagerTon || '0') === 0;
   const isSettled = roomState === 'MATCH_SETTLED' || roomState === 'SETTLED' || roomState === 'FORFEITED';
-  const isLobby = roomState === 'LOBBY' || (!gameData?.discardPileTop && !isSettled);
+  const isLobby = roomState === 'LOBBY' || (!gameData?.discardPileTop && !isSettled && roomState !== 'GAME_ACTIVE');
 
   const maxPlayers = gameData?.maxPlayers || 2;
   const currentTurnSeat = gameData?.currentTurnSeat ?? (gameData?.currentTurn === 'B' ? 1 : 0);
@@ -331,7 +331,9 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
               {isWinner ? (t('uno.winTitle') || 'HAI VINTO IL DUELLO!') : (t('uno.overTitle') || 'DUELLO TERMINATO')}
             </h2>
             <p className="text-xs text-slate-400 font-sans max-w-xs">
-              {isWinner
+              {roomState === 'FORFEITED'
+                ? (isWinner ? (t('arena.forfeitVictory') || 'Vittoria per abbandono dell\'avversario!') : (t('arena.forfeitDefeat') || 'Sconfitta per abbandono del duello.'))
+                : isWinner
                 ? (t('uno.winDesc') || 'Tutte le carte scartate con successo!')
                 : (t('uno.loseDesc') || "L'avversario ha scartato prima tutte le carte.")}
             </p>
@@ -714,7 +716,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
             </div>
           )}
 
-          {/* 4. PLAYER HAND: BEAUTIFIED FAN / ARC LAYOUT */}
+          {/* 4. PLAYER HAND: BEAUTIFIED ADAPTIVE FAN & MOBILE TOUCH HAND */}
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between px-2 text-xs font-heading font-bold text-slate-300">
               <div className="flex items-center space-x-1.5">
@@ -722,6 +724,11 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                 <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[10px] font-mono font-bold text-white">
                   {myHand.length}
                 </span>
+                {myTurn && (
+                  <span className="text-[10px] text-emerald-400 font-sans animate-pulse font-bold ml-1">
+                    • {t('uno.yourTurnPrompt') || 'È IL TUO TURNO: GIOCA O PESCA'}
+                  </span>
+                )}
               </div>
               {myHand.length === 1 && (
                 <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white font-black text-[10px] animate-bounce shadow-[0_0_15px_rgba(244,63,94,0.7)]">
@@ -730,12 +737,12 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
               )}
             </div>
 
-            {/* Fanned Arc Deck Container with smooth horizontal pan */}
-            <div className="relative w-full overflow-x-auto overflow-y-visible pt-8 pb-4 no-scrollbar">
+            {/* Fanned Arc Deck Container with smooth horizontal touch pan and no clipping */}
+            <div className="relative w-full overflow-x-auto overflow-y-visible pt-10 pb-6 touch-pan-x no-scrollbar select-none">
               <div
-                className="flex items-end justify-center min-w-full px-4"
+                className="flex items-end justify-center min-w-full px-8"
                 style={{
-                  height: '130px',
+                  height: '145px',
                 }}
               >
                 {myHand.map((card, idx) => {
@@ -744,30 +751,31 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                   const centerIdx = (N - 1) / 2;
                   const distFromCenter = idx - centerIdx;
 
-                  // Dynamic angular rotation
-                  const maxRotDeg = Math.min(30, Math.max(12, N * 2.5));
+                  // Dynamic angular rotation (smooth fan arch)
+                  const maxRotDeg = Math.min(24, Math.max(8, N * 2));
                   const rotDeg = N > 1 ? (distFromCenter / centerIdx) * (maxRotDeg / 2) : 0;
 
                   // Vertical arch curve
-                  const yOffset = Math.abs(distFromCenter) * 3;
+                  const yOffset = Math.abs(distFromCenter) * 2.2;
 
-                  // Negative margin overlap if many cards
-                  const overlapMargin = N > 5 ? -14 : -6;
+                  // Adaptive negative margin overlap based on hand size
+                  const overlapMargin = N > 8 ? -22 : N > 5 ? -15 : N > 3 ? -8 : 3;
                   const isHovered = hoveredCardIdx === idx;
 
                   return (
                     <div
                       key={card.id || idx}
                       onMouseEnter={() => setHoveredCardIdx(idx)}
-                      onMouseLeave={() => setHoveredCardIdx(null)}
+                      onMouseLeave={() => setHoveredCardIdx((prev) => (prev === idx ? null : prev))}
+                      onTouchStart={() => setHoveredCardIdx(idx)}
                       style={{
                         marginLeft: idx === 0 ? 0 : `${overlapMargin}px`,
                         transform: isHovered
-                          ? `translateY(-26px) scale(1.18) rotate(0deg)`
+                          ? `translateY(-30px) scale(1.15) rotate(0deg)`
                           : playable
-                          ? `translateY(-${10 - yOffset}px) rotate(${rotDeg}deg)`
+                          ? `translateY(-${12 - yOffset}px) rotate(${rotDeg}deg)`
                           : `translateY(${yOffset}px) rotate(${rotDeg}deg)`,
-                        zIndex: isHovered ? 50 : playable ? 20 + idx : 10 + idx,
+                        zIndex: isHovered ? 60 : playable ? 20 + idx : 10 + idx,
                         transition: 'transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), z-index 0.1s',
                       }}
                       className="shrink-0 cursor-pointer"
@@ -779,7 +787,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                         className={
                           playable
                             ? 'shadow-2xl ring-2 ring-white cursor-pointer active:scale-95'
-                            : 'opacity-45 brightness-75 cursor-not-allowed'
+                            : 'opacity-50 brightness-75 cursor-not-allowed'
                         }
                         onClick={() => handleCardClick(idx)}
                       />

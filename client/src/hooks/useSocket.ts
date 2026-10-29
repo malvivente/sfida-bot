@@ -339,6 +339,9 @@ export function useSocket({
           case 'HEADSOCCER_GOAL':
           case 'HEADSOCCER_OVERTIME':
           case 'HEADSOCCER_FULLTIME':
+          case 'BOXING_START':
+          case 'BOXING_KNOCKDOWN':
+          case 'UNO_START':
           case 'GAME_STATE':
           case 'POKER_SHOWDOWN':
             setRoomState((prev) => (prev === 'MATCH_SETTLED' ? prev : (msg.state || 'GAME_ACTIVE')));
@@ -409,6 +412,7 @@ export function useSocket({
             break;
 
           case 'HEADSOCCER_TICK':
+          case 'BOXING_TICK':
             if (currentRoomStateRef.current !== 'GAME_ACTIVE' && currentRoomStateRef.current !== 'MATCH_SETTLED' && currentRoomStateRef.current !== 'FORFEITED') {
               currentRoomStateRef.current = 'GAME_ACTIVE';
               setRoomState('GAME_ACTIVE');
@@ -421,13 +425,7 @@ export function useSocket({
                 } catch {}
               });
 
-              // Intelligently update React DOM state ONLY when user-visible UI actually changes:
-              // - Phase transition (KICKOFF_COUNTDOWN, PLAYING, GOAL_CELEBRATION, FULL_TIME)
-              // - Score changed
-              // - Integer clock second changed (once per sec)
-              // - Kickoff countdown second changed (3 -> 2 -> 1 -> 0)
-              // - Super activation toggled
-              // - Heartbeat fallback at 1000ms
+              // Intelligently update React DOM state ONLY when user-visible UI actually changes
               const gd = msg.gameData;
               const now = Date.now();
               const isPhaseChanged = gd.phase !== lastHsPhaseRef.current;
@@ -440,7 +438,7 @@ export function useSocket({
               const isSuperChanged =
                 gd.playerA?.superActive !== lastHsSuperActiveARef.current ||
                 gd.playerB?.superActive !== lastHsSuperActiveBRef.current;
-              const isHeartbeat = now - lastHsReactUpdateRef.current >= 800;
+              const isHeartbeat = now - lastHsReactUpdateRef.current >= 400;
 
               const shouldUpdateReact =
                 isPhaseChanged ||
@@ -448,13 +446,14 @@ export function useSocket({
                 isTimeSecChanged ||
                 isCountdownChanged ||
                 isSuperChanged ||
+                Boolean(gd.lastHitEvent) ||
                 isHeartbeat;
 
               if (shouldUpdateReact) {
                 lastHsReactUpdateRef.current = now;
                 lastHsPhaseRef.current = gd.phase;
-                lastHsScoreARef.current = gd.scoreA;
-                lastHsScoreBRef.current = gd.scoreB;
+                if (gd.scoreA !== undefined) lastHsScoreARef.current = gd.scoreA;
+                if (gd.scoreB !== undefined) lastHsScoreBRef.current = gd.scoreB;
                 lastHsTimeSecRef.current = currentSec;
                 lastHsCountdownSecRef.current = gd.countdownSec;
                 lastHsSuperActiveARef.current = gd.playerA?.superActive;

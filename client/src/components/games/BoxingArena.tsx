@@ -130,7 +130,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
 
   const isF2P = parseFloat(wagerTon || '0') === 0;
   const isSettled = roomState === 'MATCH_SETTLED' || roomState === 'SETTLED' || roomState === 'FORFEITED';
-  const isLobby = roomState === 'LOBBY' || (!gameData?.boxerA && !isSettled);
+  const isLobby = roomState === 'LOBBY' || roomState === 'WAITING_FOR_DEPLOY';
 
   // Subscribe to high-frequency WebSocket ticks if available
   useEffect(() => {
@@ -413,144 +413,255 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [localState, playerAName, playerBName]);
 
-  // Procedural Cyber Boxer Sprite Drawer
+  // Stylized Retro-Arcade Chibi Boxer Drawer (Matches Head Soccer Aesthetic)
   const drawBoxer = (ctx: CanvasRenderingContext2D, b: BoxerState, facingRight: boolean) => {
     ctx.save();
     const x = b.x;
-    let y = FLOOR_Y - 10;
+    let y = FLOOR_Y;
     const dir = facingRight ? 1 : -1;
     const isBlue = b.side === 'A';
     const primaryColor = isBlue ? '#06b6d4' : '#f43f5e';
-    const secondaryColor = isBlue ? '#3b82f6' : '#e11d48';
+    const secondaryColor = isBlue ? '#0284c7' : '#dc2626';
+    const headColor = isBlue ? '#38bdf8' : '#f87171';
+    const outlineColor = '#0f172a';
+    const isMe = role === 'player' && userSide === b.side;
 
     // State Modifiers
     if (b.isDodging) {
-      y += 35; // duck down
+      y += 28; // duck down
     } else if (b.state === 'UPPERCUT') {
       y -= 25; // launch leap
     } else if (b.state === 'KNOCKED_DOWN') {
       // Draw knocked down horizontal body
-      ctx.translate(x, FLOOR_Y);
+      ctx.translate(x, FLOOR_Y - 12);
       ctx.rotate((dir * Math.PI) / 2);
       ctx.fillStyle = primaryColor;
-      ctx.fillRect(-15, -40, 30, 80);
+      ctx.beginPath();
+      ctx.roundRect(-16, -35, 32, 70, 8);
+      ctx.fill();
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+      // Head
+      ctx.beginPath();
+      ctx.arc(0, -50, 24, 0, Math.PI * 2);
+      ctx.fillStyle = headColor;
+      ctx.fill();
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
       ctx.restore();
       return;
     }
 
     // Shadow on canvas
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
-    ctx.ellipse(x, FLOOR_Y, b.isDodging ? 38 : 30, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, FLOOR_Y, b.isDodging ? 38 : 32, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Body Motion Recoil on Hurt
-    const hurtRecoil = b.state === 'HURT' ? -dir * 10 : 0;
+    const hurtRecoil = b.state === 'HURT' ? -dir * 12 : 0;
 
-    // Legs / Shorts
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(x - 16 + hurtRecoil, y - 55, 32, 28);
-    ctx.fillStyle = primaryColor;
-    ctx.fillRect(x - 16 + hurtRecoil, y - 55, 32, 5); // waistband
-
-    // Boots
+    // 1. Boots & Legs
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(x - 14 + hurtRecoil, y - 28, 12, 28);
-    ctx.fillRect(x + 2 + hurtRecoil, y - 28, 12, 28);
-
-    // Torso with muscular/cyber gradient
-    ctx.fillStyle = isBlue ? '#1e3a5f' : '#4c1d24';
-    ctx.fillRect(x - 18 + hurtRecoil, y - 105, 36, 52);
-
-    // Glowing cyber neon line on chest
-    ctx.strokeStyle = primaryColor;
+    ctx.strokeStyle = outlineColor;
     ctx.lineWidth = 3;
+    // Back Boot
     ctx.beginPath();
-    ctx.moveTo(x + hurtRecoil, y - 100);
-    ctx.lineTo(x + hurtRecoil, y - 65);
+    ctx.roundRect(x - 14 + hurtRecoil, y - 24, 12, 24, [0, 0, 4, 4]);
+    ctx.fill();
+    ctx.stroke();
+    // Front Boot
+    ctx.beginPath();
+    ctx.roundRect(x + 2 + hurtRecoil, y - 24, 12, 24, [0, 0, 4, 4]);
+    ctx.fill();
     ctx.stroke();
 
-    // Head / Face
-    ctx.fillStyle = '#f87171';
+    // 2. Boxing Shorts
+    ctx.fillStyle = '#0f172a';
     ctx.beginPath();
-    ctx.arc(x + hurtRecoil, y - 120, 16, 0, Math.PI * 2);
+    ctx.roundRect(x - 17 + hurtRecoil, y - 52, 34, 30, [4, 4, 2, 2]);
+    ctx.fill();
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+    // Waistband
+    ctx.fillStyle = primaryColor;
+    ctx.fillRect(x - 15 + hurtRecoil, y - 51, 30, 6);
+
+    // 3. Compact Muscular Torso
+    ctx.fillStyle = secondaryColor;
+    ctx.beginPath();
+    ctx.roundRect(x - 16 + hurtRecoil, y - 82, 32, 32, 6);
+    ctx.fill();
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Chest Emblem / Cyber Core
+    ctx.fillStyle = primaryColor;
+    ctx.beginPath();
+    ctx.arc(x + hurtRecoil, y - 66, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Big Chibi Head (Radius 28, matching Head Soccer)
+    const headCenterY = y - 108;
+    ctx.fillStyle = headColor;
+    ctx.beginPath();
+    ctx.arc(x + hurtRecoil, headCenterY, 28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Head Specular Catchlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath();
+    ctx.arc(x + hurtRecoil - 10, headCenterY - 10, 7, 0, Math.PI * 2);
     ctx.fill();
 
     // Cyber Visor / Headgear
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(x - 15 + hurtRecoil, y - 134, 30, 14);
+    ctx.beginPath();
+    ctx.roundRect(x - 22 + hurtRecoil, headCenterY - 10, 44, 18, 5);
+    ctx.fill();
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    // Glowing Visor Strip
     ctx.fillStyle = primaryColor;
-    ctx.fillRect(x - 12 + hurtRecoil, y - 126, 24, 6);
+    ctx.beginPath();
+    ctx.roundRect(x - 18 + hurtRecoil, headCenterY - 6, 36, 10, 3);
+    ctx.fill();
 
-    // Arms & Gloves based on Action State
-    const gloveRadius = 14;
+    // 5. Oversized Boxing Gloves & Actions
+    const gloveRadius = 16;
 
     if (b.isGuarding) {
       // High Guard Shield Pose
       ctx.fillStyle = secondaryColor;
-      ctx.beginPath();
-      ctx.arc(x + dir * 18, y - 110, gloveRadius, 0, Math.PI * 2);
-      ctx.arc(x + dir * 12, y - 85, gloveRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Energy Guard Hologram
-      ctx.strokeStyle = primaryColor;
+      ctx.strokeStyle = outlineColor;
       ctx.lineWidth = 3;
+      // Front Glove
       ctx.beginPath();
-      ctx.arc(x + dir * 26, y - 95, 32, -Math.PI / 2, Math.PI / 2, !facingRight);
+      ctx.arc(x + dir * 20 + hurtRecoil, headCenterY + 4, gloveRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Back Glove
+      ctx.beginPath();
+      ctx.arc(x + dir * 14 + hurtRecoil, headCenterY + 22, gloveRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Energy Shield Arc
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(x + dir * 28 + hurtRecoil, headCenterY + 12, 34, -Math.PI / 2, Math.PI / 2, !facingRight);
       ctx.stroke();
     } else if (b.state === 'JAB') {
       // Lead Jab Extended Straight
-      const punchExt = 55;
+      const punchExt = 62;
       ctx.fillStyle = secondaryColor;
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 3;
       // Rear glove guard
       ctx.beginPath();
-      ctx.arc(x - dir * 10, y - 95, gloveRadius, 0, Math.PI * 2);
+      ctx.arc(x - dir * 12 + hurtRecoil, headCenterY + 14, gloveRadius, 0, Math.PI * 2);
       ctx.fill();
-      // Extended glove
-      ctx.beginPath();
-      ctx.arc(x + dir * punchExt, y - 115, gloveRadius + 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.stroke();
 
-      // Speed slash
+      // Speed Trail
       ctx.strokeStyle = primaryColor;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(x, y - 115);
-      ctx.lineTo(x + dir * (punchExt - 10), y - 115);
+      ctx.moveTo(x + hurtRecoil, headCenterY - 2);
+      ctx.lineTo(x + dir * (punchExt - 12) + hurtRecoil, headCenterY - 2);
+      ctx.stroke();
+
+      // Extended glove
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(x + dir * punchExt + hurtRecoil, headCenterY - 2, gloveRadius + 3, 0, Math.PI * 2);
+      ctx.fill();
       ctx.stroke();
     } else if (b.state === 'HOOK') {
       // Heavy Curved Hook
-      const hookExt = 46;
+      const hookExt = 52;
       ctx.fillStyle = '#f59e0b';
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 3.5;
+      // Rear glove
       ctx.beginPath();
-      ctx.arc(x + dir * hookExt, y - 88, gloveRadius + 4, 0, Math.PI * 2);
+      ctx.arc(x - dir * 10 + hurtRecoil, headCenterY + 18, gloveRadius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
 
-      // Hook arc trail
+      // Hook Arc Trail
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.arc(x, y - 88, hookExt, -Math.PI / 4, Math.PI / 4, !facingRight);
+      ctx.arc(x + hurtRecoil, headCenterY + 10, hookExt, -Math.PI / 3, Math.PI / 3, !facingRight);
+      ctx.stroke();
+
+      // Hook Fist
+      ctx.beginPath();
+      ctx.arc(x + dir * hookExt + hurtRecoil, headCenterY + 10, gloveRadius + 5, 0, Math.PI * 2);
+      ctx.fill();
       ctx.stroke();
     } else if (b.state === 'UPPERCUT') {
       // Super Uppercut Skyward Thrust
       ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(x + dir * 30, y - 150, gloveRadius + 6, 0, Math.PI * 2);
-      ctx.fill();
-
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 4;
       // Glowing aura
+      ctx.beginPath();
+      ctx.arc(x + dir * 32 + hurtRecoil, headCenterY - 38, gloveRadius + 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Lightning arcs
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x + dir * 15 + hurtRecoil, headCenterY + 10);
+      ctx.lineTo(x + dir * 32 + hurtRecoil, headCenterY - 38);
       ctx.stroke();
     } else {
-      // Default Idle Stance
+      // Idle Bounce Stance
       ctx.fillStyle = secondaryColor;
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 3;
+      // Lead Glove
       ctx.beginPath();
-      ctx.arc(x + dir * 16, y - 90, gloveRadius, 0, Math.PI * 2);
-      ctx.arc(x - dir * 8, y - 85, gloveRadius, 0, Math.PI * 2);
+      ctx.arc(x + dir * 18 + hurtRecoil, headCenterY + 12, gloveRadius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
+      // Rear Glove
+      ctx.beginPath();
+      ctx.arc(x - dir * 10 + hurtRecoil, headCenterY + 16, gloveRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // 6. "YOU" Marker above the active player's boxer
+    if (isMe) {
+      const badgeY = headCenterY - 42;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(x + hurtRecoil - 18, badgeY - 12, 36, 15, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = primaryColor;
+      ctx.font = '900 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('YOU', x + hurtRecoil, badgeY - 1);
+      ctx.restore();
     }
 
     ctx.restore();
@@ -892,28 +1003,28 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
 
           {/* 4. MOBILE CONTROLS (Only visible to player) */}
           {role === 'player' && (
-            <div className="grid grid-cols-2 gap-3 pt-1 select-none">
+            <div className="grid grid-cols-2 gap-3 pt-1 select-none touch-none">
               {/* Left Controls: Movement & Defense */}
-              <div className="p-2.5 rounded-3xl bg-[#141724] border border-white/10 space-y-2">
+              <div className="p-2.5 rounded-3xl bg-[#141724] border border-white/10 space-y-2 select-none touch-none">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onTouchStart={() => sendInput({ left: true })}
-                    onTouchEnd={() => sendInput({ left: false })}
+                    onTouchStart={(e) => { e.preventDefault(); sendInput({ left: true }); }}
+                    onTouchEnd={(e) => { e.preventDefault(); sendInput({ left: false }); }}
                     onMouseDown={() => sendInput({ left: true })}
                     onMouseUp={() => sendInput({ left: false })}
-                    className="py-3.5 rounded-2xl bg-white/5 active:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 font-heading font-black active:scale-95 transition-transform"
+                    className="py-3.5 rounded-2xl bg-white/5 active:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 font-heading font-black active:scale-95 transition-transform touch-none select-none"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
 
                   <button
                     type="button"
-                    onTouchStart={() => sendInput({ right: true })}
-                    onTouchEnd={() => sendInput({ right: false })}
+                    onTouchStart={(e) => { e.preventDefault(); sendInput({ right: true }); }}
+                    onTouchEnd={(e) => { e.preventDefault(); sendInput({ right: false }); }}
                     onMouseDown={() => sendInput({ right: true })}
                     onMouseUp={() => sendInput({ right: false })}
-                    className="py-3.5 rounded-2xl bg-white/5 active:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 font-heading font-black active:scale-95 transition-transform"
+                    className="py-3.5 rounded-2xl bg-white/5 active:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 font-heading font-black active:scale-95 transition-transform touch-none select-none"
                   >
                     <ArrowRight className="w-5 h-5" />
                   </button>
@@ -922,22 +1033,27 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      triggerImpact('light');
+                      sendInput({ dodge: true });
+                    }}
                     onClick={() => {
                       triggerImpact('light');
                       sendInput({ dodge: true });
                     }}
-                    className="py-3 rounded-2xl bg-sky-950/40 hover:bg-sky-900/40 border border-sky-400/30 text-sky-300 font-heading font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 active:scale-95"
+                    className="py-3 rounded-2xl bg-sky-950/40 hover:bg-sky-900/40 border border-sky-400/30 text-sky-300 font-heading font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 active:scale-95 touch-none select-none"
                   >
                     <span>💨 {t('boxing.dodge') || 'SCHIVA'}</span>
                   </button>
 
                   <button
                     type="button"
-                    onTouchStart={() => sendInput({ block: true })}
-                    onTouchEnd={() => sendInput({ block: false })}
+                    onTouchStart={(e) => { e.preventDefault(); sendInput({ block: true }); }}
+                    onTouchEnd={(e) => { e.preventDefault(); sendInput({ block: false }); }}
                     onMouseDown={() => sendInput({ block: true })}
                     onMouseUp={() => sendInput({ block: false })}
-                    className="py-3 rounded-2xl bg-blue-950/40 active:bg-blue-600/40 border border-blue-400/40 text-blue-200 font-heading font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 active:scale-95"
+                    className="py-3 rounded-2xl bg-blue-950/40 active:bg-blue-600/40 border border-blue-400/40 text-blue-200 font-heading font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 active:scale-95 touch-none select-none"
                   >
                     <Shield className="w-3.5 h-3.5" />
                     <span>{t('boxing.guard') || 'GUARDIA'}</span>
@@ -946,16 +1062,21 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
               </div>
 
               {/* Right Controls: Attack & Super Uppercut */}
-              <div className="p-2.5 rounded-3xl bg-[#141724] border border-white/10 space-y-2">
+              <div className="p-2.5 rounded-3xl bg-[#141724] border border-white/10 space-y-2 select-none touch-none">
                 <div className="grid grid-cols-2 gap-2">
                   {/* JAB */}
                   <button
                     type="button"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      triggerImpact('medium');
+                      sendInput({ jab: true });
+                    }}
                     onClick={() => {
                       triggerImpact('medium');
                       sendInput({ jab: true });
                     }}
-                    className="py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform"
+                    className="py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform touch-none select-none"
                   >
                     🥊 JAB
                   </button>
@@ -963,11 +1084,16 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                   {/* HOOK */}
                   <button
                     type="button"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      triggerImpact('heavy');
+                      sendInput({ hook: true });
+                    }}
                     onClick={() => {
                       triggerImpact('heavy');
                       sendInput({ hook: true });
                     }}
-                    className="py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform"
+                    className="py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform touch-none select-none"
                   >
                     💥 GANCIO
                   </button>
@@ -977,11 +1103,18 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                 <button
                   type="button"
                   disabled={currentSuper < 100}
-                  onClick={() => {
+                  onTouchStart={(e) => {
+                    if (currentSuper < 100) return;
+                    e.preventDefault();
                     triggerNotification('success');
                     sendInput({ super: true });
                   }}
-                  className={`w-full py-3 rounded-2xl font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all shadow-lg active:scale-95 ${
+                  onClick={() => {
+                    if (currentSuper < 100) return;
+                    triggerNotification('success');
+                    sendInput({ super: true });
+                  }}
+                  className={`w-full py-3 rounded-2xl font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all shadow-lg active:scale-95 touch-none select-none ${
                     currentSuper >= 100
                       ? 'bg-gradient-to-r from-amber-400 via-rose-500 to-yellow-400 text-slate-950 shadow-amber-400/40 animate-pulse cursor-pointer'
                       : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'

@@ -83,14 +83,20 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
       try {
         (ws as any).lastActivity = Date.now();
         const data = JSON.parse(raw.toString());
-        // Determine whether sender is Player A, Player B, or spectator
+        // Determine whether sender is Player A, Player B, extra table seat (C/D), or spectator
         const senderSide = room ? room.getPlayerSide(wallet, ws) : null;
-        const senderWallet = senderSide === 'A'
-          ? room!.playerA.walletAddress
-          : (senderSide === 'B' && room!.playerB ? room!.playerB.walletAddress : wallet);
-        const senderTelegramId = senderSide === 'A'
-          ? (room!.playerA.telegramId || telegramId)
-          : (senderSide === 'B' && room!.playerB ? (room!.playerB.telegramId || telegramId) : telegramId);
+        const extraList: any[] = (room as any)?.extraPlayers || [];
+        const senderSession = senderSide === 'A'
+          ? room!.playerA
+          : senderSide === 'B'
+          ? room!.playerB
+          : senderSide === 'C' && extraList[0]
+          ? extraList[0]
+          : senderSide === 'D' && extraList[1]
+          ? extraList[1]
+          : null;
+        const senderWallet = senderSession?.walletAddress || wallet;
+        const senderTelegramId = senderSession?.telegramId || telegramId;
 
         switch (data.type) {
           case 'READY':
@@ -247,6 +253,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance) {
           case 'CHRONO_STOP':
           case 'SPLIT_STEAL_CHOICE':
           case 'POKER_ACTION':
+          case 'UNO_PLAY_CARD':
+          case 'UNO_DRAW_CARD':
             room?.handleGameAction(senderWallet, { ...data, telegramUserId: senderTelegramId, telegramId: senderTelegramId });
             break;
 

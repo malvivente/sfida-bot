@@ -177,16 +177,26 @@ export abstract class BaseGameRoom {
   /**
    * Helper to resolve whether a connected websocket or wallet represents Player A, Player B, or neither.
    */
-  public getPlayerSide(wallet?: string, ws?: WebSocket): 'A' | 'B' | null {
+  public getPlayerSide(wallet?: string, ws?: WebSocket): 'A' | 'B' | 'C' | 'D' | null {
     if (ws) {
       if (this.playerA?.ws === ws) return 'A';
       if (this.playerB?.ws === ws) return 'B';
+      const extraList: PlayerSession[] = (this as any).extraPlayers;
+      if (Array.isArray(extraList)) {
+        if (extraList[0]?.ws === ws) return 'C';
+        if (extraList[1]?.ws === ws) return 'D';
+      }
     }
     if (wallet) {
       if (this.isSameWallet(wallet, this.playerA.walletAddress)) return 'A';
       if (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)) return 'B';
       if (this.playerA.telegramId && (this.isSameWallet(wallet, `tg_${this.playerA.telegramId}`) || wallet === String(this.playerA.telegramId))) return 'A';
       if (this.playerB?.telegramId && (this.isSameWallet(wallet, `tg_${this.playerB.telegramId}`) || wallet === String(this.playerB.telegramId))) return 'B';
+      const extraList: PlayerSession[] = (this as any).extraPlayers;
+      if (Array.isArray(extraList)) {
+        if (extraList[0] && (this.isSameWallet(wallet, extraList[0].walletAddress) || (extraList[0].telegramId && String(extraList[0].telegramId) === String(wallet)))) return 'C';
+        if (extraList[1] && (this.isSameWallet(wallet, extraList[1].walletAddress) || (extraList[1].telegramId && String(extraList[1].telegramId) === String(wallet)))) return 'D';
+      }
     }
     return null;
   }
@@ -200,6 +210,17 @@ export abstract class BaseGameRoom {
       const matchB = (wallet && this.isSameWallet(wallet, this.playerB.walletAddress)) ||
         (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId));
       if (matchB) return true;
+    }
+    const extraList: PlayerSession[] = (this as any).extraPlayers;
+    if (Array.isArray(extraList)) {
+      for (const ep of extraList) {
+        if (
+          (wallet && this.isSameWallet(wallet, ep.walletAddress)) ||
+          (telegramId && ep.telegramId && String(ep.telegramId) === String(telegramId))
+        ) {
+          return true;
+        }
+      }
     }
     return false;
   }

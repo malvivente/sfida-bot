@@ -1,3 +1,4 @@
+import { WebSocket } from 'ws';
 import { BaseGameRoom, RoomConfig, PlayerSession } from './BaseGameRoom.js';
 import { UnoState, UnoCard, UnoColor, UnoCardType, CoinTossData, UnoSeat } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
@@ -214,6 +215,89 @@ export class UnoRoom extends BaseGameRoom {
     return false;
   }
 
+  public override attachPlayer(
+    wallet: string,
+    telegramId: string,
+    username: string,
+    ws: WebSocket,
+    firstName?: string,
+    photoUrl?: string
+  ): boolean {
+    // 1. Check Player A
+    if (
+      this.isSameWallet(wallet, this.playerA.walletAddress) ||
+      (telegramId && this.playerA.telegramId && String(this.playerA.telegramId) === String(telegramId))
+    ) {
+      this.handlePlayerConnect(this.playerA, telegramId, username, ws, 'A', firstName, photoUrl);
+      this.syncSeatsFromSessions();
+      this.broadcastRoomState();
+      return true;
+    }
+
+    // 2. Check Player B
+    if (
+      this.playerB &&
+      (this.isSameWallet(wallet, this.playerB.walletAddress) ||
+        (telegramId && this.playerB.telegramId && String(this.playerB.telegramId) === String(telegramId)))
+    ) {
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
+      this.syncSeatsFromSessions();
+      this.broadcastRoomState();
+      return true;
+    }
+
+    // 3. Assign Player B if invited in config and not attached
+    if (!this.playerB && this.config.playerBAddress && this.isSameWallet(wallet, this.config.playerBAddress)) {
+      this.playerB = {
+        walletAddress: wallet,
+        telegramId,
+        username: cleanPlayerName(username),
+        firstName: firstName?.trim(),
+        displayName: firstName?.trim() || cleanPlayerName(username),
+        photoUrl,
+        ws,
+        connected: true,
+        ready: false,
+        score: 0,
+      };
+      this.handlePlayerConnect(this.playerB, telegramId, username, ws, 'B', firstName, photoUrl);
+      this.syncSeatsFromSessions();
+      this.broadcastRoomState();
+      return true;
+    }
+
+    // 4. Check Extra Players (Seats 2..3)
+    for (let i = 0; i < this.extraPlayers.length; i++) {
+      const ep = this.extraPlayers[i];
+      if (
+        this.isSameWallet(wallet, ep.walletAddress) ||
+        (telegramId && ep.telegramId && String(ep.telegramId) === String(telegramId))
+      ) {
+        ep.ws = ws;
+        ep.connected = true;
+        if (telegramId) ep.telegramId = telegramId;
+        if (username) ep.username = cleanPlayerName(username);
+        if (firstName) ep.firstName = firstName.trim();
+        if (photoUrl) ep.photoUrl = photoUrl;
+        this.syncSeatsFromSessions();
+        this.sendTo(ws, {
+          type: 'INIT_STATE',
+          matchId: this.matchId.toString(),
+          gameType: 'uno',
+          role: `PLAYER_${SIDES[2 + i] || 'C'}`,
+          state: this.state,
+          playerAName: this.playerA.username,
+          playerBName: this.playerB?.username,
+          gameData: this.getGamePayload(),
+        });
+        this.broadcastRoomState();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   public override setPlayerReady(wallet: string, telegramId?: string) {
     const all = this.getAllPlayerSessions();
     let found = false;
@@ -416,7 +500,11 @@ export class UnoRoom extends BaseGameRoom {
     if (this.state !== 'GAME_ACTIVE') return;
 
     const all = this.getAllPlayerSessions();
-    const playerIndex = all.findIndex((p) => this.isSameWallet(wallet, p.walletAddress));
+    const telegramId = data.telegramUserId || data.telegramId;
+    const playerIndex = all.findIndex((p) =>
+      (wallet && this.isSameWallet(wallet, p.walletAddress)) ||
+      (telegramId && p.telegramId && String(p.telegramId) === String(telegramId))
+    );
 
     if (playerIndex === -1 || playerIndex !== this.currentTurnSeat) {
       console.warn(`[UNO] Action attempted by ${wallet} (seat ${playerIndex}) but active seat is ${this.currentTurnSeat}.`);
