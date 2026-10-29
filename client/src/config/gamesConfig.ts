@@ -134,10 +134,21 @@ export const GAMES_METADATA: Record<GameType, GameMetadata> = {
     borderColor: 'border-amber-500/50 hover:border-amber-400',
     bgGradient: 'from-amber-950/35 via-rose-950/20 to-black/80',
   },
+  boxing: {
+    id: 'boxing',
+    title: 'Cyber Boxing',
+    badge: 'F2P & WAGER',
+    tagline: '1v1 Boxing Clash · Jab & Gancio · Parata & K.O.',
+    description: 'Scontro arcade di pugilato cyberpunk sul ring! Schiva i pugni al millisecondo, assesta jab veloci e potenti ganci al corpo, gestisci la stamina e scatena il Super Uppercut per il K.O. finale!',
+    spectatorAppeal: 'Scambi spettacolari sul ring, schivate al rallentatore e colpi da K.O. mozzafiato!',
+    accentColor: 'text-rose-400',
+    borderColor: 'border-rose-500/50 hover:border-rose-400',
+    bgGradient: 'from-rose-950/35 via-purple-950/20 to-black/80',
+  },
 };
 
-export const F2P_GAMES: GameType[] = ['uno', 'headsoccer'];
-export const QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'chrono', 'headsoccer', 'uno'];
+export const F2P_GAMES: GameType[] = ['uno', 'headsoccer', 'boxing'];
+export const QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'chrono', 'headsoccer', 'uno', 'boxing'];
 export const STRATEGY_GAMES: GameType[] = ['split', 'shotgun', 'connect4', 'cubecount', 'poker'];
 
 

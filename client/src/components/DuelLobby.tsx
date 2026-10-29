@@ -59,6 +59,10 @@ const GAME_CARD_THEMES: Record<string, { bg: string; border: string }> = {
     bg: 'from-emerald-950/45 via-[#101c18] to-[#0d0f18]',
     border: 'border-emerald-500/30 hover:border-emerald-400/60',
   },
+  boxing: {
+    bg: 'from-rose-950/45 via-[#1c1015] to-[#0d0f18]',
+    border: 'border-rose-500/30 hover:border-rose-400/60',
+  },
 };
 
 const RoomCountdownBadge: React.FC<{ expiresAt?: number }> = ({ expiresAt }) => {
@@ -302,7 +306,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
 
   const effectiveMinWager = selectedGameType === 'split' ? 5.0 : GAME_CONFIG.MIN_WAGER;
   const parsedWager = parseFloat(wagerChoice || '0');
-  const isF2PSelected = (selectedGameType === 'uno' || selectedGameType === 'headsoccer') && parsedWager === 0;
+  const isF2PSelected = (selectedGameType === 'uno' || selectedGameType === 'headsoccer' || selectedGameType === 'boxing') && parsedWager === 0;
   const isOverMax = parsedWager > GAME_CONFIG.MAX_WAGER;
   const isBelowMin = !isF2PSelected && parsedWager < effectiveMinWager;
   const netWinnerPayout = (parsedWager * 2).toFixed(2);
@@ -1768,8 +1772,8 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 </div>
               )}
 
-              {/* F2P vs Wager Toggle for UNO & Head Soccer */}
-              {(selectedGameType === 'uno' || selectedGameType === 'headsoccer') && (
+              {/* F2P vs Wager Toggle for UNO, Head Soccer & Boxing */}
+              {(selectedGameType === 'uno' || selectedGameType === 'headsoccer' || selectedGameType === 'boxing') && (
                 <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-400/40 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-heading font-black text-emerald-300 uppercase tracking-wider flex items-center space-x-1.5">

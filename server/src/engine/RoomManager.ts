@@ -10,6 +10,7 @@ import { CubeCountRoom } from './CubeCountRoom.js';
 import { HeadSoccerRoom } from './HeadSoccerRoom.js';
 import { PokerRoom } from './PokerRoom.js';
 import { UnoRoom } from './UnoRoom.js';
+import { BoxingRoom } from './BoxingRoom.js';
 
 export class RoomManager {
   private static instance: RoomManager;
@@ -97,6 +98,9 @@ export class RoomManager {
         break;
       case 'uno':
         room = new UnoRoom(config, onSettledWrapped);
+        break;
+      case 'boxing':
+        room = new BoxingRoom(config, onSettledWrapped);
         break;
       case 'roulette':
       default:

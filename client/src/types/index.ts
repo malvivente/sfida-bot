@@ -1,4 +1,4 @@
-export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker' | 'uno';
+export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker' | 'uno' | 'boxing';
 
 export type RoomState =
   | 'WAITING_FOR_DEPLOY'
@@ -649,5 +649,46 @@ export interface UnoState {
     card?: UnoCard;
     message: string;
   };
+  coinToss?: CoinTossData;
+}
+
+// --- Cyber Boxing Types ---
+export type BoxerAction = 'IDLE' | 'MOVE' | 'JAB' | 'HOOK' | 'UPPERCUT' | 'BLOCK' | 'DODGE' | 'HURT' | 'KNOCKED_DOWN';
+
+export interface BoxerState {
+  side: 'A' | 'B';
+  name: string;
+  x: number; // 0 to ARENA_W
+  hp: number; // 0 to 100
+  stamina: number; // 0 to 100
+  superMeter: number; // 0 to 100
+  state: BoxerAction;
+  stateTicks: number;
+  isGuarding: boolean;
+  isDodging: boolean;
+  isCounterVulnerable?: boolean;
+  consecutiveHits: number;
+  score: number;
+}
+
+export interface BoxingHitEvent {
+  id: string;
+  attacker: 'A' | 'B';
+  defender: 'A' | 'B';
+  type: 'JAB' | 'HOOK' | 'UPPERCUT' | 'COUNTER';
+  damage: number;
+  isCrit: boolean;
+  isBlocked: boolean;
+  timestamp: number;
+}
+
+export interface BoxingState {
+  phase: 'COUNTDOWN' | 'FIGHTING' | 'KNOCKOUT' | 'MATCH_OVER';
+  timeRemainingMs: number;
+  round: number;
+  boxerA: BoxerState;
+  boxerB: BoxerState;
+  countdownSec: number;
+  lastHitEvent?: BoxingHitEvent;
   coinToss?: CoinTossData;
 }

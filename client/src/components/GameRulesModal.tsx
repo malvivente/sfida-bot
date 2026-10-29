@@ -100,6 +100,13 @@ const GAME_CONFIGS: Record<GameType, GameStyleConfig> = {
     accentText: 'text-amber-400',
     badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   },
+  boxing: {
+    gradient: 'from-rose-600 via-red-700 to-purple-950',
+    border: 'border-rose-500/40',
+    glow: 'shadow-[0_0_30px_rgba(244,63,94,0.25)]',
+    accentText: 'text-rose-400',
+    badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+  },
 };
 
 export const GameRulesModal: React.FC<GameRulesModalProps> = ({

@@ -13,6 +13,7 @@ import { CubeCountArena } from '../components/games/CubeCountArena.js';
 import { HeadSoccerArena } from '../components/games/HeadSoccerArena.js';
 import { PokerArena } from '../components/games/PokerArena.js';
 import { UnoArena } from '../components/games/UnoArena.js';
+import { BoxingArena } from '../components/games/BoxingArena.js';
 import { SpectatorOddsBar } from '../components/SpectatorOddsBar.js';
 import { DuelLobby } from '../components/DuelLobby.js';
 import { GramIcon } from '../components/GramIcon.js';
@@ -1779,6 +1780,44 @@ export const Arena: React.FC<ArenaProps> = ({
               hasPlayerB={hasPlayerB}
               onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
               onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+            />
+          ) : effectiveGameType === 'boxing' ? (
+            <BoxingArena
+              gameData={socketData.gameData as any}
+              role={effectiveRole}
+              onInput={socketData.sendBoxingInput}
+              onSubscribeTick={socketData.subscribeToGameTick}
+              playerAName={playerA_Name}
+              playerBName={playerB_Name}
+              playerAReady={socketData.playerAReady}
+              playerBReady={socketData.playerBReady}
+              isReady={isCurrentUserReady}
+              onReady={handleReady}
+              roomState={socketData.roomState}
+              wagerTon={socketData.activeWagerTon || activeWagerTon}
+              isCreator={isCurrentCreator}
+              onCancelMatch={canCancelCurrentMatch && currentActiveMatch ? () => handleCancelMatch(currentActiveMatch) : undefined}
+              isWinner={isUserWinner}
+              winnerName={effectiveWinnerName}
+              onReturnToLobby={() => {
+                setActiveMatchId(null);
+                setPayoutClaimed(false);
+                fetchUserBalance();
+              }}
+              rematchOffer={isMatchPlayer ? socketData.rematchOffer : null}
+              onRequestRematch={isMatchPlayer ? socketData.requestRematch : undefined}
+              onAcceptRematch={isMatchPlayer ? socketData.acceptRematch : undefined}
+              onDeclineRematch={isMatchPlayer ? socketData.declineRematch : undefined}
+              isRematchProposer={isRematchProposer}
+              opponentConnected={isOpponentInRoom}
+              userSide={userSide}
+              hasPlayerB={hasPlayerB}
+              onJoinAsPlayer={canJoinAsPlayer ? handleJoinFromArena : undefined}
+              onInviteChallenger={canInviteChallenger ? handleInviteChallenger : undefined}
+              forfeitCountdown={socketData.forfeitCountdown}
+              disconnectedOpponentName={userSide === 'A' ? playerB_Name : playerA_Name}
+              isConnected={socketData.isConnected}
+              onReconnect={socketData.reconnect}
             />
           ) : (
             <RussianRouletteArena

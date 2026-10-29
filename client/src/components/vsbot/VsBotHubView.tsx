@@ -16,8 +16,8 @@ interface VsBotHubViewProps {
 }
 
 // Exactly the 7 games selected for VS BOT (excluding split, chrono, cubecount)
-const BOT_GAMES: GameType[] = ['shotgun', 'roulette', 'blackjack', 'connect4', 'bridge', 'headsoccer', 'poker'];
-const BOT_QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'headsoccer'];
+const BOT_GAMES: GameType[] = ['shotgun', 'roulette', 'blackjack', 'connect4', 'bridge', 'headsoccer', 'poker', 'boxing'];
+const BOT_QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'headsoccer', 'boxing'];
 const BOT_STRATEGY_GAMES: GameType[] = ['shotgun', 'connect4', 'poker'];
 
 export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile }) => {

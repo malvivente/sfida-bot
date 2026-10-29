@@ -75,5 +75,12 @@ export const GAMES_CONFIG = {
     initialHandSize: 7,
     turnTimeoutSeconds: 15,
   },
+  boxing: {
+    name: 'Cyber Boxing',
+    description: '1v1 Cyber Retro Boxing clash. Jabs, Hooks, Parries, Stamina guard and Super KO Uppercut! Playable F2P or with wager.',
+    roundDurationSeconds: 60,
+    initialHp: 100,
+    initialStamina: 100,
+  },
 } as const;
 

@@ -1076,6 +1076,20 @@ export function useSocket({
     }
   }, []);
 
+  const sendBoxingInput = useCallback((input: {
+    left?: boolean;
+    right?: boolean;
+    block?: boolean;
+    jab?: boolean;
+    hook?: boolean;
+    dodge?: boolean;
+    super?: boolean;
+  }) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'BOXING_INPUT', ...input }));
+    }
+  }, []);
+
   const sendPokerAction = useCallback(
     (action: 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in', amount?: number) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -1148,6 +1162,7 @@ export function useSocket({
     sendConnect4Drop,
     sendCubeCountSubmit,
     sendHeadSoccerInput,
+    sendBoxingInput,
     sendPokerAction,
     sendUnoPlayCard,
     sendUnoDrawCard,

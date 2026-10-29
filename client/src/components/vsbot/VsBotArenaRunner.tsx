@@ -14,6 +14,7 @@ import { CyberShotgunArena } from '../games/CyberShotgunArena.js';
 import { GlassBridgeArena } from '../games/GlassBridgeArena.js';
 import { HeadSoccerArena } from '../games/HeadSoccerArena.js';
 import { PokerArena } from '../games/PokerArena.js';
+import { BoxingArena } from '../games/BoxingArena.js';
 
 interface VsBotArenaRunnerProps {
   gameType: GameType;
@@ -878,6 +879,44 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     hsInputRef.current = { ...hsInputRef.current, ...inp };
   }, []);
 
+  // Cyber Boxing Local Bot State & Inputs
+  const [boxingState, setBoxingState] = useState<any>({
+    phase: 'FIGHTING',
+    timeRemainingMs: 60000,
+    round: 1,
+    countdownSec: 0,
+    boxerA: { side: 'A', name: playerName, x: 260, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
+    boxerB: { side: 'B', name: botName, x: 540, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
+    lastHitEvent: null,
+  });
+
+  const boxingInputRef = useRef<{ left: boolean; right: boolean; block: boolean; jab: boolean; hook: boolean; dodge: boolean; super: boolean }>({
+    left: false,
+    right: false,
+    block: false,
+    jab: false,
+    hook: false,
+    dodge: false,
+    super: false,
+  });
+
+  const handleBoxingInput = useCallback((inp: any) => {
+    boxingInputRef.current = { ...boxingInputRef.current, ...inp };
+  }, []);
+
+  const initBoxing = () => {
+    setBoxingState({
+      phase: 'FIGHTING',
+      timeRemainingMs: 60000,
+      round: 1,
+      countdownSec: 0,
+      boxerA: { side: 'A', name: playerName, x: 260, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
+      boxerB: { side: 'B', name: botName, x: 540, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
+      lastHitEvent: null,
+    });
+    boxingInputRef.current = { left: false, right: false, block: false, jab: false, hook: false, dodge: false, super: false };
+  };
+
   const initHeadSoccer = () => {
     setHsState({
       phase: 'PLAYING',
@@ -1113,6 +1152,209 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     return () => clearInterval(interval);
   }, [gameType, roomState]);
 
+  // Real-time 30 FPS Cyber Boxing physics simulation
+  useEffect(() => {
+    if (gameType !== 'boxing' || roomState !== 'GAME_ACTIVE') return;
+
+    const interval = setInterval(() => {
+      setBoxingState((prev: any) => {
+        if (!prev || prev.phase === 'MATCH_OVER') return prev;
+
+        const newTime = Math.max(0, prev.timeRemainingMs - 33);
+        if (newTime <= 0 || prev.boxerA.hp <= 0 || prev.boxerB.hp <= 0) {
+          const winSide = prev.boxerA.hp > prev.boxerB.hp ? 'A' : prev.boxerB.hp > prev.boxerA.hp ? 'B' : 'A';
+          setWinnerSide(winSide);
+          setRoomState('MATCH_SETTLED');
+          if (winSide === 'A') triggerNotification('success');
+          else triggerNotification('error');
+          return { ...prev, phase: 'MATCH_OVER', timeRemainingMs: 0 };
+        }
+
+        let pA = { ...prev.boxerA };
+        let pB = { ...prev.boxerB };
+        const inp = boxingInputRef.current;
+        let lastHitEvent = prev.lastHitEvent;
+
+        // Passive recovery
+        pA.stamina = Math.min(100, pA.stamina + 0.45);
+        pB.stamina = Math.min(100, pB.stamina + 0.45);
+        pA.superMeter = Math.min(100, pA.superMeter + 0.1);
+        pB.superMeter = Math.min(100, pB.superMeter + 0.1);
+
+        // Update Player A stateTicks
+        if (pA.stateTicks > 0) {
+          pA.stateTicks--;
+          if (pA.stateTicks <= 0) {
+            pA.isDodging = false;
+            pA.state = inp.block ? 'BLOCK' : 'IDLE';
+            pA.isGuarding = inp.block;
+          }
+        } else {
+          // Handle Player A input
+          if (inp.super && pA.superMeter >= 100) {
+            inp.super = false;
+            pA.superMeter = 0;
+            pA.state = 'UPPERCUT';
+            pA.stateTicks = 16;
+            pA.isGuarding = false;
+          } else if (inp.dodge && pA.stamina >= 15) {
+            inp.dodge = false;
+            pA.stamina -= 15;
+            pA.state = 'DODGE';
+            pA.stateTicks = 8;
+            pA.isDodging = true;
+            pA.isGuarding = false;
+          } else if (inp.hook && pA.stamina >= 20) {
+            inp.hook = false;
+            pA.stamina -= 20;
+            pA.state = 'HOOK';
+            pA.stateTicks = 12;
+            pA.isGuarding = false;
+          } else if (inp.jab && pA.stamina >= 10) {
+            inp.jab = false;
+            pA.stamina -= 10;
+            pA.state = 'JAB';
+            pA.stateTicks = 7;
+            pA.isGuarding = false;
+          } else if (inp.block && pA.stamina >= 8) {
+            pA.state = 'BLOCK';
+            pA.isGuarding = true;
+          } else {
+            pA.isGuarding = false;
+            if (inp.left) {
+              pA.state = 'MOVE';
+              pA.x = Math.max(140, pA.x - 5.5);
+            } else if (inp.right) {
+              pA.state = 'MOVE';
+              pA.x = Math.min(660, pA.x + 5.5);
+            } else {
+              pA.state = 'IDLE';
+            }
+          }
+        }
+
+        // Bot AI (Boxer B)
+        const dist = Math.abs(pB.x - pA.x);
+        if (pB.stateTicks > 0) {
+          pB.stateTicks--;
+          if (pB.stateTicks <= 0) {
+            pB.isDodging = false;
+            pB.state = 'IDLE';
+            pB.isGuarding = false;
+          }
+        } else {
+          const r = Math.random();
+          if (dist > 135) {
+            pB.state = 'MOVE';
+            pB.x = Math.max(140, pB.x - 4.2);
+          } else if (dist < 80 && r < 0.25) {
+            pB.state = 'MOVE';
+            pB.x = Math.min(660, pB.x + 3.8);
+          } else if (pB.superMeter >= 100 && dist <= 135) {
+            pB.superMeter = 0;
+            pB.state = 'UPPERCUT';
+            pB.stateTicks = 16;
+            pB.isGuarding = false;
+          } else if ((pA.state === 'JAB' || pA.state === 'HOOK') && r < 0.55) {
+            if (r < 0.3 && pB.stamina >= 15) {
+              pB.stamina -= 15;
+              pB.state = 'DODGE';
+              pB.stateTicks = 8;
+              pB.isDodging = true;
+            } else {
+              pB.state = 'BLOCK';
+              pB.isGuarding = true;
+            }
+          } else if (dist <= 125 && r < 0.12 && pB.stamina >= 20) {
+            pB.stamina -= 20;
+            pB.state = 'HOOK';
+            pB.stateTicks = 12;
+            pB.isGuarding = false;
+          } else if (dist <= 135 && r < 0.25 && pB.stamina >= 10) {
+            pB.stamina -= 10;
+            pB.state = 'JAB';
+            pB.stateTicks = 7;
+            pB.isGuarding = false;
+          } else {
+            pB.state = 'IDLE';
+            pB.isGuarding = false;
+          }
+        }
+
+        // Distance constraint
+        if (pA.x + 70 > pB.x) {
+          const mid = (pA.x + pB.x) / 2;
+          pA.x = mid - 35;
+          pB.x = mid + 35;
+        }
+
+        // Hit Detection: Player A hitting Bot B
+        if ((pA.state === 'JAB' && pA.stateTicks === 3) || (pA.state === 'HOOK' && pA.stateTicks === 6) || (pA.state === 'UPPERCUT' && pA.stateTicks === 8)) {
+          const range = pA.state === 'HOOK' ? 115 : 135;
+          if (dist <= range && !pB.isDodging) {
+            const isBlocked = pB.isGuarding && pB.stamina >= 10 && pA.state !== 'UPPERCUT';
+            const baseDmg = pA.state === 'UPPERCUT' ? 38 : pA.state === 'HOOK' ? 18 : 8;
+            const finalDmg = isBlocked ? Math.max(2, Math.round(baseDmg * 0.22)) : baseDmg;
+            pB.hp = Math.max(0, pB.hp - finalDmg);
+            if (!isBlocked) {
+              pB.state = 'HURT';
+              pB.stateTicks = 6;
+              pB.x = Math.min(660, pB.x + 15);
+            }
+            pA.superMeter = Math.min(100, pA.superMeter + (pA.state === 'UPPERCUT' ? 0 : 12));
+            lastHitEvent = {
+              id: `hit_${Date.now()}`,
+              attacker: 'A',
+              defender: 'B',
+              type: pA.state === 'UPPERCUT' ? 'UPPERCUT' : isBlocked ? 'JAB' : 'HOOK',
+              damage: finalDmg,
+              isCrit: false,
+              isBlocked,
+              timestamp: Date.now(),
+            };
+          }
+        }
+
+        // Hit Detection: Bot B hitting Player A
+        if ((pB.state === 'JAB' && pB.stateTicks === 3) || (pB.state === 'HOOK' && pB.stateTicks === 6) || (pB.state === 'UPPERCUT' && pB.stateTicks === 8)) {
+          const range = pB.state === 'HOOK' ? 115 : 135;
+          if (dist <= range && !pA.isDodging) {
+            const isBlocked = pA.isGuarding && pA.stamina >= 10 && pB.state !== 'UPPERCUT';
+            const baseDmg = pB.state === 'UPPERCUT' ? 38 : pB.state === 'HOOK' ? 18 : 8;
+            const finalDmg = isBlocked ? Math.max(2, Math.round(baseDmg * 0.22)) : baseDmg;
+            pA.hp = Math.max(0, pA.hp - finalDmg);
+            if (!isBlocked) {
+              pA.state = 'HURT';
+              pA.stateTicks = 6;
+              pA.x = Math.max(140, pA.x - 15);
+            }
+            pB.superMeter = Math.min(100, pB.superMeter + (pB.state === 'UPPERCUT' ? 0 : 12));
+            lastHitEvent = {
+              id: `hit_${Date.now()}`,
+              attacker: 'B',
+              defender: 'A',
+              type: pB.state === 'UPPERCUT' ? 'UPPERCUT' : isBlocked ? 'JAB' : 'HOOK',
+              damage: finalDmg,
+              isCrit: false,
+              isBlocked,
+              timestamp: Date.now(),
+            };
+          }
+        }
+
+        return {
+          ...prev,
+          timeRemainingMs: newTime,
+          boxerA: pA,
+          boxerB: pB,
+          lastHitEvent,
+        };
+      });
+    }, 33);
+
+    return () => clearInterval(interval);
+  }, [gameType, roomState, triggerNotification]);
+
   // ==========================================
   // --- 7. POKER (POKER ROOM REPLICA) ---
   // ==========================================
@@ -1199,10 +1441,11 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     setTurnTimeLeft(15);
     setMatchId(Date.now());
 
-    if (gameType === 'headsoccer') {
+    if (gameType === 'headsoccer' || gameType === 'boxing') {
       setShowCoinToss(false);
       setRoomState('GAME_ACTIVE');
-      initHeadSoccer();
+      if (gameType === 'headsoccer') initHeadSoccer();
+      if (gameType === 'boxing') initBoxing();
     } else {
       setShowCoinToss(true);
       setRoomState('READY_CHECK');
@@ -1277,8 +1520,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         </div>
       </div>
 
-      {/* Active Turn Clock Indicator (Hidden for Head Soccer real-time match) */}
-      {roomState === 'GAME_ACTIVE' && gameType !== 'headsoccer' && (
+      {/* Active Turn Clock Indicator (Hidden for real-time action matches) */}
+      {roomState === 'GAME_ACTIVE' && gameType !== 'headsoccer' && gameType !== 'boxing' && (
         <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-[#141724] border border-white/10 text-xs">
           <div className="flex items-center space-x-2">
             <span
@@ -1466,6 +1709,23 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             wagerTon="0.00"
             isCreator={true}
             isWinner={winnerSide === 'A'}
+            onReturnToLobby={onExit}
+          />
+        )}
+
+        {gameType === 'boxing' && (
+          <BoxingArena
+            gameData={boxingState}
+            role="player"
+            onInput={handleBoxingInput}
+            onSubscribeTick={() => () => {}}
+            playerAName={playerName}
+            playerBName={botName}
+            roomState={roomState}
+            wagerTon="0.00"
+            isCreator={true}
+            isWinner={winnerSide === 'A'}
+            winnerName={winnerSide === 'A' ? playerName : botName}
             onReturnToLobby={onExit}
           />
         )}
