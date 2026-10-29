@@ -852,10 +852,15 @@ export abstract class BaseGameRoom {
     this.winnerAddress = winnerAddress;
     this.cleanupTimers();
 
+    const allSessions: PlayerSession[] = (this as any).getAllPlayerSessions
+      ? (this as any).getAllPlayerSessions()
+      : [this.playerA, ...(this.playerB ? [this.playerB] : [])];
+    const winnerSession = allSessions.find((s) => this.isSameWallet(winnerAddress, s.walletAddress));
     const winnerName =
-      this.isSameWallet(winnerAddress, this.playerA.walletAddress)
+      winnerSession?.username ||
+      (this.isSameWallet(winnerAddress, this.playerA.walletAddress)
         ? this.playerA.username
-        : this.playerB?.username || 'Opponent';
+        : this.playerB?.username || 'Opponent');
     this.winnerName = winnerName;
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -884,7 +889,8 @@ export abstract class BaseGameRoom {
     console.log(`[${this.gameType.toUpperCase()}] Match #${this.matchId} settled. Winner: ${winnerName} (${winnerAddress})`);
 
     const wagerNum = Number(this.config.wagerAmountNano) / 1e9;
-    const totalPot = wagerNum * 2;
+    const totalPlayersCount = Math.max(2, allSessions.length);
+    const totalPot = wagerNum * totalPlayersCount;
     const { duelRakePercent, spectatorRakePercent } = feeConfig.getConfig();
     const rakeShare = (duelRakePercent || 0) / 100;
     const winnerShare = 1 - rakeShare;

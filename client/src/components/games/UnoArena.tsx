@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { UnoState, UnoCard, UnoColor } from '../../types/index.js';
+import React, { useState, useMemo } from 'react';
+import { UnoState, UnoCard, UnoColor, UnoSeat } from '../../types/index.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { GramIcon } from '../GramIcon.js';
@@ -7,9 +7,6 @@ import {
   Trophy,
   Clock,
   Swords,
-  ShieldCheck,
-  Sparkles,
-  RefreshCw,
   Layers,
   Loader2,
   CheckCircle2,
@@ -17,6 +14,11 @@ import {
   Share2,
   User,
   ArrowLeft,
+  RotateCw,
+  RotateCcw,
+  Ban,
+  RefreshCw,
+  Zap,
 } from 'lucide-react';
 
 interface UnoArenaProps {
@@ -50,37 +52,134 @@ interface UnoArenaProps {
   onJoinAsPlayer?: () => void;
 }
 
-const COLOR_CLASSES: Record<UnoColor | 'WILD', { bg: string; border: string; text: string; glow: string }> = {
+const COLOR_CLASSES: Record<UnoColor | 'WILD', { bg: string; border: string; text: string; glow: string; hex: string }> = {
   RED: {
-    bg: 'bg-gradient-to-br from-red-600 to-rose-700',
+    bg: 'bg-gradient-to-br from-rose-500 via-red-600 to-rose-700',
     border: 'border-red-400',
-    text: 'text-white',
-    glow: 'shadow-[0_0_15px_rgba(239,68,68,0.5)]',
+    text: 'text-red-600',
+    glow: 'shadow-[0_0_18px_rgba(239,68,68,0.6)]',
+    hex: '#ef4444',
   },
   BLUE: {
-    bg: 'bg-gradient-to-br from-blue-600 to-indigo-700',
-    border: 'border-blue-400',
-    text: 'text-white',
-    glow: 'shadow-[0_0_15px_rgba(59,130,246,0.5)]',
+    bg: 'bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700',
+    border: 'border-sky-400',
+    text: 'text-blue-600',
+    glow: 'shadow-[0_0_18px_rgba(59,130,246,0.6)]',
+    hex: '#3b82f6',
   },
   GREEN: {
-    bg: 'bg-gradient-to-br from-emerald-600 to-green-700',
-    border: 'border-emerald-400',
-    text: 'text-white',
-    glow: 'shadow-[0_0_15px_rgba(16,185,129,0.5)]',
+    bg: 'bg-gradient-to-br from-emerald-400 via-emerald-600 to-teal-800',
+    border: 'border-emerald-300',
+    text: 'text-emerald-600',
+    glow: 'shadow-[0_0_18px_rgba(16,185,129,0.6)]',
+    hex: '#10b981',
   },
   YELLOW: {
-    bg: 'bg-gradient-to-br from-amber-500 to-yellow-600',
-    border: 'border-amber-300',
-    text: 'text-slate-950',
-    glow: 'shadow-[0_0_15px_rgba(245,158,11,0.5)]',
+    bg: 'bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-600',
+    border: 'border-amber-200',
+    text: 'text-amber-500',
+    glow: 'shadow-[0_0_18px_rgba(245,158,11,0.6)]',
+    hex: '#f59e0b',
   },
   WILD: {
-    bg: 'bg-gradient-to-br from-purple-700 via-pink-600 to-amber-500',
-    border: 'border-white',
+    bg: 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-950',
+    border: 'border-amber-300',
     text: 'text-white',
-    glow: 'shadow-[0_0_20px_rgba(236,72,153,0.6)]',
+    glow: 'shadow-[0_0_22px_rgba(168,85,247,0.7)]',
+    hex: '#a855f7',
   },
+};
+
+// Reusable Authentic UNO Card Renderer
+const UnoCardGraphic: React.FC<{
+  card: UnoCard;
+  isPlayable?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  onClick?: () => void;
+}> = ({ card, isPlayable = false, size = 'md', className = '', onClick }) => {
+  const colorDef = COLOR_CLASSES[card.color] || COLOR_CLASSES.RED;
+  const isWild = card.color === 'WILD';
+
+  const sizeClasses = {
+    sm: 'w-14 h-20 text-[10px]',
+    md: 'w-16 h-24 text-xs',
+    lg: 'w-24 h-36 text-sm',
+  }[size];
+
+  const renderCardContent = () => {
+    if (card.type === 'SKIP') {
+      return <Ban className={size === 'lg' ? 'w-10 h-10 stroke-[2.5]' : 'w-5 h-5 stroke-[2.5]'} />;
+    }
+    if (card.type === 'REVERSE') {
+      return <RefreshCw className={size === 'lg' ? 'w-9 h-9 stroke-[2.5]' : 'w-5 h-5 stroke-[2.5]'} />;
+    }
+    if (card.type === 'DRAW2') {
+      return <span className={`font-mono font-black ${size === 'lg' ? 'text-3xl' : 'text-base'}`}>+2</span>;
+    }
+    if (card.type === 'WILD_DRAW4') {
+      return <span className={`font-mono font-black ${size === 'lg' ? 'text-3xl' : 'text-base'}`}>+4</span>;
+    }
+    if (card.type === 'WILD') {
+      return (
+        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-black/30 overflow-hidden grid grid-cols-2 grid-rows-2">
+          <div className="bg-red-500" />
+          <div className="bg-blue-500" />
+          <div className="bg-yellow-400" />
+          <div className="bg-emerald-500" />
+        </div>
+      );
+    }
+    return (
+      <span className={`font-mono font-black italic tracking-tighter ${size === 'lg' ? 'text-4xl' : 'text-xl'}`}>
+        {card.type}
+      </span>
+    );
+  };
+
+  const cornerBadge = () => {
+    if (card.type === 'SKIP') return '⊘';
+    if (card.type === 'REVERSE') return '⇄';
+    if (card.type === 'DRAW2') return '+2';
+    if (card.type === 'WILD_DRAW4') return '+4';
+    if (card.type === 'WILD') return '★';
+    return card.type;
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative select-none rounded-2xl border-2 border-white/80 p-1 flex flex-col justify-between overflow-hidden shadow-lg transition-transform ${sizeClasses} ${colorDef.bg} ${className}`}
+    >
+      {/* Top Left Corner */}
+      <span className="font-mono font-black text-[10px] sm:text-xs text-white leading-none drop-shadow">
+        {cornerBadge()}
+      </span>
+
+      {/* Central Authentic Tilted Oval */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          className={`w-[78%] h-[68%] rounded-[50%] -rotate-[24deg] bg-white shadow-md flex items-center justify-center border border-black/10 ${
+            isWild ? 'text-purple-600' : colorDef.text
+          }`}
+        >
+          <div className="rotate-[24deg] flex items-center justify-center">
+            {renderCardContent()}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Right Corner (inverted) */}
+      <span className="font-mono font-black text-[10px] sm:text-xs text-white leading-none self-end rotate-180 drop-shadow">
+        {cornerBadge()}
+      </span>
+
+      {/* Playable Aura Overlay */}
+      {isPlayable && (
+        <div className="absolute inset-0 ring-2 ring-white/90 rounded-2xl pointer-events-none animate-pulse" />
+      )}
+    </div>
+  );
 };
 
 export const UnoArena: React.FC<UnoArenaProps> = ({
@@ -117,19 +216,63 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
   const { t } = useI18n();
 
   const [wildPickerCardIndex, setWildPickerCardIndex] = useState<number | null>(null);
+  const [hoveredCardIdx, setHoveredCardIdx] = useState<number | null>(null);
 
   const isF2P = parseFloat(wagerTon || '0') === 0;
   const isSettled = roomState === 'MATCH_SETTLED' || roomState === 'SETTLED' || roomState === 'FORFEITED';
   const isLobby = roomState === 'LOBBY' || (!gameData?.discardPileTop && !isSettled);
 
-  const currentTurnSide = gameData?.currentTurn || 'A';
-  const myTurn = role === 'player' && currentTurnSide === userSide;
+  const maxPlayers = gameData?.maxPlayers || 2;
+  const currentTurnSeat = gameData?.currentTurnSeat ?? (gameData?.currentTurn === 'B' ? 1 : 0);
+  const seats: UnoSeat[] = useMemo(() => {
+    if (gameData?.seats && gameData.seats.length > 0) return gameData.seats;
+    return [
+      {
+        seatIndex: 0,
+        side: 'A',
+        walletAddress: '',
+        telegramId: '',
+        username: playerAName || 'Player 1',
+        handCount: gameData?.handCountA ?? 7,
+        unoCalled: Boolean(gameData?.unoCalledA),
+        ready: Boolean(playerAReady),
+        connected: true,
+      },
+      {
+        seatIndex: 1,
+        side: 'B',
+        walletAddress: '',
+        telegramId: '',
+        username: playerBName || 'Player 2',
+        handCount: gameData?.handCountB ?? 7,
+        unoCalled: Boolean(gameData?.unoCalledB),
+        ready: Boolean(playerBReady),
+        connected: hasPlayerB,
+      },
+    ];
+  }, [gameData, playerAName, playerBName, playerAReady, playerBReady, hasPlayerB]);
 
-  const myHand = (userSide === 'A' ? gameData?.handA : gameData?.handB) || [];
-  const opponentCardCount = (userSide === 'A' ? gameData?.handCountB : gameData?.handCountA) ?? 7;
+  // Determine user seat index
+  const mySeatIndex = useMemo(() => {
+    if (role !== 'player') return 0;
+    if (userSide === 'B') return 1;
+    return 0;
+  }, [role, userSide]);
+
+  const myTurn = role === 'player' && currentTurnSeat === mySeatIndex;
+
+  // Retrieve user's hand
+  const myHand: UnoCard[] = useMemo(() => {
+    if (gameData?.handsBySeat && gameData.handsBySeat[mySeatIndex]) {
+      return gameData.handsBySeat[mySeatIndex];
+    }
+    if (mySeatIndex === 1) return gameData?.handB || [];
+    return gameData?.handA || [];
+  }, [gameData, mySeatIndex]);
 
   const topCard = gameData?.discardPileTop;
   const activeColor = gameData?.currentColor || 'RED';
+  const direction = gameData?.direction ?? 1;
 
   const isCardPlayable = (card: UnoCard) => {
     if (!myTurn) return false;
@@ -148,7 +291,7 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
     }
 
     if (card.color === 'WILD') {
-      triggerImpact('light');
+      triggerImpact('medium');
       setWildPickerCardIndex(index);
     } else {
       triggerImpact('heavy');
@@ -156,100 +299,62 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
     }
   };
 
-  const handleChooseColorAndPlay = (color: UnoColor) => {
+  const handleChooseColorAndPlay = (chosenColor: UnoColor) => {
     if (wildPickerCardIndex === null) return;
     triggerImpact('heavy');
-    onPlayCard(wildPickerCardIndex, color);
+    const idx = wildPickerCardIndex;
     setWildPickerCardIndex(null);
+    onPlayCard(idx, chosenColor);
   };
 
-  return (
-    <div className="w-full max-w-md mx-auto space-y-4 select-none pb-8 animate-in fade-in duration-200 font-sans relative">
-      {/* 1. STARTING COUNTDOWN OVERLAY */}
-      {countdownSeconds !== null && countdownSeconds !== undefined && countdownSeconds > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="text-center space-y-3">
-            <span className="text-xs font-heading font-black tracking-widest text-cyan-400 uppercase">
-              {t('uno.countdownStarting') || 'IL DUELLO STA PER INIZIARE'}
-            </span>
-            <div className="text-8xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 animate-pulse drop-shadow-[0_0_30px_rgba(251,191,36,0.8)]">
-              {countdownSeconds}
-            </div>
-            <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-              {t('uno.getReady') || 'PREPARATI A SCARTARE!'}
-            </span>
-          </div>
-        </div>
-      )}
+  // Seated opponents (all seats except user's seat)
+  const opponents = useMemo(() => {
+    return seats.filter((s) => s.seatIndex !== mySeatIndex);
+  }, [seats, mySeatIndex]);
 
-      {/* 2. MATCH SETTLED / VICTORY OVERLAY */}
+  return (
+    <div className="w-full max-w-lg mx-auto flex flex-col space-y-3 pb-8 select-none">
+      {/* 1. MATCH RESOLUTION MODAL */}
       {isSettled && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in zoom-in-95 duration-200">
-          <div className="w-full max-w-sm rounded-3xl bg-[#141724] border border-white/15 p-6 shadow-2xl flex flex-col items-center text-center space-y-4">
+        <div className="p-5 rounded-3xl bg-gradient-to-b from-[#171a29] to-[#0e101a] border border-white/10 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+          <div className="flex flex-col items-center text-center space-y-2">
             <div
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl ${
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
                 isWinner
-                  ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-slate-950 shadow-amber-500/30'
-                  : 'bg-rose-500/20 border border-rose-500/40 text-rose-400 shadow-rose-500/20'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-400/40'
+                  : 'bg-rose-500/20 text-rose-400 border border-rose-400/40'
               }`}
             >
-              {isWinner ? <Trophy className="w-9 h-9 animate-bounce" /> : <XCircle className="w-9 h-9" />}
+              {isWinner ? <Trophy className="w-9 h-9" /> : <XCircle className="w-9 h-9" />}
             </div>
+            <h2 className="text-xl font-heading font-black tracking-wider text-white uppercase">
+              {isWinner ? (t('uno.winTitle') || 'HAI VINTO IL DUELLO!') : (t('uno.overTitle') || 'DUELLO TERMINATO')}
+            </h2>
+            <p className="text-xs text-slate-400 font-sans max-w-xs">
+              {isWinner
+                ? (t('uno.winDesc') || 'Tutte le carte scartate con successo!')
+                : (t('uno.loseDesc') || "L'avversario ha scartato prima tutte le carte.")}
+            </p>
+          </div>
 
-            <div>
-              <h3 className="text-2xl font-heading font-black text-white uppercase tracking-wider">
-                {isWinner ? (t('uno.winTitle') || 'HAI VINTO IL DUELLO!') : (t('uno.overTitle') || 'DUELLO TERMINATO')}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                {winnerName
-                  ? `${t('common.winner') || 'Vincitore'}: ${winnerName}`
-                  : isWinner
-                  ? (t('uno.winDesc') || 'Tutte le carte scartate con successo!')
-                  : (t('uno.loseDesc') || "L'avversario ha scartato prima tutte le carte.")}
-              </p>
-            </div>
-
-            <div className="p-3 w-full rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
-              <span className="text-xs font-heading font-bold text-slate-300 uppercase">
-                {isF2P ? `${t('common.mode') || 'MODALITÀ'}:` : `${t('arena.prizePool') || 'MONTEPREMI'}:`}
-              </span>
+          <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-heading font-bold uppercase">
+              {t('arena.prizePot') || 'MONTEPREMI:'}
+            </span>
+            <div className="flex items-center space-x-1.5 font-heading font-black text-amber-300">
               {isF2P ? (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold text-xs uppercase">
-                  🎮 FREE TO PLAY
-                </span>
+                <span className="text-xs text-emerald-400">FREE TO PLAY</span>
               ) : (
-                <div className="flex items-center space-x-1 font-mono font-bold text-amber-400 text-sm">
+                <>
                   <GramIcon className="w-4 h-4" />
-                  <span>{(parseFloat(wagerTon || '0') * 1.95).toFixed(2)} GRAM</span>
-                </div>
+                  <span className="text-sm">{(parseFloat(wagerTon || '0') * maxPlayers * 0.95).toFixed(2)} GRAM</span>
+                </>
               )}
             </div>
+          </div>
 
-            {/* Rematch Controls */}
-            {rematchOffer?.status === 'PENDING' && !isRematchProposer && (
-              <div className="w-full space-y-2 animate-in zoom-in-95">
-                <span className="text-xs text-cyan-300 font-heading font-bold uppercase block">
-                  {t('uno.opponentRematchRequested') || "L'avversario ha richiesto la rivincita!"}
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={onAcceptRematch}
-                    className="py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-heading font-black text-xs uppercase"
-                  >
-                    {t('common.accept') || 'Accetta'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onDeclineRematch}
-                    className="py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-heading font-bold text-xs uppercase"
-                  >
-                    {t('common.decline') || 'Rifiuta'}
-                  </button>
-                </div>
-              </div>
-            )}
-
+          {/* Action buttons */}
+          <div className="space-y-2 pt-1">
             {onRequestRematch && !rematchOffer && (
               <button
                 type="button"
@@ -261,7 +366,6 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
               </button>
             )}
 
-            {/* Back to lobby */}
             <button
               type="button"
               onClick={onReturnToLobby}
@@ -274,11 +378,14 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
       )}
 
       {/* Top Match Bar */}
-      <div className="flex items-center justify-between px-2 py-2 rounded-2xl bg-black/40 border border-white/10 text-xs">
+      <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-black/40 border border-white/10 text-xs">
         <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
           <span className="font-heading font-black text-white uppercase tracking-wider">
             {t('uno.title') || 'UNO CYBER DUEL'}
+          </span>
+          <span className="px-1.5 py-0.5 rounded bg-white/10 text-[9px] font-mono font-bold text-slate-300">
+            {maxPlayers}P
           </span>
         </div>
 
@@ -296,79 +403,84 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
         </div>
       </div>
 
-      {/* 3. LOBBY PRE-MATCH VIEW (WITH "PRONTO" READY BUTTON) */}
+      {/* 2. LOBBY PRE-MATCH VIEW */}
       {isLobby ? (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {/* Duelists Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Player A */}
-            <div
-              className={`p-4 rounded-3xl border flex flex-col items-center text-center space-y-2 transition-all ${
-                playerAReady
-                  ? 'bg-emerald-950/20 border-emerald-500/40'
-                  : 'bg-[#141724] border-white/10'
-              }`}
-            >
-              <div className="relative">
-                <div className="w-14 h-14 rounded-2xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center font-heading font-black text-lg text-purple-300">
-                  {playerAName ? playerAName.slice(0, 2).toUpperCase() : 'P1'}
-                </div>
-                {playerAReady && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 absolute -bottom-1 -right-1 bg-black rounded-full" />
-                )}
-              </div>
-              <span className="text-xs font-heading font-black text-white truncate max-w-full">
-                {playerAName}
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[9px] font-heading font-black uppercase ${
-                  playerAReady
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-white/5 text-slate-400 border border-white/10'
-                }`}
-              >
-                {playerAReady ? (t('arena.ready') || 'PRONTO') : (t('arena.waiting') || 'IN ATTESA')}
-              </span>
-            </div>
+          <div className="text-center space-y-1">
+            <span className="text-[11px] font-heading font-black text-slate-400 uppercase tracking-widest">
+              TAVOLO {maxPlayers} GIOCATORI
+            </span>
+            <p className="text-xs text-slate-300 font-sans">
+              {seats.filter((s) => Boolean(s.walletAddress || s.username !== `Player ${s.seatIndex + 1}`)).length} / {maxPlayers} Giocatori al tavolo
+            </p>
+          </div>
 
-            {/* Player B */}
-            <div
-              className={`p-4 rounded-3xl border flex flex-col items-center text-center space-y-2 transition-all ${
-                playerBReady
-                  ? 'bg-emerald-950/20 border-emerald-500/40'
-                  : 'bg-[#141724] border-white/10'
-              }`}
-            >
-              <div className="relative">
-                <div className="w-14 h-14 rounded-2xl bg-cyan-600/30 border border-cyan-400/40 flex items-center justify-center font-heading font-black text-lg text-cyan-300">
-                  {hasPlayerB && playerBName ? playerBName.slice(0, 2).toUpperCase() : '?'}
+          {/* Dynamic Seats Grid for 2, 3 or 4 Players */}
+          <div className={`grid gap-2.5 ${maxPlayers === 2 ? 'grid-cols-2' : maxPlayers === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {seats.slice(0, maxPlayers).map((seat) => {
+              const isOccupied = Boolean(seat.walletAddress || (seat.username && !seat.username.startsWith('Player ')));
+              const isMe = seat.seatIndex === mySeatIndex;
+
+              return (
+                <div
+                  key={seat.seatIndex}
+                  className={`p-3.5 rounded-3xl border flex flex-col items-center text-center space-y-2 transition-all ${
+                    seat.ready
+                      ? 'bg-emerald-950/25 border-emerald-500/40 shadow-sm'
+                      : isOccupied
+                      ? 'bg-[#141724] border-white/10'
+                      : 'bg-black/20 border-dashed border-white/10'
+                  }`}
+                >
+                  <div className="relative">
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-black text-base border ${
+                        seat.ready
+                          ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                          : isOccupied
+                          ? 'bg-purple-600/30 border-purple-400/40 text-purple-200'
+                          : 'bg-white/5 border-white/10 text-slate-600'
+                      }`}
+                    >
+                      {isOccupied ? (seat.username ? seat.username.slice(0, 2).toUpperCase() : `P${seat.seatIndex + 1}`) : '+'}
+                    </div>
+                    {seat.ready && (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 absolute -bottom-1 -right-1 bg-black rounded-full" />
+                    )}
+                  </div>
+
+                  <div className="w-full truncate px-1">
+                    <span className="text-xs font-heading font-black text-white truncate block">
+                      {isOccupied ? seat.displayName || seat.username : `Posto ${seat.seatIndex + 1}`}
+                    </span>
+                    {isMe && (
+                      <span className="text-[9px] font-heading font-bold text-amber-400 uppercase">
+                        (Tu)
+                      </span>
+                    )}
+                  </div>
+
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-heading font-black uppercase ${
+                      seat.ready
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : isOccupied
+                        ? 'bg-white/5 text-slate-400 border border-white/10'
+                        : 'bg-white/5 text-slate-600 border border-white/5'
+                    }`}
+                  >
+                    {seat.ready ? (t('arena.ready') || 'PRONTO') : isOccupied ? (t('arena.waiting') || 'IN ATTESA') : 'LIBERO'}
+                  </span>
                 </div>
-                {playerBReady && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 absolute -bottom-1 -right-1 bg-black rounded-full" />
-                )}
-              </div>
-              <span className="text-xs font-heading font-black text-white truncate max-w-full">
-                {hasPlayerB ? playerBName : (t('arena.waitingOpponentShort') || 'In attesa sfidante...')}
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[9px] font-heading font-black uppercase ${
-                  playerBReady
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-white/5 text-slate-400 border border-white/10'
-                }`}
-              >
-                {playerBReady ? (t('arena.ready') || 'PRONTO') : hasPlayerB ? (t('arena.waiting') || 'IN ATTESA') : (t('arena.freeSlot') || 'LIBERO')}
-              </span>
-            </div>
+              );
+            })}
           </div>
 
           {/* Lobby Info Notice */}
-          <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-center">
+          <div className="p-3 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-center">
             <span className="text-xs text-slate-300 font-sans">
-              {!hasPlayerB
-                ? (t('uno.waitingLobbyDesc') || 'Condividi il link o attendi che un avversario entri nella stanza.')
-                : isReady
-                ? (t('uno.waitingOpponentDesc') || "Sei pronto! In attesa che anche l'avversario confermi...")
+              {isReady
+                ? (t('uno.waitingOpponentDesc') || 'Sei pronto! In attesa che gli altri giocatori confermino...')
                 : (t('uno.readyDesc') || 'Clicca su PRONTO PER IL DUELLO per avviare la partita!')}
             </span>
           </div>
@@ -382,125 +494,119 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                   triggerImpact('heavy');
                   onReady?.();
                 }}
-                disabled={isReady || !hasPlayerB}
+                disabled={isReady}
                 className={`w-full py-4 rounded-2xl font-heading font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center space-x-2 shadow-lg active:scale-95 ${
                   isReady
                     ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 cursor-not-allowed shadow-inner'
-                    : !hasPlayerB
-                    ? 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
                     : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/30'
                 }`}
               >
                 {isReady ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
-                    <span>{t('arena.readyWaiting') || "IN ATTESA DELL'AVVERSARIO..."}</span>
+                    <span>{t('arena.readyWaiting') || 'IN ATTESA DEGLI ALTRI...'}</span>
                   </>
-                ) : !hasPlayerB ? (
-                  <span>{t('arena.waitingForOpponentBtn') || 'IN ATTESA DI UNO SFIDANTE...'}</span>
                 ) : (
                   <>
-                    <Swords className="w-5 h-5" />
-                    <span>{t('arena.readyToDuel') || 'PRONTO PER IL DUELLO'}</span>
+                    <Zap className="w-5 h-5 text-slate-950" />
+                    <span>{t('arena.readyBtn') || 'PRONTO PER IL DUELLO!'}</span>
                   </>
                 )}
               </button>
 
-              {/* Creator actions when waiting for player B */}
-              {isCreator && !hasPlayerB && (
-                <div className="space-y-2 pt-1">
-                  {onInviteChallenger && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerImpact('light');
-                        onInviteChallenger();
-                      }}
-                      className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-md"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      <span>{t('arena.inviteChallengerBtn') || 'INVITA SFIDANTE'}</span>
-                    </button>
-                  )}
-
-                  {onCancelMatch && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerImpact('medium');
-                        onCancelMatch();
-                      }}
-                      className="w-full py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-rose-400 border border-rose-500/20 font-heading font-bold text-xs uppercase transition-all"
-                    >
-                      {t('uno.cancel') || 'ANNULLA PARTITA'}
-                    </button>
-                  )}
-                </div>
+              {onInviteChallenger && (
+                <button
+                  type="button"
+                  onClick={onInviteChallenger}
+                  className="w-full py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-purple-400" />
+                  <span>{t('arena.inviteChallengerBtn') || 'INVITA SFIDANTI'}</span>
+                </button>
               )}
             </div>
           ) : (
-            /* Spectator View */
             <div className="space-y-2 pt-1">
-              {!hasPlayerB && onJoinAsPlayer && (
+              {onJoinAsPlayer && (
                 <button
                   type="button"
                   onClick={() => {
                     triggerImpact('heavy');
                     onJoinAsPlayer();
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-600 text-white font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg active:scale-95"
                 >
                   <Swords className="w-4 h-4" />
-                  <span>{t('uno.enterChallenger') || 'ENTRA COME SFIDANTE'}</span>
+                  <span>{t('uno.enterChallenger') || 'SIEDITI AL TAVOLO'}</span>
                 </button>
               )}
             </div>
           )}
         </div>
       ) : (
-        /* 4. ACTIVE UNO DUEL TABLE */
-        <div className="space-y-4">
-          {/* Opponent Hand Box */}
-          <div className="p-3 rounded-2xl bg-[#141724] border border-white/10 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center font-heading font-bold text-xs text-purple-300">
-                {opponentCardCount}
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-heading font-black text-white">{playerBName}</span>
-                  {currentTurnSide !== userSide && (
-                    <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-heading font-black animate-pulse">
-                      {t('uno.turn') || 'TURNO'}
+        /* 3. ACTIVE UNO DUEL TABLE */
+        <div className="space-y-3">
+          {/* Opponents Seats Row around the table */}
+          <div className={`grid gap-2 ${opponents.length === 1 ? 'grid-cols-1' : opponents.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {opponents.map((opp) => {
+              const isOppTurn = currentTurnSeat === opp.seatIndex;
+              return (
+                <div
+                  key={opp.seatIndex}
+                  className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between ${
+                    isOppTurn
+                      ? 'bg-rose-950/30 border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.3)] ring-1 ring-rose-400'
+                      : 'bg-[#141724]/90 border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2 truncate">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center font-heading font-black text-xs text-purple-300">
+                        {opp.username ? opp.username.slice(0, 2).toUpperCase() : `P${opp.seatIndex + 1}`}
+                      </div>
+                      {isOppTurn && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 animate-ping" />
+                      )}
+                    </div>
+                    <div className="truncate">
+                      <div className="flex items-center space-x-1 truncate">
+                        <span className="text-[11px] font-heading font-black text-white truncate">
+                          {opp.displayName || opp.username}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-slate-400 font-sans block">
+                        {opp.handCount} {t('uno.cardsLeft') || 'carte'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* UNO Shout Badge if 1 card */}
+                  {opp.handCount === 1 ? (
+                    <span className="px-2 py-0.5 rounded-lg bg-rose-500 text-white font-heading font-black text-[10px] animate-bounce shadow-md">
+                      📢 UNO!
                     </span>
+                  ) : (
+                    <div className="flex items-center space-x-0.5 px-2 py-1 rounded-lg bg-black/40 border border-white/5">
+                      <Layers className="w-3 h-3 text-amber-400" />
+                      <span className="text-xs font-mono font-black text-amber-300">{opp.handCount}</span>
+                    </div>
                   )}
                 </div>
-                <span className="text-[10px] text-slate-400 font-sans">
-                  {opponentCardCount} {t('uno.cardsLeft') || 'carte rimaste'}
-                </span>
-              </div>
-            </div>
-
-            {/* Uno Shout Badge if 1 card */}
-            {opponentCardCount === 1 && (
-              <span className="px-2.5 py-1 rounded-xl bg-rose-500 text-white font-heading font-black text-xs animate-bounce shadow-[0_0_15px_rgba(244,63,94,0.7)]">
-                📢 UNO!
-              </span>
-            )}
+              );
+            })}
           </div>
 
-          {/* Center Table: Discard Pile & Draw Deck */}
-          <div className="relative rounded-3xl bg-gradient-to-b from-[#131622] to-[#0c0e16] border border-white/10 p-5 shadow-2xl flex flex-col items-center justify-center min-h-[220px]">
-            {/* Active Color Orb */}
-            <div className="absolute top-3 left-4 flex items-center space-x-2">
-              <span className="text-[10px] font-heading font-bold text-slate-400 uppercase">
-                {t('uno.activeColor') || 'COLORE ATTIVO:'}
-              </span>
-              <div className="flex items-center space-x-1.5">
+          {/* Center Table: Discard Pile, Draw Pile & Rotation Indicator */}
+          <div className="relative rounded-3xl bg-gradient-to-b from-[#131622] via-[#0e111a] to-[#0a0c12] border border-white/10 p-4 shadow-2xl flex flex-col items-center justify-center min-h-[220px]">
+            {/* Top Table Info: Active Color & Turn Status */}
+            <div className="w-full flex items-center justify-between px-1 mb-2">
+              {/* Active Color Badge */}
+              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-black/50 border border-white/10">
+                <span className="text-[9px] font-heading font-bold text-slate-400 uppercase">
+                  {t('uno.activeColor') || 'COLORE:'}
+                </span>
                 <span
-                  className={`w-3.5 h-3.5 rounded-full ${
-                    COLOR_CLASSES[activeColor]?.glow || ''
-                  } ${
+                  className={`w-3 h-3 rounded-full ${COLOR_CLASSES[activeColor]?.glow || ''} ${
                     activeColor === 'RED'
                       ? 'bg-red-500'
                       : activeColor === 'BLUE'
@@ -510,21 +616,33 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                       : 'bg-amber-400'
                   }`}
                 />
-                <span className="text-xs font-heading font-black text-white">{activeColor}</span>
+                <span className="text-[11px] font-heading font-black text-white">{activeColor}</span>
+              </div>
+
+              {/* Rotation Direction (Clockwise / Counter-Clockwise) */}
+              {maxPlayers > 2 && (
+                <div className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-black/50 border border-white/10 text-[10px] font-heading font-black text-slate-300">
+                  {direction === 1 ? (
+                    <RotateCw className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+                  ) : (
+                    <RotateCcw className="w-3.5 h-3.5 text-rose-400 animate-spin" style={{ animationDuration: '6s' }} />
+                  )}
+                  <span>{direction === 1 ? 'ORARIO' : 'ANTIORARIO'}</span>
+                </div>
+              )}
+
+              {/* Turn Indicator */}
+              <div className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-black/50 border border-white/10 text-xs font-heading font-black">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className={myTurn ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}>
+                  {myTurn ? (t('uno.turn') || 'IL TUO TURNO') : (t('uno.opponentTurn') || 'IN ATTESA...')}
+                </span>
               </div>
             </div>
 
-            {/* Turn indicator */}
-            <div className="absolute top-3 right-4 flex items-center space-x-1 text-xs font-heading font-bold">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className={myTurn ? 'text-emerald-400 animate-pulse font-black' : 'text-slate-400'}>
-                {myTurn ? (t('uno.turn') || 'IL TUO TURNO') : (t('uno.opponentTurn') || 'TURNO AVVERSARIO')}
-              </span>
-            </div>
-
-            {/* Discard & Draw Pile */}
-            <div className="flex items-center space-x-6 my-4">
-              {/* Draw Deck */}
+            {/* Central Cards Arena */}
+            <div className="flex items-center justify-center space-x-6 my-2">
+              {/* Draw Pile Button */}
               <button
                 type="button"
                 disabled={!myTurn}
@@ -532,37 +650,36 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                   triggerImpact('heavy');
                   onDrawCard();
                 }}
-                className={`w-20 h-28 rounded-2xl bg-gradient-to-br from-slate-800 to-black border-2 border-white/20 p-2 flex flex-col items-center justify-center shadow-xl transition-all active:scale-95 ${
-                  myTurn ? 'hover:border-cyan-400 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/30' : 'opacity-60 cursor-not-allowed'
+                className={`relative w-20 h-28 rounded-2xl bg-gradient-to-br from-slate-800 to-black border-2 border-white/20 p-2 flex flex-col items-center justify-center shadow-xl transition-all active:scale-95 ${
+                  myTurn
+                    ? 'hover:border-cyan-400 cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.4)] ring-2 ring-cyan-500/40 -translate-y-1'
+                    : 'opacity-60 cursor-not-allowed'
                 }`}
               >
-                <Layers className="w-7 h-7 text-cyan-400 mb-1" />
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center mb-1">
+                  <Layers className="w-6 h-6 text-cyan-400" />
+                </div>
                 <span className="text-[10px] font-heading font-black text-white uppercase text-center leading-tight">
-                  {myTurn ? (t('uno.drawCard') || 'PESCA CARTA') : (t('uno.deck') || 'MAZZO')}
+                  {myTurn ? (t('uno.drawCard') || 'PESCA') : (t('uno.deck') || 'MAZZO')}
+                </span>
+                <span className="text-[9px] font-mono text-cyan-300 font-bold">
+                  {gameData?.drawPileCount ?? 50}
                 </span>
               </button>
 
-              {/* Top Discard Card */}
+              {/* Discard Pile Top Card */}
               {topCard ? (
-                <div
-                  className={`w-24 h-36 rounded-2xl p-2.5 flex flex-col justify-between border-2 transition-all shadow-2xl ${
-                    COLOR_CLASSES[topCard.color]?.bg
-                  } ${COLOR_CLASSES[topCard.color]?.border} ${COLOR_CLASSES[topCard.color]?.glow} ${
-                    COLOR_CLASSES[topCard.color]?.text
-                  }`}
-                >
-                  <span className="font-mono font-black text-lg">{topCard.type}</span>
-                  <div className="text-center font-mono font-black text-3xl">{topCard.type}</div>
-                  <span className="font-mono font-black text-lg self-end rotate-180">{topCard.type}</span>
+                <div className="transform rotate-1 transition-transform">
+                  <UnoCardGraphic card={topCard} size="lg" />
                 </div>
               ) : (
                 <div className="w-24 h-36 rounded-2xl bg-black/40 border border-white/10" />
               )}
             </div>
 
-            {/* Last Action Announcement */}
+            {/* Last Action Announcement banner */}
             {gameData?.lastAction && (
-              <div className="text-[11px] font-sans text-slate-300 text-center max-w-xs mt-1">
+              <div className="text-[11px] font-sans font-medium text-slate-300 text-center max-w-sm mt-1 px-3 py-1 rounded-xl bg-black/30 border border-white/5">
                 {gameData.lastAction.message}
               </div>
             )}
@@ -580,14 +697,14 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
                     key={col}
                     type="button"
                     onClick={() => handleChooseColorAndPlay(col)}
-                    className={`py-3 rounded-xl font-heading font-black text-xs uppercase shadow-md active:scale-95 border ${
+                    className={`py-3.5 rounded-xl font-heading font-black text-xs uppercase shadow-md active:scale-95 border ${
                       col === 'RED'
-                        ? 'bg-red-600 text-white border-red-400'
+                        ? 'bg-red-600 text-white border-red-400 shadow-red-500/30'
                         : col === 'BLUE'
-                        ? 'bg-blue-600 text-white border-blue-400'
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-blue-500/30'
                         : col === 'GREEN'
-                        ? 'bg-emerald-600 text-white border-emerald-400'
-                        : 'bg-amber-400 text-slate-950 border-amber-300'
+                        ? 'bg-emerald-600 text-white border-emerald-400 shadow-emerald-500/30'
+                        : 'bg-amber-400 text-slate-950 border-amber-300 shadow-amber-400/30'
                     }`}
                   >
                     {col}
@@ -597,41 +714,79 @@ export const UnoArena: React.FC<UnoArenaProps> = ({
             </div>
           )}
 
-          {/* Player Hand Cards */}
-          <div className="space-y-2">
+          {/* 4. PLAYER HAND: BEAUTIFIED FAN / ARC LAYOUT */}
+          <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between px-2 text-xs font-heading font-bold text-slate-300">
-              <span>{t('uno.yourCards') || 'LE TUE CARTE'} ({myHand.length})</span>
+              <div className="flex items-center space-x-1.5">
+                <span>{t('uno.yourCards') || 'LE TUE CARTE'}</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[10px] font-mono font-bold text-white">
+                  {myHand.length}
+                </span>
+              </div>
               {myHand.length === 1 && (
-                <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white font-black text-[10px] animate-bounce">
+                <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white font-black text-[10px] animate-bounce shadow-[0_0_15px_rgba(244,63,94,0.7)]">
                   {t('uno.saidUno') || 'HAI DETTO UNO!'}
                 </span>
               )}
             </div>
 
-            {/* Scrollable Hand */}
-            <div className="flex items-center space-x-2 overflow-x-auto py-2 px-1 scrollbar-none">
-              {myHand.map((card, idx) => {
-                const playable = isCardPlayable(card);
-                return (
-                  <button
-                    key={card.id || idx}
-                    type="button"
-                    disabled={!myTurn}
-                    onClick={() => handleCardClick(idx)}
-                    className={`shrink-0 w-16 h-24 rounded-2xl p-2 flex flex-col justify-between border-2 transition-all select-none active:scale-95 ${
-                      COLOR_CLASSES[card.color]?.bg
-                    } ${COLOR_CLASSES[card.color]?.border} ${COLOR_CLASSES[card.color]?.text} ${
-                      playable
-                        ? `${COLOR_CLASSES[card.color]?.glow} -translate-y-2.5 ring-2 ring-white cursor-pointer`
-                        : 'opacity-40 brightness-75 cursor-not-allowed'
-                    }`}
-                  >
-                    <span className="font-mono font-black text-xs leading-none">{card.type}</span>
-                    <span className="font-mono font-black text-lg text-center leading-none">{card.type}</span>
-                    <span className="font-mono font-black text-xs leading-none self-end rotate-180">{card.type}</span>
-                  </button>
-                );
-              })}
+            {/* Fanned Arc Deck Container with smooth horizontal pan */}
+            <div className="relative w-full overflow-x-auto overflow-y-visible pt-8 pb-4 no-scrollbar">
+              <div
+                className="flex items-end justify-center min-w-full px-4"
+                style={{
+                  height: '130px',
+                }}
+              >
+                {myHand.map((card, idx) => {
+                  const playable = isCardPlayable(card);
+                  const N = myHand.length;
+                  const centerIdx = (N - 1) / 2;
+                  const distFromCenter = idx - centerIdx;
+
+                  // Dynamic angular rotation
+                  const maxRotDeg = Math.min(30, Math.max(12, N * 2.5));
+                  const rotDeg = N > 1 ? (distFromCenter / centerIdx) * (maxRotDeg / 2) : 0;
+
+                  // Vertical arch curve
+                  const yOffset = Math.abs(distFromCenter) * 3;
+
+                  // Negative margin overlap if many cards
+                  const overlapMargin = N > 5 ? -14 : -6;
+                  const isHovered = hoveredCardIdx === idx;
+
+                  return (
+                    <div
+                      key={card.id || idx}
+                      onMouseEnter={() => setHoveredCardIdx(idx)}
+                      onMouseLeave={() => setHoveredCardIdx(null)}
+                      style={{
+                        marginLeft: idx === 0 ? 0 : `${overlapMargin}px`,
+                        transform: isHovered
+                          ? `translateY(-26px) scale(1.18) rotate(0deg)`
+                          : playable
+                          ? `translateY(-${10 - yOffset}px) rotate(${rotDeg}deg)`
+                          : `translateY(${yOffset}px) rotate(${rotDeg}deg)`,
+                        zIndex: isHovered ? 50 : playable ? 20 + idx : 10 + idx,
+                        transition: 'transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), z-index 0.1s',
+                      }}
+                      className="shrink-0 cursor-pointer"
+                    >
+                      <UnoCardGraphic
+                        card={card}
+                        isPlayable={playable}
+                        size="md"
+                        className={
+                          playable
+                            ? 'shadow-2xl ring-2 ring-white cursor-pointer active:scale-95'
+                            : 'opacity-45 brightness-75 cursor-not-allowed'
+                        }
+                        onClick={() => handleCardClick(idx)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

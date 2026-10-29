@@ -510,8 +510,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Match not found' });
     }
 
-    const isMultiPoker = room.gameType === 'poker' && ((room as any).maxPlayers || 2) > 2;
-    if (isMultiPoker) {
+    const isMultiTable = (room.gameType === 'poker' || room.gameType === 'uno') && ((room as any).maxPlayers || 2) > 2;
+    if (isMultiTable) {
       const allSessions: any[] = (room as any).getAllPlayerSessions();
       const isAlreadySeated = allSessions.some(
         (p: any) =>
@@ -523,14 +523,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
       if (isAlreadySeated) {
         return reply.send({
           success: true,
-          message: 'Already joined poker match',
+          message: `Already joined ${room.gameType} match`,
           matchId: room.matchId.toString(),
           state: room.state,
         });
       }
 
       if (!(room as any).hasAvailableSeat()) {
-        return reply.status(400).send({ error: 'Poker table is full' });
+        return reply.status(400).send({ error: `${room.gameType === 'poker' ? 'Poker' : 'UNO'} table is full` });
       }
     } else {
       // Idempotent join check: if this user is already Player B in this room, return success
@@ -587,8 +587,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
         body.inviteCode.trim().toUpperCase() === room.inviteCode.trim().toUpperCase()
       );
 
-      // In multi-player poker or if possessing valid inviteCode, allow joining even if direct targets were set
-      if (!isTargetUser && !(isMultiPoker && hasValidInviteCode)) {
+      // In multi-player games or if possessing valid inviteCode, allow joining even if direct targets were set
+      if (!isTargetUser && !(isMultiTable && hasValidInviteCode)) {
         return reply.status(403).send({
           error: 'DIRECT_DUEL_RESTRICTED',
           message: `Questa sfida è privata e riservata a ${room.targetOpponentUsername || 'un utente specifico'}.`,
@@ -671,7 +671,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     // Assign player to room
-    if (isMultiPoker && room.playerB) {
+    if (isMultiTable && room.playerB) {
       const ep = (room as any).addExtraPlayer(
         body.playerBAddress,
         body.telegramUserId || '',
@@ -687,7 +687,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
         type: 'ROOM_UPDATE',
         state: room.state,
         gameData: (room as any).getGamePayload?.(),
-        message: `${ep?.username || 'Player'} has joined the Poker Table!`,
+        message: `${ep?.username || 'Player'} has joined the table!`,
       });
     } else {
       room.playerB = {

@@ -1,8 +1,10 @@
-import { BaseGameRoom, RoomConfig } from './BaseGameRoom.js';
-import { UnoState, UnoCard, UnoColor, UnoCardType, CoinTossData } from '../types/gameTypes.js';
+import { BaseGameRoom, RoomConfig, PlayerSession } from './BaseGameRoom.js';
+import { UnoState, UnoCard, UnoColor, UnoCardType, CoinTossData, UnoSeat } from '../types/gameTypes.js';
 import { GAMES_CONFIG } from '../config/gamesConfig.js';
+import { cleanPlayerName } from '../utils/cleanName.js';
 
 const COLORS: UnoColor[] = ['RED', 'BLUE', 'GREEN', 'YELLOW'];
+const SIDES: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D'];
 
 function generateUnoDeck(): UnoCard[] {
   const deck: UnoCard[] = [];
@@ -43,14 +45,18 @@ function generateUnoDeck(): UnoCard[] {
 }
 
 export class UnoRoom extends BaseGameRoom {
+  public maxPlayers: number = 2;
+  public extraPlayers: PlayerSession[] = [];
+  public seats: UnoSeat[] = [];
+
   public drawPile: UnoCard[] = [];
   public discardPile: UnoCard[] = [];
-  public handA: UnoCard[] = [];
-  public handB: UnoCard[] = [];
+  public hands: Map<number, UnoCard[]> = new Map();
+
   public currentColor: UnoColor = 'RED';
-  public currentTurn: 'A' | 'B' = 'A';
-  public unoCalledA: boolean = false;
-  public unoCalledB: boolean = false;
+  public currentTurnSeat: number = 0;
+  public direction: 1 | -1 = 1; // 1 = clockwise, -1 = counter-clockwise
+
   public lastAction?: UnoState['lastAction'];
   public coinToss?: CoinTossData;
 
@@ -61,6 +67,190 @@ export class UnoRoom extends BaseGameRoom {
     onSettled?: (room: BaseGameRoom, winner: string) => Promise<void>
   ) {
     super(config, 'uno', onSettled);
+    this.maxPlayers = Math.min(4, Math.max(2, Number((config as any).maxPlayers) || 2));
+    this.initializeSeats();
+  }
+
+  private initializeSeats() {
+    this.seats = [];
+    for (let i = 0; i < this.maxPlayers; i++) {
+      this.seats.push({
+        seatIndex: i,
+        side: SIDES[i] || 'A',
+        walletAddress: '',
+        telegramId: '',
+        username: `Player ${i + 1}`,
+        displayName: `Player ${i + 1}`,
+        photoUrl: '',
+        handCount: 0,
+        unoCalled: false,
+        ready: false,
+        connected: false,
+      });
+    }
+    this.syncSeatsFromSessions();
+  }
+
+  public syncSeatsFromSessions() {
+    const sessions = this.getAllPlayerSessions();
+    for (let i = 0; i < this.maxPlayers; i++) {
+      const p = sessions[i];
+      if (this.seats[i]) {
+        if (p) {
+          this.seats[i].walletAddress = p.walletAddress || '';
+          this.seats[i].telegramId = p.telegramId || '';
+          this.seats[i].username = p.username || `Player ${i + 1}`;
+          this.seats[i].displayName = p.displayName || p.firstName || p.username || `Player ${i + 1}`;
+          this.seats[i].photoUrl = p.photoUrl || '';
+          this.seats[i].ready = Boolean(p.ready);
+          this.seats[i].connected = Boolean(p.connected);
+          this.seats[i].handCount = this.hands.get(i)?.length || 0;
+        } else {
+          this.seats[i].walletAddress = '';
+          this.seats[i].telegramId = '';
+          this.seats[i].username = `Player ${i + 1}`;
+          this.seats[i].displayName = `Player ${i + 1}`;
+          this.seats[i].photoUrl = '';
+          this.seats[i].ready = false;
+          this.seats[i].connected = false;
+          this.seats[i].handCount = 0;
+          this.seats[i].unoCalled = false;
+        }
+      }
+    }
+  }
+
+  public getAllPlayerSessions(): PlayerSession[] {
+    const list: PlayerSession[] = [this.playerA];
+    if (this.playerB) list.push(this.playerB);
+    for (const ep of this.extraPlayers) {
+      list.push(ep);
+    }
+    return list;
+  }
+
+  public hasAvailableSeat(): boolean {
+    return this.getAllPlayerSessions().length < this.maxPlayers;
+  }
+
+  public isTableFull(): boolean {
+    return this.getAllPlayerSessions().length >= this.maxPlayers;
+  }
+
+  public addExtraPlayer(
+    walletAddress: string,
+    telegramId: string,
+    username: string,
+    firstName?: string,
+    photoUrl?: string
+  ): PlayerSession | null {
+    if (this.isTableFull()) return null;
+
+    const session: PlayerSession = {
+      walletAddress,
+      telegramId,
+      username: cleanPlayerName(username),
+      firstName: firstName?.trim(),
+      displayName: firstName?.trim() || cleanPlayerName(username),
+      photoUrl,
+      connected: false,
+      ready: false,
+      score: 0,
+    };
+
+    this.extraPlayers.push(session);
+    this.syncSeatsFromSessions();
+    return session;
+  }
+
+  public override isPlayerParticipant(wallet?: string, telegramId?: string): boolean {
+    if (!wallet && !telegramId) return false;
+    const all = this.getAllPlayerSessions();
+    return all.some(
+      (p) =>
+        (wallet && this.isSameWallet(wallet, p.walletAddress)) ||
+        (telegramId && p.telegramId && String(telegramId) === String(p.telegramId))
+    );
+  }
+
+  public override upgradeSpectatorToPlayer(wallet: string, telegramId: string, username: string): boolean {
+    const all = this.getAllPlayerSessions();
+    for (const p of all) {
+      if (
+        (wallet && this.isSameWallet(wallet, p.walletAddress)) ||
+        (telegramId && p.telegramId && String(telegramId) === String(p.telegramId))
+      ) {
+        p.connected = true;
+        if (wallet) p.walletAddress = wallet;
+        if (telegramId) p.telegramId = telegramId;
+        if (username) p.username = cleanPlayerName(username);
+        this.syncSeatsFromSessions();
+        return true;
+      }
+    }
+
+    if (!this.playerB) {
+      this.playerB = {
+        walletAddress: wallet,
+        telegramId,
+        username: cleanPlayerName(username),
+        displayName: cleanPlayerName(username),
+        connected: true,
+        ready: false,
+        score: 0,
+      };
+      this.syncSeatsFromSessions();
+      return true;
+    }
+
+    if (this.hasAvailableSeat()) {
+      this.addExtraPlayer(wallet, telegramId, username);
+      const last = this.extraPlayers[this.extraPlayers.length - 1];
+      if (last) last.connected = true;
+      this.syncSeatsFromSessions();
+      return true;
+    }
+
+    return false;
+  }
+
+  public override setPlayerReady(wallet: string, telegramId?: string) {
+    const all = this.getAllPlayerSessions();
+    let found = false;
+
+    for (let idx = 0; idx < all.length; idx++) {
+      const p = all[idx];
+      if (
+        this.isSameWallet(wallet, p.walletAddress) ||
+        (telegramId && p.telegramId && String(p.telegramId) === String(telegramId))
+      ) {
+        p.ready = true;
+        if (this.seats[idx]) this.seats[idx].ready = true;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) return;
+
+    this.syncSeatsFromSessions();
+    this.broadcastRoomState();
+
+    this.broadcast({
+      type: 'PLAYER_READY',
+      playerA: { ready: this.playerA.ready },
+      playerB: this.playerB ? { ready: this.playerB.ready } : null,
+      seats: this.seats.map((s) => ({ seatIndex: s.seatIndex, ready: s.ready, username: s.username })),
+    });
+
+    const seatedCount = all.length;
+    const allReady = seatedCount >= 2 && seatedCount >= this.maxPlayers && all.every((p) => p.ready);
+
+    if (allReady && this.state === 'LOBBY') {
+      this.cancelLobbyExpirationTimer();
+      this.cancelPlayerBExpirationTimer();
+      this.startBettingWindow();
+    }
   }
 
   public getGamePayload(): UnoState {
@@ -71,17 +261,35 @@ export class UnoRoom extends BaseGameRoom {
       value: 7,
     };
 
+    const handA = this.hands.get(0) || [];
+    const handB = this.hands.get(1) || [];
+
+    const handsBySeat: Record<number, UnoCard[]> = {};
+    for (let i = 0; i < this.maxPlayers; i++) {
+      handsBySeat[i] = this.hands.get(i) || [];
+      if (this.seats[i]) {
+        this.seats[i].handCount = handsBySeat[i].length;
+      }
+    }
+
+    const currentTurnSide = (SIDES[this.currentTurnSeat] || 'A') as 'A' | 'B' | 'C' | 'D';
+
     return {
-      currentTurn: this.currentTurn,
+      maxPlayers: this.maxPlayers,
+      currentTurn: currentTurnSide,
+      currentTurnSeat: this.currentTurnSeat,
+      direction: this.direction,
       discardPileTop: topCard,
       currentColor: this.currentColor,
       drawPileCount: this.drawPile.length,
-      handA: this.handA,
-      handB: this.handB,
-      handCountA: this.handA.length,
-      handCountB: this.handB.length,
-      unoCalledA: this.unoCalledA,
-      unoCalledB: this.unoCalledB,
+      seats: this.seats,
+      handA,
+      handB,
+      handCountA: handA.length,
+      handCountB: handB.length,
+      unoCalledA: Boolean(this.seats[0]?.unoCalled),
+      unoCalledB: Boolean(this.seats[1]?.unoCalled),
+      handsBySeat,
       lastAction: this.lastAction,
       coinToss: this.coinToss,
     };
@@ -91,21 +299,31 @@ export class UnoRoom extends BaseGameRoom {
     this.state = 'GAME_ACTIVE';
     this.drawPile = generateUnoDeck();
     this.discardPile = [];
-    this.handA = [];
-    this.handB = [];
-    this.unoCalledA = false;
-    this.unoCalledB = false;
+    this.hands.clear();
+    this.direction = 1;
     this.lastAction = undefined;
 
-    // Deal 7 cards to each
-    for (let i = 0; i < 7; i++) {
-      if (this.drawPile.length > 0) this.handA.push(this.drawPile.pop()!);
-      if (this.drawPile.length > 0) this.handB.push(this.drawPile.pop()!);
+    const totalSeated = this.getAllPlayerSessions().length;
+
+    // Initialize hands for all seated players
+    for (let i = 0; i < totalSeated; i++) {
+      this.hands.set(i, []);
+      if (this.seats[i]) {
+        this.seats[i].unoCalled = false;
+      }
+    }
+
+    // Deal 7 cards to each seated player
+    for (let round = 0; round < 7; round++) {
+      for (let i = 0; i < totalSeated; i++) {
+        if (this.drawPile.length > 0) {
+          this.hands.get(i)!.push(this.drawPile.pop()!);
+        }
+      }
     }
 
     // Top card on discard
     let firstCard = this.drawPile.pop()!;
-    // Ensure first card is not a wild +4 to start cleanly
     while (firstCard.type === 'WILD_DRAW4' && this.drawPile.length > 0) {
       this.drawPile.unshift(firstCard);
       firstCard = this.drawPile.pop()!;
@@ -113,18 +331,23 @@ export class UnoRoom extends BaseGameRoom {
     this.discardPile.push(firstCard);
     this.currentColor = firstCard.color === 'WILD' ? 'RED' : firstCard.color;
 
-    // Random starter via coin toss
-    this.currentTurn = Math.random() > 0.5 ? 'A' : 'B';
-    const activePlayerName = this.currentTurn === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+    // Random starter among seated players
+    this.currentTurnSeat = Math.floor(Math.random() * totalSeated);
+    const activeSession = this.getAllPlayerSessions()[this.currentTurnSeat];
+    const activePlayerName = activeSession?.username || `Player ${this.currentTurnSeat + 1}`;
+
+    const starterSide = (SIDES[this.currentTurnSeat] || 'A') as 'A' | 'B';
 
     this.coinToss = {
       playerASide: 'HEADS',
       playerBSide: 'TAILS',
-      winningFace: this.currentTurn === 'A' ? 'HEADS' : 'TAILS',
-      starterSide: this.currentTurn,
+      winningFace: this.currentTurnSeat === 0 ? 'HEADS' : 'TAILS',
+      starterSide,
       starterName: activePlayerName,
       timestamp: Date.now(),
     };
+
+    this.syncSeatsFromSessions();
 
     this.broadcast({
       type: 'UNO_START',
@@ -141,7 +364,7 @@ export class UnoRoom extends BaseGameRoom {
 
     const timeoutSec = GAMES_CONFIG.uno?.turnTimeoutSeconds || 15;
     this.turnTimeout = setTimeout(() => {
-      console.log(`[UNO] Match #${this.matchId}: Player ${this.currentTurn} timed out. Auto-drawing.`);
+      console.log(`[UNO] Match #${this.matchId}: Seat ${this.currentTurnSeat} timed out. Auto-drawing.`);
       this.handleAutoTimeout();
     }, timeoutSec * 1000 + (this.discardPile.length <= 1 ? 3000 : 0));
   }
@@ -151,7 +374,6 @@ export class UnoRoom extends BaseGameRoom {
       const top = this.discardPile.pop()!;
       this.drawPile = this.discardPile;
       this.discardPile = [top];
-      // Shuffle
       for (let i = this.drawPile.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [this.drawPile[i], this.drawPile[j]] = [this.drawPile[j], this.drawPile[i]];
@@ -163,20 +385,29 @@ export class UnoRoom extends BaseGameRoom {
     if (this.state !== 'GAME_ACTIVE') return;
 
     this.reshuffleIfNeeded();
-    const currentHand = this.currentTurn === 'A' ? this.handA : this.handB;
+    const currentHand = this.hands.get(this.currentTurnSeat) || [];
     if (this.drawPile.length > 0) {
       currentHand.push(this.drawPile.pop()!);
     }
 
-    const side = this.currentTurn;
-    const opponent = side === 'A' ? 'B' : 'A';
+    const all = this.getAllPlayerSessions();
+    const currentSession = all[this.currentTurnSeat];
+    const currentName = currentSession?.username || `Player ${this.currentTurnSeat + 1}`;
+    const side = (SIDES[this.currentTurnSeat] || 'A') as 'A' | 'B' | 'C' | 'D';
+
     this.lastAction = {
-      player: side,
+      player: currentName,
+      seatIndex: this.currentTurnSeat,
+      side,
       type: 'DRAW',
-      message: `Tempo scaduto per ${side === 'A' ? this.playerA.username : this.playerB?.username}! Carta pescata automaticamente.`,
+      message: `Tempo scaduto per ${currentName}! Carta pescata automaticamente.`,
     };
 
-    this.currentTurn = opponent;
+    // Advance turn to next seat
+    const totalSeated = all.length;
+    this.currentTurnSeat = (this.currentTurnSeat + this.direction + totalSeated) % totalSeated;
+
+    this.syncSeatsFromSessions();
     this.startTurnTimer();
     this.broadcastRoomState();
   }
@@ -184,33 +415,34 @@ export class UnoRoom extends BaseGameRoom {
   public handleGameAction(wallet: string, data: any) {
     if (this.state !== 'GAME_ACTIVE') return;
 
-    const side = this.isSameWallet(wallet, this.playerA.walletAddress) ? 'A' : (this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress) ? 'B' : null);
-    if (!side || side !== this.currentTurn) {
-      console.warn(`[UNO] Action attempted by ${wallet} but not their turn (${this.currentTurn}).`);
+    const all = this.getAllPlayerSessions();
+    const playerIndex = all.findIndex((p) => this.isSameWallet(wallet, p.walletAddress));
+
+    if (playerIndex === -1 || playerIndex !== this.currentTurnSeat) {
+      console.warn(`[UNO] Action attempted by ${wallet} (seat ${playerIndex}) but active seat is ${this.currentTurnSeat}.`);
       return;
     }
 
     if (data.type === 'UNO_PLAY_CARD') {
-      this.handlePlayCard(side, data.cardIndex, data.chosenColor);
+      this.handlePlayCard(playerIndex, data.cardIndex, data.chosenColor);
     } else if (data.type === 'UNO_DRAW_CARD') {
-      this.handleDrawCard(side);
+      this.handleDrawCard(playerIndex);
     }
   }
 
-  private handlePlayCard(side: 'A' | 'B', cardIndex: number, chosenColor?: UnoColor) {
-    const hand = side === 'A' ? this.handA : this.handB;
-    if (cardIndex < 0 || cardIndex >= hand.length) return;
+  private handlePlayCard(seatIndex: number, cardIndex: number, chosenColor?: UnoColor) {
+    const hand = this.hands.get(seatIndex);
+    if (!hand || cardIndex < 0 || cardIndex >= hand.length) return;
 
     const card = hand[cardIndex];
     const topCard = this.discardPile[this.discardPile.length - 1];
 
-    // Check validity
     const isColorMatch = card.color === this.currentColor;
-    const isTypeMatch = card.type === topCard.type;
+    const isTypeMatch = topCard ? card.type === topCard.type : false;
     const isWild = card.color === 'WILD';
 
     if (!isColorMatch && !isTypeMatch && !isWild) {
-      console.warn(`[UNO] Card cannot be played: ${card.color} ${card.type} on ${this.currentColor} ${topCard.type}`);
+      console.warn(`[UNO] Card cannot be played: ${card.color} ${card.type} on ${this.currentColor} ${topCard?.type}`);
       return;
     }
 
@@ -230,43 +462,90 @@ export class UnoRoom extends BaseGameRoom {
       this.currentColor = card.color as UnoColor;
     }
 
-    const opponentSide = side === 'A' ? 'B' : 'A';
-    const opponentHand = opponentSide === 'A' ? this.handA : this.handB;
+    const all = this.getAllPlayerSessions();
+    const totalSeated = all.length;
+    const currentSession = all[seatIndex];
+    const currentName = currentSession?.username || `Player ${seatIndex + 1}`;
+    const side = (SIDES[seatIndex] || 'A') as 'A' | 'B' | 'C' | 'D';
 
-    let message = `${side === 'A' ? this.playerA.username : this.playerB?.username} gioca ${card.color} ${card.type}`;
+    let message = `${currentName} gioca ${card.color} ${card.type}`;
+    let skipSteps = 1;
 
-    // Handle special effects
-    let extraTurn = false;
-    if (card.type === 'SKIP' || card.type === 'REVERSE') {
-      extraTurn = true;
-      message += `! Turno saltato per l'avversario!`;
-    } else if (card.type === 'DRAW2') {
-      this.reshuffleIfNeeded();
-      for (let i = 0; i < 2; i++) {
-        if (this.drawPile.length > 0) opponentHand.push(this.drawPile.pop()!);
+    // Special card handling
+    if (totalSeated === 2) {
+      // 2-Player rules: SKIP, REVERSE, DRAW2, WILD_DRAW4 give immediate extra turn to player
+      if (card.type === 'SKIP' || card.type === 'REVERSE') {
+        skipSteps = 0;
+        message += `! Turno saltato per l'avversario!`;
+      } else if (card.type === 'DRAW2') {
+        const opponentSeat = (seatIndex + 1) % 2;
+        const opponentHand = this.hands.get(opponentSeat) || [];
+        this.reshuffleIfNeeded();
+        for (let i = 0; i < 2; i++) {
+          if (this.drawPile.length > 0) opponentHand.push(this.drawPile.pop()!);
+        }
+        skipSteps = 0;
+        message += `! L'avversario pesca 2 carte e salta il turno!`;
+      } else if (card.type === 'WILD_DRAW4') {
+        const opponentSeat = (seatIndex + 1) % 2;
+        const opponentHand = this.hands.get(opponentSeat) || [];
+        this.reshuffleIfNeeded();
+        for (let i = 0; i < 4; i++) {
+          if (this.drawPile.length > 0) opponentHand.push(this.drawPile.pop()!);
+        }
+        skipSteps = 0;
+        message += `! L'avversario pesca 4 carte e il colore diventa ${this.currentColor}!`;
+      } else if (isWild) {
+        message += `! Il colore scelto è ${this.currentColor}!`;
       }
-      extraTurn = true;
-      message += `! L'avversario pesca 2 carte e salta il turno!`;
-    } else if (card.type === 'WILD_DRAW4') {
-      this.reshuffleIfNeeded();
-      for (let i = 0; i < 4; i++) {
-        if (this.drawPile.length > 0) opponentHand.push(this.drawPile.pop()!);
+    } else {
+      // 3 or 4-Player rules
+      if (card.type === 'REVERSE') {
+        this.direction = (this.direction === 1 ? -1 : 1) as 1 | -1;
+        message += `! Giro invertito!`;
+        skipSteps = 1;
+      } else if (card.type === 'SKIP') {
+        skipSteps = 2; // Jump over next player
+        const victimSeat = (seatIndex + this.direction + totalSeated) % totalSeated;
+        const victimName = all[victimSeat]?.username || `Player ${victimSeat + 1}`;
+        message += `! Turno saltato per ${victimName}!`;
+      } else if (card.type === 'DRAW2') {
+        const victimSeat = (seatIndex + this.direction + totalSeated) % totalSeated;
+        const victimHand = this.hands.get(victimSeat) || [];
+        const victimName = all[victimSeat]?.username || `Player ${victimSeat + 1}`;
+        this.reshuffleIfNeeded();
+        for (let i = 0; i < 2; i++) {
+          if (this.drawPile.length > 0) victimHand.push(this.drawPile.pop()!);
+        }
+        skipSteps = 2; // Victim draws and loses turn
+        message += `! ${victimName} pesca 2 carte e salta il turno!`;
+      } else if (card.type === 'WILD_DRAW4') {
+        const victimSeat = (seatIndex + this.direction + totalSeated) % totalSeated;
+        const victimHand = this.hands.get(victimSeat) || [];
+        const victimName = all[victimSeat]?.username || `Player ${victimSeat + 1}`;
+        this.reshuffleIfNeeded();
+        for (let i = 0; i < 4; i++) {
+          if (this.drawPile.length > 0) victimHand.push(this.drawPile.pop()!);
+        }
+        skipSteps = 2; // Victim draws 4 and loses turn
+        message += `! ${victimName} pesca 4 carte e il colore diventa ${this.currentColor}!`;
+      } else if (isWild) {
+        message += `! Il colore scelto è ${this.currentColor}!`;
       }
-      extraTurn = true;
-      message += `! L'avversario pesca 4 carte e il colore diventa ${this.currentColor}!`;
-    } else if (isWild) {
-      message += `! Il colore scelto è ${this.currentColor}!`;
     }
 
-    // Check UNO shout
+    // UNO Shout check
     if (hand.length === 1) {
-      if (side === 'A') this.unoCalledA = true;
-      else this.unoCalledB = true;
+      if (this.seats[seatIndex]) {
+        this.seats[seatIndex].unoCalled = true;
+      }
       message += ` 📢 UNO!`;
     }
 
     this.lastAction = {
-      player: side,
+      player: currentName,
+      seatIndex,
+      side,
       type: 'PLAY',
       card,
       message,
@@ -274,42 +553,53 @@ export class UnoRoom extends BaseGameRoom {
 
     // Check Victory
     if (hand.length === 0) {
-      const winnerWallet = side === 'A' ? this.playerA.walletAddress : (this.playerB?.walletAddress || '');
+      const winnerWallet = currentSession.walletAddress;
+      this.syncSeatsFromSessions();
       this.broadcastRoomState();
       this.settleMatch(winnerWallet);
       return;
     }
 
-    // Next turn
-    if (!extraTurn) {
-      this.currentTurn = opponentSide;
+    // Next turn calculation
+    if (skipSteps > 0) {
+      this.currentTurnSeat = (seatIndex + this.direction * skipSteps + totalSeated * 2) % totalSeated;
     }
 
+    this.syncSeatsFromSessions();
     this.startTurnTimer();
     this.broadcastRoomState();
   }
 
-  private handleDrawCard(side: 'A' | 'B') {
+  private handleDrawCard(seatIndex: number) {
     if (this.turnTimeout) {
       clearTimeout(this.turnTimeout);
       this.turnTimeout = undefined;
     }
 
     this.reshuffleIfNeeded();
-    const hand = side === 'A' ? this.handA : this.handB;
+    const hand = this.hands.get(seatIndex) || [];
     if (this.drawPile.length > 0) {
       hand.push(this.drawPile.pop()!);
     }
 
-    const opponentSide = side === 'A' ? 'B' : 'A';
+    const all = this.getAllPlayerSessions();
+    const totalSeated = all.length;
+    const currentSession = all[seatIndex];
+    const currentName = currentSession?.username || `Player ${seatIndex + 1}`;
+    const side = (SIDES[seatIndex] || 'A') as 'A' | 'B' | 'C' | 'D';
+
     this.lastAction = {
-      player: side,
+      player: currentName,
+      seatIndex,
+      side,
       type: 'DRAW',
-      message: `${side === 'A' ? this.playerA.username : this.playerB?.username} pesca una carta dal mazzo.`,
+      message: `${currentName} pesca una carta dal mazzo.`,
     };
 
-    // Pass turn to opponent
-    this.currentTurn = opponentSide;
+    // Pass turn to next seat
+    this.currentTurnSeat = (seatIndex + this.direction + totalSeated) % totalSeated;
+
+    this.syncSeatsFromSessions();
     this.startTurnTimer();
     this.broadcastRoomState();
   }
@@ -323,5 +613,6 @@ export class UnoRoom extends BaseGameRoom {
 
   public override resetForRematch() {
     this.cleanupGameTimers();
+    this.initializeSeats();
   }
 }

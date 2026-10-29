@@ -679,10 +679,10 @@ export const Arena: React.FC<ArenaProps> = ({
         )
       );
 
-      const tableMaxPlayers = (m as any).maxPlayers || (m as any).gameData?.maxPlayers || (m.gameType === 'poker' ? 4 : 2);
+      const tableMaxPlayers = (m as any).maxPlayers || (m as any).gameData?.maxPlayers || (m.gameType === 'poker' || m.gameType === 'uno' ? 4 : 2);
       const seatedCount = (m as any).currentPlayers || (m as any).gameData?.seats?.filter((s: any) => Boolean(s.walletAddress)).length ||
         (m.playerB ? 2 : 1);
-      const hasAvailableSeat = !m.playerB || (m.gameType === 'poker' && seatedCount < tableMaxPlayers);
+      const hasAvailableSeat = !m.playerB || ((m.gameType === 'poker' || m.gameType === 'uno') && seatedCount < tableMaxPlayers);
 
       if (isPlayerA || isPlayerB || isAlreadyExtraPlayer) {
         // Participant resuming duel
@@ -973,19 +973,19 @@ export const Arena: React.FC<ArenaProps> = ({
     (currentActiveMatch?.targetOpponentId && userId && String(currentActiveMatch.targetOpponentId) === String(userId))
   );
 
-  const tableMaxPlayers = (currentActiveMatch as any)?.maxPlayers || (socketData.gameData as any)?.maxPlayers || (effectiveGameType === 'poker' ? 4 : 2);
-  const isMultiPokerRoom = effectiveGameType === 'poker' && tableMaxPlayers > 2;
+  const tableMaxPlayers = (currentActiveMatch as any)?.maxPlayers || (socketData.gameData as any)?.maxPlayers || (effectiveGameType === 'poker' || effectiveGameType === 'uno' ? 4 : 2);
+  const isMultiSeatRoom = (effectiveGameType === 'poker' || effectiveGameType === 'uno') && tableMaxPlayers > 2;
   const tableHasOpenSeats = (socketData.gameData as any)?.seats
     ? (socketData.gameData as any).seats.filter((s: any) => Boolean(s.walletAddress)).length < tableMaxPlayers
-    : ((currentActiveMatch as any)?.currentPlayers !== undefined ? (currentActiveMatch as any).currentPlayers < tableMaxPlayers : (!hasPlayerB || isMultiPokerRoom));
+    : ((currentActiveMatch as any)?.currentPlayers !== undefined ? (currentActiveMatch as any).currentPlayers < tableMaxPlayers : (!hasPlayerB || isMultiSeatRoom));
 
-  const canJoinAsPlayer = (effectiveGameType === 'poker' ? tableHasOpenSeats : !hasPlayerB) && !isCurrentCreator && !isMatchPlayerResolved && (
+  const canJoinAsPlayer = ((effectiveGameType === 'poker' || effectiveGameType === 'uno') ? tableHasOpenSeats : !hasPlayerB) && !isCurrentCreator && !isMatchPlayerResolved && (
     hasDesignatedOpponent
       ? isTargetOpponent
       : (!isPrivateMatch || Boolean(effectiveInviteCode))
   );
 
-  const canInviteChallenger = isMultiPokerRoom
+  const canInviteChallenger = isMultiSeatRoom
     ? (tableHasOpenSeats && effectiveRole === 'player')
     : (isCurrentCreator && !hasPlayerB && !hasDesignatedOpponent);
 

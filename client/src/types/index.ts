@@ -611,19 +611,40 @@ export interface UnoCard {
   value: number;
 }
 
+export interface UnoSeat {
+  seatIndex: number;
+  side: 'A' | 'B' | 'C' | 'D';
+  walletAddress: string;
+  telegramId: string;
+  username: string;
+  displayName?: string;
+  photoUrl?: string;
+  handCount: number;
+  unoCalled: boolean;
+  ready: boolean;
+  connected: boolean;
+}
+
 export interface UnoState {
-  currentTurn: 'A' | 'B';
+  maxPlayers: number;
+  currentTurn: 'A' | 'B' | 'C' | 'D';
+  currentTurnSeat: number;
+  direction: 1 | -1;
   discardPileTop: UnoCard;
   currentColor: UnoColor;
   drawPileCount: number;
+  seats: UnoSeat[];
   handA: UnoCard[];
   handB: UnoCard[];
   handCountA: number;
   handCountB: number;
   unoCalledA: boolean;
   unoCalledB: boolean;
+  handsBySeat?: Record<number, UnoCard[]>;
   lastAction?: {
-    player: 'A' | 'B';
+    player: string;
+    seatIndex?: number;
+    side: 'A' | 'B' | 'C' | 'D';
     type: 'PLAY' | 'DRAW' | 'PASS' | 'UNO_CALLED';
     card?: UnoCard;
     message: string;

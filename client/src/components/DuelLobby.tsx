@@ -212,6 +212,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   const [jackpotGram, setJackpotGram] = useState<string>('5.00');
   const [joiningMatchId, setJoiningMatchId] = useState<string | null>(null);
   const [pokerMaxPlayers, setPokerMaxPlayers] = useState<number>(2);
+  const [unoMaxPlayers, setUnoMaxPlayers] = useState<number>(2);
   const [userRaffleTicketsCount, setUserRaffleTicketsCount] = useState<number>(0);
 
   const effectiveUserId = React.useMemo(() => {
@@ -415,7 +416,11 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
         isPrivateRoom,
         targetOpponentInput.trim() || undefined,
         isPrivateRoom ? allowSpectators : true,
-        selectedGameType === 'poker' ? pokerMaxPlayers : undefined
+        selectedGameType === 'poker'
+          ? pokerMaxPlayers
+          : selectedGameType === 'uno'
+          ? unoMaxPlayers
+          : undefined
       );
       if (result !== false) {
         setShowCreateModal(false);
@@ -1943,14 +1948,59 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     </p>
                   </div>
                 )}
+
+                {/* UNO Max Players Selector */}
+                {selectedGameType === 'uno' && (
+                  <div className="mt-2 space-y-1.5 p-3 rounded-2xl bg-gradient-to-r from-rose-950/40 via-amber-950/30 to-black/50 border border-rose-500/30">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-heading font-black text-rose-300 uppercase tracking-wider block">
+                        {t('uno.tableSizeLabel')}
+                      </label>
+                      <span className="text-[10px] font-mono text-amber-400 font-bold">
+                        {unoMaxPlayers === 2 ? t('uno.headsUp') : `${unoMaxPlayers} Giocatori`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      {[2, 3, 4].map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => {
+                            triggerImpact('light');
+                            setUnoMaxPlayers(count);
+                          }}
+                          className={`py-2 px-1 rounded-xl text-center font-heading font-black text-xs transition-all border ${
+                            unoMaxPlayers === count
+                              ? 'bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 text-slate-950 border-white/40 shadow-sm'
+                              : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <div className="text-xs">{count}P</div>
+                          <div className="text-[8px] font-normal opacity-80">
+                            {count === 2 ? '1v1' : count === 3 ? '3P' : '4P Classic'}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-slate-400 pt-0.5 leading-tight">
+                      {unoMaxPlayers === 2
+                        ? t('uno.headsUpDesc')
+                        : unoMaxPlayers === 3
+                        ? t('uno.threeMaxDesc')
+                        : t('uno.fourMaxDesc')}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Direct Challenge Opponent (Optional) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-heading font-bold text-slate-400 uppercase tracking-wider block">
-                    {selectedGameType === 'poker' && pokerMaxPlayers > 2
-                      ? t('poker.directChallengeLabelMulti', { count: pokerMaxPlayers - 1 })
+                    {((selectedGameType === 'poker' && pokerMaxPlayers > 2) || (selectedGameType === 'uno' && unoMaxPlayers > 2))
+                      ? t('poker.directChallengeLabelMulti', {
+                          count: (selectedGameType === 'poker' ? pokerMaxPlayers : unoMaxPlayers) - 1,
+                        })
                       : t('lobby.directChallengeLabel')}
                   </label>
                   {friendsList.length > 0 && (
@@ -1972,7 +2022,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       {friendsList.map((f, idx) => {
                         const friendName = f.displayName || f.name || f.username || t('lobby.friendFallback');
                         const targetTag = f.username ? (f.username.startsWith('@') ? f.username : `@${f.username}`) : friendName;
-                        const isMultiPoker = selectedGameType === 'poker' && pokerMaxPlayers > 2;
+                        const isMultiRoom =
+                          (selectedGameType === 'poker' && pokerMaxPlayers > 2) ||
+                          (selectedGameType === 'uno' && unoMaxPlayers > 2);
+                        const effectiveTableCap = selectedGameType === 'poker' ? pokerMaxPlayers : unoMaxPlayers;
                         const currentTokens = targetOpponentInput
                           .split(/[,\s]+/)
                           .map((u) => u.trim())
@@ -1985,12 +2038,12 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                             type="button"
                             onClick={() => {
                               triggerImpact('light');
-                              if (isMultiPoker) {
+                              if (isMultiRoom) {
                                 let updated: string[];
                                 if (isSelected) {
                                   updated = currentTokens.filter((t) => t.toLowerCase() !== targetTag.toLowerCase());
                                 } else {
-                                  if (currentTokens.length >= pokerMaxPlayers - 1) return;
+                                  if (currentTokens.length >= effectiveTableCap - 1) return;
                                   updated = [...currentTokens, targetTag];
                                 }
                                 setTargetOpponentInput(updated.join(', '));
@@ -2029,7 +2082,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                       }
                     }}
                     placeholder={
-                      selectedGameType === 'poker' && pokerMaxPlayers > 2
+                      ((selectedGameType === 'poker' && pokerMaxPlayers > 2) || (selectedGameType === 'uno' && unoMaxPlayers > 2))
                         ? '@amico1, @amico2...'
                         : t('lobby.opponentPlaceholder')
                     }
@@ -2051,10 +2104,10 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                     <span>{t('lobby.directDuelNotice', { target: targetOpponentInput })}</span>
                   </p>
                 )}
-                {selectedGameType === 'poker' && pokerMaxPlayers > 2 && (
+                {((selectedGameType === 'poker' && pokerMaxPlayers > 2) || (selectedGameType === 'uno' && unoMaxPlayers > 2)) && (
                   <p className="text-[10px] text-purple-300 font-sans flex items-center space-x-1">
                     <span>💡</span>
-                    <span>{t('poker.multiInviteTip', { count: pokerMaxPlayers })}</span>
+                    <span>{t('poker.multiInviteTip', { count: selectedGameType === 'poker' ? pokerMaxPlayers : unoMaxPlayers })}</span>
                   </p>
                 )}
               </div>
