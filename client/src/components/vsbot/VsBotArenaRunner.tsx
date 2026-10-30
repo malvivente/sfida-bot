@@ -916,6 +916,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     superBufferTicks: 0,
   });
 
+  const botCooldownRef = useRef<number>(0);
+
   const handleBoxingInput = useCallback((inp: any) => {
     const cur = boxingInputRef.current;
     boxingInputRef.current = {
@@ -929,13 +931,14 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   }, []);
 
   const initBoxing = () => {
+    botCooldownRef.current = 15;
     setBoxingState({
       phase: 'FIGHTING',
       timeRemainingMs: 60000,
       round: 1,
       countdownSec: 0,
-      boxerA: { side: 'A', name: playerName, x: 260, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
-      boxerB: { side: 'B', name: botName, x: 540, hp: 100, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
+      boxerA: { side: 'A', name: playerName, x: 260, hp: 150, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
+      boxerB: { side: 'B', name: botName, x: 540, hp: 150, stamina: 100, superMeter: 0, state: 'IDLE', stateTicks: 0, isGuarding: false, isDodging: false, consecutiveHits: 0, score: 0 },
       lastHitEvent: null,
     });
     boxingInputRef.current = {
@@ -1212,10 +1215,14 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         let lastHitEvent = prev.lastHitEvent;
 
         // Passive recovery
-        pA.stamina = Math.min(100, pA.stamina + 0.45);
-        pB.stamina = Math.min(100, pB.stamina + 0.45);
-        pA.superMeter = Math.min(100, pA.superMeter + 0.1);
-        pB.superMeter = Math.min(100, pB.superMeter + 0.1);
+        pA.stamina = Math.min(100, pA.stamina + 0.85);
+        pB.stamina = Math.min(100, pB.stamina + 0.50);
+        pA.superMeter = Math.min(100, pA.superMeter + 0.15);
+        pB.superMeter = Math.min(100, pB.superMeter + 0.10);
+
+        if (botCooldownRef.current > 0) {
+          botCooldownRef.current--;
+        }
 
         // Input Buffers decrement
         if (inp.jabBufferTicks > 0) inp.jabBufferTicks--;
@@ -1243,41 +1250,41 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             inp.superBufferTicks = 0;
             pA.superMeter = 0;
             pA.state = 'UPPERCUT';
-            pA.stateTicks = 16;
+            pA.stateTicks = 14;
             pA.isGuarding = false;
-          } else if (wantDodge && pA.stamina >= 15) {
+          } else if (wantDodge && pA.stamina >= 10) {
             inp.dodge = false;
             inp.dodgeBufferTicks = 0;
-            pA.stamina -= 15;
+            pA.stamina -= 10;
             pA.state = 'DODGE';
-            pA.stateTicks = 8;
+            pA.stateTicks = 6;
             pA.isDodging = true;
             pA.isGuarding = false;
-          } else if (wantHook && pA.stamina >= 20) {
+          } else if (wantHook && pA.stamina >= 14) {
             inp.hook = false;
             inp.hookBufferTicks = 0;
-            pA.stamina -= 20;
+            pA.stamina -= 14;
             pA.state = 'HOOK';
-            pA.stateTicks = 12;
+            pA.stateTicks = 8;
             pA.isGuarding = false;
-          } else if (wantJab && pA.stamina >= 10) {
+          } else if (wantJab && pA.stamina >= 7) {
             inp.jab = false;
             inp.jabBufferTicks = 0;
-            pA.stamina -= 10;
+            pA.stamina -= 7;
             pA.state = 'JAB';
-            pA.stateTicks = 7;
+            pA.stateTicks = 5;
             pA.isGuarding = false;
-          } else if (inp.block && pA.stamina >= 8) {
+          } else if (inp.block && pA.stamina >= 6) {
             pA.state = 'BLOCK';
             pA.isGuarding = true;
           } else {
             pA.isGuarding = false;
             if (inp.left) {
               pA.state = 'MOVE';
-              pA.x = Math.max(140, pA.x - 5.5);
+              pA.x = Math.max(140, pA.x - 6.5);
             } else if (inp.right) {
               pA.state = 'MOVE';
-              pA.x = Math.min(660, pA.x + 5.5);
+              pA.x = Math.min(660, pA.x + 6.5);
             } else {
               pA.state = 'IDLE';
             }
@@ -1293,39 +1300,59 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             pB.state = 'IDLE';
             pB.isGuarding = false;
           }
+        } else if (botCooldownRef.current > 0) {
+          // Bot in cooldown: reposition smoothly, no auto-block or instant attacks
+          if (dist < 65) {
+            pB.state = 'MOVE';
+            pB.x = Math.min(660, pB.x + 3.0);
+          } else if (dist > 115) {
+            pB.state = 'MOVE';
+            pB.x = Math.max(140, pB.x - 2.8);
+          } else {
+            pB.state = 'IDLE';
+          }
+          pB.isGuarding = false;
+          pB.isDodging = false;
         } else {
           const r = Math.random();
-          if (dist > 80) {
+          if (dist > 85) {
             pB.state = 'MOVE';
             pB.x = Math.max(140, pB.x - 4.2);
-          } else if (dist < 60 && r < 0.22) {
+          } else if (dist < 58 && r < 0.25) {
             pB.state = 'MOVE';
             pB.x = Math.min(660, pB.x + 3.8);
           } else if (pB.superMeter >= 100 && dist <= 78) {
             pB.superMeter = 0;
             pB.state = 'UPPERCUT';
-            pB.stateTicks = 16;
+            pB.stateTicks = 14;
             pB.isGuarding = false;
-          } else if ((pA.state === 'JAB' || pA.state === 'HOOK') && r < 0.55) {
-            if (r < 0.3 && pB.stamina >= 15) {
+            botCooldownRef.current = 24;
+          } else if ((pA.state === 'JAB' || pA.state === 'HOOK') && r < 0.22) {
+            // Human-like occasional block
+            if (r < 0.08 && pB.stamina >= 15) {
               pB.stamina -= 15;
               pB.state = 'DODGE';
-              pB.stateTicks = 8;
+              pB.stateTicks = 6;
               pB.isDodging = true;
+              botCooldownRef.current = 16;
             } else {
               pB.state = 'BLOCK';
               pB.isGuarding = true;
+              pB.stateTicks = 6;
+              botCooldownRef.current = 14;
             }
-          } else if (dist <= 72 && r < 0.18 && pB.stamina >= 20) {
-            pB.stamina -= 20;
+          } else if (dist <= 74 && r < 0.12 && pB.stamina >= 18) {
+            pB.stamina -= 18;
             pB.state = 'HOOK';
-            pB.stateTicks = 12;
+            pB.stateTicks = 9;
             pB.isGuarding = false;
-          } else if (dist <= 82 && r < 0.35 && pB.stamina >= 10) {
+            botCooldownRef.current = 18 + Math.floor(Math.random() * 10);
+          } else if (dist <= 84 && r < 0.20 && pB.stamina >= 10) {
             pB.stamina -= 10;
             pB.state = 'JAB';
-            pB.stateTicks = 7;
+            pB.stateTicks = 6;
             pB.isGuarding = false;
+            botCooldownRef.current = 16 + Math.floor(Math.random() * 10);
           } else {
             pB.state = 'IDLE';
             pB.isGuarding = false;
@@ -1340,24 +1367,26 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         }
 
         // Hit Detection: Player A hitting Bot B
-        if ((pA.state === 'JAB' && pA.stateTicks === 3) || (pA.state === 'HOOK' && pA.stateTicks === 6) || (pA.state === 'UPPERCUT' && pA.stateTicks === 8)) {
-          const range = pA.state === 'UPPERCUT' ? 78 : pA.state === 'HOOK' ? 72 : 82;
+        if ((pA.state === 'JAB' && pA.stateTicks === 3) || (pA.state === 'HOOK' && pA.stateTicks === 5) || (pA.state === 'UPPERCUT' && pA.stateTicks === 7)) {
+          const range = pA.state === 'UPPERCUT' ? 80 : pA.state === 'HOOK' ? 76 : 84;
           if (dist <= range && !pB.isDodging) {
             const isBlocked = pB.isGuarding && pB.stamina >= 10 && pA.state !== 'UPPERCUT';
-            const baseDmg = pA.state === 'UPPERCUT' ? 38 : pA.state === 'HOOK' ? 18 : 8;
+            const baseDmg = pA.state === 'UPPERCUT' ? 42 : pA.state === 'HOOK' ? 22 : 9;
             const finalDmg = isBlocked ? Math.max(2, Math.round(baseDmg * 0.22)) : baseDmg;
             pB.hp = Math.max(0, pB.hp - finalDmg);
             if (!isBlocked) {
               pB.state = 'HURT';
               pB.stateTicks = 6;
-              pB.x = Math.min(660, pB.x + 15);
+              pB.x = Math.min(660, pB.x + (pA.state === 'UPPERCUT' ? 26 : 14));
+              botCooldownRef.current = 14;
             }
-            pA.superMeter = Math.min(100, pA.superMeter + (pA.state === 'UPPERCUT' ? 0 : 12));
+            const superGain = pA.state === 'UPPERCUT' ? 0 : pA.state === 'HOOK' ? 22 : 12;
+            pA.superMeter = Math.min(100, pA.superMeter + superGain);
             lastHitEvent = {
-              id: `hit_${Date.now()}`,
+              id: `hit_${Date.now()}_${Math.random()}`,
               attacker: 'A',
               defender: 'B',
-              type: pA.state === 'UPPERCUT' ? 'UPPERCUT' : isBlocked ? 'JAB' : 'HOOK',
+              type: pA.state === 'UPPERCUT' ? 'UPPERCUT' : isBlocked ? 'JAB' : pA.state === 'HOOK' ? 'HOOK' : 'JAB',
               damage: finalDmg,
               isCrit: false,
               isBlocked,
@@ -1367,24 +1396,25 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         }
 
         // Hit Detection: Bot B hitting Player A
-        if ((pB.state === 'JAB' && pB.stateTicks === 3) || (pB.state === 'HOOK' && pB.stateTicks === 6) || (pB.state === 'UPPERCUT' && pB.stateTicks === 8)) {
-          const range = pB.state === 'UPPERCUT' ? 78 : pB.state === 'HOOK' ? 72 : 82;
+        if ((pB.state === 'JAB' && pB.stateTicks === 3) || (pB.state === 'HOOK' && pB.stateTicks === 5) || (pB.state === 'UPPERCUT' && pB.stateTicks === 7)) {
+          const range = pB.state === 'UPPERCUT' ? 80 : pB.state === 'HOOK' ? 76 : 84;
           if (dist <= range && !pA.isDodging) {
             const isBlocked = pA.isGuarding && pA.stamina >= 10 && pB.state !== 'UPPERCUT';
-            const baseDmg = pB.state === 'UPPERCUT' ? 38 : pB.state === 'HOOK' ? 18 : 8;
+            const baseDmg = pB.state === 'UPPERCUT' ? 36 : pB.state === 'HOOK' ? 18 : 8;
             const finalDmg = isBlocked ? Math.max(2, Math.round(baseDmg * 0.22)) : baseDmg;
             pA.hp = Math.max(0, pA.hp - finalDmg);
             if (!isBlocked) {
               pA.state = 'HURT';
               pA.stateTicks = 6;
-              pA.x = Math.max(140, pA.x - 15);
+              pA.x = Math.max(140, pA.x - (pB.state === 'UPPERCUT' ? 26 : 14));
             }
-            pB.superMeter = Math.min(100, pB.superMeter + (pB.state === 'UPPERCUT' ? 0 : 12));
+            const superGain = pB.state === 'UPPERCUT' ? 0 : pB.state === 'HOOK' ? 18 : 10;
+            pB.superMeter = Math.min(100, pB.superMeter + superGain);
             lastHitEvent = {
-              id: `hit_${Date.now()}`,
+              id: `hit_${Date.now()}_${Math.random()}`,
               attacker: 'B',
               defender: 'A',
-              type: pB.state === 'UPPERCUT' ? 'UPPERCUT' : isBlocked ? 'JAB' : 'HOOK',
+              type: pB.state === 'UPPERCUT' ? 'UPPERCUT' : isBlocked ? 'JAB' : pB.state === 'HOOK' ? 'HOOK' : 'JAB',
               damage: finalDmg,
               isCrit: false,
               isBlocked,

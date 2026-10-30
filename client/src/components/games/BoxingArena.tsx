@@ -94,12 +94,14 @@ interface BoxingSprites {
   boxerAIdle?: HTMLImageElement;
   boxerAJab?: HTMLImageElement;
   boxerAHook?: HTMLImageElement;
+  boxerASuper?: HTMLImageElement;
   boxerABlock?: HTMLImageElement;
   boxerAHurt?: HTMLImageElement;
   boxerADodge?: HTMLImageElement;
   boxerBIdle?: HTMLImageElement;
   boxerBJab?: HTMLImageElement;
   boxerBHook?: HTMLImageElement;
+  boxerBSuper?: HTMLImageElement;
   boxerBBlock?: HTMLImageElement;
   boxerBHurt?: HTMLImageElement;
   boxerBDodge?: HTMLImageElement;
@@ -110,12 +112,14 @@ const BOXING_SPRITE_PATHS = {
   boxerAIdle: '/assets/games/boxing/boxer_a_idle.webp',
   boxerAJab: '/assets/games/boxing/boxer_a_jab.webp',
   boxerAHook: '/assets/games/boxing/boxer_a_hook.webp',
+  boxerASuper: '/assets/games/boxing/boxer_a_super.webp',
   boxerABlock: '/assets/games/boxing/boxer_a_block.webp',
   boxerAHurt: '/assets/games/boxing/boxer_a_hurt.webp',
   boxerADodge: '/assets/games/boxing/boxer_a_dodge.webp',
   boxerBIdle: '/assets/games/boxing/boxer_b_idle.webp',
   boxerBJab: '/assets/games/boxing/boxer_b_jab.webp',
   boxerBHook: '/assets/games/boxing/boxer_b_hook.webp',
+  boxerBSuper: '/assets/games/boxing/boxer_b_super.webp',
   boxerBBlock: '/assets/games/boxing/boxer_b_block.webp',
   boxerBHurt: '/assets/games/boxing/boxer_b_hurt.webp',
   boxerBDodge: '/assets/games/boxing/boxer_b_dodge.webp',
@@ -168,12 +172,14 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     boxerAIdle: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAIdle),
     boxerAJab: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAJab),
     boxerAHook: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAHook),
+    boxerASuper: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerASuper),
     boxerABlock: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerABlock),
     boxerAHurt: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAHurt),
     boxerADodge: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerADodge),
     boxerBIdle: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBIdle),
     boxerBJab: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBJab),
     boxerBHook: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBHook),
+    boxerBSuper: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBSuper),
     boxerBBlock: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBBlock),
     boxerBHurt: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBHurt),
     boxerBDodge: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBDodge),
@@ -529,9 +535,12 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     } else if (b.state === 'JAB') {
       activeImg = isBlue ? spritesRef.current.boxerAJab : spritesRef.current.boxerBJab;
       targetH = 108;
-    } else if (b.state === 'HOOK' || b.state === 'UPPERCUT') {
+    } else if (b.state === 'HOOK') {
       activeImg = isBlue ? spritesRef.current.boxerAHook : spritesRef.current.boxerBHook;
       targetH = 108;
+    } else if (b.state === 'UPPERCUT') {
+      activeImg = isBlue ? spritesRef.current.boxerASuper : spritesRef.current.boxerBSuper;
+      targetH = 114;
     } else {
       activeImg = isBlue ? spritesRef.current.boxerAIdle : spritesRef.current.boxerBIdle;
       targetH = 108;
@@ -651,8 +660,11 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     ctx.restore();
   };
 
-  const currentHpA = localState?.boxerA?.hp ?? 100;
-  const currentHpB = localState?.boxerB?.hp ?? 100;
+  const MAX_BOXER_HP = 150;
+  const currentHpA = localState?.boxerA?.hp ?? MAX_BOXER_HP;
+  const currentHpB = localState?.boxerB?.hp ?? MAX_BOXER_HP;
+  const hpPercentA = Math.max(0, Math.min(100, (currentHpA / MAX_BOXER_HP) * 100));
+  const hpPercentB = Math.max(0, Math.min(100, (currentHpB / MAX_BOXER_HP) * 100));
   const currentStamina = (userSide === 'A' ? localState?.boxerA?.stamina : localState?.boxerB?.stamina) ?? 100;
   const currentSuper = (userSide === 'A' ? localState?.boxerA?.superMeter : localState?.boxerB?.superMeter) ?? 0;
   const timeSec = Math.ceil((localState?.timeRemainingMs ?? 60000) / 1000);
@@ -877,13 +889,18 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
             <div className="flex items-center justify-between">
               {/* Boxer A Info */}
               <div className="flex-1 text-left">
-                <span className="text-xs font-heading font-black text-cyan-400 truncate block">
-                  {playerAName}
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-heading font-black text-cyan-400 truncate block">
+                    {playerAName}
+                  </span>
+                  <span className="text-[10px] font-mono text-cyan-300 font-bold ml-1">
+                    {Math.round(currentHpA)}
+                  </span>
+                </div>
                 <div className="w-full bg-black/50 rounded-full h-3 border border-white/10 overflow-hidden mt-1">
                   <div
                     className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-150"
-                    style={{ width: `${Math.max(0, currentHpA)}%` }}
+                    style={{ width: `${hpPercentA}%` }}
                   />
                 </div>
               </div>
@@ -901,13 +918,18 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
 
               {/* Boxer B Info */}
               <div className="flex-1 text-right">
-                <span className="text-xs font-heading font-black text-rose-400 truncate block">
-                  {playerBName}
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-rose-300 font-bold mr-1">
+                    {Math.round(currentHpB)}
+                  </span>
+                  <span className="text-xs font-heading font-black text-rose-400 truncate block">
+                    {playerBName}
+                  </span>
+                </div>
                 <div className="w-full bg-black/50 rounded-full h-3 border border-white/10 overflow-hidden mt-1">
                   <div
                     className="h-full bg-gradient-to-l from-rose-500 to-red-600 transition-all duration-150 ml-auto"
-                    style={{ width: `${Math.max(0, currentHpB)}%` }}
+                    style={{ width: `${hpPercentB}%` }}
                   />
                 </div>
               </div>

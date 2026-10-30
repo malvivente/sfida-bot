@@ -72,7 +72,7 @@ export class BoxingRoom extends BaseGameRoom {
       side,
       name: isA ? this.playerA.username : (this.playerB?.username || 'Boxer B'),
       x: isA ? 260 : 540,
-      hp: 100,
+      hp: 150,
       stamina: 100,
       superMeter: 0,
       state: 'IDLE',
@@ -202,13 +202,13 @@ export class BoxingRoom extends BaseGameRoom {
   private updateBoxer(b: BoxerState, inp: PlayerInput, opponent: BoxerState) {
     // Passive stamina recovery
     if (b.state === 'IDLE' || b.state === 'MOVE') {
-      b.stamina = Math.min(100, b.stamina + 0.6); // ~18 stamina/s
+      b.stamina = Math.min(100, b.stamina + 0.85); // fast stamina recovery
     } else if (b.state === 'BLOCK') {
-      b.stamina = Math.min(100, b.stamina + 0.15);
+      b.stamina = Math.min(100, b.stamina + 0.25);
     }
 
-    // Passive super meter charge (+2%/s)
-    b.superMeter = Math.min(100, b.superMeter + 0.07);
+    // Passive super meter charge (+4%/s)
+    b.superMeter = Math.min(100, b.superMeter + 0.12);
 
     // Decrement input buffers
     if (inp.jabBufferTicks > 0) inp.jabBufferTicks--;
@@ -225,7 +225,7 @@ export class BoxingRoom extends BaseGameRoom {
       if (b.stateTicks <= 0) {
         b.isDodging = false;
         b.isCounterVulnerable = false;
-        if (inp.block && b.stamina >= 8) {
+        if (inp.block && b.stamina >= 6) {
           b.state = 'BLOCK';
           b.isGuarding = true;
         } else {
@@ -249,11 +249,11 @@ export class BoxingRoom extends BaseGameRoom {
     }
 
     // 2. Dodge / Weave
-    if (inp.dodgeBufferTicks > 0 && b.stamina >= 15) {
+    if (inp.dodgeBufferTicks > 0 && b.stamina >= 10) {
       inp.dodgeBufferTicks = 0;
-      b.stamina = Math.max(0, b.stamina - 15);
+      b.stamina = Math.max(0, b.stamina - 10);
       b.state = 'DODGE';
-      b.stateTicks = 8;
+      b.stateTicks = 6;
       b.isDodging = true;
       b.isGuarding = false;
 
@@ -265,20 +265,20 @@ export class BoxingRoom extends BaseGameRoom {
     }
 
     // 3. Hook (Heavy body blow)
-    if (inp.hookBufferTicks > 0 && b.stamina >= 18) {
+    if (inp.hookBufferTicks > 0 && b.stamina >= 14) {
       inp.hookBufferTicks = 0;
-      b.stamina = Math.max(0, b.stamina - 18);
+      b.stamina = Math.max(0, b.stamina - 14);
       b.state = 'HOOK';
-      b.stateTicks = 9;
+      b.stateTicks = 8;
       b.isGuarding = false;
       b.isDodging = false;
       return;
     }
 
     // 4. Jab (Fast head strike)
-    if (inp.jabBufferTicks > 0 && b.stamina >= 8) {
+    if (inp.jabBufferTicks > 0 && b.stamina >= 7) {
       inp.jabBufferTicks = 0;
-      b.stamina = Math.max(0, b.stamina - 8);
+      b.stamina = Math.max(0, b.stamina - 7);
       b.state = 'JAB';
       b.stateTicks = 5;
       b.isGuarding = false;
@@ -287,7 +287,7 @@ export class BoxingRoom extends BaseGameRoom {
     }
 
     // 5. Block / Guard
-    if (inp.block && b.stamina >= 8) {
+    if (inp.block && b.stamina >= 6) {
       b.state = 'BLOCK';
       b.isGuarding = true;
       b.isDodging = false;
@@ -324,19 +324,19 @@ export class BoxingRoom extends BaseGameRoom {
 
     if (!isJabHitFrame && !isHookHitFrame && !isUppercutHitFrame) return;
 
-    let range = 82;
+    let range = 84;
     let baseDmg = 9;
     let hitType: BoxingHitEvent['type'] = 'JAB';
     let superGain = 12;
 
     if (attacker.state === 'HOOK') {
-      range = 72;
-      baseDmg = 19;
+      range = 76;
+      baseDmg = 22;
       hitType = 'HOOK';
-      superGain = 20;
+      superGain = 22;
     } else if (attacker.state === 'UPPERCUT') {
-      range = 78;
-      baseDmg = 40;
+      range = 80;
+      baseDmg = 42;
       hitType = 'UPPERCUT';
       superGain = 0;
     }

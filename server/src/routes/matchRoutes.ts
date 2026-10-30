@@ -283,7 +283,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const { creationFeeGram, minWagerGram, minWagerSplitGram = 5.0 } = feeConfig.getConfig();
     const effectiveMinWager = gameType === 'split' ? minWagerSplitGram : minWagerGram;
 
-    const isF2PAllowed = gameType === 'uno' || gameType === 'headsoccer';
+    const isF2PAllowed = gameType === 'uno' || gameType === 'headsoccer' || gameType === 'boxing';
     const isF2P = isF2PAllowed && wagerGram === 0;
 
     if (!isF2P && wagerGram < effectiveMinWager) {
@@ -624,7 +624,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
     const { joinFeeGram } = feeConfig.getConfig();
-    const isF2P = (room.gameType === 'uno' || room.gameType === 'headsoccer') && wagerGram === 0;
+    const isF2P = (room.gameType === 'uno' || room.gameType === 'headsoccer' || room.gameType === 'boxing') && wagerGram === 0;
     const totalRequired = isF2P ? 0 : (wagerGram + joinFeeGram);
 
     // Check Player B's balance

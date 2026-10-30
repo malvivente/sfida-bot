@@ -653,6 +653,8 @@ export const translations: Translations = {
   'arena.readyWaiting': { it: 'PRONTO • IN ATTESA DELL\'AVVERSARIO', en: 'READY • WAITING FOR OPPONENT' },
   'arena.waitingForOpponentBtn': { it: '⏳ IN ATTESA DI UNO SFIDANTE...', en: '⏳ WAITING FOR OPPONENT...' },
   'arena.joinAsPlayer': { it: 'PARTECIPA AL DUELLO ({amount} GRAM)', en: 'JOIN DUEL ({amount} GRAM)' },
+  'arena.ready': { it: 'PRONTO', en: 'READY' },
+  'arena.waiting': { it: 'IN ATTESA', en: 'WAITING' },
   'arena.readyBadge': { it: '✓ PRONTO', en: '✓ READY' },
   'arena.waitingBadge': { it: 'IN ATTESA', en: 'WAITING' },
   'arena.waitingTurn': { it: 'ATTESA', en: 'WAITING' },
