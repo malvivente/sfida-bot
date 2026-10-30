@@ -96,11 +96,13 @@ interface BoxingSprites {
   boxerAHook?: HTMLImageElement;
   boxerABlock?: HTMLImageElement;
   boxerAHurt?: HTMLImageElement;
+  boxerADodge?: HTMLImageElement;
   boxerBIdle?: HTMLImageElement;
   boxerBJab?: HTMLImageElement;
   boxerBHook?: HTMLImageElement;
   boxerBBlock?: HTMLImageElement;
   boxerBHurt?: HTMLImageElement;
+  boxerBDodge?: HTMLImageElement;
 }
 
 const BOXING_SPRITE_PATHS = {
@@ -110,11 +112,13 @@ const BOXING_SPRITE_PATHS = {
   boxerAHook: '/assets/games/boxing/boxer_a_hook.webp',
   boxerABlock: '/assets/games/boxing/boxer_a_block.webp',
   boxerAHurt: '/assets/games/boxing/boxer_a_hurt.webp',
+  boxerADodge: '/assets/games/boxing/boxer_a_dodge.webp',
   boxerBIdle: '/assets/games/boxing/boxer_b_idle.webp',
   boxerBJab: '/assets/games/boxing/boxer_b_jab.webp',
   boxerBHook: '/assets/games/boxing/boxer_b_hook.webp',
   boxerBBlock: '/assets/games/boxing/boxer_b_block.webp',
   boxerBHurt: '/assets/games/boxing/boxer_b_hurt.webp',
+  boxerBDodge: '/assets/games/boxing/boxer_b_dodge.webp',
 };
 
 const BOXING_SPRITE_CACHE: Record<string, HTMLImageElement> = {};
@@ -166,11 +170,13 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     boxerAHook: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAHook),
     boxerABlock: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerABlock),
     boxerAHurt: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerAHurt),
+    boxerADodge: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerADodge),
     boxerBIdle: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBIdle),
     boxerBJab: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBJab),
     boxerBHook: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBHook),
     boxerBBlock: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBBlock),
     boxerBHurt: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBHurt),
+    boxerBDodge: getOrLoadBoxingSprite(BOXING_SPRITE_PATHS.boxerBDodge),
   });
 
   const [localState, setLocalState] = useState<BoxingState | undefined>(gameData);
@@ -514,9 +520,12 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     if (b.state === 'HURT') {
       activeImg = isBlue ? spritesRef.current.boxerAHurt : spritesRef.current.boxerBHurt;
       targetH = 108;
-    } else if (b.isGuarding) {
+    } else if (b.isDodging || b.state === 'DODGE') {
+      activeImg = isBlue ? spritesRef.current.boxerADodge : spritesRef.current.boxerBDodge;
+      targetH = 82;
+    } else if (b.isGuarding || b.state === 'BLOCK') {
       activeImg = isBlue ? spritesRef.current.boxerABlock : spritesRef.current.boxerBBlock;
-      targetH = 98;
+      targetH = 108;
     } else if (b.state === 'JAB') {
       activeImg = isBlue ? spritesRef.current.boxerAJab : spritesRef.current.boxerBJab;
       targetH = 108;
@@ -528,10 +537,8 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       targetH = 108;
     }
 
-    // 4. State Y-offset modifiers (Dodge ducking or leaping uppercut)
-    if (b.isDodging) {
-      y += 18; // duck down into weave
-    } else if (b.state === 'UPPERCUT') {
+    // 4. State Y-offset modifiers (Leaping uppercut)
+    if (b.state === 'UPPERCUT') {
       y -= 18; // leaping uppercut
     }
 
@@ -540,10 +547,8 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       const targetW = targetH * (activeImg.naturalWidth / activeImg.naturalHeight);
       let offsetX = -targetW / 2;
       // Precision hitbox center alignment for forward-extended punch sprites
-      if (b.state === 'JAB') {
+      if (b.state === 'JAB' || b.state === 'HOOK' || b.state === 'UPPERCUT') {
         offsetX = facingRight ? -targetW * 0.40 : -targetW * 0.60;
-      } else if (b.state === 'HOOK') {
-        offsetX = facingRight ? -targetW * 0.42 : -targetW * 0.58;
       }
       const offsetY = -targetH;
 
