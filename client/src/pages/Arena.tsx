@@ -28,6 +28,7 @@ import { areAddressesEqual } from '../utils/ton.js';
 import { ArrowLeft, Trash2, AlertTriangle, Loader2, CheckCircle2, ArrowDownLeft, AlertCircle, Share2, Swords, X, Target } from 'lucide-react';
 import { shareToTelegram } from '../utils/telegram.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
+import { getUserFee, UserRank } from '../config/ranksConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
@@ -109,6 +110,10 @@ export const Arena: React.FC<ArenaProps> = ({
     }
   });
   const [feeConfigData, setFeeConfigData] = useState<FeeConfig | null>(null);
+
+  const userRank: UserRank = (userBalance?.rank as UserRank) || 'wood';
+  const userRankFee: number = userBalance?.rankFeeGram !== undefined ? userBalance.rankFeeGram : getUserFee(userRank);
+
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('1.0');
   const [depositLoading, setDepositLoading] = useState(false);
@@ -1173,7 +1178,7 @@ export const Arena: React.FC<ArenaProps> = ({
               <div className="p-3 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between">
                 <span className="text-xs text-slate-400 font-sans">{t('arena.amountToRefund')}</span>
                 <span className="text-sm font-heading font-black text-amber-300 flex items-center space-x-1">
-                  <span>{(parseFloat(matchToCancel.wagerAmountNano) / 1e9 + (feeConfigData?.creationFeeGram || 0.02)).toFixed(2)}</span>
+                  <span>{(parseFloat(matchToCancel.wagerAmountNano) / 1e9 + ((matchToCancel as any).creationFeeGram || feeConfigData?.creationFeeGram || userRankFee)).toFixed(2)}</span>
                   <GramIcon className="w-3.5 h-3.5 text-amber-400 inline" />
                 </span>
               </div>
@@ -1951,8 +1956,8 @@ export const Arena: React.FC<ArenaProps> = ({
           onBalanceUpdated={(newBal) => {
             setUserBalance((prev) => (prev ? { ...prev, balanceGram: newBal } : null));
           }}
-          creationFeeGram={feeConfigData?.creationFeeGram || 0.05}
-          joinFeeGram={feeConfigData?.joinFeeGram || 0.05}
+          creationFeeGram={userRankFee}
+          joinFeeGram={userRankFee}
           initialInviteCode={initialInviteCode}
           onOpenDeposit={(missing) => {
             if (missing) setDepositAmount(missing);

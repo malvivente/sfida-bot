@@ -1,13 +1,16 @@
 import React from 'react';
-import { Wallet, HelpCircle, Globe, Shield, Users } from 'lucide-react';
+import { Wallet, HelpCircle, Globe, Users } from 'lucide-react';
 import { GramIcon } from './GramIcon.js';
 import { UserAvatar } from './UserAvatar.js';
+import { RankAvatarBadge } from './RankBadge.js';
+import { UserRank } from '../config/ranksConfig.js';
 import { useHaptics } from '../hooks/useHaptics.js';
 import { useI18n } from '../i18n/index.js';
 import { TonConnectButton } from '@tonconnect/ui-react';
 
 interface EpicHeaderProps {
   userBalanceGram?: string;
+  userRank?: UserRank;
   onOpenDeposit?: () => void;
   photoUrl?: string | null;
   displayName?: string;
@@ -21,6 +24,7 @@ interface EpicHeaderProps {
 
 export const EpicHeader: React.FC<EpicHeaderProps> = ({
   userBalanceGram = '0.00',
+  userRank = 'wood',
   onOpenDeposit,
   photoUrl,
   displayName,
@@ -99,7 +103,7 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
             onClick={onOpenProfile}
             className="flex items-center space-x-3 cursor-pointer group select-none"
           >
-            {/* Avatar with subtle glow ring and VIP gem badge */}
+            {/* Avatar with subtle glow ring and Rank badge */}
             <div className="relative">
               <UserAvatar
                 photoUrl={photoUrl}
@@ -108,9 +112,7 @@ export const EpicHeader: React.FC<EpicHeaderProps> = ({
                 roundedClass="rounded-2xl"
                 className="ring-2 ring-white/10 group-hover:ring-purple-500/50 transition-all shadow-md"
               />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 border border-[#0e1015] flex items-center justify-center shadow-sm">
-                <Shield className="w-2.5 h-2.5 text-white" />
-              </div>
+              <RankAvatarBadge rank={userRank} size="sm" />
             </div>
 
             {/* Balance info */}

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { Address } from '@ton/ton';
 import { feeConfig } from '../config/feeConfig.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
+import { UserRank, RANKS_CONFIG, getRankFromXp, getUserFee, getNextRankProgress } from '../config/ranksConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,15 @@ export interface UserStats {
   totalProfitsGram: string;
   dailyStreak: number;
   hasWonToday: boolean;
+  xp?: number;
+  rank?: UserRank;
+  rankFeeGram?: number;
+  nextRank?: UserRank | null;
+  progressPercent?: number;
+  xpInCurrentTier?: number;
+  xpNeededForNextTier?: number;
+  claimedRankRewards?: string[];
+  freeRaffleTickets?: number;
 }
 
 export interface LeaderboardEntry {
@@ -71,6 +81,8 @@ export interface LeaderboardEntry {
   winRate: number;
   dailyStreak: number;
   totalProfitsGram: string;
+  rankTier?: UserRank;
+  xp?: number;
 }
 
 export interface UserAccount {
@@ -96,6 +108,10 @@ export interface UserAccount {
   depositedTotalGram: string;
   withdrawnTotalTon: string;
   withdrawnTotalGram: string;
+  xp?: number;
+  rank?: UserRank;
+  claimedRankRewards?: string[];
+  freeRaffleTickets?: number;
   updatedAt: number;
   mockStats?: {
     duelsPlayed: number;
@@ -110,7 +126,7 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN' | 'CASINO_BET' | 'CASINO_WIN';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN' | 'CASINO_BET' | 'CASINO_WIN' | 'RANK_REWARD';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
@@ -896,6 +912,14 @@ export class DatabaseService {
         }
       }
 
+      if (account.xp === undefined) {
+        account.xp = 0;
+        account.rank = 'wood';
+        account.claimedRankRewards = [];
+        account.freeRaffleTickets = 0;
+        changed = true;
+      }
+
       if (changed) {
         account.updatedAt = Date.now();
         this.persistData();
@@ -925,6 +949,10 @@ export class DatabaseService {
       depositedTotalGram: '0.00',
       withdrawnTotalTon: '0.00',
       withdrawnTotalGram: '0.00',
+      xp: 0,
+      rank: 'wood',
+      claimedRankRewards: [],
+      freeRaffleTickets: 0,
       updatedAt: Date.now(),
     };
 
@@ -1241,7 +1269,7 @@ export class DatabaseService {
   public async creditUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN' | 'CASINO_WIN',
+    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN' | 'CASINO_WIN' | 'RANK_REWARD',
     details?: string,
     telegramId?: string
   ): Promise<UserAccount> {
@@ -1445,12 +1473,130 @@ export class DatabaseService {
     return { success: true, data: this.treasury };
   }
 
+  // --- Rank, XP, and Level-Up Methods ---
+
+  public async addXp(walletAddress?: string, xpToAdd: number = 0, telegramId?: string): Promise<{
+    account?: UserAccount;
+    newRank?: UserRank;
+    didLevelUp: boolean;
+    rewardGram: number;
+    rewardTickets: number;
+  }> {
+    if (xpToAdd <= 0) return { didLevelUp: false, rewardGram: 0, rewardTickets: 0 };
+    const user = await this.getUserAccount(walletAddress, telegramId);
+    if (!user) return { didLevelUp: false, rewardGram: 0, rewardTickets: 0 };
+
+    const oldXp = user.xp || 0;
+    const oldRank = user.rank || getRankFromXp(oldXp);
+    const newXp = oldXp + xpToAdd;
+    const newRank = getRankFromXp(newXp);
+
+    user.xp = newXp;
+    user.rank = newRank;
+
+    let totalRewardGram = 0;
+    let totalRewardTickets = 0;
+    let didLevelUp = false;
+
+    const ranksOrder: UserRank[] = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'obsidian'];
+    const newRankIndex = ranksOrder.indexOf(newRank);
+    const oldRankIndex = ranksOrder.indexOf(oldRank);
+
+    if (newRankIndex > oldRankIndex) {
+      didLevelUp = true;
+    }
+
+    const claimed = new Set(user.claimedRankRewards || []);
+    for (let i = 1; i <= newRankIndex; i++) {
+      const r = ranksOrder[i];
+      if (!claimed.has(r)) {
+        const cfg = RANKS_CONFIG[r];
+        if (cfg.rewardGram > 0) {
+          totalRewardGram += cfg.rewardGram;
+          await this.creditUserBalance(
+            user.walletAddress,
+            cfg.rewardGram.toFixed(2),
+            'RANK_REWARD',
+            `Premio Level-Up Rank ${cfg.name} (+${cfg.rewardGram} GRAM)`,
+            user.telegramId
+          );
+        }
+        if (cfg.rewardTickets > 0) {
+          totalRewardTickets += cfg.rewardTickets;
+          user.freeRaffleTickets = (user.freeRaffleTickets || 0) + cfg.rewardTickets;
+          this.awardFreeRaffleTickets(user.telegramId || '', user.username, cfg.rewardTickets);
+        }
+        claimed.add(r);
+        console.log(`[DatabaseService] User ${user.telegramId || user.walletAddress} achieved Rank ${cfg.name}! Claimed ${cfg.rewardGram} GRAM & ${cfg.rewardTickets} tickets.`);
+      }
+    }
+
+    user.claimedRankRewards = Array.from(claimed);
+    this.persistData();
+
+    return {
+      account: user,
+      newRank,
+      didLevelUp,
+      rewardGram: totalRewardGram,
+      rewardTickets: totalRewardTickets,
+    };
+  }
+
+  public awardFreeRaffleTickets(userId: string, username?: string, quantity: number = 1): void {
+    const cleanUserId = String(userId).trim();
+    if (!cleanUserId || quantity <= 0) return;
+
+    const activeRaffle = Array.from(this.raffles.values()).find(
+      (r) => r.status === 'ACTIVE' && Date.now() < r.endsAtEpoch && r.ticketPriceGram > 0
+    );
+    if (!activeRaffle) return;
+
+    const startNum = activeRaffle.totalTickets + 1;
+    for (let i = 0; i < quantity; i++) {
+      const num = startNum + i;
+      this.raffleTickets.push({
+        id: `tkt_rank_${activeRaffle.id}_${num}_${Date.now()}`,
+        raffleId: activeRaffle.id,
+        userId: cleanUserId,
+        username,
+        ticketNumber: num,
+        purchasedAt: Date.now(),
+      });
+    }
+    activeRaffle.totalTickets += quantity;
+    this.persistRaffles();
+    console.log(`[DatabaseService] Awarded ${quantity} free tickets in Raffle ${activeRaffle.id} to user ${cleanUserId}`);
+  }
+
   // --- Match and History Methods ---
 
   public async saveMatch(record: StoredMatch): Promise<void> {
     this.matches.set(record.matchId, record);
     this.indexMatch(record);
     this.leaderboardCache.clear();
+
+    // Award XP to participants:
+    // 15 XP for playing, +10 XP for winner, +5 XP per 1 GRAM wagered (capped at 100 XP)
+    try {
+      const wagerGram = parseFloat(record.wagerGram || record.wagerTon || '0');
+      const volumeXp = Math.min(100, Math.floor(wagerGram * 5));
+
+      const isWinnerA = record.winnerAddress === record.playerAAddress ||
+        (record.winnerTelegramId && record.winnerTelegramId === record.playerATelegramId);
+      const xpA = 15 + (isWinnerA ? 10 : 0) + volumeXp;
+      await this.addXp(record.playerAAddress, xpA, record.playerATelegramId);
+
+      if (record.playerBAddress || record.playerBTelegramId) {
+        const isWinnerB = record.winnerAddress === record.playerBAddress ||
+          (record.winnerTelegramId && record.winnerTelegramId === record.playerBTelegramId);
+        const xpB = 15 + (isWinnerB ? 10 : 0) + volumeXp;
+        await this.addXp(record.playerBAddress, xpB, record.playerBTelegramId);
+      }
+    } catch (e) {
+      console.warn('[DatabaseService] Error awarding match XP:', e);
+    }
+
     this.persistData();
     console.log(`[DatabaseService] Persisted match #${record.matchId} (Winner: ${record.winnerName || record.winnerAddress})`);
   }
@@ -1683,6 +1829,22 @@ export class DatabaseService {
 
     const { dailyStreak, hasWonToday } = this.calculateDailyWinStreak(history);
 
+    let xp = userAcc?.xp;
+    if (xp === undefined) {
+      // Historical calculation for existing users
+      const totalWagerVolume = history.reduce((acc, h) => acc + (parseFloat(h.wagerGram || h.wagerTon) || 0), 0);
+      xp = (duelsPlayed * 15) + (duelsWon * 10) + Math.min(5000, Math.floor(totalWagerVolume * 5));
+      if (userAcc) {
+        userAcc.xp = xp;
+        userAcc.rank = getRankFromXp(xp);
+        this.persistData();
+      }
+    }
+
+    const rank = userAcc?.rank || getRankFromXp(xp || 0);
+    const rankFeeGram = getUserFee(rank);
+    const progress = getNextRankProgress(xp || 0);
+
     return {
       duelsPlayed,
       duelsWon,
@@ -1692,6 +1854,15 @@ export class DatabaseService {
       totalProfitsGram: totalProfits,
       dailyStreak,
       hasWonToday,
+      xp: xp || 0,
+      rank,
+      rankFeeGram,
+      nextRank: progress.nextRank,
+      progressPercent: progress.progressPercent,
+      xpInCurrentTier: progress.xpInCurrentTier,
+      xpNeededForNextTier: progress.xpNeededForNextTier,
+      claimedRankRewards: userAcc?.claimedRankRewards || [],
+      freeRaffleTickets: userAcc?.freeRaffleTickets || 0,
     };
   }
 
@@ -1820,6 +1991,8 @@ export class DatabaseService {
           winRate: stats.winRate,
           dailyStreak: stats.dailyStreak,
           totalProfitsGram: stats.totalProfitsGram,
+          rankTier: stats.rank || 'wood',
+          xp: stats.xp || 0,
         });
       }
 
@@ -1874,6 +2047,8 @@ export class DatabaseService {
           winRate: stats.winRate,
           dailyStreak: stats.dailyStreak,
           totalProfitsGram: stats.totalProfitsGram,
+          rankTier: stats.rank || 'wood',
+          xp: stats.xp || 0,
         };
       }
     }

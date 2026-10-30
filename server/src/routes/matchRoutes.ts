@@ -6,6 +6,7 @@ import { signerService } from '../services/signer.js';
 import { tonSettlementService } from '../services/tonSettlement.js';
 import { dbService } from '../services/db.js';
 import { feeConfig } from '../config/feeConfig.js';
+import { getUserFee } from '../config/ranksConfig.js';
 import { isTelegramChatMember } from '../bot/index.js';
 import { TonClient, WalletContractV4, WalletContractV5R1, SendMode, internal, toNano, Address } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
@@ -280,7 +281,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const wagerGram = Number(wagerNano) / 1e9;
     const gameType = body.gameType || 'roulette';
 
-    const { creationFeeGram, minWagerGram, minWagerSplitGram = 5.0 } = feeConfig.getConfig();
+    const { minWagerGram, minWagerSplitGram = 5.0 } = feeConfig.getConfig();
     const effectiveMinWager = gameType === 'split' ? minWagerSplitGram : minWagerGram;
 
     const isF2PAllowed = gameType === 'uno' || gameType === 'headsoccer' || gameType === 'boxing';
@@ -296,14 +297,15 @@ export async function matchRoutes(fastify: FastifyInstance) {
       });
     }
 
-    const totalRequired = isF2P ? 0 : (wagerGram + creationFeeGram);
-
-    // Check Player A's internal balance
+    // Check Player A's internal balance and calculate rank-based fee
     const userAccount = await dbService.getUserAccount(
       effectivePlayerAddress,
       body.telegramUserId,
       body.telegramUsername
     );
+    const userRank = userAccount.rank || 'wood';
+    const creationFeeGram = getUserFee(userRank);
+    const totalRequired = isF2P ? 0 : (wagerGram + creationFeeGram);
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
     if (!isF2P && currentBal < totalRequired) {
@@ -623,16 +625,17 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
-    const { joinFeeGram } = feeConfig.getConfig();
     const isF2P = (room.gameType === 'uno' || room.gameType === 'headsoccer' || room.gameType === 'boxing') && wagerGram === 0;
-    const totalRequired = isF2P ? 0 : (wagerGram + joinFeeGram);
 
-    // Check Player B's balance
+    // Check Player B's balance and calculate rank-based participation fee
     const userAccount = await dbService.getUserAccount(
       body.playerBAddress,
       body.telegramUserId,
       body.telegramUsername
     );
+    const userRank = userAccount.rank || 'wood';
+    const joinFeeGram = getUserFee(userRank);
+    const totalRequired = isF2P ? 0 : (wagerGram + joinFeeGram);
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
     if (!isF2P && currentBal < totalRequired) {

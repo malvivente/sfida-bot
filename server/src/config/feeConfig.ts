@@ -39,8 +39,8 @@ export interface FeeConfig {
 
 const DEFAULT_CONFIG: FeeConfig = {
   currency: 'GRAM',
-  creationFeeGram: 0.05,
-  joinFeeGram: 0.05,
+  creationFeeGram: 0.10,
+  joinFeeGram: 0.10,
   spectatorFeeGram: 0.05,
   duelRakePercent: 0,
   spectatorRakePercent: 0,

@@ -7,6 +7,8 @@ import { GramIcon } from '../components/GramIcon.js';
 import { GameIcon } from '../components/GameIcon.js';
 import { UserAvatar } from '../components/UserAvatar.js';
 import { DepositModal } from '../components/DepositModal.js';
+import { RankAvatarBadge, RankPill, RankProgressCard } from '../components/RankBadge.js';
+import { UserRank } from '../config/ranksConfig.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useI18n } from '../i18n/index.js';
@@ -238,6 +240,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
     ? (parseFloat(userBalance.balanceGram || userBalance.balanceTon || '0')).toFixed(2)
     : '0.00';
 
+  const userRank: UserRank = serverStats?.rank || userBalance?.rank || 'wood';
+  const userXp: number = serverStats?.xp ?? userBalance?.xp ?? 0;
+
   return (
     <div className="w-full max-w-md mx-auto space-y-4 font-sans select-none pb-12 animate-in fade-in duration-200">
       
@@ -252,18 +257,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
               roundedClass="rounded-2xl"
               className="ring-2 ring-purple-500/50 shadow-md"
             />
-            {isPremium && (
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-heading font-black text-[10px] flex items-center justify-center shadow-md">
-                ★
-              </span>
-            )}
+            <RankAvatarBadge rank={userRank} size="md" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
               <h2 className="text-base font-heading font-black text-white truncate">
                 {cleanPlayerName(displayName || fullName || username)}
               </h2>
+              <RankPill rank={userRank} />
             </div>
             <div className="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
               {username && <span className="text-purple-300 font-bold">@{username.replace(/^@/, '')}</span>}
@@ -451,6 +453,9 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
           </button>
         )}
       </div>
+
+      {/* Rank Progression & Tier Perks Card */}
+      <RankProgressCard xp={userXp} rank={userRank} />
 
       {/* ACTIVE DUELS SECTION */}
       {activeMatches.length > 0 && (

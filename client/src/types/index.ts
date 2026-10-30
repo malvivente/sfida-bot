@@ -1,3 +1,5 @@
+import { UserRank } from '../config/ranksConfig.js';
+
 export type GameType = 'roulette' | 'blackjack' | 'bridge' | 'chrono' | 'split' | 'shotgun' | 'connect4' | 'cubecount' | 'headsoccer' | 'poker' | 'uno' | 'boxing';
 
 export type RoomState =
@@ -325,6 +327,15 @@ export interface UserStats {
   totalProfitsGram: string;
   dailyStreak?: number;
   hasWonToday?: boolean;
+  xp?: number;
+  rank?: UserRank;
+  rankFeeGram?: number;
+  nextRank?: UserRank | null;
+  progressPercent?: number;
+  xpInCurrentTier?: number;
+  xpNeededForNextTier?: number;
+  claimedRankRewards?: string[];
+  freeRaffleTickets?: number;
 }
 
 export interface LeaderboardEntry {
@@ -338,6 +349,8 @@ export interface LeaderboardEntry {
   winRate: number;
   dailyStreak: number;
   totalProfitsGram: string;
+  rankTier?: UserRank;
+  xp?: number;
 }
 
 export interface MatchHistoryItem {
@@ -364,6 +377,11 @@ export interface InternalAccount {
   depositedTotalGram: string;
   withdrawnTotalTon: string;
   withdrawnTotalGram: string;
+  xp?: number;
+  rank?: UserRank;
+  rankFeeGram?: number;
+  claimedRankRewards?: string[];
+  freeRaffleTickets?: number;
 }
 
 export interface BalanceTransaction {

@@ -1,7 +1,7 @@
 {
   "currency": "GRAM",
-  "creationFeeGram": 0.05,
-  "joinFeeGram": 0.05,
+  "creationFeeGram": 0.1,
+  "joinFeeGram": 0.1,
   "spectatorFeeGram": 0.05,
   "duelRakePercent": 0,
   "spectatorRakePercent": 0,

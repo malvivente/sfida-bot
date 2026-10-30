@@ -19,6 +19,7 @@ import { requestTelegramFullscreen, exitTelegramFullscreen, getTelegramWebApp } 
 import { useTelegram } from './hooks/useTelegram.js';
 import { useTonClashContract } from './hooks/useTonClashContract.js';
 import { GameType } from './types/index.js';
+import { UserRank } from './config/ranksConfig.js';
 
 export const App: React.FC = () => {
   const { isFullscreen, topInset, isIos } = useTelegramViewport();
@@ -160,7 +161,7 @@ export const App: React.FC = () => {
     };
   }, [checkSystemStatus]);
 
-  // In-bot balance state synced from localStorage / server
+  // In-bot balance & rank state synced from localStorage / server
   const [userBalanceGram, setUserBalanceGram] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('sfidabot_user_balance');
@@ -171,6 +172,19 @@ export const App: React.FC = () => {
       return '0.00';
     } catch {
       return '0.00';
+    }
+  });
+
+  const [userRank, setUserRank] = useState<UserRank>(() => {
+    try {
+      const saved = localStorage.getItem('sfidabot_user_balance');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.rank || 'wood';
+      }
+      return 'wood';
+    } catch {
+      return 'wood';
     }
   });
 
@@ -195,6 +209,9 @@ export const App: React.FC = () => {
         if (data?.account) {
           const bal = data.account.balanceGram || data.account.balanceTon || '0.00';
           setUserBalanceGram(bal);
+          if (data.account.rank) {
+            setUserRank(data.account.rank);
+          }
           try {
             localStorage.setItem('sfidabot_user_balance', JSON.stringify(data.account));
           } catch {}
@@ -215,7 +232,11 @@ export const App: React.FC = () => {
     const handleUpdate = (e: any) => {
       if (e?.detail?.balance !== undefined) {
         setUserBalanceGram(String(e.detail.balance));
-      } else {
+      }
+      if (e?.detail?.rank !== undefined) {
+        setUserRank(e.detail.rank);
+      }
+      if (e?.detail?.balance === undefined) {
         fetchLiveBalance();
       }
     };
@@ -485,6 +506,7 @@ export const App: React.FC = () => {
       {!isInsideMatch && (
         <EpicHeader
           userBalanceGram={userBalanceGram}
+          userRank={userRank}
           onOpenDeposit={() => setShowDepositModal(true)}
           photoUrl={photoUrl}
           displayName={displayName || fullName || username}
