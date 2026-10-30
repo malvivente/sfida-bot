@@ -55,8 +55,8 @@ export class GlassBridgeRoom extends BaseGameRoom {
     this.currentStepB = 0;
     this.livesA = GAMES_CONFIG.bridge.initialLives;
     this.livesB = GAMES_CONFIG.bridge.initialLives;
-    this.passesRemainingA = 0;
-    this.passesRemainingB = 0;
+    this.passesRemainingA = 1;
+    this.passesRemainingB = 1;
     this.revealedSteps = {};
     // Coin toss determines who takes the first leap
     this.currentTurn = Math.random() < 0.5 ? 'A' : 'B';
@@ -97,7 +97,65 @@ export class GlassBridgeRoom extends BaseGameRoom {
   public handleGameAction(wallet: string, data: any) {
     if (data.type === 'BRIDGE_STEP' && (data.choice === 'LEFT' || data.choice === 'RIGHT')) {
       this.handleBridgeStep(wallet, data.choice);
+    } else if (data.type === 'BRIDGE_PASS') {
+      this.handleBridgePass(wallet);
     }
+  }
+
+  public handleBridgePass(wallet: string) {
+    if (this.state !== 'GAME_ACTIVE') return;
+
+    const side = this.isSameWallet(wallet, this.playerA.walletAddress)
+      ? 'A'
+      : this.playerB && this.isSameWallet(wallet, this.playerB.walletAddress)
+      ? 'B'
+      : null;
+
+    if (!side || side !== this.currentTurn) {
+      console.warn(`[GlassBridge] Pass action from ${wallet} ignored: not active turn (${this.currentTurn}).`);
+      return;
+    }
+
+    const passesLeft = side === 'A' ? this.passesRemainingA : this.passesRemainingB;
+    if (passesLeft <= 0) {
+      console.warn(`[GlassBridge] Pass action from ${wallet} ignored: 0 passes remaining.`);
+      return;
+    }
+
+    if (this.turnTimeout) {
+      clearTimeout(this.turnTimeout);
+      this.turnTimeout = undefined;
+    }
+
+    if (side === 'A') {
+      this.passesRemainingA -= 1;
+    } else {
+      this.passesRemainingB -= 1;
+    }
+
+    const playerName = side === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+    const opponentSide = side === 'A' ? 'B' : 'A';
+    const opponentName = opponentSide === 'A' ? this.playerA.username : (this.playerB?.username || 'Player B');
+    const currentStep = Math.max(this.currentStepA, this.currentStepB);
+    const targetStep = currentStep + 1;
+
+    this.currentTurn = opponentSide;
+
+    this.lastOutcome = {
+      player: side,
+      step: targetStep,
+      result: 'PASS',
+      livesRemaining: side === 'A' ? this.livesA : this.livesB,
+      message: `⏩ SKIP! ${playerName} ha passato la guida del Passo #${targetStep} a ${opponentName}!`,
+    };
+
+    this.broadcast({
+      type: 'BRIDGE_UPDATE',
+      lastOutcome: this.lastOutcome,
+      gameData: this.getGamePayload(),
+    });
+    this.broadcastRoomState();
+    this.startTurnTimer();
   }
 
   public handleBridgeStep(wallet: string, choice: BridgeTileChoice) {
@@ -218,8 +276,8 @@ export class GlassBridgeRoom extends BaseGameRoom {
     this.currentStepB = 0;
     this.livesA = GAMES_CONFIG.bridge.initialLives;
     this.livesB = GAMES_CONFIG.bridge.initialLives;
-    this.passesRemainingA = 0;
-    this.passesRemainingB = 0;
+    this.passesRemainingA = 1;
+    this.passesRemainingB = 1;
     this.revealedSteps = {};
     this.lastOutcome = undefined;
     this.cleanupGameTimers();

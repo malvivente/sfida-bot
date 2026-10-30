@@ -85,8 +85,8 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
   const currentTurn = gameData?.currentTurn ?? 'A';
   const livesA = gameData?.livesA ?? 3;
   const livesB = gameData?.livesB ?? 3;
-  const passesRemainingA = gameData?.passesRemainingA ?? 0;
-  const passesRemainingB = gameData?.passesRemainingB ?? 0;
+  const passesRemainingA = gameData?.passesRemainingA ?? 1;
+  const passesRemainingB = gameData?.passesRemainingB ?? 1;
   const revealedSteps = gameData?.revealedSteps ?? {};
   const lastOutcome = gameData?.lastOutcome;
 
@@ -112,7 +112,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
       setOutcomePhase('none');
     }
   }, [roomState]);
-  const canPassLead = myCurrentStep > 0 && myPassesRemaining > 0;
+  const canPassLead = myPassesRemaining > 0;
 
   // Window of 5 steps around the activeStep
   const minStep = Math.max(1, activeStep - 2);
@@ -146,7 +146,10 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           </div>
           <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
-              currentTurn === 'A' ? <span className="text-cyber-cyan font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
+              <>
+                {currentTurn === 'A' ? <span className="text-cyber-cyan font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>}
+                <span className="text-[8px] text-slate-400 font-mono">({passesRemainingA > 0 ? '1 SKIP' : '0 SKIP'})</span>
+              </>
             ) : (
               playerAReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
@@ -183,7 +186,10 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           </div>
           <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
-              currentTurn === 'B' ? <span className="text-cyber-pink font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>
+              <>
+                <span className="text-[8px] text-slate-400 font-mono">({passesRemainingB > 0 ? '1 SKIP' : '0 SKIP'})</span>
+                {currentTurn === 'B' ? <span className="text-cyber-pink font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>}
+              </>
             ) : (
               playerBReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
             )}
@@ -279,11 +285,15 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               className={`mt-3 max-w-xs p-2.5 rounded-2xl border text-xs font-chakra flex items-center space-x-2 ${
                 lastOutcome.result === 'SHATTER'
                   ? 'bg-cyber-pink/20 border-cyber-pink text-white shadow-neon-pink'
+                  : lastOutcome.result === 'PASS'
+                  ? 'bg-cyber-amber/20 border-cyber-amber text-amber-200 shadow-[0_0_15px_rgba(255,184,0,0.3)]'
                   : 'bg-cyber-green/20 border-cyber-green text-slate-200'
               }`}
             >
               {lastOutcome.result === 'SHATTER' ? (
                 <Flame className="w-5 h-5 text-cyber-pink shrink-0 animate-bounce" />
+              ) : lastOutcome.result === 'PASS' ? (
+                <ArrowUpRight className="w-5 h-5 text-cyber-amber shrink-0 animate-pulse" />
               ) : (
                 <ShieldCheck className="w-5 h-5 text-cyber-green shrink-0" />
               )}
@@ -573,18 +583,18 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                   <button
                     onClick={onPass}
                     disabled={!canPassLead}
-                    className={`w-full py-2 rounded-xl text-xs font-chakra font-bold transition-all flex items-center justify-center space-x-1 ${
+                    className={`w-full py-2.5 rounded-xl text-xs font-chakra font-bold transition-all flex items-center justify-center space-x-1.5 ${
                       canPassLead
-                        ? 'bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 active:scale-95'
+                        ? 'bg-gradient-to-r from-amber-600/30 to-amber-500/20 border border-amber-500/60 text-amber-200 hover:text-white hover:border-amber-400 hover:bg-amber-500/30 active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
                         : 'bg-black/40 border border-slate-900 text-slate-600 cursor-not-allowed'
                     }`}
                   >
-                    <ArrowUpRight className="w-3.5 h-3.5 text-cyber-amber" />
-                    <span>PASS LEAD TO OPPONENT (1 LEFT)</span>
+                    <ArrowUpRight className="w-4 h-4 text-cyber-amber" />
+                    <span>SKIP TURNO / PASSA GUIDA (1 DISPONIBILE)</span>
                   </button>
                 ) : (
-                  <div className="w-full py-1.5 rounded-xl bg-black/40 border border-slate-900 text-slate-600 text-[10px] font-chakra text-center font-bold">
-                    PASS EXHAUSTED (0 LEFT) • MUST JUMP
+                  <div className="w-full py-2 rounded-xl bg-black/40 border border-slate-900 text-slate-500 text-[10px] font-chakra text-center font-bold">
+                    SKIP ESAURITO (0 DISPONIBILI) • DEVI SALTARE
                   </div>
                 )}
               </div>

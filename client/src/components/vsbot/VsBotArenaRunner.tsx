@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GameType, CoinTossData, ShotgunItem } from '../../types/index.js';
+import { GameType, CoinTossData, ShotgunItem, GlassBridgeState } from '../../types/index.js';
 import { GAMES_METADATA } from '../../config/gamesConfig.js';
 import { ArrowLeft, Bot, RotateCcw, Trophy, Skull, Clock, Swords } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
@@ -771,85 +771,193 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   const [bridgeCurrentB, setBridgeCurrentB] = useState<number>(0);
   const [bridgeLivesA, setBridgeLivesA] = useState<number>(3);
   const [bridgeLivesB, setBridgeLivesB] = useState<number>(3);
+  const [bridgePassesA, setBridgePassesA] = useState<number>(1);
+  const [bridgePassesB, setBridgePassesB] = useState<number>(1);
   const [bridgeSafePath, setBridgeSafePath] = useState<Array<'LEFT' | 'RIGHT'>>(() =>
-    Array(12).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT'))
+    Array(100).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT'))
   );
   const [bridgeRevealed, setBridgeRevealed] = useState<Record<number, 'LEFT' | 'RIGHT'>>({});
   const [bridgeTurn, setBridgeTurn] = useState<'A' | 'B'>('A');
+  const [bridgeLastOutcome, setBridgeLastOutcome] = useState<GlassBridgeState['lastOutcome']>(undefined);
 
   const initBridge = (starter: 'A' | 'B') => {
     setBridgeCurrentA(0);
     setBridgeCurrentB(0);
     setBridgeLivesA(3);
     setBridgeLivesB(3);
-    setBridgeSafePath(Array(12).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT')));
+    setBridgePassesA(1);
+    setBridgePassesB(1);
+    setBridgeSafePath(Array(100).fill(null).map(() => (Math.random() > 0.5 ? 'LEFT' : 'RIGHT')));
     setBridgeRevealed({});
     setBridgeTurn(starter);
+    setBridgeLastOutcome(undefined);
+    setTurnTimeLeft(15);
   };
 
   const handleBridgeStep = (choice: 'LEFT' | 'RIGHT', stepper: 'A' | 'B' = 'A') => {
     if (bridgeTurn !== stepper || roomState !== 'GAME_ACTIVE') return;
-    const step = stepper === 'A' ? bridgeCurrentA : bridgeCurrentB;
-    const isSafe = bridgeSafePath[step] === choice;
+
+    const currentStep = Math.max(bridgeCurrentA, bridgeCurrentB);
+    const targetStep = currentStep + 1; // 1-based (1, 2, 3...)
+    const targetStepIndex = targetStep - 1;
+
+    // Ensure safe path dynamically if ever needed
+    let safeChoice = bridgeSafePath[targetStepIndex];
+    if (!safeChoice) {
+      safeChoice = Math.random() > 0.5 ? 'LEFT' : 'RIGHT';
+      setBridgeSafePath((prev) => {
+        const next = [...prev];
+        next[targetStepIndex] = safeChoice;
+        return next;
+      });
+    }
+
+    const isSafe = safeChoice === choice;
+    const stepperName = stepper === 'A' ? playerName : botName;
+    const opponentSide = stepper === 'A' ? 'B' : 'A';
+    const opponentName = opponentSide === 'A' ? playerName : botName;
 
     if (isSafe) {
-      setBridgeRevealed((p) => ({ ...p, [step]: choice }));
-      const next = step + 1;
-      if (stepper === 'A') {
-        setBridgeCurrentA(next);
-        if (next >= 8) {
-          setWinnerSide('A');
-          setRoomState('MATCH_SETTLED');
-          triggerNotification('success');
-          return;
-        }
-      } else {
-        setBridgeCurrentB(next);
-        if (next >= 8) {
-          setWinnerSide('B');
-          setRoomState('MATCH_SETTLED');
-          triggerNotification('error');
-          return;
-        }
-      }
-      setBridgeTurn(stepper === 'A' ? 'B' : 'A');
+      setBridgeRevealed((p) => ({ ...p, [targetStep]: safeChoice }));
+      setBridgeCurrentA(targetStep);
+      setBridgeCurrentB(targetStep);
+      setBridgeTurn(opponentSide);
       setTurnTimeLeft(15);
+
+      setBridgeLastOutcome({
+        player: stepper,
+        step: targetStep,
+        choice,
+        result: 'SAFE',
+        livesRemaining: stepper === 'A' ? bridgeLivesA : bridgeLivesB,
+        message: `🟩 SAFE! ${stepperName} ha scelto ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} al Passo #${targetStep} ed era corretto! Tocca a ${opponentName}.`,
+      });
+
+      if (stepper === 'A') {
+        triggerNotification('success');
+      } else {
+        triggerImpact('light');
+      }
     } else {
-      // Fragile glass shatters! Loses 1 life (starts with 3 lives like PVP)
-      setBridgeRevealed((p) => ({ ...p, [step]: choice === 'LEFT' ? 'RIGHT' : 'LEFT' }));
+      // Fragile glass shatters!
+      const correctOther: 'LEFT' | 'RIGHT' = choice === 'LEFT' ? 'RIGHT' : 'LEFT';
+      setBridgeRevealed((p) => ({ ...p, [targetStep]: correctOther }));
+
+      const currentLives = stepper === 'A' ? bridgeLivesA : bridgeLivesB;
+      const nextLives = currentLives - 1;
+
       if (stepper === 'A') {
-        const nextLives = bridgeLivesA - 1;
         setBridgeLivesA(nextLives);
-        if (nextLives <= 0) {
-          setWinnerSide('B');
-          setRoomState('MATCH_SETTLED');
-          triggerNotification('error');
-          return;
-        }
       } else {
-        const nextLives = bridgeLivesB - 1;
         setBridgeLivesB(nextLives);
-        if (nextLives <= 0) {
-          setWinnerSide('A');
-          setRoomState('MATCH_SETTLED');
-          triggerNotification('success');
-          return;
-        }
       }
-      setBridgeTurn(stepper === 'A' ? 'B' : 'A');
+
+      if (nextLives <= 0) {
+        // Out of lives! Opponent wins immediately!
+        setBridgeLastOutcome({
+          player: stepper,
+          step: targetStep,
+          choice,
+          result: 'SHATTER',
+          livesRemaining: 0,
+          message: `💥 CRASH! Il vetro ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} si è infranto al Passo #${targetStep}! ${stepperName} è caduto senza vite rimanenti!`,
+        });
+
+        if (stepper === 'A') {
+          triggerNotification('error');
+        } else {
+          triggerNotification('success');
+        }
+
+        setTimeout(() => {
+          setWinnerSide(opponentSide);
+          setRoomState('MATCH_SETTLED');
+        }, 1200);
+        return;
+      }
+
+      // Lost 1 life, both advance, turn alternates to opponent
+      setBridgeCurrentA(targetStep);
+      setBridgeCurrentB(targetStep);
+      setBridgeTurn(opponentSide);
       setTurnTimeLeft(15);
+
+      setBridgeLastOutcome({
+        player: stepper,
+        step: targetStep,
+        choice,
+        result: 'SHATTER',
+        livesRemaining: nextLives,
+        message: `💥 CRASH! Il vetro ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} si è infranto! ${stepperName} perde 1 vita (${nextLives}/3 rimaste). Tocca a ${opponentName}.`,
+      });
+
+      if (stepper === 'A') {
+        triggerNotification('error');
+      } else {
+        triggerNotification('warning');
+      }
     }
+  };
+
+  const handleBridgePass = (stepper: 'A' | 'B' = 'A') => {
+    if (bridgeTurn !== stepper || roomState !== 'GAME_ACTIVE') return;
+
+    const passesLeft = stepper === 'A' ? bridgePassesA : bridgePassesB;
+    if (passesLeft <= 0) return;
+
+    if (stepper === 'A') {
+      setBridgePassesA((p) => p - 1);
+    } else {
+      setBridgePassesB((p) => p - 1);
+    }
+
+    const stepperName = stepper === 'A' ? playerName : botName;
+    const opponentSide = stepper === 'A' ? 'B' : 'A';
+    const opponentName = opponentSide === 'A' ? playerName : botName;
+    const currentStep = Math.max(bridgeCurrentA, bridgeCurrentB);
+    const targetStep = currentStep + 1;
+
+    setBridgeTurn(opponentSide);
+    setTurnTimeLeft(15);
+
+    setBridgeLastOutcome({
+      player: stepper,
+      step: targetStep,
+      choice: 'LEFT',
+      result: 'PASS',
+      livesRemaining: stepper === 'A' ? bridgeLivesA : bridgeLivesB,
+      message: `⏩ SKIP! ${stepperName} ha usato lo skip al Passo #${targetStep}! Tocca a ${opponentName}.`,
+    });
+
+    triggerImpact('medium');
   };
 
   useEffect(() => {
     if (gameType !== 'bridge' || roomState !== 'GAME_ACTIVE' || bridgeTurn !== 'B') return;
+
     const timer = setTimeout(() => {
-      const known = bridgeRevealed[bridgeCurrentB];
-      const choice = known ? known : Math.random() > 0.5 ? 'LEFT' : 'RIGHT';
+      const currentStep = Math.max(bridgeCurrentA, bridgeCurrentB);
+      const targetStep = currentStep + 1;
+      const known = bridgeRevealed[targetStep];
+
+      if (known) {
+        handleBridgeStep(known, 'B');
+        return;
+      }
+
+      // Tactical skip: bot has a chance to pass if low on lives or randomly ~15%
+      const shouldPass = bridgePassesB > 0 && (bridgeLivesB <= 1 ? Math.random() < 0.35 : Math.random() < 0.15);
+      if (shouldPass) {
+        handleBridgePass('B');
+        return;
+      }
+
+      const choice: 'LEFT' | 'RIGHT' = Math.random() > 0.5 ? 'LEFT' : 'RIGHT';
       handleBridgeStep(choice, 'B');
     }, 1200);
+
     return () => clearTimeout(timer);
-  }, [gameType, roomState, bridgeTurn, bridgeCurrentB, bridgeRevealed, bridgeLivesA, bridgeLivesB]);
+  }, [gameType, roomState, bridgeTurn, bridgeCurrentA, bridgeCurrentB, bridgeRevealed, bridgeLivesA, bridgeLivesB, bridgePassesB, bridgeSafePath]);
 
   // ==========================================
   // --- 6. HEAD SOCCER (REAL-TIME ARCADE REPLICA) ---
@@ -1754,26 +1862,29 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         {gameType === 'bridge' && (
           <GlassBridgeArena
             gameData={{
-              totalSteps: 10,
               currentStepA: bridgeCurrentA,
               currentStepB: bridgeCurrentB,
-              activeStep: Math.max(bridgeCurrentA, bridgeCurrentB),
+              activeStep: Math.max(1, Math.max(bridgeCurrentA, bridgeCurrentB) + 1),
               currentTurn: bridgeTurn,
               livesA: bridgeLivesA,
               livesB: bridgeLivesB,
+              passesRemainingA: bridgePassesA,
+              passesRemainingB: bridgePassesB,
               revealedSteps: bridgeRevealed,
+              lastOutcome: bridgeLastOutcome,
               coinToss: coinToss || undefined,
-            } as any}
+            }}
             role="player"
             isPlayerTurn={bridgeTurn === 'A'}
             onStep={(c) => handleBridgeStep(c, 'A')}
-            onPass={() => {}}
+            onPass={() => handleBridgePass('A')}
             playerAName={playerName}
             playerBName={botName}
             roomState={roomState}
             wagerTon="0.00"
             isCreator={true}
             isWinner={winnerSide === 'A'}
+            onRequestRematch={startNewMatch}
             onReturnToLobby={onExit}
           />
         )}

@@ -94,8 +94,8 @@ export interface GlassBridgeState {
   lastOutcome?: {
     player: 'A' | 'B';
     step: number;
-    choice: BridgeTileChoice;
-    result: 'SAFE' | 'SHATTER';
+    choice?: BridgeTileChoice;
+    result: 'SAFE' | 'SHATTER' | 'PASS';
     livesRemaining: number;
     message: string;
   };
