@@ -80,8 +80,10 @@ export const translations: Translations = {
   'common.exit': { it: 'Esci', en: 'Exit' },
   'common.play': { it: 'Gioca', en: 'Play' },
   'common.confirm': { it: 'Conferma', en: 'Confirm' },
+  'common.loading': { it: 'CARICAMENTO...', en: 'LOADING...' },
 
   // VS BOT
+  'vsbot.yourTurn': { it: 'IL TUO TURNO', en: 'YOUR TURN' },
   'vsbot.title': { it: 'GIOCATORE VS BOT', en: 'PLAYER VS BOT' },
   'vsbot.subtitle': { it: 'Allénati contro i bot IA nei giochi ufficiali. Partite gratuite, senza scommesse e senza spettatori.', en: 'Practice against AI bots in official games. Free matches, zero wagers, no spectators.' },
   'vsbot.heroBadge': { it: 'ALLENAMENTO LIBERO 100% GRATUITO', en: '100% FREE PRACTICE ARENA' },
@@ -858,11 +860,25 @@ export const translations: Translations = {
   'chronoblind.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
   'chronoblind.defeatDesc': { it: 'Il tuo avversario è stato più preciso.', en: 'Your opponent timed closer to target.' },
 
-  // Glass Bridge Arena Outcome
+  // Glass Bridge Arena Gameplay & Outcome
   'glassbridge.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },
   'glassbridge.victoryDesc': { it: 'Hai superato l\'avversario sul Ponte di Vetro!', en: 'You outlasted your rival on the Glass Bridge!' },
   'glassbridge.defeatTitle': { it: 'SCONFITTA!', en: 'DEFEAT!' },
   'glassbridge.defeatDesc': { it: 'Hai esaurito le tue 3 vite nel vuoto.', en: 'You lost all 3 lives into the void.' },
+  'bridge.endlessBridge': { it: 'PONTE DI VETRO INFINITO', en: 'ENDLESS GLASS BRIDGE' },
+  'bridge.stepNumber': { it: 'PASSO #{step}', en: 'STEP #{step}' },
+  'bridge.stepPrompt': { it: '⚡ PASSO #{step} • SALTA O PASSA GUIDA', en: '⚡ STEP #{step} • TAKE THE LEAP OR PASS' },
+  'bridge.stepLeft': { it: 'PASSO A SINISTRA', en: 'STEP LEFT' },
+  'bridge.stepRight': { it: 'PASSO A DESTRA', en: 'STEP RIGHT' },
+  'bridge.safeShatterOdds': { it: '50% Salvo / 50% Rottura', en: '50% Safe / 50% Shatter' },
+  'bridge.skipTurnAvailable': { it: 'SKIP TURNO / PASSA GUIDA (1 DISPONIBILE)', en: 'SKIP TURN / PASS LEAD (1 AVAILABLE)' },
+  'bridge.skipExhausted': { it: 'SKIP ESAURITO (0 DISPONIBILI) • DEVI SALTARE', en: 'NO SKIPS REMAINING (0 AVAILABLE) • MUST JUMP' },
+  'bridge.preparingStep': { it: '{name} si prepara per il Passo #{step}...', en: '{name} is preparing for Step #{step}...' },
+  'bridge.tileLeft': { it: 'SINISTRA', en: 'LEFT' },
+  'bridge.tileRight': { it: 'DESTRA', en: 'RIGHT' },
+  'bridge.tileSafe': { it: '✓ SALVO', en: '✓ SAFE' },
+  'bridge.tileBroke': { it: '✗ CROLLO', en: '✗ BROKE' },
+  'bridge.skipsRemaining': { it: '{count} SKIP', en: '{count} SKIP' },
 
   // Russian Roulette Arena Outcome
   'roulette.victoryTitle': { it: 'VITTORIA!', en: 'VICTORY!' },

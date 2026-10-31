@@ -1,4 +1,4 @@
-export type UserRank = 'wood' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'obsidian';
+export type UserRank = 'wood' | 'bronze' | 'iron' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'obsidian';
 
 export interface RankDefinition {
   id: UserRank;
@@ -47,14 +47,29 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
     glowShadow: 'shadow-[0_0_10px_rgba(205,127,50,0.4)]',
     iconName: 'Award',
   },
+  iron: {
+    id: 'iron',
+    name: 'Iron',
+    nameIt: 'Ferro',
+    minXp: 250,
+    feeGram: 0.07,
+    rewardGram: 0.35,
+    rewardTickets: 5,
+    badgeColor: '#9CA3AF',
+    textColor: 'text-zinc-300',
+    borderColor: 'border-zinc-400/60',
+    bgGradient: 'from-zinc-700/80 via-zinc-600/60 to-slate-800/60',
+    glowShadow: 'shadow-[0_0_10px_rgba(156,163,175,0.4)]',
+    iconName: 'Shield',
+  },
   silver: {
     id: 'silver',
     name: 'Silver',
     nameIt: 'Argento',
-    minXp: 350,
+    minXp: 500,
     feeGram: 0.06,
-    rewardGram: 0.50,
-    rewardTickets: 7,
+    rewardGram: 0.60,
+    rewardTickets: 10,
     badgeColor: '#C0C0C0',
     textColor: 'text-slate-200',
     borderColor: 'border-slate-300/60',
@@ -66,10 +81,10 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
     id: 'gold',
     name: 'Gold',
     nameIt: 'Oro',
-    minXp: 900,
+    minXp: 1200,
     feeGram: 0.04,
     rewardGram: 1.50,
-    rewardTickets: 15,
+    rewardTickets: 20,
     badgeColor: '#FBBF24',
     textColor: 'text-yellow-400',
     borderColor: 'border-yellow-400/70',
@@ -81,10 +96,10 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
     id: 'platinum',
     name: 'Platinum',
     nameIt: 'Platino',
-    minXp: 2200,
+    minXp: 2800,
     feeGram: 0.02,
     rewardGram: 3.50,
-    rewardTickets: 30,
+    rewardTickets: 40,
     badgeColor: '#22D3EE',
     textColor: 'text-cyan-300',
     borderColor: 'border-cyan-400/70',
@@ -96,10 +111,10 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
     id: 'diamond',
     name: 'Diamond',
     nameIt: 'Diamante',
-    minXp: 5000,
+    minXp: 6500,
     feeGram: 0.01,
     rewardGram: 8.00,
-    rewardTickets: 60,
+    rewardTickets: 80,
     badgeColor: '#38BDF8',
     textColor: 'text-sky-300',
     borderColor: 'border-sky-400/80',
@@ -111,10 +126,10 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
     id: 'obsidian',
     name: 'Obsidian',
     nameIt: 'Ossidiana',
-    minXp: 12000,
+    minXp: 15000,
     feeGram: 0.01,
     rewardGram: 20.00,
-    rewardTickets: 150,
+    rewardTickets: 200,
     badgeColor: '#A855F7',
     textColor: 'text-purple-300',
     borderColor: 'border-purple-400/90',
@@ -124,7 +139,7 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
   },
 };
 
-export const RANKS_LIST: UserRank[] = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'obsidian'];
+export const RANKS_LIST: UserRank[] = ['wood', 'bronze', 'iron', 'silver', 'gold', 'platinum', 'diamond', 'obsidian'];
 
 export function getRankFromXp(xp: number): UserRank {
   for (let i = RANKS_LIST.length - 1; i >= 0; i--) {

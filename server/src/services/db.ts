@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { Address } from '@ton/ton';
 import { feeConfig } from '../config/feeConfig.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
-import { UserRank, RANKS_CONFIG, getRankFromXp, getUserFee, getNextRankProgress } from '../config/ranksConfig.js';
+import { UserRank, RANKS_CONFIG, RANKS_LIST, getRankFromXp, getUserFee, getNextRankProgress } from '../config/ranksConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1498,7 +1498,7 @@ export class DatabaseService {
     let totalRewardTickets = 0;
     let didLevelUp = false;
 
-    const ranksOrder: UserRank[] = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'obsidian'];
+    const ranksOrder = RANKS_LIST;
     const newRankIndex = ranksOrder.indexOf(newRank);
     const oldRankIndex = ranksOrder.indexOf(oldRank);
 

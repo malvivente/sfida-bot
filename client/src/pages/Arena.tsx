@@ -918,6 +918,8 @@ export const Arena: React.FC<ArenaProps> = ({
   const hasPlayerB = Boolean(socketData.socketPlayerB || socketData.playerBName || currentActiveMatch?.playerB);
   const playerA_Name = cleanPlayerName(socketData.socketPlayerA?.name || socketData.playerAName || currentActiveMatch?.playerA.name || 'Player A');
   const playerB_Name = cleanPlayerName(socketData.socketPlayerB?.name || socketData.playerBName || currentActiveMatch?.playerB?.name || (hasPlayerB ? 'Player B' : t('arena.waitingForOpponent')));
+  const playerA_Photo = socketData.socketPlayerA?.photoUrl || (currentActiveMatch?.playerA as any)?.photoUrl || (isCurrentCreator ? photoUrl : undefined);
+  const playerB_Photo = socketData.socketPlayerB?.photoUrl || (currentActiveMatch?.playerB as any)?.photoUrl || (!isCurrentCreator && userSide === 'B' ? photoUrl : undefined);
 
   const effectiveWinnerName = socketData.matchWinnerName ? cleanPlayerName(socketData.matchWinnerName) : (
     socketData.winnerSide ? (socketData.winnerSide === 'A' ? playerA_Name : playerB_Name) : (
@@ -1793,6 +1795,8 @@ export const Arena: React.FC<ArenaProps> = ({
               onSubscribeTick={socketData.subscribeToGameTick}
               playerAName={playerA_Name}
               playerBName={playerB_Name}
+              playerAPhoto={playerA_Photo}
+              playerBPhoto={playerB_Photo}
               playerAReady={socketData.playerAReady}
               playerBReady={socketData.playerBReady}
               isReady={isCurrentUserReady}

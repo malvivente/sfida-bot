@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { BoxingState, BoxerState, BoxingHitEvent } from '../../types/index.js';
 import { GramIcon } from '../GramIcon.js';
+import { UserAvatar } from '../UserAvatar.js';
 import { useI18n } from '../../i18n/index.js';
 import { useHaptics } from '../../hooks/useHaptics.js';
 
@@ -34,6 +35,8 @@ interface BoxingArenaProps {
   }) => void;
   playerAName: string;
   playerBName?: string;
+  playerAPhoto?: string;
+  playerBPhoto?: string;
   playerAReady?: boolean;
   playerBReady?: boolean;
   isReady?: boolean;
@@ -143,6 +146,8 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
   onInput,
   playerAName,
   playerBName = 'Avversario',
+  playerAPhoto,
+  playerBPhoto,
   playerAReady = false,
   playerBReady = false,
   isReady = false,
@@ -758,9 +763,13 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
               }`}
             >
               <div className="relative">
-                <div className="w-14 h-14 rounded-2xl bg-cyan-600/30 border border-cyan-400/40 flex items-center justify-center font-heading font-black text-lg text-cyan-300">
-                  {playerAName ? playerAName.slice(0, 2).toUpperCase() : 'P1'}
-                </div>
+                <UserAvatar
+                  photoUrl={playerAPhoto}
+                  name={playerAName}
+                  sizeClass="w-14 h-14"
+                  roundedClass="rounded-2xl"
+                  className="border border-cyan-400/40 shadow-md ring-2 ring-cyan-500/20"
+                />
                 {playerAReady && (
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 absolute -bottom-1 -right-1 bg-black rounded-full" />
                 )}
@@ -786,9 +795,19 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
               }`}
             >
               <div className="relative">
-                <div className="w-14 h-14 rounded-2xl bg-rose-600/30 border border-rose-400/40 flex items-center justify-center font-heading font-black text-lg text-rose-300">
-                  {hasPlayerB && playerBName ? playerBName.slice(0, 2).toUpperCase() : '?'}
-                </div>
+                {hasPlayerB ? (
+                  <UserAvatar
+                    photoUrl={playerBPhoto}
+                    name={playerBName}
+                    sizeClass="w-14 h-14"
+                    roundedClass="rounded-2xl"
+                    className="border border-rose-400/40 shadow-md ring-2 ring-rose-500/20"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-rose-600/30 border border-rose-400/40 flex items-center justify-center font-heading font-black text-lg text-rose-300">
+                    ?
+                  </div>
+                )}
                 {playerBReady && (
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 absolute -bottom-1 -right-1 bg-black rounded-full" />
                 )}

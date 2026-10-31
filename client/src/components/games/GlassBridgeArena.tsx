@@ -148,7 +148,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
             {roomState === 'GAME_ACTIVE' ? (
               <>
                 {currentTurn === 'A' ? <span className="text-cyber-cyan font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>}
-                <span className="text-[8px] text-slate-400 font-mono">({passesRemainingA > 0 ? '1 SKIP' : '0 SKIP'})</span>
+                <span className="text-[8px] text-slate-400 font-mono">({t('bridge.skipsRemaining', { count: passesRemainingA > 0 ? 1 : 0 })})</span>
               </>
             ) : (
               playerAReady ? <span className="text-cyber-green font-bold">{t('arena.readyBadge')}</span> : <span className="text-slate-400">{t('arena.waitingBadge')}</span>
@@ -160,9 +160,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
         <div className="flex flex-col items-center shrink-0 px-1 text-center">
           <span className="text-[8px] text-cyber-green uppercase font-chakra font-bold tracking-widest flex items-center space-x-1">
             <Compass className="w-3 h-3 text-cyber-green inline shrink-0" />
-            <span>ENDLESS BRIDGE</span>
+            <span>{t('bridge.endlessBridge')}</span>
           </span>
-          <span className="text-xs font-mono font-black text-white">PASSO #{activeStep}</span>
+          <span className="text-xs font-mono font-black text-white">{t('bridge.stepNumber', { step: activeStep })}</span>
         </div>
 
         {/* Player B */}
@@ -187,7 +187,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
           <span className="text-[9px] font-mono mt-0.5 flex items-center space-x-1">
             {roomState === 'GAME_ACTIVE' ? (
               <>
-                <span className="text-[8px] text-slate-400 font-mono">({passesRemainingB > 0 ? '1 SKIP' : '0 SKIP'})</span>
+                <span className="text-[8px] text-slate-400 font-mono">({t('bridge.skipsRemaining', { count: passesRemainingB > 0 ? 1 : 0 })})</span>
                 {currentTurn === 'B' ? <span className="text-cyber-pink font-bold animate-pulse">{t('arena.activeTurn')}</span> : <span className="text-slate-500">{t('arena.waitingTurn')}</span>}
               </>
             ) : (
@@ -233,7 +233,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                       : 'bg-transparent border-slate-800 text-slate-600'
                   }`}
                 >
-                  {revealed === 'LEFT' ? '✓ SAFE' : revealed === 'RIGHT' ? '✗ BROKE' : 'LEFT'}
+                  {revealed === 'LEFT' ? (t('bridge.tileSafe') || '✓ SAFE') : revealed === 'RIGHT' ? (t('bridge.tileBroke') || '✗ BROKE') : (t('bridge.tileLeft') || 'LEFT')}
                 </div>
 
                 {/* Right Tile */}
@@ -248,7 +248,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                       : 'bg-transparent border-slate-800 text-slate-600'
                   }`}
                 >
-                  {revealed === 'RIGHT' ? '✓ SAFE' : revealed === 'LEFT' ? '✗ BROKE' : 'RIGHT'}
+                  {revealed === 'RIGHT' ? (t('bridge.tileSafe') || '✓ SAFE') : revealed === 'LEFT' ? (t('bridge.tileBroke') || '✗ BROKE') : (t('bridge.tileRight') || 'RIGHT')}
                 </div>
               </div>
             );
@@ -553,7 +553,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
             isPlayerTurn ? (
               <div className="w-full flex flex-col space-y-2">
                 <span className="text-[11px] font-orbitron font-bold text-cyber-green uppercase tracking-wider text-center animate-pulse">
-                  ⚡ STEP #{activeStep} • TAKE THE LEAP OR PASS
+                  {t('bridge.stepPrompt', { step: activeStep })}
                 </span>
 
                 <div className="flex space-x-2 w-full">
@@ -561,9 +561,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                     onClick={() => onStep('LEFT')}
                     className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-bg border-2 border-cyber-green text-cyber-green shadow-[0_0_15px_rgba(0,255,102,0.3)] hover:bg-cyber-green/15 active:scale-95 transition-all flex flex-col items-center"
                   >
-                    <span>STEP LEFT</span>
+                    <span>{t('bridge.stepLeft')}</span>
                     <span className="text-[9px] text-cyber-green/80 font-chakra font-normal mt-0.5">
-                      50% Safe / 50% Shatter
+                      {t('bridge.safeShatterOdds')}
                     </span>
                   </button>
 
@@ -571,9 +571,9 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                     onClick={() => onStep('RIGHT')}
                     className="flex-1 py-3 px-2 rounded-2xl font-orbitron font-extrabold text-xs uppercase tracking-wider bg-cyber-bg border-2 border-cyber-cyan text-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:bg-cyber-cyan/15 active:scale-95 transition-all flex flex-col items-center"
                   >
-                    <span>STEP RIGHT</span>
+                    <span>{t('bridge.stepRight')}</span>
                     <span className="text-[9px] text-cyber-cyan/80 font-chakra font-normal mt-0.5">
-                      50% Safe / 50% Shatter
+                      {t('bridge.safeShatterOdds')}
                     </span>
                   </button>
                 </div>
@@ -590,11 +590,11 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
                     }`}
                   >
                     <ArrowUpRight className="w-4 h-4 text-cyber-amber" />
-                    <span>SKIP TURNO / PASSA GUIDA (1 DISPONIBILE)</span>
+                    <span>{t('bridge.skipTurnAvailable')}</span>
                   </button>
                 ) : (
                   <div className="w-full py-2 rounded-xl bg-black/40 border border-slate-900 text-slate-500 text-[10px] font-chakra text-center font-bold">
-                    SKIP ESAURITO (0 DISPONIBILI) • DEVI SALTARE
+                    {t('bridge.skipExhausted')}
                   </div>
                 )}
               </div>
@@ -602,7 +602,7 @@ export const GlassBridgeArena: React.FC<GlassBridgeArenaProps> = ({
               <div className="w-full py-3.5 rounded-xl bg-black/50 border border-cyber-border text-center flex items-center justify-center space-x-2">
                 <Loader2 className="w-4 h-4 animate-spin text-cyber-green" />
                 <span className="text-xs font-chakra font-bold text-slate-300">
-                  {activeTurnName} is preparing for Step #{activeStep}...
+                  {t('bridge.preparingStep', { name: activeTurnName, step: activeStep })}
                 </span>
               </div>
             )

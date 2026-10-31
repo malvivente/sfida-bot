@@ -32,9 +32,10 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   userProfile,
 }) => {
   const { triggerImpact, triggerNotification } = useHaptics();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const isIt = language === 'it';
 
-  const playerName = userProfile?.displayName || userProfile?.username || 'Giocatore';
+  const playerName = userProfile?.displayName || userProfile?.username || (isIt ? 'Giocatore' : 'Player');
   const botName = t('vsbot.cpuOpponent');
 
   const [roomState, setRoomState] = useState<'READY_CHECK' | 'GAME_ACTIVE' | 'MATCH_SETTLED'>('READY_CHECK');
@@ -89,7 +90,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           shooter,
           target,
           result: 'BANG',
-          message: `💥 BANG! ${shooterDisplayName} si è sparato con il colpo letale!`,
+          message: isIt
+            ? `💥 BANG! ${shooterDisplayName} si è sparato con il colpo letale!`
+            : `💥 BANG! ${shooterDisplayName} shot themselves with the lethal bullet!`,
         });
         setWinnerSide(opponent);
         setRoomState('MATCH_SETTLED');
@@ -104,7 +107,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           shooter,
           target,
           result: 'BLANK',
-          message: `🔒 CLICK! ${shooterDisplayName} si è sparato... Camera vuota!`,
+          message: isIt
+            ? `🔒 CLICK! ${shooterDisplayName} si è sparato... Camera vuota!`
+            : `🔒 CLICK! ${shooterDisplayName} shot themselves... Empty chamber!`,
         });
       }
     } else {
@@ -115,7 +120,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           shooter,
           target,
           result: 'BANG',
-          message: `💥 BANG! ${shooterDisplayName} ha colpito ${opponentDisplayName} con il colpo letale!`,
+          message: isIt
+            ? `💥 BANG! ${shooterDisplayName} ha colpito ${opponentDisplayName} con il colpo letale!`
+            : `💥 BANG! ${shooterDisplayName} hit ${opponentDisplayName} with the lethal bullet!`,
         });
         setWinnerSide(shooter);
         setRoomState('MATCH_SETTLED');
@@ -130,7 +137,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           shooter,
           target,
           result: 'BLANK',
-          message: `💨 CLICK! ${shooterDisplayName} ha sparato a ${opponentDisplayName}... A vuoto!`,
+          message: isIt
+            ? `💨 CLICK! ${shooterDisplayName} ha sparato a ${opponentDisplayName}... A vuoto!`
+            : `💨 CLICK! ${shooterDisplayName} shot at ${opponentDisplayName}... Blank!`,
         });
       }
     }
@@ -650,13 +659,19 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         }
       }
 
+      const shooterTitle = shooter === 'A' ? playerName : botName;
+      const targetTitleIt = target === 'self' ? 'se stesso' : 'avversario';
+      const targetTitleEn = target === 'self' ? 'themselves' : 'opponent';
+
       setShotgunLastAction({
         player: shooter,
         type: 'SHOOT',
         target,
         result: 'BANG',
         damage: dmg,
-        message: `${shooter === 'A' ? playerName : botName} spara a ${target === 'self' ? 'se stesso' : 'avversario'}! BANG! -${dmg} HP!`,
+        message: isIt
+          ? `💥 ${shooterTitle} spara a ${targetTitleIt}! BANG! -${dmg} HP!`
+          : `💥 ${shooterTitle} shoots ${targetTitleEn}! BANG! -${dmg} HP!`,
       });
 
       // Turn passes to opponent (unless handcuffed)
@@ -669,13 +684,19 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       setTurnTimeLeft(15);
     } else {
       // Blank
+      const shooterTitle = shooter === 'A' ? playerName : botName;
+      const targetTitleIt = target === 'self' ? 'se stesso' : 'avversario';
+      const targetTitleEn = target === 'self' ? 'themselves' : 'opponent';
+
       setShotgunLastAction({
         player: shooter,
         type: 'SHOOT',
         target,
         result: 'BLANK',
         damage: 0,
-        message: `${shooter === 'A' ? playerName : botName} spara a ${target === 'self' ? 'se stesso' : 'avversario'}! CLICK! Bossolo a salve!`,
+        message: isIt
+          ? `💨 ${shooterTitle} spara a ${targetTitleIt}! CLICK! Bossolo a salve!`
+          : `💨 ${shooterTitle} shoots ${targetTitleEn}! CLICK! Blank shell!`,
       });
 
       if (target === 'self') {
@@ -708,7 +729,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         player: user,
         type: 'USE_ITEM',
         item: 'saw',
-        message: `${user === 'A' ? playerName : botName} usa la Sega Laser! Danno raddoppiato!`,
+        message: isIt
+          ? `${user === 'A' ? playerName : botName} usa la Sega Laser! Danno raddoppiato!`
+          : `${user === 'A' ? playerName : botName} used the Laser Saw! Double damage!`,
       });
     } else if (item === 'ejector') {
       if (shotgunShells.length > 0) {
@@ -720,7 +743,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           player: user,
           type: 'USE_ITEM',
           item: 'ejector',
-          message: `${user === 'A' ? playerName : botName} espelle un bossolo ${ejected}!`,
+          message: isIt
+            ? `${user === 'A' ? playerName : botName} espelle un bossolo ${ejected === 'LIVE' ? 'VERO' : 'A SALVE'}!`
+            : `${user === 'A' ? playerName : botName} ejected a ${ejected} shell!`,
         });
       }
     } else if (item === 'handcuffs') {
@@ -830,7 +855,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         choice,
         result: 'SAFE',
         livesRemaining: stepper === 'A' ? bridgeLivesA : bridgeLivesB,
-        message: `🟩 SAFE! ${stepperName} ha scelto ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} al Passo #${targetStep} ed era corretto! Tocca a ${opponentName}.`,
+        message: isIt
+          ? `🟩 SAFE! ${stepperName} ha scelto ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} al Passo #${targetStep} ed era corretto! Tocca a ${opponentName}.`
+          : `🟩 SAFE! ${stepperName} stepped ${choice} on Step #${targetStep} safely! ${opponentName}'s turn.`,
       });
 
       if (stepper === 'A') {
@@ -860,7 +887,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           choice,
           result: 'SHATTER',
           livesRemaining: 0,
-          message: `💥 CRASH! Il vetro ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} si è infranto al Passo #${targetStep}! ${stepperName} è caduto senza vite rimanenti!`,
+          message: isIt
+            ? `💥 CRASH! Il vetro ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} si è infranto al Passo #${targetStep}! ${stepperName} è caduto senza vite rimanenti!`
+            : `💥 CRASH! The ${choice} glass shattered on Step #${targetStep}! ${stepperName} fell with 0 lives remaining!`,
         });
 
         if (stepper === 'A') {
@@ -888,7 +917,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         choice,
         result: 'SHATTER',
         livesRemaining: nextLives,
-        message: `💥 CRASH! Il vetro ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} si è infranto! ${stepperName} perde 1 vita (${nextLives}/3 rimaste). Tocca a ${opponentName}.`,
+        message: isIt
+          ? `💥 CRASH! Il vetro ${choice === 'LEFT' ? 'SINISTRA' : 'DESTRA'} si è infranto! ${stepperName} perde 1 vita (${nextLives}/3 rimaste). Tocca a ${opponentName}.`
+          : `💥 CRASH! The ${choice} glass shattered! ${stepperName} lost 1 life (${nextLives}/3 remaining). ${opponentName}'s turn.`,
       });
 
       if (stepper === 'A') {
@@ -926,7 +957,9 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       choice: 'LEFT',
       result: 'PASS',
       livesRemaining: stepper === 'A' ? bridgeLivesA : bridgeLivesB,
-      message: `⏩ SKIP! ${stepperName} ha usato lo skip al Passo #${targetStep}! Tocca a ${opponentName}.`,
+      message: isIt
+        ? `⏩ SKIP! ${stepperName} ha usato lo skip al Passo #${targetStep}! Tocca a ${opponentName}.`
+        : `⏩ SKIP! ${stepperName} skipped Step #${targetStep}! ${opponentName}'s turn.`,
     });
 
     triggerImpact('medium');
@@ -1730,7 +1763,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
                 (gameType === 'connect4' && c4Turn === 'A') ||
                 (gameType === 'shotgun' && shotgunTurn === 'A') ||
                 (gameType === 'bridge' && bridgeTurn === 'A'))
-                ? 'TUO TURNO'
+                ? t('vsbot.yourTurn')
                 : t('vsbot.cpuThinking')}
             </span>
           </div>
@@ -1913,6 +1946,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             onSubscribeTick={() => () => {}}
             playerAName={playerName}
             playerBName={botName}
+            playerAPhoto={userProfile?.photoUrl}
+            playerBPhoto={undefined}
             playerAReady={true}
             playerBReady={true}
             hasPlayerB={true}

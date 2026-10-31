@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Shield, Award, Star, Crown, Sparkles, Gem, Flame, ChevronRight, Gift, Ticket, Zap, Info, X, Trophy } from 'lucide-react';
 import { UserRank, RANKS_CONFIG, RANKS_LIST, getRankFromXp, getNextRankProgress } from '../config/ranksConfig.js';
 import { GramIcon } from './GramIcon.js';
@@ -34,6 +35,8 @@ export const RankAvatarBadge: React.FC<RankAvatarBadgeProps> = ({
     switch (rank) {
       case 'bronze':
         return <Award className={`${iconSizes} text-amber-200`} />;
+      case 'iron':
+        return <Shield className={`${iconSizes} text-zinc-200 fill-zinc-400`} />;
       case 'silver':
         return <Star className={`${iconSizes} text-slate-100 fill-slate-100`} />;
       case 'gold':
@@ -137,6 +140,8 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
             <div className={`w-9 h-9 rounded-2xl bg-gradient-to-tr ${currentConfig.bgGradient} border ${currentConfig.borderColor} flex items-center justify-center ${currentConfig.glowShadow}`}>
               {effectiveRank === 'bronze' ? (
                 <Award className="w-5 h-5 text-amber-200" />
+              ) : effectiveRank === 'iron' ? (
+                <Shield className="w-5 h-5 text-zinc-100 fill-zinc-400" />
               ) : effectiveRank === 'silver' ? (
                 <Star className="w-5 h-5 text-slate-100 fill-slate-100" />
               ) : effectiveRank === 'gold' ? (
@@ -234,12 +239,19 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
               />
             </div>
             {nextConfig.rewardGram > 0 && (
-              <div className="flex items-center space-x-1 text-[9px] text-amber-300 font-sans pt-0.5">
-                <Gift className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>
-                  {isIt
-                    ? `Premio Rank ${nextConfig.name}: +${nextConfig.rewardGram} GRAM e ${nextConfig.rewardTickets} Biglietti Raffle!`
-                    : `Rank ${nextConfig.name} Reward: +${nextConfig.rewardGram} GRAM and ${nextConfig.rewardTickets} Raffle Tickets!`}
+              <div className="flex items-center space-x-1.5 text-[10px] font-sans pt-0.5 flex-wrap">
+                <Gift className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-slate-300">
+                  {isIt ? `Premio Rank ${nextConfig.name}:` : `Rank ${nextConfig.name} Reward:`}
+                </span>
+                <span className="flex items-center space-x-0.5 text-cyan-300 font-mono font-bold">
+                  <span>+{nextConfig.rewardGram}</span>
+                  <GramIcon className="w-3 h-3 text-cyan-400 inline shrink-0" />
+                </span>
+                <span className="text-slate-500">•</span>
+                <span className="flex items-center space-x-0.5 text-purple-300 font-mono font-bold">
+                  <span>+{nextConfig.rewardTickets}</span>
+                  <Ticket className="w-3 h-3 text-purple-400 inline shrink-0" />
                 </span>
               </div>
             )}
@@ -251,9 +263,17 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
         )}
       </div>
 
-      {/* Modal: All Ranks & Perks Table */}
-      {showRanksModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+      {/* Modal: All Ranks & Perks Table (Portal to document.body for full-screen backdrop coverage) */}
+      {showRanksModal && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              triggerImpact('light');
+              setShowRanksModal(false);
+            }
+          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
+        >
           <div className="w-full max-w-sm rounded-3xl bg-[#141724] border border-white/20 p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center space-x-2">
@@ -299,6 +319,8 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
                       <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${cfg.bgGradient} border ${cfg.borderColor} flex items-center justify-center shrink-0`}>
                         {rankId === 'bronze' ? (
                           <Award className="w-4 h-4 text-amber-200" />
+                        ) : rankId === 'iron' ? (
+                          <Shield className="w-4 h-4 text-zinc-100 fill-zinc-400" />
                         ) : rankId === 'silver' ? (
                           <Star className="w-4 h-4 text-slate-100 fill-slate-100" />
                         ) : rankId === 'gold' ? (
@@ -336,8 +358,16 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
                         {cfg.feeGram.toFixed(2)} GRAM <span className="text-[10px] text-slate-400">fee</span>
                       </div>
                       {cfg.rewardGram > 0 && (
-                        <div className="text-[9px] text-amber-300 font-sans">
-                          +{cfg.rewardGram}g & {cfg.rewardTickets} tickets
+                        <div className="flex items-center justify-end space-x-1.5 mt-0.5 text-[10px] font-mono font-bold">
+                          <span className="flex items-center space-x-0.5 text-cyan-300">
+                            <span>+{cfg.rewardGram}</span>
+                            <GramIcon className="w-3 h-3 text-cyan-400 inline shrink-0" />
+                          </span>
+                          <span className="text-slate-500">•</span>
+                          <span className="flex items-center space-x-0.5 text-purple-300">
+                            <span>+{cfg.rewardTickets}</span>
+                            <Ticket className="w-3 h-3 text-purple-400 inline shrink-0" />
+                          </span>
                         </div>
                       )}
                     </div>
@@ -354,7 +384,8 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
               {isIt ? 'CHIUDI' : 'CLOSE'}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
