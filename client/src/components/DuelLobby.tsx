@@ -198,7 +198,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   }, [initialGameFilter, onClearInitialGameFilter]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string } | null>(null);
+  const [insufficientJoinMatch, setInsufficientJoinMatch] = useState<{ match: MatchData; required: string; missing: string; fee?: string } | null>(null);
   const [lobbySubSection, setLobbySubSection] = useState<'PUBLIC' | 'PRIVATE' | 'OPEN' | 'MY_DUELS' | 'DIRECT'>('PUBLIC');
   const [targetOpponentInput, setTargetOpponentInput] = useState<string>('');
   const [showFriendPicker, setShowFriendPicker] = useState<boolean>(false);
@@ -442,13 +442,14 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       onOpenWallet?.();
       return;
     }
-    const wagerGram = parseFloat(m.wagerAmountNano) / 1e9;
-    const fee = joinFeeGram !== undefined ? joinFeeGram : 0.05;
-    const requiredTotal = wagerGram + fee;
-    if (currentBal < requiredTotal) {
+    const isF2P = (m as any).isF2P || parseFloat(m.wagerAmountNano || '0') === 0;
+    const wagerGram = parseFloat(m.wagerAmountNano || '0') / 1e9;
+    const fee = isF2P ? 0 : (joinFeeGram !== undefined ? joinFeeGram : 0.10);
+    const requiredTotal = isF2P ? 0 : (wagerGram + fee);
+    if (!isF2P && currentBal < requiredTotal) {
       triggerImpact('heavy');
       const diff = (requiredTotal - currentBal).toFixed(2);
-      setInsufficientJoinMatch({ match: m, required: requiredTotal.toFixed(2), missing: diff });
+      setInsufficientJoinMatch({ match: m, required: requiredTotal.toFixed(2), missing: diff, fee: fee.toFixed(2) });
       return;
     }
     setJoiningMatchId(m.matchId);
@@ -1432,9 +1433,17 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                               <Swords className="w-3.5 h-3.5" />
                             )}
                             <span className="flex items-center space-x-1">
-                              <span>{isTargetForThisDuel ? t('lobby.acceptDuelBtn') : t('lobby.joinBtn')} ({wagerGram}</span>
-                              <GramIcon className={`w-3 h-3 ${isTargetForThisDuel ? 'text-black' : 'text-white'} inline-block`} />
-                              <span>)</span>
+                              {parseFloat(wagerGram || '0') === 0 ? (
+                                <span className="font-extrabold text-emerald-300">
+                                  {isTargetForThisDuel ? t('lobby.acceptDuelBtn') : t('lobby.joinBtn')} (F2P)
+                                </span>
+                              ) : (
+                                <>
+                                  <span>{isTargetForThisDuel ? t('lobby.acceptDuelBtn') : t('lobby.joinBtn')} ({wagerGram}</span>
+                                  <GramIcon className={`w-3 h-3 ${isTargetForThisDuel ? 'text-black' : 'text-white'} inline-block`} />
+                                  <span>)</span>
+                                </>
+                              )}
                             </span>
                           </button>
                           {m.allowSpectators !== false && (
@@ -1522,6 +1531,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
                 {t('lobby.insufficientJoinDesc', {
                   required: insufficientJoinMatch.required,
                   current: currentBal.toFixed(2),
+                  fee: insufficientJoinMatch.fee || '0.10',
                 })}
               </p>
 

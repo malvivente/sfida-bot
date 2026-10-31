@@ -19,6 +19,8 @@ interface PlayerInput {
   hookBufferTicks: number;
   dodgeBufferTicks: number;
   superBufferTicks: number;
+  dashBufferTicks: number;
+  dashDir: number;
 }
 
 export class BoxingRoom extends BaseGameRoom {
@@ -40,6 +42,8 @@ export class BoxingRoom extends BaseGameRoom {
     hookBufferTicks: 0,
     dodgeBufferTicks: 0,
     superBufferTicks: 0,
+    dashBufferTicks: 0,
+    dashDir: 0,
   };
 
   private inputB: PlayerInput = {
@@ -50,6 +54,8 @@ export class BoxingRoom extends BaseGameRoom {
     hookBufferTicks: 0,
     dodgeBufferTicks: 0,
     superBufferTicks: 0,
+    dashBufferTicks: 0,
+    dashDir: 0,
   };
 
   private loopInterval?: NodeJS.Timeout;
@@ -72,7 +78,7 @@ export class BoxingRoom extends BaseGameRoom {
       side,
       name: isA ? this.playerA.username : (this.playerB?.username || 'Boxer B'),
       x: isA ? 260 : 540,
-      hp: 150,
+      hp: 200,
       stamina: 100,
       superMeter: 0,
       state: 'IDLE',
@@ -200,11 +206,11 @@ export class BoxingRoom extends BaseGameRoom {
   }
 
   private updateBoxer(b: BoxerState, inp: PlayerInput, opponent: BoxerState) {
-    // Passive stamina recovery
+    // Passive stamina recovery (moderated recovery rate)
     if (b.state === 'IDLE' || b.state === 'MOVE') {
-      b.stamina = Math.min(100, b.stamina + 0.85); // fast stamina recovery
+      b.stamina = Math.min(100, b.stamina + 0.45);
     } else if (b.state === 'BLOCK') {
-      b.stamina = Math.min(100, b.stamina + 0.25);
+      b.stamina = Math.min(100, b.stamina + 0.10);
     }
 
     // Passive super meter charge (+4%/s)
@@ -215,6 +221,7 @@ export class BoxingRoom extends BaseGameRoom {
     if (inp.hookBufferTicks > 0) inp.hookBufferTicks--;
     if (inp.dodgeBufferTicks > 0) inp.dodgeBufferTicks--;
     if (inp.superBufferTicks > 0) inp.superBufferTicks--;
+    if (inp.dashBufferTicks > 0) inp.dashBufferTicks--;
 
     // Decrement state ticks
     if (b.stateTicks > 0) {
@@ -245,6 +252,24 @@ export class BoxingRoom extends BaseGameRoom {
       b.stateTicks = 14;
       b.isGuarding = false;
       b.isDodging = false;
+      return;
+    }
+
+    // 1b. Dash (Double-tap directional sprint burst, consumes 14 stamina, uses dodge/weave animation)
+    if (inp.dashBufferTicks > 0 && b.stamina >= 14) {
+      inp.dashBufferTicks = 0;
+      const dashDir = inp.dashDir || (b.side === 'A' ? 1 : -1);
+      b.stamina = Math.max(0, b.stamina - 14);
+      b.state = 'DODGE';
+      b.stateTicks = 7;
+      b.isDodging = true;
+      b.isGuarding = false;
+      b.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, b.x + dashDir * 32));
+
+      // Counter window on opponent if dashing during their punch windup
+      if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
+        opponent.isCounterVulnerable = true;
+      }
       return;
     }
 
@@ -324,19 +349,19 @@ export class BoxingRoom extends BaseGameRoom {
 
     if (!isJabHitFrame && !isHookHitFrame && !isUppercutHitFrame) return;
 
-    let range = 84;
+    let range = 125;
     let baseDmg = 9;
     let hitType: BoxingHitEvent['type'] = 'JAB';
     let superGain = 12;
 
     if (attacker.state === 'HOOK') {
-      range = 76;
+      range = 105;
       baseDmg = 22;
       hitType = 'HOOK';
       superGain = 22;
     } else if (attacker.state === 'UPPERCUT') {
-      range = 80;
-      baseDmg = 42;
+      range = 110;
+      baseDmg = 28;
       hitType = 'UPPERCUT';
       superGain = 0;
     }
@@ -440,6 +465,10 @@ export class BoxingRoom extends BaseGameRoom {
       if (data.hook) inp.hookBufferTicks = 8;
       if (data.dodge) inp.dodgeBufferTicks = 8;
       if (data.super) inp.superBufferTicks = 8;
+      if (data.dash) {
+        inp.dashBufferTicks = 8;
+        inp.dashDir = data.dashDir !== undefined ? data.dashDir : (data.dash === 'left' ? -1 : 1);
+      }
     }
   }
 

@@ -32,6 +32,8 @@ interface BoxingArenaProps {
     hook?: boolean;
     dodge?: boolean;
     super?: boolean;
+    dash?: 'left' | 'right' | boolean;
+    dashDir?: number;
   }) => void;
   playerAName: string;
   playerBName?: string;
@@ -286,6 +288,11 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
   }, [localState?.lastHitEvent, triggerImpact]);
 
   // Input helpers for player
+  const lastLeftTap = useRef<number>(0);
+  const lastRightTap = useRef<number>(0);
+  const lastLeftKey = useRef<number>(0);
+  const lastRightKey = useRef<number>(0);
+
   const sendInput = useCallback(
     (inputPayload: {
       left?: boolean;
@@ -295,12 +302,36 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       hook?: boolean;
       dodge?: boolean;
       super?: boolean;
+      dash?: 'left' | 'right' | boolean;
+      dashDir?: number;
     }) => {
       if (role !== 'player' || !onInput) return;
       onInput(inputPayload);
     },
     [role, onInput]
   );
+
+  const handleLeftPress = useCallback(() => {
+    const now = Date.now();
+    if (now - lastLeftTap.current < 280) {
+      triggerImpact('heavy');
+      sendInput({ dash: 'left', dashDir: -1 });
+    } else {
+      sendInput({ left: true });
+    }
+    lastLeftTap.current = now;
+  }, [sendInput, triggerImpact]);
+
+  const handleRightPress = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRightTap.current < 280) {
+      triggerImpact('heavy');
+      sendInput({ dash: 'right', dashDir: 1 });
+    } else {
+      sendInput({ right: true });
+    }
+    lastRightTap.current = now;
+  }, [sendInput, triggerImpact]);
 
   // Keyboard controls for desktop pair testing
   useEffect(() => {
@@ -309,16 +340,29 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
       keysPressed.current[e.key.toLowerCase()] = true;
+      const now = Date.now();
 
       if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') {
-        sendInput({ left: true });
+        if (now - lastLeftKey.current < 280) {
+          triggerImpact('heavy');
+          sendInput({ dash: 'left', dashDir: -1 });
+        } else {
+          sendInput({ left: true });
+        }
+        lastLeftKey.current = now;
       } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
-        sendInput({ right: true });
+        if (now - lastRightKey.current < 280) {
+          triggerImpact('heavy');
+          sendInput({ dash: 'right', dashDir: 1 });
+        } else {
+          sendInput({ right: true });
+        }
+        lastRightKey.current = now;
       } else if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
         sendInput({ block: true });
       } else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') {
-        triggerImpact('light');
-        sendInput({ dodge: true });
+        triggerImpact('heavy');
+        sendInput({ dash: userSide === 'A' ? 'left' : 'right', dashDir: userSide === 'A' ? -1 : 1 });
       } else if (e.key.toLowerCase() === 'j' || e.key.toLowerCase() === 'z') {
         sendInput({ jab: true });
       } else if (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'x') {
@@ -346,7 +390,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [role, sendInput, triggerImpact]);
+  }, [role, sendInput, triggerImpact, userSide]);
 
   // Main Canvas Rendering Loop
   useEffect(() => {
@@ -665,7 +709,7 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
     ctx.restore();
   };
 
-  const MAX_BOXER_HP = 150;
+  const MAX_BOXER_HP = 200;
   const currentHpA = localState?.boxerA?.hp ?? MAX_BOXER_HP;
   const currentHpB = localState?.boxerB?.hp ?? MAX_BOXER_HP;
   const hpPercentA = Math.max(0, Math.min(100, (currentHpA / MAX_BOXER_HP) * 100));
@@ -1055,55 +1099,43 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onTouchStart={(e) => { e.preventDefault(); sendInput({ left: true }); }}
+                    onTouchStart={(e) => { e.preventDefault(); handleLeftPress(); }}
                     onTouchEnd={(e) => { e.preventDefault(); sendInput({ left: false }); }}
-                    onMouseDown={() => sendInput({ left: true })}
+                    onMouseDown={() => handleLeftPress()}
                     onMouseUp={() => sendInput({ left: false })}
                     className="py-3.5 rounded-2xl bg-white/5 active:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 font-heading font-black active:scale-95 transition-transform touch-none select-none"
+                    title="Move Left (Double-tap for Dash)"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
 
                   <button
                     type="button"
-                    onTouchStart={(e) => { e.preventDefault(); sendInput({ right: true }); }}
+                    onTouchStart={(e) => { e.preventDefault(); handleRightPress(); }}
                     onTouchEnd={(e) => { e.preventDefault(); sendInput({ right: false }); }}
-                    onMouseDown={() => sendInput({ right: true })}
+                    onMouseDown={() => handleRightPress()}
                     onMouseUp={() => sendInput({ right: false })}
                     className="py-3.5 rounded-2xl bg-white/5 active:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 font-heading font-black active:scale-95 transition-transform touch-none select-none"
+                    title="Move Right (Double-tap for Dash)"
                   >
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      triggerImpact('light');
-                      sendInput({ dodge: true });
-                    }}
-                    onClick={() => {
-                      triggerImpact('light');
-                      sendInput({ dodge: true });
-                    }}
-                    className="py-3 rounded-2xl bg-sky-950/40 hover:bg-sky-900/40 border border-sky-400/30 text-sky-300 font-heading font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 active:scale-95 touch-none select-none"
-                  >
-                    <span>💨 {t('boxing.dodge') || 'SCHIVA'}</span>
-                  </button>
+                <button
+                  type="button"
+                  onTouchStart={(e) => { e.preventDefault(); sendInput({ block: true }); }}
+                  onTouchEnd={(e) => { e.preventDefault(); sendInput({ block: false }); }}
+                  onMouseDown={() => sendInput({ block: true })}
+                  onMouseUp={() => sendInput({ block: false })}
+                  className="w-full py-3 rounded-2xl bg-blue-950/50 hover:bg-blue-900/40 active:bg-blue-600/50 border border-blue-400/40 text-blue-200 font-heading font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 active:scale-95 touch-none select-none transition-all shadow-sm"
+                >
+                  <Shield className="w-4 h-4 text-blue-400" />
+                  <span>{t('boxing.guard') || 'GUARDIA'}</span>
+                </button>
 
-                  <button
-                    type="button"
-                    onTouchStart={(e) => { e.preventDefault(); sendInput({ block: true }); }}
-                    onTouchEnd={(e) => { e.preventDefault(); sendInput({ block: false }); }}
-                    onMouseDown={() => sendInput({ block: true })}
-                    onMouseUp={() => sendInput({ block: false })}
-                    className="py-3 rounded-2xl bg-blue-950/40 active:bg-blue-600/40 border border-blue-400/40 text-blue-200 font-heading font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 active:scale-95 touch-none select-none"
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>{t('boxing.guard') || 'GUARDIA'}</span>
-                  </button>
+                <div className="text-[10px] text-center font-heading font-bold text-cyan-400/90 tracking-wide uppercase">
+                  ⚡ 2x TAP ◀ / ▶ PER DASH
                 </div>
               </div>
 

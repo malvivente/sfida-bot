@@ -587,7 +587,7 @@ export const translations: Translations = {
   'lobby.creatorTag': { it: 'CREATORE', en: 'CREATOR' },
   'lobby.opponentTag': { it: 'AVVERSARIO', en: 'OPPONENT' },
   'lobby.insufficientModalTitle': { it: 'SALDO INSUFFICIENTE PER PARTECIPARE', en: 'INSUFFICIENT BALANCE TO JOIN' },
-  'lobby.insufficientJoinDesc': { it: 'Questo duello richiede {required} GRAM (inclusi 0.05 GRAM di quota di partecipazione). Il tuo saldo disponibile è di {current} GRAM.', en: 'This duel requires {required} GRAM (including 0.05 GRAM entry fee). Your available balance is {current} GRAM.' },
+  'lobby.insufficientJoinDesc': { it: 'Questo duello richiede {required} GRAM (inclusi {fee} GRAM di quota di partecipazione). Il tuo saldo disponibile è di {current} GRAM.', en: 'This duel requires {required} GRAM (including {fee} GRAM entry fee). Your available balance is {current} GRAM.' },
   'lobby.missingDeposit': { it: 'Deposito Mancante:', en: 'Missing Deposit:' },
   'lobby.filterTitle': { it: 'Filtri e Ricerca', en: 'Filters & Search' },
   'lobby.filterBtn': { it: 'Filtri', en: 'Filters' },

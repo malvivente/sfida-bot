@@ -64,7 +64,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
       if (r.isPrivate && r.allowSpectators === false) {
         const isParticipant =
           (wallet && (r.isSameWallet(r.playerA.walletAddress, wallet) || (r.playerB && r.isSameWallet(r.playerB.walletAddress, wallet)))) ||
-          (userId && (String(r.playerA.telegramId) === String(userId) || (r.playerB && String(r.playerB.telegramId) === String(userId)) || (r.targetOpponentId && String(r.targetOpponentId) === String(userId)))) ||
+          (userId && (
+            String(r.playerA.telegramId) === String(userId) ||
+            (r.playerB && String(r.playerB.telegramId) === String(userId)) ||
+            (r.targetOpponentId && String(r.targetOpponentId) === String(userId)) ||
+            (r.targetOpponentUsername && dbService.findUser(r.targetOpponentUsername)?.telegramId === String(userId))
+          )) ||
           (cleanUsername && (
             (r.playerA.username && r.playerA.username.toLowerCase().replace(/^@/, '').trim() === cleanUsername) ||
             (r.playerB?.username && r.playerB.username.toLowerCase().replace(/^@/, '').trim() === cleanUsername) ||
@@ -304,7 +309,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       body.telegramUsername
     );
     const userRank = userAccount.rank || 'wood';
-    const creationFeeGram = getUserFee(userRank);
+    const creationFeeGram = isF2P ? 0 : getUserFee(userRank);
     const totalRequired = isF2P ? 0 : (wagerGram + creationFeeGram);
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 
@@ -411,8 +416,16 @@ export async function matchRoutes(fastify: FastifyInstance) {
     room.playerA.firstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
     room.playerA.photoUrl = body.photoUrl || userAccount.photoUrl || '';
     (room as any).syncSeatsFromSessions?.();
-    room.targetOpponentUsername = body.targetOpponentUsername;
+    const cleanTargetOpponent = body.targetOpponentUsername ? body.targetOpponentUsername.trim().replace(/^@/, '') : undefined;
+    room.targetOpponentUsername = cleanTargetOpponent;
     room.targetOpponentId = body.targetOpponentId;
+
+    if (cleanTargetOpponent && !room.targetOpponentId) {
+      const resolvedTarget = dbService.findUser(cleanTargetOpponent);
+      if (resolvedTarget?.telegramId) {
+        room.targetOpponentId = resolvedTarget.telegramId;
+      }
+    }
 
     if (body.telegramUserId) {
       dbService.setLastPlayedGame(body.telegramUserId, gameType).catch((err) =>
@@ -437,25 +450,33 @@ export async function matchRoutes(fastify: FastifyInstance) {
             for (const targetKey of rawTargets) {
               const targetUser = dbService.findUser(targetKey);
               if (targetUser && targetUser.telegramId) {
-                const targetLang = resolveLanguage(targetUser.customLanguageCode || targetUser.languageCode);
-                const gameConfig = (GAMES_CONFIG as any)[gameType];
-                const gameTitle = gameConfig?.name || gameType.toUpperCase();
-                const rawUser = (body.rawUsername || userAccount.username || '').trim().replace(/^@/, '');
-                const creatorFirstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
-                const creatorName = rawUser ? `@${rawUser}` : (creatorFirstName || 'Un duellante');
-                const text = botT(targetLang, 'direct_challenge_msg', {
-                  creatorName,
-                  gameTitle,
-                  wager: wagerGram.toFixed(2),
-                });
-                const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
-                const btnLabel = botT(targetLang, 'btn_accept_challenge');
-                const duelUrl = `${webAppUrl}?startapp=duel_${matchId}${inviteCode ? `_${inviteCode}` : ''}`;
-                const keyboard = new InlineKeyboard().webApp(btnLabel, duelUrl);
-                await bot.api.sendMessage(Number(targetUser.telegramId), text, {
-                  parse_mode: 'HTML',
-                  reply_markup: keyboard,
-                });
+                try {
+                  const targetLang = resolveLanguage(targetUser.customLanguageCode || targetUser.languageCode);
+                  const gameConfig = (GAMES_CONFIG as any)[gameType];
+                  const gameTitle = gameConfig?.name || gameType.toUpperCase();
+                  const rawUser = (body.rawUsername || userAccount.username || '').trim().replace(/^@/, '');
+                  const creatorFirstName = body.firstName || userAccount.firstName || (userAccount.displayName ? userAccount.displayName.trim().split(/\s+/)[0] : undefined);
+                  const creatorName = rawUser ? `@${rawUser}` : (creatorFirstName || 'Un duellante');
+                  const wagerDisplay = isF2P ? 'GRATIS (F2P)' : `${wagerGram.toFixed(2)} GRAM`;
+                  const text = botT(targetLang, 'direct_challenge_msg', {
+                    creatorName,
+                    gameTitle,
+                    wager: wagerDisplay,
+                  });
+                  const webAppUrl = process.env.WEBAPP_URL || 'https://sfida-arena.vercel.app';
+                  const btnLabel = botT(targetLang, 'btn_accept_challenge');
+                  const duelUrl = `${webAppUrl}?startapp=duel_${matchId}${inviteCode ? `_${inviteCode}` : ''}`;
+                  const keyboard = new InlineKeyboard().webApp(btnLabel, duelUrl);
+                  await bot.api.sendMessage(Number(targetUser.telegramId), text, {
+                    parse_mode: 'HTML',
+                    reply_markup: keyboard,
+                  });
+                  console.log(`[matchRoutes] Successfully sent direct challenge DM to ${targetUser.telegramId} (@${targetUser.username})`);
+                } catch (dmErr) {
+                  console.warn(`[matchRoutes] Could not send DM to target ${targetUser.telegramId}:`, dmErr);
+                }
+              } else {
+                console.warn(`[matchRoutes] Direct challenge target '${targetKey}' not found in user database`);
               }
             }
           }
@@ -625,7 +646,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     const wagerGram = Number(room.config.wagerAmountNano) / 1e9;
-    const isF2P = (room.gameType === 'uno' || room.gameType === 'headsoccer' || room.gameType === 'boxing') && wagerGram === 0;
+    const isF2P = wagerGram === 0;
 
     // Check Player B's balance and calculate rank-based participation fee
     const userAccount = await dbService.getUserAccount(
@@ -634,7 +655,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
       body.telegramUsername
     );
     const userRank = userAccount.rank || 'wood';
-    const joinFeeGram = getUserFee(userRank);
+    const joinFeeGram = isF2P ? 0 : getUserFee(userRank);
     const totalRequired = isF2P ? 0 : (wagerGram + joinFeeGram);
     const currentBal = parseFloat(userAccount.balanceGram || userAccount.balanceTon || '0');
 

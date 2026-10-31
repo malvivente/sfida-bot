@@ -111,11 +111,11 @@ export const TipModal: React.FC<TipModalProps> = ({
         }, 1500);
       } else {
         triggerImpact('heavy');
-        setErrorMsg(data?.error || t('tip.errorGeneric'));
+        setErrorMsg(data?.error || data?.message || t('tip.errorGeneric'));
       }
-    } catch {
+    } catch (e: any) {
       triggerImpact('heavy');
-      setErrorMsg(t('tip.errorGeneric'));
+      setErrorMsg(e?.message || t('tip.errorGeneric'));
     } finally {
       setIsSubmitting(false);
     }

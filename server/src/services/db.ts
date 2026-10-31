@@ -899,10 +899,12 @@ export class DatabaseService {
         account.photoUrl = photoUrl;
         changed = true;
       }
-      if (username && account.username !== username) {
-        account.username = username;
+      if (username) {
         if (cleanUsername) this.usersByUsername.set(cleanUsername, account);
-        changed = true;
+        if (account.username !== username) {
+          account.username = username;
+          changed = true;
+        }
       }
       if (walletAddress && !walletAddress.startsWith('tg_') && !/^\d+$/.test(walletAddress)) {
         const friendly = this.toFriendlyAddress(walletAddress);
@@ -2291,11 +2293,11 @@ export class DatabaseService {
     const cleanUname = cleanLower.replace(/^@/, '');
 
     // 1. By Telegram ID
-    let account = this.usersByTg.get(clean) || this.usersByTg.get(cleanLower);
+    let account = this.usersByTg.get(clean) || this.usersByTg.get(cleanLower) || this.usersByTg.get(cleanUname);
     if (account) return account;
 
-    // 2. By Username
-    account = this.usersByUsername.get(cleanUname);
+    // 2. By Username (cached map)
+    account = this.usersByUsername.get(cleanUname) || this.usersByUsername.get(cleanLower);
     if (account) return account;
 
     // 3. By Wallet Address
@@ -2307,15 +2309,28 @@ export class DatabaseService {
     account = this.usersByWallet.get(cleanLower);
     if (account) return account;
 
-    // 4. By Storage key or scan
+    // 4. By Storage key or comprehensive scan
     for (const [key, u] of this.users.entries()) {
+      const uTg = u.telegramId ? String(u.telegramId).trim() : '';
+      const uUname = u.username ? u.username.toLowerCase().replace(/^@/, '').trim() : '';
+      const uDisp = u.displayName ? u.displayName.toLowerCase().replace(/^@/, '').trim() : '';
+      const uFirst = u.firstName ? u.firstName.toLowerCase().trim() : '';
+      const uWallet = u.walletAddress ? u.walletAddress.toLowerCase() : '';
+
       if (
         key === clean ||
         key === cleanLower ||
         key === `tg_${clean}` ||
-        u.telegramId === clean ||
-        (u.username && u.username.toLowerCase() === cleanUname) ||
-        (u.walletAddress && u.walletAddress.toLowerCase() === cleanLower)
+        key === `tg_${cleanUname}` ||
+        uTg === clean ||
+        uTg === cleanUname ||
+        uUname === cleanUname ||
+        uUname === cleanLower ||
+        uDisp === cleanUname ||
+        uDisp === cleanLower ||
+        uFirst === cleanUname ||
+        uWallet === cleanLower ||
+        (norm && u.walletAddress && this.normalizeAddress(u.walletAddress) === norm)
       ) {
         return u;
       }
@@ -2549,9 +2564,12 @@ export class DatabaseService {
     const senderDesc = `Tip a @${recipient.username || recipient.displayName}${note ? ': ' + note : ''}`;
     const recipientDesc = `Tip da @${sender.username || sender.displayName}${note ? ': ' + note : ''}`;
 
+    const senderWallet = sender.walletAddress || (sender.telegramId ? `tg_${sender.telegramId}` : '');
+    const recipientWallet = recipient.walletAddress || (recipient.telegramId ? `tg_${recipient.telegramId}` : '');
+
     this.transactions.push({
       id: `tx_${Date.now()}_tip_out`,
-      walletAddress: sender.walletAddress,
+      walletAddress: senderWallet,
       type: 'TRANSFER_OUT',
       amountNano: BigInt(Math.round(amtNum * 1e9)).toString(),
       amountTon: amtStr,
@@ -2562,7 +2580,7 @@ export class DatabaseService {
 
     this.transactions.push({
       id: `tx_${Date.now()}_tip_in`,
-      walletAddress: recipient.walletAddress,
+      walletAddress: recipientWallet,
       type: 'TRANSFER_IN',
       amountNano: BigInt(Math.round(amtNum * 1e9)).toString(),
       amountTon: amtStr,
@@ -2571,9 +2589,15 @@ export class DatabaseService {
       details: recipientDesc,
     });
 
+    this.leaderboardCache.clear();
     this.persistData();
     console.log(`[DatabaseService] Transfer/Tip: ${amtStr} GRAM from ${sender.displayName} to ${recipient.displayName}`);
-    return { success: true, senderAccount: sender, recipientAccount: recipient };
+
+    return {
+      success: true,
+      senderAccount: sender,
+      recipientAccount: recipient,
+    };
   }
 
   /**
