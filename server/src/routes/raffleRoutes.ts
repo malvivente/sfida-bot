@@ -42,11 +42,13 @@ export async function raffleRoutes(fastify: FastifyInstance) {
       }
 
       const data = dbService.getUserRaffleTickets(userId);
+      const userAcc = await dbService.getUserAccount(undefined, userId);
       return reply.send({
         success: true,
         tickets: data.tickets,
         freeEntries: data.freeEntries,
         raffles: data.raffles,
+        freeRaffleTickets: userAcc?.freeRaffleTickets || 0,
       });
     } catch (err: any) {
       console.error('[RaffleRoutes] Error fetching user tickets:', err);
@@ -65,12 +67,14 @@ export async function raffleRoutes(fastify: FastifyInstance) {
         userId?: string | number;
         quantity?: number;
         username?: string;
+        useFreeTickets?: boolean;
       };
 
       const raffleId = String(body.raffleId || '').trim();
       const userId = String(body.userId || '').trim();
       const quantity = Math.max(1, Math.floor(Number(body.quantity) || 1));
       const username = body.username ? String(body.username).trim() : undefined;
+      const useFreeTickets = Boolean(body.useFreeTickets);
 
       if (!raffleId) {
         return reply.status(400).send({ success: false, error: 'Raffle ID is required' });
@@ -80,7 +84,7 @@ export async function raffleRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ success: false, error: 'Telegram User ID is required' });
       }
 
-      const result = await dbService.buyRaffleTickets(raffleId, userId, quantity, username);
+      const result = await dbService.buyRaffleTickets(raffleId, userId, quantity, username, useFreeTickets);
 
       if (!result.success) {
         return reply.status(400).send({ success: false, error: result.error });
@@ -89,6 +93,8 @@ export async function raffleRoutes(fastify: FastifyInstance) {
       return reply.send({
         success: true,
         isFreeEntry: result.isFreeEntry,
+        usedFreeTickets: result.usedFreeTickets,
+        remainingFreeTickets: result.remainingFreeTickets,
         ticketNumbers: result.ticketNumbers,
         newBalance: result.newBalance,
       });

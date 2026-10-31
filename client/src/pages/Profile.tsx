@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, ArrowRight, ArrowDownLeft, ArrowUpRight, Loader2, CheckCircle2, AlertCircle, X, Coins, Users } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Flame, Trophy, TrendingUp, History, Swords, Sparkles, Wallet, ArrowRight, ArrowDownLeft, ArrowUpRight, Loader2, CheckCircle2, AlertCircle, X, Coins, Users, Ticket, ChevronRight } from 'lucide-react';
 import { useTonClashContract } from '../hooks/useTonClashContract.js';
 import { useTelegram } from '../hooks/useTelegram.js';
 import { useTelegramViewport } from '../hooks/useTelegramViewport.js';
@@ -9,6 +10,7 @@ import { UserAvatar } from '../components/UserAvatar.js';
 import { DepositModal } from '../components/DepositModal.js';
 import { RankAvatarBadge, RankPill, RankProgressCard } from '../components/RankBadge.js';
 import { UserRank } from '../config/ranksConfig.js';
+import { STREAK_MILESTONES, getNextStreakMilestone, getPrevStreakMilestone } from '../config/streaksConfig.js';
 import { DuelHistoryRecord, UserStats, UserBalance, MatchData, GameType } from '../types/index.js';
 import { GAMES_METADATA } from '../config/gamesConfig.js';
 import { useI18n } from '../i18n/index.js';
@@ -214,14 +216,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
   const dailyStreak = serverStats?.dailyStreak || 0;
   const hasWonToday = serverStats?.hasWonToday || false;
+  const [showStreakModal, setShowStreakModal] = useState(false);
 
-  const MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365];
-  const nextMilestone = MILESTONES.find((m) => m > dailyStreak) || (dailyStreak + 30);
-  const prevMilestones = MILESTONES.filter((m) => m <= dailyStreak);
-  const prevMilestone = prevMilestones.length > 0 ? prevMilestones[prevMilestones.length - 1] : 0;
+  const nextMilestoneObj = getNextStreakMilestone(dailyStreak);
+  const prevMilestoneObj = getPrevStreakMilestone(dailyStreak);
+  const nextMilestoneDays = nextMilestoneObj?.days || (dailyStreak + 30);
+  const prevMilestoneDays = prevMilestoneObj?.days || 0;
   const streakProgressPct = Math.min(
     100,
-    Math.max(0, Math.round(((dailyStreak - prevMilestone) / (nextMilestone - prevMilestone)) * 100))
+    Math.max(0, Math.round(((dailyStreak - prevMilestoneDays) / (nextMilestoneDays - prevMilestoneDays)) * 100))
   );
 
   const totalProfitsGram = serverStats
@@ -381,43 +384,79 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
           </div>
 
           {/* Daily Win Streak Card */}
-          <div className="bg-[#10131d]/90 border border-orange-500/30 rounded-2xl p-3.5 flex flex-col justify-between shadow-md">
+          <div
+            onClick={() => {
+              triggerImpact('light');
+              setShowStreakModal(true);
+            }}
+            className="bg-[#10131d]/90 border border-orange-500/30 hover:border-orange-500/60 rounded-2xl p-3.5 flex flex-col justify-between shadow-md cursor-pointer active:scale-[0.98] transition-all group relative overflow-hidden"
+          >
+            {/* Ambient subtle glow */}
+            <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-orange-500/10 blur-xl pointer-events-none group-hover:bg-orange-500/20 transition-all" />
+
             <div>
-              <div className="flex items-center space-x-1 text-xs mb-1 text-orange-400 font-semibold">
-                <Flame className="w-3.5 h-3.5 fill-orange-400 shrink-0" />
-                <span className="font-heading font-black text-white text-[11px] sm:text-xs tracking-wider truncate">
-                  {t('profile.streakTitle', { streak: dailyStreak })}
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center space-x-1.5 text-xs text-orange-400 font-semibold">
+                  <Flame className={`w-3.5 h-3.5 ${dailyStreak > 0 ? 'fill-orange-400 text-orange-400 animate-pulse' : 'text-slate-500'} shrink-0`} />
+                  <span className="font-heading font-black text-white text-[11px] sm:text-xs tracking-wider truncate">
+                    {t('profile.streakTitle', { streak: dailyStreak })}
+                  </span>
+                </div>
+                <span className="text-[9px] font-heading font-bold text-orange-300/80 bg-orange-500/15 px-1.5 py-0.5 rounded-md flex items-center space-x-0.5 shrink-0">
+                  <span>Traguardi</span>
+                  <ChevronRight className="w-2.5 h-2.5" />
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 font-medium">
+
+              <div className="text-[11px] font-medium mt-0.5">
                 {hasWonToday ? (
-                  <span className="text-emerald-400 font-bold flex items-center space-x-0.5">
+                  <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                     <span>{t('profile.streakCompleted')}</span>
                   </span>
                 ) : (
-                  <span>{t('profile.streakAction')}</span>
+                  <span className="text-amber-400 font-semibold flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                    <span>{t('profile.streakAction')}</span>
+                  </span>
                 )}
               </div>
             </div>
 
-            <div className="mt-2 space-y-1">
+            <div className="mt-2.5 space-y-1.5">
               <div className="flex items-center justify-between text-[10px] text-slate-400">
-                <span className="text-emerald-400 font-bold shrink-0">
-                  {t('profile.streakUnit', { days: prevMilestone })} ✓
+                <span className="text-emerald-400 font-mono font-bold shrink-0">
+                  {prevMilestoneDays} gg ✓
                 </span>
-                <div className="flex-1 mx-1.5 h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/10">
+                <div className="flex-1 mx-2 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/10 p-[0.5px]">
                   <div
                     style={{ width: `${streakProgressPct}%` }}
-                    className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 rounded-full transition-all duration-500"
                   />
                 </div>
-                <span className="text-amber-300 font-bold shrink-0">
-                  {t('profile.streakUnit', { days: nextMilestone })} 🎁
+                <span className="text-amber-300 font-mono font-bold shrink-0">
+                  {nextMilestoneDays} gg 🎁
                 </span>
               </div>
-              <div className="text-[9px] text-slate-400 text-center truncate font-medium">
-                {t('profile.streakGoal', { days: nextMilestone, reward: (nextMilestone * 0.5).toFixed(0) })}
-              </div>
+
+              {nextMilestoneObj ? (
+                <div className="flex items-center justify-center space-x-1.5 text-[10px] font-mono font-bold text-slate-300">
+                  <span className="text-slate-400">Traguardo {nextMilestoneObj.days} gg:</span>
+                  <span className="inline-flex items-center space-x-0.5 text-cyan-300">
+                    <span>+{nextMilestoneObj.rewardGram}</span>
+                    <GramIcon className="w-3 h-3 text-cyan-400 inline shrink-0" />
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="inline-flex items-center space-x-0.5 text-purple-300">
+                    <span>+{nextMilestoneObj.rewardTickets}</span>
+                    <Ticket className="w-3 h-3 text-purple-400 inline shrink-0" />
+                  </span>
+                </div>
+              ) : (
+                <div className="text-[10px] font-heading font-black text-amber-300 text-center">
+                  LEGGENDA MAX STREAK!
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -689,6 +728,126 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             </div>
           </div>
         </div>
+      )}
+
+      {/* Streak Milestones Roadmap Modal */}
+      {showStreakModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-3 animate-in fade-in duration-200 select-none font-sans"
+          onClick={() => setShowStreakModal(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-[#141726] border border-orange-500/40 p-5 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[88vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400">
+                  <Flame className="w-5 h-5 fill-orange-400 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
+                    {t('profile.streakModalTitle') || 'TRAGUARDI STREAK'}
+                  </h3>
+                  <span className="text-[10px] text-slate-400 block font-medium">
+                    Serie attuale: <strong className="text-orange-400 font-bold">{dailyStreak} giorni</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStreakModal(false)}
+                className="p-1 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Description note */}
+            <div className="p-3 rounded-2xl bg-orange-950/20 border border-orange-500/20 text-[11px] text-slate-300 leading-relaxed font-sans shrink-0">
+              Vinci almeno <strong className="text-white">1 duello ogni giorno</strong> (PvP o Vs Bot) per incrementare la serie e sbloccare ricompense in <span className="text-cyan-300 font-bold">GRAM</span> e <span className="text-purple-300 font-bold">Ticket Raffle</span>! Se salti un giorno senza vincere, la streak si azzera.
+            </div>
+
+            {/* Milestones list */}
+            <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+              {STREAK_MILESTONES.map((m) => {
+                const isReached = dailyStreak >= m.days;
+                const isTarget = nextMilestoneObj?.days === m.days;
+
+                return (
+                  <div
+                    key={m.days}
+                    className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${
+                      isReached
+                        ? 'bg-orange-500/10 border-orange-500/30'
+                        : isTarget
+                        ? 'bg-white/5 border-orange-400/50 shadow-md ring-1 ring-orange-400/30'
+                        : 'bg-black/30 border-white/5 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-heading font-black text-xs shrink-0 ${
+                        isReached
+                          ? 'bg-gradient-to-tr from-orange-500 to-amber-500 text-slate-950 shadow-md'
+                          : isTarget
+                          ? 'bg-orange-500/20 border border-orange-400 text-orange-300'
+                          : 'bg-white/5 text-slate-400'
+                      }`}>
+                        {m.days}d
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-xs font-heading font-black text-white truncate">
+                            {m.titleIt}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-0.5 text-[10px] font-mono font-bold">
+                          <span className="flex items-center space-x-0.5 text-cyan-300">
+                            <span>+{m.rewardGram.toFixed(2)}</span>
+                            <GramIcon className="w-2.5 h-2.5 text-cyan-400 inline shrink-0" />
+                          </span>
+                          <span className="text-slate-500">•</span>
+                          <span className="flex items-center space-x-0.5 text-purple-300">
+                            <span>+{m.rewardTickets}</span>
+                            <Ticket className="w-2.5 h-2.5 text-purple-400 inline shrink-0" />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      {isReached ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-heading font-black uppercase">
+                          Sbloccato ✓
+                        </span>
+                      ) : isTarget ? (
+                        <span className="px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-400/50 text-orange-300 text-[10px] font-heading font-black uppercase">
+                          {dailyStreak}/{m.days} gg
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-500 text-[10px] font-heading font-bold uppercase">
+                          {m.days} gg
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setShowStreakModal(false)}
+              className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-heading font-black text-xs uppercase tracking-wider shrink-0 transition-all active:scale-95"
+            >
+              {t('common.close') || 'CHIUDI'}
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

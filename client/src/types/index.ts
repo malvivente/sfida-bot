@@ -335,6 +335,7 @@ export interface UserStats {
   xpInCurrentTier?: number;
   xpNeededForNextTier?: number;
   claimedRankRewards?: string[];
+  claimedStreakMilestones?: number[];
   freeRaffleTickets?: number;
 }
 
@@ -381,6 +382,7 @@ export interface InternalAccount {
   rank?: UserRank;
   rankFeeGram?: number;
   claimedRankRewards?: string[];
+  claimedStreakMilestones?: number[];
   freeRaffleTickets?: number;
 }
 

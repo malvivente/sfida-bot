@@ -193,11 +193,11 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
             <span className="text-[10px] text-slate-400 font-sans font-medium">
               {isIt ? 'Fee Partita' : 'Match Fee'}
             </span>
-            <div className="flex items-baseline space-x-1 mt-1">
+            <div className="flex items-center space-x-1 mt-1">
               <span className={`text-base font-heading font-black ${currentConfig.textColor}`}>
                 {currentConfig.feeGram.toFixed(2)}
               </span>
-              <span className="text-[10px] text-slate-400 font-bold">GRAM</span>
+              <GramIcon className="w-3.5 h-3.5 text-cyan-400 inline shrink-0" />
               {currentConfig.feeGram < 0.10 && (
                 <span className="text-[9px] text-emerald-400 font-mono font-bold ml-auto">
                   -{Math.round((1 - currentConfig.feeGram / 0.10) * 100)}%
@@ -210,11 +210,15 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
             <span className="text-[10px] text-slate-400 font-sans font-medium">
               {isIt ? 'Prossimo Sblocco' : 'Next Unlock'}
             </span>
-            <div className="flex items-center space-x-1 mt-1 text-[11px] font-heading font-bold text-white truncate">
+            <div className="flex items-center space-x-1.5 mt-1 text-[11px] font-heading font-bold text-white truncate">
               {nextConfig ? (
                 <>
                   <span className={nextConfig.textColor}>{nextConfig.name}</span>
-                  <span className="text-slate-400 text-[10px]">({nextConfig.feeGram}g)</span>
+                  <span className="text-slate-400 text-[10px] inline-flex items-center space-x-0.5">
+                    <span>({nextConfig.feeGram.toFixed(2)}</span>
+                    <GramIcon className="w-2.5 h-2.5 text-cyan-400 inline shrink-0" />
+                    <span>fee)</span>
+                  </span>
                 </>
               ) : (
                 <span className="text-purple-300 font-bold">TOP TIER MAX!</span>
@@ -354,8 +358,10 @@ export const RankProgressCard: React.FC<RankProgressCardProps> = ({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="text-xs font-mono font-bold text-white">
-                        {cfg.feeGram.toFixed(2)} GRAM <span className="text-[10px] text-slate-400">fee</span>
+                      <div className="text-xs font-mono font-bold text-white flex items-center justify-end space-x-1">
+                        <span>{cfg.feeGram.toFixed(2)}</span>
+                        <GramIcon className="w-3 h-3 text-cyan-400 inline shrink-0" />
+                        <span className="text-[10px] text-slate-400">fee</span>
                       </div>
                       {cfg.rewardGram > 0 && (
                         <div className="flex items-center justify-end space-x-1.5 mt-0.5 text-[10px] font-mono font-bold">

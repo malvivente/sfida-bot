@@ -5,6 +5,7 @@ import { Address } from '@ton/ton';
 import { feeConfig } from '../config/feeConfig.js';
 import { cleanPlayerName } from '../utils/cleanName.js';
 import { UserRank, RANKS_CONFIG, RANKS_LIST, getRankFromXp, getUserFee, getNextRankProgress } from '../config/ranksConfig.js';
+import { STREAK_MILESTONES } from '../config/streaksConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,7 @@ export interface UserStats {
   xpInCurrentTier?: number;
   xpNeededForNextTier?: number;
   claimedRankRewards?: string[];
+  claimedStreakMilestones?: number[];
   freeRaffleTickets?: number;
 }
 
@@ -111,6 +113,7 @@ export interface UserAccount {
   xp?: number;
   rank?: UserRank;
   claimedRankRewards?: string[];
+  claimedStreakMilestones?: number[];
   freeRaffleTickets?: number;
   updatedAt: number;
   mockStats?: {
@@ -126,7 +129,7 @@ export interface UserAccount {
 export interface BalanceTransaction {
   id: string;
   walletAddress: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN' | 'CASINO_BET' | 'CASINO_WIN' | 'RANK_REWARD';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'MATCH_WIN' | 'MATCH_BET' | 'REMATCH_BET' | 'CREATION_FEE' | 'REFUND' | 'JACKPOT_BONUS' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'PROMO_CREATE' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_TICKET' | 'RAFFLE_WIN' | 'CASINO_BET' | 'CASINO_WIN' | 'RANK_REWARD' | 'STREAK_REWARD';
   amountNano: string;
   amountTon: string; // for backward compatibility
   amountGram: string; // primary GRAM amount
@@ -916,6 +919,7 @@ export class DatabaseService {
         account.xp = 0;
         account.rank = 'wood';
         account.claimedRankRewards = [];
+        account.claimedStreakMilestones = [];
         account.freeRaffleTickets = 0;
         changed = true;
       }
@@ -952,6 +956,7 @@ export class DatabaseService {
       xp: 0,
       rank: 'wood',
       claimedRankRewards: [],
+      claimedStreakMilestones: [],
       freeRaffleTickets: 0,
       updatedAt: Date.now(),
     };
@@ -1269,7 +1274,7 @@ export class DatabaseService {
   public async creditUserBalance(
     walletAddress: string,
     amountGram: string,
-    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN' | 'CASINO_WIN' | 'RANK_REWARD',
+    type: 'DEPOSIT' | 'MATCH_WIN' | 'REFUND' | 'PROMO_REDEEM' | 'PROMO_REFUND' | 'RAFFLE_WIN' | 'CASINO_WIN' | 'RANK_REWARD' | 'STREAK_REWARD',
     details?: string,
     telegramId?: string
   ): Promise<UserAccount> {
@@ -1524,7 +1529,6 @@ export class DatabaseService {
         if (cfg.rewardTickets > 0) {
           totalRewardTickets += cfg.rewardTickets;
           user.freeRaffleTickets = (user.freeRaffleTickets || 0) + cfg.rewardTickets;
-          this.awardFreeRaffleTickets(user.telegramId || '', user.username, cfg.rewardTickets);
         }
         claimed.add(r);
         console.log(`[DatabaseService] User ${user.telegramId || user.walletAddress} achieved Rank ${cfg.name}! Claimed ${cfg.rewardGram} GRAM & ${cfg.rewardTickets} tickets.`);
@@ -1569,6 +1573,52 @@ export class DatabaseService {
     console.log(`[DatabaseService] Awarded ${quantity} free tickets in Raffle ${activeRaffle.id} to user ${cleanUserId}`);
   }
 
+  public async checkStreakMilestones(walletAddress?: string, telegramId?: string): Promise<{
+    awardedMilestones: number[];
+    rewardGram: number;
+    rewardTickets: number;
+  }> {
+    const user = await this.getUserAccount(walletAddress, telegramId);
+    if (!user) return { awardedMilestones: [], rewardGram: 0, rewardTickets: 0 };
+
+    const history = await this.getUserHistory(user.walletAddress, user.telegramId);
+    const { dailyStreak } = this.calculateDailyWinStreak(history);
+    if (dailyStreak <= 0) return { awardedMilestones: [], rewardGram: 0, rewardTickets: 0 };
+
+    user.claimedStreakMilestones = user.claimedStreakMilestones || [];
+    const awardedMilestones: number[] = [];
+    let totalGram = 0;
+    let totalTickets = 0;
+
+    for (const m of STREAK_MILESTONES) {
+      if (dailyStreak >= m.days && !user.claimedStreakMilestones.includes(m.days)) {
+        user.claimedStreakMilestones.push(m.days);
+        awardedMilestones.push(m.days);
+        if (m.rewardGram > 0) {
+          totalGram += m.rewardGram;
+          await this.creditUserBalance(
+            user.walletAddress,
+            m.rewardGram.toFixed(2),
+            'STREAK_REWARD',
+            `Premio Streak ${m.days} giorni (+${m.rewardGram} GRAM)`,
+            user.telegramId
+          );
+        }
+        if (m.rewardTickets > 0) {
+          totalTickets += m.rewardTickets;
+          user.freeRaffleTickets = (user.freeRaffleTickets || 0) + m.rewardTickets;
+        }
+        console.log(`[DatabaseService] User ${user.telegramId || user.walletAddress} achieved Streak ${m.days} days! Awarded ${m.rewardGram} GRAM & ${m.rewardTickets} tickets.`);
+      }
+    }
+
+    if (awardedMilestones.length > 0) {
+      this.persistData();
+    }
+
+    return { awardedMilestones, rewardGram: totalGram, rewardTickets: totalTickets };
+  }
+
   // --- Match and History Methods ---
 
   public async saveMatch(record: StoredMatch): Promise<void> {
@@ -1593,8 +1643,15 @@ export class DatabaseService {
         const xpB = 15 + (isWinnerB ? 10 : 0) + volumeXp;
         await this.addXp(record.playerBAddress, xpB, record.playerBTelegramId);
       }
+
+      // Check daily win streak milestones for the winner
+      const winnerTg = record.winnerTelegramId;
+      const winnerWallet = record.winnerAddress;
+      if (winnerTg || winnerWallet) {
+        await this.checkStreakMilestones(winnerWallet, winnerTg);
+      }
     } catch (e) {
-      console.warn('[DatabaseService] Error awarding match XP:', e);
+      console.warn('[DatabaseService] Error awarding match XP / streak:', e);
     }
 
     this.persistData();
@@ -1862,6 +1919,7 @@ export class DatabaseService {
       xpInCurrentTier: progress.xpInCurrentTier,
       xpNeededForNextTier: progress.xpNeededForNextTier,
       claimedRankRewards: userAcc?.claimedRankRewards || [],
+      claimedStreakMilestones: userAcc?.claimedStreakMilestones || [],
       freeRaffleTickets: userAcc?.freeRaffleTickets || 0,
     };
   }
@@ -2961,12 +3019,15 @@ export class DatabaseService {
     raffleId: string,
     userId: string,
     quantity: number,
-    username?: string
+    username?: string,
+    useFreeTickets?: boolean
   ): Promise<{
     success: boolean;
     error?: string;
     ticketNumbers?: number[];
     isFreeEntry?: boolean;
+    usedFreeTickets?: boolean;
+    remainingFreeTickets?: number;
     newBalance?: string;
   }> {
     const cleanUserId = String(userId).trim();
@@ -3012,7 +3073,47 @@ export class DatabaseService {
       return { success: true, isFreeEntry: true, newBalance: newBal };
     }
 
-    // 2. PAID RAFFLE: Purchase numbered tickets using balance
+    // 2. USE FREE RAFFLE TICKETS FROM INVENTORY
+    if (useFreeTickets) {
+      const userAcc = await this.getUserAccount(undefined, cleanUserId);
+      const freeAvail = userAcc.freeRaffleTickets || 0;
+      const qty = Math.max(1, Math.floor(quantity));
+      if (freeAvail < qty) {
+        return { success: false, error: 'Ticket omaggio insufficienti nel tuo inventario' };
+      }
+
+      userAcc.freeRaffleTickets = freeAvail - qty;
+      const ticketNumbers: number[] = [];
+      const startNum = raffle.totalTickets + 1;
+
+      for (let i = 0; i < qty; i++) {
+        const num = startNum + i;
+        ticketNumbers.push(num);
+        this.raffleTickets.push({
+          id: `tkt_free_${raffle.id}_${num}_${Date.now()}`,
+          raffleId: raffle.id,
+          userId: cleanUserId,
+          username: username || undefined,
+          ticketNumber: num,
+          purchasedAt: Date.now(),
+        });
+      }
+
+      raffle.totalTickets += qty;
+      this.persistRaffles();
+      this.persistData();
+
+      console.log(`[DatabaseService] User ${cleanUserId} used ${qty} free tickets for raffle ${raffle.id} (Remaining free: ${userAcc.freeRaffleTickets})`);
+      return {
+        success: true,
+        usedFreeTickets: true,
+        remainingFreeTickets: userAcc.freeRaffleTickets,
+        ticketNumbers,
+        newBalance: userAcc.balanceGram || '0.00',
+      };
+    }
+
+    // 3. PAID RAFFLE: Purchase numbered tickets using balance
     const qty = Math.max(1, Math.floor(quantity));
     const totalCost = parseFloat((raffle.ticketPriceGram * qty).toFixed(2));
 

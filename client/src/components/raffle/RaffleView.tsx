@@ -72,6 +72,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
   const [myTickets, setMyTickets] = useState<StoredRaffleTicket[]>([]);
   const [myFreeEntries, setMyFreeEntries] = useState<StoredFreeEntry[]>([]);
   const [myRafflesMap, setMyRafflesMap] = useState<Record<string, StoredRaffle>>({});
+  const [availableVoucherTickets, setAvailableVoucherTickets] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Selected raffle for entry modal
@@ -112,6 +113,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           setMyTickets(data.tickets || []);
           setMyFreeEntries(data.freeEntries || []);
           setMyRafflesMap(data.raffles || {});
+          if (data.freeRaffleTickets !== undefined) {
+            setAvailableVoucherTickets(Number(data.freeRaffleTickets) || 0);
+          }
         }
       }
     } catch (err) {
@@ -218,10 +222,19 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
   const isModalAlreadyRegistered = modalRaffle && isModalFree ? isUserRegisteredInFreeRaffle(modalRaffle.id) : false;
 
   // Perform purchase or free registration
-  const handleConfirmPurchase = async () => {
+  const handleConfirmPurchase = async (useFree: boolean = false) => {
     if (!modalRaffle || isBuying) return;
 
-    if (!isModalFree && !canAfford) {
+    if (useFree) {
+      if (availableVoucherTickets < 1) {
+        triggerNotification('error');
+        setBuyFeedback({
+          type: 'error',
+          message: 'Non hai ticket omaggio disponibili!',
+        });
+        return;
+      }
+    } else if (!isModalFree && !canAfford) {
       triggerNotification('error');
       setBuyFeedback({
         type: 'error',
@@ -241,8 +254,9 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
         body: JSON.stringify({
           raffleId: modalRaffle.id,
           userId: effectiveUserId,
-          quantity: isModalFree ? 1 : selectedQuantity,
+          quantity: useFree ? 1 : (isModalFree ? 1 : selectedQuantity),
           username: username || displayName || undefined,
+          useFreeTickets: useFree,
         }),
       });
 
@@ -267,10 +281,20 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           } catch {}
         }
 
+        if (data.usedFreeTickets) {
+          setAvailableVoucherTickets((prev) => (data.remainingFreeTickets !== undefined ? data.remainingFreeTickets : Math.max(0, prev - 1)));
+        }
+
         // Notify lobby banner that ticket counts changed
         window.dispatchEvent(new CustomEvent('sfida_raffle_updated'));
 
-        if (data.isFreeEntry || isModalFree) {
+        if (data.usedFreeTickets) {
+          const tktNum = data.ticketNumbers ? `#TK-${data.ticketNumbers[0]}` : '';
+          setBuyFeedback({
+            type: 'success',
+            message: `🎉 Biglietto riscattato con 1 Ticket Omaggio! ${tktNum}`,
+          });
+        } else if (data.isFreeEntry || isModalFree) {
           setBuyFeedback({
             type: 'success',
             message: t('raffle.freeEntryRegistered') || 'Iscrizione gratuita completata! Sei registrato per l\'estrazione.',
@@ -321,10 +345,18 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
           <span>{t('common.back')}</span>
         </button>
 
-        {/* Counter of active tickets & entries currently in possession */}
-        <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-heading font-extrabold uppercase tracking-wider">
-          <Ticket className="w-3.5 h-3.5 text-amber-300" />
-          <span>{totalActiveInPossession} {t('raffle.activeTickets')}</span>
+        {/* Counter of active tickets & voucher tickets in possession */}
+        <div className="flex items-center space-x-1.5">
+          {availableVoucherTickets > 0 && (
+            <div className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-heading font-extrabold tracking-wider">
+              <Ticket className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span>{availableVoucherTickets} Omaggio</span>
+            </div>
+          )}
+          <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-heading font-extrabold uppercase tracking-wider">
+            <Ticket className="w-3.5 h-3.5 text-amber-300" />
+            <span>{totalActiveInPossession} {t('raffle.activeTickets')}</span>
+          </div>
         </div>
       </div>
 
@@ -891,6 +923,31 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
               </div>
             )}
 
+            {/* Free voucher ticket redemption option */}
+            {availableVoucherTickets > 0 && !isModalFree && (
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-400/30 flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Ticket className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+                  <div className="min-w-0">
+                    <span className="text-xs font-heading font-black text-amber-300 block truncate">
+                      {availableVoucherTickets} Ticket Omaggio Disponibili
+                    </span>
+                    <span className="text-[10px] text-slate-300 block">
+                      Usa 1 ticket invece di spendere GRAM
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isBuying}
+                  onClick={() => handleConfirmPurchase(true)}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all shrink-0"
+                >
+                  Usa Gratis
+                </button>
+              </div>
+            )}
+
             {/* Action Button */}
             {isModalFree && isModalAlreadyRegistered ? (
               <button
@@ -905,7 +962,7 @@ export const RaffleView: React.FC<RaffleViewProps> = ({
               <button
                 type="button"
                 disabled={isBuying || (!isModalFree && !canAfford)}
-                onClick={handleConfirmPurchase}
+                onClick={() => handleConfirmPurchase(false)}
                 className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-heading font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center space-x-2"
               >
                 <Ticket className="w-4 h-4" />
