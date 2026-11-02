@@ -141,6 +141,7 @@ interface DuelLobbyProps {
   initialCreateWager?: string | null;
   onClearInitialCreateWager?: () => void;
   onBalanceUpdated?: (newBalance: string) => void;
+  onBotMatchActiveChange?: (isActive: boolean) => void;
 }
 
 export const DuelLobby: React.FC<DuelLobbyProps> = ({
@@ -174,6 +175,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
   initialCreateWager,
   onClearInitialCreateWager,
   onBalanceUpdated,
+  onBotMatchActiveChange,
 }) => {
   const { triggerImpact } = useHaptics();
   const { botUsername, userId, username, fullName, displayName, photoUrl } = useTelegram();
@@ -724,6 +726,7 @@ export const DuelLobby: React.FC<DuelLobbyProps> = ({
       {sectionView === 'vs_bot' ? (
         <VsBotHubView
           onBack={() => setSectionView('hub')}
+          onBotMatchActiveChange={onBotMatchActiveChange}
           userProfile={{
             displayName: displayName || fullName || username,
             username,

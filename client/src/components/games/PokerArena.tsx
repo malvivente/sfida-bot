@@ -604,10 +604,14 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                 {t('poker.hand').toUpperCase()} {gameData?.handNumber || 1} · {t('poker.blinds').toUpperCase()} {gameData?.smallBlind || 10}/{gameData?.bigBlind || 20}
               </div>
               <div className="text-[10px] text-emerald-200/70 font-medium">
-                {t('poker.blindsIncreaseIn', {
-                  count: handsUntilBlindIncrease,
-                  unit: handsUntilBlindIncrease === 1 ? t('poker.handUnitSingular') : t('poker.handUnitPlural'),
-                })}
+                {wagerTon === '0.00' || (gameData as any)?.isVsBot ? (
+                  <span>VS CPU · PRACTICE</span>
+                ) : (
+                  t('poker.blindsIncreaseIn', {
+                    count: handsUntilBlindIncrease,
+                    unit: handsUntilBlindIncrease === 1 ? t('poker.handUnitSingular') : t('poker.handUnitPlural'),
+                  })
+                )}
               </div>
             </div>
           ) : (
@@ -1389,21 +1393,21 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     <button
                       type="button"
                       onClick={() => handleActionClick('fold')}
-                      className="py-2.5 px-1.5 rounded-2xl bg-[#14261d] hover:bg-[#1a3326] border border-red-500/40 text-rose-200 font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex flex-col items-center justify-center"
+                      className="py-2.5 px-1.5 min-h-[52px] rounded-2xl bg-[#14261d] hover:bg-[#1a3326] border border-red-500/40 text-rose-200 font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex flex-col items-center justify-center"
                     >
                       <span className="text-sm font-black text-rose-300">{t('poker.btnFold')}</span>
-                      <span className="text-[9px] font-normal text-rose-400/80">{t('poker.btnFoldSub')}</span>
+                      <span className="text-[9px] font-normal text-rose-400/80 leading-tight">{t('poker.btnFoldSub')}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleActionClick(toCall === 0 ? 'check' : 'call')}
-                      className="py-2.5 px-1.5 rounded-2xl bg-[#183626] hover:bg-[#1f4531] border border-emerald-500/50 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex flex-col items-center justify-center"
+                      className="py-2.5 px-1.5 min-h-[52px] rounded-2xl bg-[#183626] hover:bg-[#1f4531] border border-emerald-500/50 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all flex flex-col items-center justify-center"
                     >
                       <span className="text-sm font-black text-emerald-300">
                         {toCall === 0 ? t('poker.btnCheck') : t('poker.btnCall')}
                       </span>
-                      <span className="text-[9px] font-mono text-emerald-200/80">
+                      <span className="text-[9px] font-mono text-emerald-200/80 leading-tight">
                         {toCall === 0 ? t('poker.btnCheckSub') : t('poker.btnCallSub', { amount: toCall.toLocaleString() })}
                       </span>
                     </button>
@@ -1411,7 +1415,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                     <button
                       type="button"
                       onClick={handleRaiseSubmit}
-                      className="py-2.5 px-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 hover:brightness-110 text-white font-heading font-black text-xs uppercase tracking-wider shadow-[0_4px_16px_rgba(16,185,129,0.4)] active:scale-95 transition-all flex flex-col items-center justify-center"
+                      className="py-2.5 px-1.5 min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 hover:brightness-110 text-white font-heading font-black text-xs uppercase tracking-wider shadow-[0_4px_16px_rgba(16,185,129,0.4)] active:scale-95 transition-all flex flex-col items-center justify-center"
                     >
                       <span className="text-sm font-black">
                         {customRaiseAmount >= maxLegalRaise
@@ -1420,7 +1424,7 @@ export const PokerArena: React.FC<PokerArenaProps> = ({
                           ? t('poker.btnBet')
                           : t('poker.btnRaise')}
                       </span>
-                      <span className="text-[9px] font-mono text-emerald-100">
+                      <span className="text-[9px] font-mono text-emerald-100 leading-tight">
                         {customRaiseAmount.toLocaleString()} {t('poker.chips')}
                       </span>
                     </button>

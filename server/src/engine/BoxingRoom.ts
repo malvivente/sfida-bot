@@ -256,14 +256,17 @@ export class BoxingRoom extends BaseGameRoom {
 
     // Process buffered or active inputs
     // 1. Super KO Uppercut
-    if (inp.superBufferTicks > 0 && b.superMeter >= 100) {
+    if (inp.superBufferTicks > 0) {
+      const canSuper = b.superMeter >= 100;
       inp.superBufferTicks = 0;
-      b.superMeter = 0;
-      b.state = 'UPPERCUT';
-      b.stateTicks = 14;
-      b.isGuarding = false;
-      b.isDodging = false;
-      return;
+      if (canSuper) {
+        b.superMeter = 0;
+        b.state = 'UPPERCUT';
+        b.stateTicks = 14;
+        b.isGuarding = false;
+        b.isDodging = false;
+        return;
+      }
     }
 
     // 1b. Dash (Double-tap directional sprint burst, consumes 14 stamina, uses dodge/weave animation)
@@ -289,41 +292,50 @@ export class BoxingRoom extends BaseGameRoom {
     }
 
     // 2. Dodge / Weave
-    if (inp.dodgeBufferTicks > 0 && b.stamina >= 10) {
+    if (inp.dodgeBufferTicks > 0) {
+      const canDodge = b.stamina >= 10;
       inp.dodgeBufferTicks = 0;
-      b.stamina = Math.max(0, b.stamina - 10);
-      b.state = 'DODGE';
-      b.stateTicks = 6;
-      b.isDodging = true;
-      b.isGuarding = false;
+      if (canDodge) {
+        b.stamina = Math.max(0, b.stamina - 10);
+        b.state = 'DODGE';
+        b.stateTicks = 6;
+        b.isDodging = true;
+        b.isGuarding = false;
 
-      // Counter window on opponent if dodging during their punch windup
-      if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
-        opponent.isCounterVulnerable = true;
+        // Counter window on opponent if dodging during their punch windup
+        if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
+          opponent.isCounterVulnerable = true;
+        }
+        return;
       }
-      return;
     }
 
     // 3. Hook (Heavy body blow)
-    if (inp.hookBufferTicks > 0 && b.stamina >= 14) {
+    if (inp.hookBufferTicks > 0) {
+      const canHook = b.stamina >= 14;
       inp.hookBufferTicks = 0;
-      b.stamina = Math.max(0, b.stamina - 14);
-      b.state = 'HOOK';
-      b.stateTicks = 8;
-      b.isGuarding = false;
-      b.isDodging = false;
-      return;
+      if (canHook) {
+        b.stamina = Math.max(0, b.stamina - 14);
+        b.state = 'HOOK';
+        b.stateTicks = 8;
+        b.isGuarding = false;
+        b.isDodging = false;
+        return;
+      }
     }
 
     // 4. Jab (Fast head strike)
-    if (inp.jabBufferTicks > 0 && b.stamina >= 7) {
+    if (inp.jabBufferTicks > 0) {
+      const canJab = b.stamina >= 7;
       inp.jabBufferTicks = 0;
-      b.stamina = Math.max(0, b.stamina - 7);
-      b.state = 'JAB';
-      b.stateTicks = 5;
-      b.isGuarding = false;
-      b.isDodging = false;
-      return;
+      if (canJab) {
+        b.stamina = Math.max(0, b.stamina - 7);
+        b.state = 'JAB';
+        b.stateTicks = 5;
+        b.isGuarding = false;
+        b.isDodging = false;
+        return;
+      }
     }
 
     // 5. Block / Guard
@@ -476,17 +488,19 @@ export class BoxingRoom extends BaseGameRoom {
       if (typeof data.left === 'boolean') inp.left = data.left;
       if (typeof data.right === 'boolean') inp.right = data.right;
       if (typeof data.block === 'boolean') inp.block = data.block;
-      if (data.jab) inp.jabBufferTicks = 8;
-      if (data.hook) inp.hookBufferTicks = 8;
-      if (data.dodge) inp.dodgeBufferTicks = 8;
-      if (data.super) inp.superBufferTicks = 8;
+      const boxer = side === 'A' ? this.boxerA : this.boxerB;
+      const canAct = boxer.stateTicks <= 0;
+
+      if (data.jab) inp.jabBufferTicks = canAct && boxer.stamina >= 7 ? 2 : 0;
+      if (data.hook) inp.hookBufferTicks = canAct && boxer.stamina >= 14 ? 2 : 0;
+      if (data.dodge) inp.dodgeBufferTicks = canAct && boxer.stamina >= 10 ? 2 : 0;
+      if (data.super) inp.superBufferTicks = canAct && boxer.superMeter >= 100 ? 2 : 0;
       if (data.dash) {
-        const boxer = side === 'A' ? this.boxerA : this.boxerB;
-        if (boxer.stamina >= 14) {
-          inp.dashBufferTicks = 8;
+        if (canAct && boxer.stamina >= 14) {
+          inp.dashBufferTicks = 2;
           inp.dashDir = data.dashDir !== undefined ? data.dashDir : (data.dash === 'left' ? -1 : 1);
         } else {
-          inp.dashBufferTicks = 0; // Do not queue if insufficient stamina
+          inp.dashBufferTicks = 0; // Do not queue if insufficient stamina or busy
         }
       }
     }

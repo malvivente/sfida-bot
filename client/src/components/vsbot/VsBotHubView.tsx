@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Bot } from 'lucide-react';
 import { GameType } from '../../types/index.js';
 import { GAMES_METADATA } from '../../config/gamesConfig.js';
@@ -8,6 +8,7 @@ import { VsBotArenaRunner } from './VsBotArenaRunner.js';
 
 interface VsBotHubViewProps {
   onBack: () => void;
+  onBotMatchActiveChange?: (isActive: boolean) => void;
   userProfile?: {
     displayName?: string;
     username?: string;
@@ -20,12 +21,19 @@ const BOT_GAMES: GameType[] = ['shotgun', 'roulette', 'blackjack', 'connect4', '
 const BOT_QUICK_GAMES: GameType[] = ['roulette', 'blackjack', 'bridge', 'headsoccer', 'boxing'];
 const BOT_STRATEGY_GAMES: GameType[] = ['shotgun', 'connect4', 'poker'];
 
-export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, userProfile }) => {
+export const VsBotHubView: React.FC<VsBotHubViewProps> = ({ onBack, onBotMatchActiveChange, userProfile }) => {
   const { triggerImpact } = useHaptics();
   const { t } = useI18n();
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'quick' | 'strategy'>('all');
   const [activeBotGame, setActiveBotGame] = useState<GameType | null>(null);
+
+  useEffect(() => {
+    onBotMatchActiveChange?.(Boolean(activeBotGame));
+    return () => {
+      onBotMatchActiveChange?.(false);
+    };
+  }, [activeBotGame, onBotMatchActiveChange]);
 
   if (activeBotGame) {
     return (

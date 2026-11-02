@@ -391,11 +391,12 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
           sendInput({ dash: userSide === 'A' ? 'left' : 'right', dashDir: userSide === 'A' ? -1 : 1 });
         }
       } else if (e.key.toLowerCase() === 'j' || e.key.toLowerCase() === 'z') {
-        sendInput({ jab: true });
+        if (myStamina >= 7) sendInput({ jab: true });
       } else if (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'x') {
-        sendInput({ hook: true });
+        if (myStamina >= 14) sendInput({ hook: true });
       } else if (e.key === ' ' || e.key.toLowerCase() === 'c') {
-        sendInput({ super: true });
+        const mySuper = myBoxer?.superMeter ?? 0;
+        if (mySuper >= 100) sendInput({ super: true });
       }
     };
 
@@ -1138,10 +1139,14 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                     type="button"
                     onTouchStart={(e) => {
                       e.preventDefault();
+                      const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+                      if ((myBoxer?.stamina ?? 100) < 7) return;
                       triggerImpact('medium');
                       sendInput({ jab: true });
                     }}
                     onClick={() => {
+                      const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+                      if ((myBoxer?.stamina ?? 100) < 7) return;
                       triggerImpact('medium');
                       sendInput({ jab: true });
                     }}
@@ -1155,10 +1160,14 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
                     type="button"
                     onTouchStart={(e) => {
                       e.preventDefault();
+                      const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+                      if ((myBoxer?.stamina ?? 100) < 14) return;
                       triggerImpact('heavy');
                       sendInput({ hook: true });
                     }}
                     onClick={() => {
+                      const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+                      if ((myBoxer?.stamina ?? 100) < 14) return;
                       triggerImpact('heavy');
                       sendInput({ hook: true });
                     }}

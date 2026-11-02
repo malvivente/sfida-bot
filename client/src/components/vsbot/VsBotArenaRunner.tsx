@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GameType, CoinTossData, ShotgunItem, GlassBridgeState } from '../../types/index.js';
+import { GameType, CoinTossData, ShotgunItem, GlassBridgeState, PokerCard, PokerStage, PokerActionType } from '../../types/index.js';
 import { GAMES_METADATA } from '../../config/gamesConfig.js';
 import { ArrowLeft, Bot, RotateCcw, Trophy, Skull, Clock, Swords } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics.js';
 import { useI18n } from '../../i18n/index.js';
 import { CoinTossOverlay } from '../CoinTossOverlay.js';
+import { evaluatePokerHandClient } from '../../utils/pokerEvaluator.js';
 
 // Arenas for the 7 VS BOT games
 import { RussianRouletteArena } from '../games/RussianRouletteArena.js';
@@ -1072,11 +1073,11 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     boxingInputRef.current = {
       ...cur,
       ...inp,
-      jabBufferTicks: inp.jab ? 8 : (inp.jab === false ? 0 : cur.jabBufferTicks),
-      hookBufferTicks: inp.hook ? 8 : (inp.hook === false ? 0 : cur.hookBufferTicks),
-      dodgeBufferTicks: inp.dodge ? 8 : (inp.dodge === false ? 0 : cur.dodgeBufferTicks),
-      superBufferTicks: inp.super ? 8 : (inp.super === false ? 0 : cur.superBufferTicks),
-      dashBufferTicks: inp.dash ? 8 : (inp.dash === false ? 0 : cur.dashBufferTicks),
+      jabBufferTicks: inp.jab ? 2 : (inp.jab === false ? 0 : cur.jabBufferTicks),
+      hookBufferTicks: inp.hook ? 2 : (inp.hook === false ? 0 : cur.hookBufferTicks),
+      dodgeBufferTicks: inp.dodge ? 2 : (inp.dodge === false ? 0 : cur.dodgeBufferTicks),
+      superBufferTicks: inp.super ? 2 : (inp.super === false ? 0 : cur.superBufferTicks),
+      dashBufferTicks: inp.dash ? 2 : (inp.dash === false ? 0 : cur.dashBufferTicks),
       dashDir: inp.dash ? (inp.dashDir !== undefined ? inp.dashDir : (inp.dash === 'left' ? -1 : 1)) : cur.dashDir,
     };
   }, []);
@@ -1423,35 +1424,43 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
               inp.dashActiveTicks = 8;
               pA.x = Math.max(140, Math.min(660, pA.x + dir * 15));
             }
-          } else if (wantSuper && pA.superMeter >= 100) {
+          } else if (wantSuper) {
             inp.super = false;
             inp.superBufferTicks = 0;
-            pA.superMeter = 0;
-            pA.state = 'UPPERCUT';
-            pA.stateTicks = 14;
-            pA.isGuarding = false;
-          } else if (wantDodge && pA.stamina >= 10) {
+            if (pA.superMeter >= 100) {
+              pA.superMeter = 0;
+              pA.state = 'UPPERCUT';
+              pA.stateTicks = 14;
+              pA.isGuarding = false;
+            }
+          } else if (wantDodge) {
             inp.dodge = false;
             inp.dodgeBufferTicks = 0;
-            pA.stamina -= 10;
-            pA.state = 'DODGE';
-            pA.stateTicks = 6;
-            pA.isDodging = true;
-            pA.isGuarding = false;
-          } else if (wantHook && pA.stamina >= 14) {
+            if (pA.stamina >= 10) {
+              pA.stamina -= 10;
+              pA.state = 'DODGE';
+              pA.stateTicks = 6;
+              pA.isDodging = true;
+              pA.isGuarding = false;
+            }
+          } else if (wantHook) {
             inp.hook = false;
             inp.hookBufferTicks = 0;
-            pA.stamina -= 14;
-            pA.state = 'HOOK';
-            pA.stateTicks = 8;
-            pA.isGuarding = false;
-          } else if (wantJab && pA.stamina >= 7) {
+            if (pA.stamina >= 14) {
+              pA.stamina -= 14;
+              pA.state = 'HOOK';
+              pA.stateTicks = 8;
+              pA.isGuarding = false;
+            }
+          } else if (wantJab) {
             inp.jab = false;
             inp.jabBufferTicks = 0;
-            pA.stamina -= 7;
-            pA.state = 'JAB';
-            pA.stateTicks = 5;
-            pA.isGuarding = false;
+            if (pA.stamina >= 7) {
+              pA.stamina -= 7;
+              pA.state = 'JAB';
+              pA.stateTicks = 5;
+              pA.isGuarding = false;
+            }
           } else if (inp.block && pA.stamina >= 6) {
             pA.state = 'BLOCK';
             pA.isGuarding = true;
@@ -1615,36 +1624,112 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
   }, [gameType, roomState, triggerNotification]);
 
   // ==========================================
-  // --- 7. POKER (POKER ROOM REPLICA) ---
+  // --- 7. POKER (TEXAS HOLD'EM ENGINE) ---
   // ==========================================
-  const [pokerPot, setPokerPot] = useState(100);
+  const [heroHoleCards, setHeroHoleCards] = useState<PokerCard[]>([]);
+  const [botHoleCards, setBotHoleCards] = useState<PokerCard[]>([]);
+  const [pokerBoardPool, setPokerBoardPool] = useState<PokerCard[]>([]);
+  const [pokerCommunityCards, setPokerCommunityCards] = useState<PokerCard[]>([]);
+  const [pokerPot, setPokerPot] = useState(30);
   const [pokerTurn, setPokerTurn] = useState<'A' | 'B'>('A');
-  const [pokerPhase, setPokerPhase] = useState<'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN'>('FLOP');
-  const [pokerCommunityCards, setPokerCommunityCards] = useState<any[]>([
-    { suit: '♠', value: '10', numericValue: 10 },
-    { suit: '♥', value: 'J', numericValue: 11 },
-    { suit: '♦', value: 'Q', numericValue: 12 },
-  ]);
+  const [pokerPhase, setPokerPhase] = useState<PokerStage>('PREFLOP');
+  const [heroChips, setHeroChips] = useState(490);
+  const [botChips, setBotChips] = useState(480);
+  const [heroCurrentBet, setHeroCurrentBet] = useState(10);
+  const [botCurrentBet, setBotCurrentBet] = useState(20);
+  const [pokerTableBet, setPokerTableBet] = useState(20);
+  const [heroLastAction, setHeroLastAction] = useState<any>(undefined);
+  const [botLastAction, setBotLastAction] = useState<any>(undefined);
 
-  const initPoker = () => {
-    setPokerPot(100);
-    setPokerPhase('FLOP');
-    setPokerTurn('A');
-    setPokerCommunityCards([
-      { suit: '♠', value: '10', numericValue: 10 },
-      { suit: '♥', value: 'J', numericValue: 11 },
-      { suit: '♦', value: 'Q', numericValue: 12 },
-    ]);
+  const generateDeck = (): PokerCard[] => {
+    const suits: ('♠' | '♥' | '♦' | '♣')[] = ['♠', '♥', '♦', '♣'];
+    const values: { val: string; num: number }[] = [
+      { val: '2', num: 2 }, { val: '3', num: 3 }, { val: '4', num: 4 }, { val: '5', num: 5 },
+      { val: '6', num: 6 }, { val: '7', num: 7 }, { val: '8', num: 8 }, { val: '9', num: 9 },
+      { val: '10', num: 10 }, { val: 'J', num: 11 }, { val: 'Q', num: 12 }, { val: 'K', num: 13 },
+      { val: 'A', num: 14 },
+    ];
+    const deck: PokerCard[] = [];
+    for (const s of suits) {
+      for (const v of values) {
+        deck.push({ suit: s, value: v.val, numericValue: v.num });
+      }
+    }
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
   };
 
-  const handlePokerAction = (action: string) => {
+  const initPoker = () => {
+    const deck = generateDeck();
+    const heroCards = [deck[0], deck[1]];
+    const botCards = [deck[2], deck[3]];
+    const boardPool = [deck[4], deck[5], deck[6], deck[7], deck[8]];
+
+    setHeroHoleCards(heroCards);
+    setBotHoleCards(botCards);
+    setPokerBoardPool(boardPool);
+    setPokerCommunityCards([]);
+    setPokerPot(30);
+    setHeroChips(490);
+    setBotChips(480);
+    setHeroCurrentBet(10);
+    setBotCurrentBet(20);
+    setPokerTableBet(20);
+    setPokerPhase('PREFLOP');
+    setPokerTurn('A');
+    setTurnTimeLeft(15);
+    setHeroLastAction({ type: 'BLIND', amount: 10, message: 'Small Blind (10)' });
+    setBotLastAction({ type: 'BLIND', amount: 20, message: 'Big Blind (20)' });
+  };
+
+  const handlePokerAction = (action: PokerActionType, amount?: number) => {
+    if (pokerTurn !== 'A' || roomState !== 'GAME_ACTIVE') return;
+
     if (action === 'fold') {
+      setHeroLastAction({ type: 'FOLD', message: 'Fold' });
       setWinnerSide('B');
       setRoomState('MATCH_SETTLED');
       triggerNotification('error');
-    } else {
+      return;
+    }
+
+    if (action === 'check') {
+      setHeroLastAction({ type: 'CHECK', message: 'Check' });
       setPokerTurn('B');
       setTurnTimeLeft(15);
+      return;
+    }
+
+    if (action === 'call') {
+      const callDiff = Math.max(0, pokerTableBet - heroCurrentBet);
+      const actualCall = Math.min(heroChips, callDiff);
+      setHeroChips((prev) => prev - actualCall);
+      setHeroCurrentBet((prev) => prev + actualCall);
+      setPokerPot((prev) => prev + actualCall);
+      setHeroLastAction({ type: 'CALL', amount: actualCall, message: `Call ${actualCall}` });
+      setPokerTurn('B');
+      setTurnTimeLeft(15);
+      return;
+    }
+
+    if (action === 'raise' || action === 'bet' || action === 'all_in') {
+      const targetBet = amount !== undefined ? amount : (action === 'all_in' ? heroChips + heroCurrentBet : pokerTableBet + 40);
+      const addedChips = Math.min(heroChips, Math.max(0, targetBet - heroCurrentBet));
+      setHeroChips((prev) => prev - addedChips);
+      setHeroCurrentBet((prev) => prev + addedChips);
+      setPokerTableBet((prev) => Math.max(prev, heroCurrentBet + addedChips));
+      setPokerPot((prev) => prev + addedChips);
+      setHeroLastAction({
+        type: action === 'all_in' ? 'ALL_IN' : (action === 'bet' ? 'BET' : 'RAISE'),
+        amount: targetBet,
+        message: action === 'all_in' ? 'ALL-IN' : `Raise ${targetBet}`,
+      });
+      setPokerTurn('B');
+      setTurnTimeLeft(15);
+      return;
     }
   };
 
@@ -1653,33 +1738,87 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     if (gameType !== 'poker' || roomState !== 'GAME_ACTIVE' || pokerTurn !== 'B') return;
 
     const timer = setTimeout(() => {
-      if (pokerPhase === 'FLOP') {
+      const toCall = Math.max(0, heroCurrentBet - botCurrentBet);
+      let newBotChips = botChips;
+      let newBotCurrentBet = botCurrentBet;
+      let newPot = pokerPot;
+
+      if (toCall > 0) {
+        const actualCall = Math.min(newBotChips, toCall);
+        newBotChips -= actualCall;
+        newBotCurrentBet += actualCall;
+        newPot += actualCall;
+        setBotChips(newBotChips);
+        setBotCurrentBet(newBotCurrentBet);
+        setPokerPot(newPot);
+        setBotLastAction({ type: 'CALL', amount: actualCall, message: `Call ${actualCall}` });
+      } else {
+        setBotLastAction({ type: 'CHECK', message: 'Check' });
+      }
+
+      if (pokerPhase === 'PREFLOP') {
+        setPokerPhase('FLOP');
+        setPokerCommunityCards(pokerBoardPool.slice(0, 3));
+        setHeroCurrentBet(0);
+        setBotCurrentBet(0);
+        setPokerTableBet(0);
+        setPokerTurn('A');
+        setTurnTimeLeft(15);
+      } else if (pokerPhase === 'FLOP') {
         setPokerPhase('TURN');
-        setPokerCommunityCards((prev) => [
-          ...prev,
-          { suit: '♣', value: '4', numericValue: 4 },
-        ]);
+        setPokerCommunityCards(pokerBoardPool.slice(0, 4));
+        setHeroCurrentBet(0);
+        setBotCurrentBet(0);
+        setPokerTableBet(0);
         setPokerTurn('A');
         setTurnTimeLeft(15);
       } else if (pokerPhase === 'TURN') {
         setPokerPhase('RIVER');
-        setPokerCommunityCards((prev) => [
-          ...prev,
-          { suit: '♥', value: 'A', numericValue: 14 },
-        ]);
+        setPokerCommunityCards(pokerBoardPool.slice(0, 5));
+        setHeroCurrentBet(0);
+        setBotCurrentBet(0);
+        setPokerTableBet(0);
         setPokerTurn('A');
         setTurnTimeLeft(15);
       } else {
         // Showdown
         setPokerPhase('SHOWDOWN');
-        setWinnerSide('A');
-        setRoomState('MATCH_SETTLED');
-        triggerNotification('success');
+        setPokerTurn('A');
+
+        const heroEval = evaluatePokerHandClient([...heroHoleCards, ...pokerBoardPool]);
+        const botEval = evaluatePokerHandClient([...botHoleCards, ...pokerBoardPool]);
+        const heroScore = heroEval?.score || 0;
+        const botScore = botEval?.score || 0;
+        const heroWins = heroScore >= botScore;
+
+        if (heroWins) {
+          triggerNotification('success');
+        } else {
+          triggerNotification('error');
+        }
+
+        setTimeout(() => {
+          setWinnerSide(heroWins ? 'A' : 'B');
+          setRoomState('MATCH_SETTLED');
+        }, 2200);
       }
-    }, 1300);
+    }, 1100);
 
     return () => clearTimeout(timer);
-  }, [gameType, roomState, pokerTurn, pokerPhase]);
+  }, [
+    gameType,
+    roomState,
+    pokerTurn,
+    pokerPhase,
+    heroCurrentBet,
+    botCurrentBet,
+    botChips,
+    pokerPot,
+    pokerBoardPool,
+    heroHoleCards,
+    botHoleCards,
+    triggerNotification,
+  ]);
 
   // --- Initial Start & Coin Toss Orchestration ---
   const startNewMatch = useCallback(() => {
@@ -1789,7 +1928,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
                 (gameType === 'blackjack' && bjTurn === 'A') ||
                 (gameType === 'connect4' && c4Turn === 'A') ||
                 (gameType === 'shotgun' && shotgunTurn === 'A') ||
-                (gameType === 'bridge' && bridgeTurn === 'A')
+                (gameType === 'bridge' && bridgeTurn === 'A') ||
+                (gameType === 'poker' && pokerTurn === 'A')
                   ? 'bg-emerald-400 animate-ping'
                   : 'bg-amber-400 animate-pulse'
               }`}
@@ -1799,7 +1939,8 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
                 (gameType === 'blackjack' && bjTurn === 'A') ||
                 (gameType === 'connect4' && c4Turn === 'A') ||
                 (gameType === 'shotgun' && shotgunTurn === 'A') ||
-                (gameType === 'bridge' && bridgeTurn === 'A'))
+                (gameType === 'bridge' && bridgeTurn === 'A') ||
+                (gameType === 'poker' && pokerTurn === 'A'))
                 ? t('vsbot.yourTurn')
                 : t('vsbot.cpuThinking')}
             </span>
@@ -2000,41 +2141,66 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         {gameType === 'poker' && (
           <PokerArena
             gameData={{
-              phase: pokerPhase,
+              stage: pokerPhase,
               pot: pokerPot,
-              currentTurn: pokerTurn === 'A' ? 0 : 1,
+              currentBet: pokerTableBet,
+              minRaise: 20,
+              maxPlayers: 2,
+              handNumber: 1,
+              blindLevel: 1,
+              smallBlind: 10,
+              bigBlind: 20,
+              buttonSeat: 0,
+              smallBlindSeat: 0,
+              bigBlindSeat: 1,
               activeSeat: pokerTurn === 'A' ? 0 : 1,
-              dealerSeat: 0,
-              currentBet: 50,
-              minRaise: 50,
+              currentTurn: pokerTurn === 'A' ? 0 : 1,
+              turnTimeLimit: 15,
+              turnTimeRemaining: turnTimeLeft,
+              communityCards: pokerCommunityCards,
+              sidePots: [],
+              isVsBot: true,
               seats: [
                 {
                   seatIndex: 0,
+                  walletAddress: '0:hero',
+                  telegramId: '1',
                   username: playerName,
-                  chips: 500,
-                  currentBet: 50,
-                  hasFolded: false,
+                  displayName: playerName,
+                  photoUrl: userProfile?.photoUrl,
+                  chips: heroChips,
+                  currentBet: heroCurrentBet,
+                  totalInvestedThisHand: 500 - heroChips,
+                  hasFolded: winnerSide === 'B' && pokerPhase !== 'SHOWDOWN',
+                  isAllIn: heroChips === 0,
                   isConnected: true,
-                  cards: [
-                    { suit: '♠', value: 'A', numericValue: 14 },
-                    { suit: '♥', value: 'K', numericValue: 13 },
-                  ],
+                  isReady: true,
+                  isTurn: pokerTurn === 'A',
+                  role: 'SB',
+                  holeCards: heroHoleCards,
+                  hasHoleCards: true,
+                  lastAction: heroLastAction,
                 },
                 {
                   seatIndex: 1,
+                  walletAddress: '0:bot',
+                  telegramId: 'bot',
                   username: botName,
-                  chips: 500,
-                  currentBet: 50,
-                  hasFolded: false,
+                  displayName: botName,
+                  chips: botChips,
+                  currentBet: botCurrentBet,
+                  totalInvestedThisHand: 500 - botChips,
+                  hasFolded: winnerSide === 'A' && pokerPhase !== 'SHOWDOWN',
+                  isAllIn: botChips === 0,
                   isConnected: true,
-                  cards: [
-                    { suit: '♦', value: 'Q', numericValue: 12 },
-                    { suit: '♣', value: 'J', numericValue: 11 },
-                  ],
+                  isReady: true,
+                  isTurn: pokerTurn === 'B',
+                  role: 'BB',
+                  holeCards: (pokerPhase === 'SHOWDOWN' || roomState === 'MATCH_SETTLED') ? botHoleCards : undefined,
+                  hasHoleCards: true,
+                  lastAction: botLastAction,
                 },
               ],
-              communityCards: pokerCommunityCards,
-              turnTimeRemaining: turnTimeLeft,
             } as any}
             role="PLAYER_A"
             userSide="A"

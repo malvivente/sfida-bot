@@ -82,12 +82,13 @@ export const Arena: React.FC<ArenaProps> = ({
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
   const modalBottomOffset = isFullscreen ? 24 : 12;
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
+  const [isBotMatchActive, setIsBotMatchActive] = useState(false);
   const [pendingInviteMatch, setPendingInviteMatch] = useState<{ match: MatchData; inviteCode?: string } | null>(null);
   const [unavailableMatchNotice, setUnavailableMatchNotice] = useState<{ matchId?: string } | null>(null);
 
   useEffect(() => {
-    onMatchActiveChange?.(Boolean(activeMatchId));
-  }, [activeMatchId, onMatchActiveChange]);
+    onMatchActiveChange?.(Boolean(activeMatchId || isBotMatchActive));
+  }, [activeMatchId, isBotMatchActive, onMatchActiveChange]);
   const [role, setRole] = useState<'player' | 'spectator'>(initialRole);
   const [isReady, setIsReady] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -1942,6 +1943,7 @@ export const Arena: React.FC<ArenaProps> = ({
       ) : (
         <DuelLobby
           matches={matches}
+          onBotMatchActiveChange={setIsBotMatchActive}
           onCreateMatch={handleCreateMatch}
           onJoinMatch={handleJoinMatch}
           onSpectateMatch={handleSpectateMatch}
