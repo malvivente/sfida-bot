@@ -1046,6 +1046,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     dodgeBufferTicks: number;
     superBufferTicks: number;
     dashBufferTicks: number;
+    dashActiveTicks: number;
   }>({
     left: false,
     right: false,
@@ -1061,6 +1062,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
     dodgeBufferTicks: 0,
     superBufferTicks: 0,
     dashBufferTicks: 0,
+    dashActiveTicks: 0,
   });
 
   const botCooldownRef = useRef<number>(0);
@@ -1105,6 +1107,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
       dodgeBufferTicks: 0,
       superBufferTicks: 0,
       dashBufferTicks: 0,
+      dashActiveTicks: 0,
     };
   };
 
@@ -1383,11 +1386,19 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
         if (inp.superBufferTicks > 0) inp.superBufferTicks--;
         if (inp.dashBufferTicks > 0) inp.dashBufferTicks--;
 
+        // Active Dash displacement (snappy sliding retreat/advance across ticks)
+        if (inp.dashActiveTicks > 0) {
+          inp.dashActiveTicks--;
+          const step = inp.dashDir || 1;
+          pA.x = Math.max(140, Math.min(660, pA.x + step * 10));
+        }
+
         // Update Player A stateTicks
         if (pA.stateTicks > 0) {
           pA.stateTicks--;
           if (pA.stateTicks <= 0) {
             pA.isDodging = false;
+            inp.dashActiveTicks = 0;
             pA.state = inp.block ? 'BLOCK' : 'IDLE';
             pA.isGuarding = inp.block;
           }
@@ -1405,10 +1416,11 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
             const dir = inp.dashDir || 1;
             pA.stamina = Math.max(0, pA.stamina - 14);
             pA.state = 'DODGE';
-            pA.stateTicks = 7;
+            pA.stateTicks = 8;
             pA.isDodging = true;
             pA.isGuarding = false;
-            pA.x = Math.max(140, Math.min(660, pA.x + dir * 32));
+            inp.dashActiveTicks = 8;
+            pA.x = Math.max(140, Math.min(660, pA.x + dir * 15));
           } else if (wantSuper && pA.superMeter >= 100) {
             inp.super = false;
             inp.superBufferTicks = 0;
@@ -1532,7 +1544,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
 
         // Hit Detection: Player A hitting Bot B
         if ((pA.state === 'JAB' && pA.stateTicks === 3) || (pA.state === 'HOOK' && pA.stateTicks === 5) || (pA.state === 'UPPERCUT' && pA.stateTicks === 7)) {
-          const range = pA.state === 'UPPERCUT' ? 110 : pA.state === 'HOOK' ? 105 : 125;
+          const range = pA.state === 'UPPERCUT' ? 88 : pA.state === 'HOOK' ? 84 : 92;
           if (dist <= range && !pB.isDodging) {
             const isBlocked = pB.isGuarding && pB.stamina >= 10 && pA.state !== 'UPPERCUT';
             const baseDmg = pA.state === 'UPPERCUT' ? 28 : pA.state === 'HOOK' ? 22 : 9;
@@ -1561,7 +1573,7 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
 
         // Hit Detection: Bot B hitting Player A
         if ((pB.state === 'JAB' && pB.stateTicks === 3) || (pB.state === 'HOOK' && pB.stateTicks === 5) || (pB.state === 'UPPERCUT' && pB.stateTicks === 7)) {
-          const range = pB.state === 'UPPERCUT' ? 110 : pB.state === 'HOOK' ? 105 : 125;
+          const range = pB.state === 'UPPERCUT' ? 88 : pB.state === 'HOOK' ? 84 : 92;
           if (dist <= range && !pA.isDodging) {
             const isBlocked = pA.isGuarding && pA.stamina >= 10 && pB.state !== 'UPPERCUT';
             const baseDmg = pB.state === 'UPPERCUT' ? 26 : pB.state === 'HOOK' ? 18 : 8;

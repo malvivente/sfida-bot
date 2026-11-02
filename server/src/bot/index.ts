@@ -4,7 +4,7 @@ import { dbService } from '../services/db.js';
 import { botT, resolveLanguage, SUPPORTED_LANGUAGES, BotLanguage } from './i18n.js';
 import { renderCustomEmojis } from './emojis.js';
 import { GameType } from '../types/gameTypes.js';
-import { handleBroadcastCommand } from './broadcast.js';
+import { handleBroadcastCommand, isBotAdmin } from './broadcast.js';
 import {
   handleSetGroupCommand,
   handleGetGroupCommand,
@@ -34,9 +34,11 @@ import {
 } from './adminMaintenance.js';
 import {
   handleCreateRaffleCommand,
+  handleCreateFreeRaffleCommand,
   handleSetFeaturedRaffleCommand,
   handleEndRaffleCommand,
   handleListRafflesCommand,
+  handleAdminHelpCommand,
 } from './adminRaffle.js';
 import { RoomManager } from '../engine/RoomManager.js';
 import { computeEscrowAddress } from '../utils/escrow.js';
@@ -261,8 +263,12 @@ export function createTelegramBot(token?: string): Bot {
   bot.command('help', async (ctx) => {
     const lang = await getUserLang(ctx.from);
     const botUsername = await getBotUsername();
+    let text = renderCustomEmojis(botT(lang, 'help_text', { botUsername }));
+    if (isBotAdmin(ctx.from?.id)) {
+      text += `\n\n🛡️ <b>Admin Access:</b> Digita /admin per la lista completa dei comandi amministratore.`;
+    }
 
-    await ctx.reply(renderCustomEmojis(botT(lang, 'help_text', { botUsername })), {
+    await ctx.reply(text, {
       parse_mode: 'HTML',
     });
   });
@@ -340,9 +346,17 @@ export function createTelegramBot(token?: string): Bot {
     await handleListAdminsCommand(ctx);
   });
 
+  // Admin Commands Help Manual
+  bot.command(['admin', 'adminhelp', 'comandi_admin'], async (ctx) => {
+    await handleAdminHelpCommand(ctx);
+  });
+
   // Admin Raffle Commands
   bot.command(['create_raffle', 'createraffle'], async (ctx) => {
     await handleCreateRaffleCommand(ctx);
+  });
+  bot.command(['create_free_raffle', 'createfreeraffle'], async (ctx) => {
+    await handleCreateFreeRaffleCommand(ctx);
   });
   bot.command(['set_featured_raffle', 'setfeaturedraffle', 'featured_raffle'], async (ctx) => {
     await handleSetFeaturedRaffleCommand(ctx);

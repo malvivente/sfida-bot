@@ -1,4 +1,4 @@
-export type UserRank = 'wood' | 'bronze' | 'iron' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'obsidian';
+export type UserRank = 'wood' | 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'obsidian';
 
 export interface RankDefinition {
   id: UserRank;
@@ -32,35 +32,35 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
     glowShadow: 'shadow-[0_0_8px_rgba(180,83,9,0.3)]',
     iconName: 'Shield',
   },
-  bronze: {
-    id: 'bronze',
-    name: 'Bronze',
-    nameIt: 'Bronzo',
-    minXp: 500,
-    feeGram: 0.08,
-    rewardGram: 0.50,
-    rewardTickets: 5,
-    badgeColor: '#CD7F32',
-    textColor: 'text-amber-500',
-    borderColor: 'border-amber-600/60',
-    bgGradient: 'from-amber-900/80 via-amber-800/60 to-yellow-950/60',
-    glowShadow: 'shadow-[0_0_10px_rgba(205,127,50,0.4)]',
-    iconName: 'Award',
-  },
   iron: {
     id: 'iron',
     name: 'Iron',
     nameIt: 'Ferro',
-    minXp: 1250,
-    feeGram: 0.07,
-    rewardGram: 1.00,
-    rewardTickets: 10,
+    minXp: 500,
+    feeGram: 0.08,
+    rewardGram: 0.50,
+    rewardTickets: 5,
     badgeColor: '#9CA3AF',
     textColor: 'text-zinc-300',
     borderColor: 'border-zinc-400/60',
     bgGradient: 'from-zinc-700/80 via-zinc-600/60 to-slate-800/60',
     glowShadow: 'shadow-[0_0_10px_rgba(156,163,175,0.4)]',
     iconName: 'Shield',
+  },
+  bronze: {
+    id: 'bronze',
+    name: 'Bronze',
+    nameIt: 'Bronzo',
+    minXp: 1250,
+    feeGram: 0.07,
+    rewardGram: 1.00,
+    rewardTickets: 10,
+    badgeColor: '#CD7F32',
+    textColor: 'text-amber-500',
+    borderColor: 'border-amber-600/60',
+    bgGradient: 'from-amber-900/80 via-amber-800/60 to-yellow-950/60',
+    glowShadow: 'shadow-[0_0_10px_rgba(205,127,50,0.4)]',
+    iconName: 'Award',
   },
   silver: {
     id: 'silver',
@@ -139,7 +139,7 @@ export const RANKS_CONFIG: Record<UserRank, RankDefinition> = {
   },
 };
 
-export const RANKS_LIST: UserRank[] = ['wood', 'bronze', 'iron', 'silver', 'gold', 'platinum', 'diamond', 'obsidian'];
+export const RANKS_LIST: UserRank[] = ['wood', 'iron', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'obsidian'];
 
 export function getRankFromXp(xp: number): UserRank {
   for (let i = RANKS_LIST.length - 1; i >= 0; i--) {

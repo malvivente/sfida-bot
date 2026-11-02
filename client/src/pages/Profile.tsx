@@ -39,7 +39,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
   const { userId, username, fullName, displayName, photoUrl, isPremium } = useTelegram();
   const { isFullscreen, topInset } = useTelegramViewport();
   const { triggerImpact } = useHaptics();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const modalTopOffset = isFullscreen ? Math.max(topInset, 80) + 8 : 12;
   const modalBottomOffset = isFullscreen ? 24 : 12;
@@ -395,15 +395,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-orange-500/10 blur-xl pointer-events-none group-hover:bg-orange-500/20 transition-all" />
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center space-x-1.5 text-xs text-orange-400 font-semibold">
+              <div className="flex items-center justify-between mb-1 gap-1">
+                <div className="flex items-center space-x-1.5 text-xs text-orange-400 font-semibold min-w-0">
                   <Flame className={`w-3.5 h-3.5 ${dailyStreak > 0 ? 'fill-orange-400 text-orange-400 animate-pulse' : 'text-slate-500'} shrink-0`} />
                   <span className="font-heading font-black text-white text-[11px] sm:text-xs tracking-wider truncate">
                     {t('profile.streakTitle', { streak: dailyStreak })}
                   </span>
                 </div>
-                <span className="text-[9px] font-heading font-bold text-orange-300/80 bg-orange-500/15 px-1.5 py-0.5 rounded-md flex items-center space-x-0.5 shrink-0">
-                  <span>Traguardi</span>
+                <span className="text-[9px] font-heading font-bold text-orange-300/90 bg-orange-500/15 px-1.5 py-0.5 rounded-md flex items-center space-x-0.5 shrink-0 whitespace-nowrap">
+                  <span>{t('profile.streakMilestonesBadge')}</span>
                   <ChevronRight className="w-2.5 h-2.5" />
                 </span>
               </div>
@@ -426,7 +426,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             <div className="mt-2.5 space-y-1.5">
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span className="text-emerald-400 font-mono font-bold shrink-0">
-                  {prevMilestoneDays} gg ✓
+                  {t('profile.streakDaysShort', { days: prevMilestoneDays })} ✓
                 </span>
                 <div className="flex-1 mx-2 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/10 p-[0.5px]">
                   <div
@@ -435,26 +435,26 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                   />
                 </div>
                 <span className="text-amber-300 font-mono font-bold shrink-0">
-                  {nextMilestoneDays} gg 🎁
+                  {t('profile.streakDaysShort', { days: nextMilestoneDays })} 🎁
                 </span>
               </div>
 
               {nextMilestoneObj ? (
-                <div className="flex items-center justify-center space-x-1.5 text-[10px] font-mono font-bold text-slate-300">
-                  <span className="text-slate-400">Traguardo {nextMilestoneObj.days} gg:</span>
-                  <span className="inline-flex items-center space-x-0.5 text-cyan-300">
+                <div className="flex items-center justify-center space-x-1 text-[10px] font-mono font-bold text-slate-300 whitespace-nowrap overflow-hidden">
+                  <span className="text-slate-400">{t('profile.streakTargetLabel', { days: nextMilestoneObj.days })}</span>
+                  <span className="inline-flex items-center space-x-0.5 text-cyan-300 shrink-0">
                     <span>+{nextMilestoneObj.rewardGram}</span>
                     <GramIcon className="w-3 h-3 text-cyan-400 inline shrink-0" />
                   </span>
                   <span className="text-slate-500">•</span>
-                  <span className="inline-flex items-center space-x-0.5 text-purple-300">
+                  <span className="inline-flex items-center space-x-0.5 text-purple-300 shrink-0">
                     <span>+{nextMilestoneObj.rewardTickets}</span>
                     <Ticket className="w-3 h-3 text-purple-400 inline shrink-0" />
                   </span>
                 </div>
               ) : (
                 <div className="text-[10px] font-heading font-black text-amber-300 text-center">
-                  LEGGENDA MAX STREAK!
+                  {t('profile.streakMaxLegend')}
                 </div>
               )}
             </div>
@@ -748,10 +748,10 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                 </div>
                 <div>
                   <h3 className="text-sm font-heading font-black text-white uppercase tracking-wider">
-                    {t('profile.streakModalTitle') || 'TRAGUARDI STREAK'}
+                    {t('profile.streakModalTitle')}
                   </h3>
                   <span className="text-[10px] text-slate-400 block font-medium">
-                    Serie attuale: <strong className="text-orange-400 font-bold">{dailyStreak} giorni</strong>
+                    {t('profile.streakCurrent', { days: dailyStreak })}
                   </span>
                 </div>
               </div>
@@ -766,7 +766,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
 
             {/* Description note */}
             <div className="p-3 rounded-2xl bg-orange-950/20 border border-orange-500/20 text-[11px] text-slate-300 leading-relaxed font-sans shrink-0">
-              Vinci almeno <strong className="text-white">1 duello ogni giorno</strong> (PvP o Vs Bot) per incrementare la serie e sbloccare ricompense in <span className="text-cyan-300 font-bold">GRAM</span> e <span className="text-purple-300 font-bold">Ticket Raffle</span>! Se salti un giorno senza vincere, la streak si azzera.
+              {language === 'en' ? (
+                <>
+                  Win at least <strong className="text-white">1 match every day</strong> (PvP or Vs Bot) to extend your streak and unlock rewards in <span className="text-cyan-300 font-bold">GRAM</span> and <span className="text-purple-300 font-bold">Raffle Tickets</span>! If you miss a day without winning, your streak resets.
+                </>
+              ) : (
+                <>
+                  Vinci almeno <strong className="text-white">1 duello ogni giorno</strong> (PvP o Vs Bot) per incrementare la serie e sbloccare ricompense in <span className="text-cyan-300 font-bold">GRAM</span> e <span className="text-purple-300 font-bold">Ticket Raffle</span>! Se salti un giorno senza vincere, la streak si azzera.
+                </>
+              )}
             </div>
 
             {/* Milestones list */}
@@ -800,7 +808,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                       <div className="min-w-0">
                         <div className="flex items-center space-x-1.5">
                           <span className="text-xs font-heading font-black text-white truncate">
-                            {m.titleIt}
+                            {language === 'en' ? m.titleEn : m.titleIt}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2 mt-0.5 text-[10px] font-mono font-bold">
@@ -820,15 +828,15 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
                     <div className="shrink-0 text-right">
                       {isReached ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-heading font-black uppercase">
-                          Sbloccato ✓
+                          {t('profile.streakUnlocked')}
                         </span>
                       ) : isTarget ? (
                         <span className="px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-400/50 text-orange-300 text-[10px] font-heading font-black uppercase">
-                          {dailyStreak}/{m.days} gg
+                          {t('profile.streakDaysProgress', { current: dailyStreak, total: m.days })}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-500 text-[10px] font-heading font-bold uppercase">
-                          {m.days} gg
+                          {t('profile.streakDaysShort', { days: m.days })}
                         </span>
                       )}
                     </div>
@@ -843,7 +851,7 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
               onClick={() => setShowStreakModal(false)}
               className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-heading font-black text-xs uppercase tracking-wider shrink-0 transition-all active:scale-95"
             >
-              {t('common.close') || 'CHIUDI'}
+              {t('common.close')}
             </button>
           </div>
         </div>,

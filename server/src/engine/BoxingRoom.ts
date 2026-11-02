@@ -21,6 +21,7 @@ interface PlayerInput {
   superBufferTicks: number;
   dashBufferTicks: number;
   dashDir: number;
+  dashActiveTicks: number;
 }
 
 export class BoxingRoom extends BaseGameRoom {
@@ -44,6 +45,7 @@ export class BoxingRoom extends BaseGameRoom {
     superBufferTicks: 0,
     dashBufferTicks: 0,
     dashDir: 0,
+    dashActiveTicks: 0,
   };
 
   private inputB: PlayerInput = {
@@ -56,6 +58,7 @@ export class BoxingRoom extends BaseGameRoom {
     superBufferTicks: 0,
     dashBufferTicks: 0,
     dashDir: 0,
+    dashActiveTicks: 0,
   };
 
   private loopInterval?: NodeJS.Timeout;
@@ -223,6 +226,13 @@ export class BoxingRoom extends BaseGameRoom {
     if (inp.superBufferTicks > 0) inp.superBufferTicks--;
     if (inp.dashBufferTicks > 0) inp.dashBufferTicks--;
 
+    // Active Dash displacement (snappy sliding retreat/advance across ticks)
+    if (inp.dashActiveTicks > 0) {
+      inp.dashActiveTicks--;
+      const step = inp.dashDir || (b.side === 'A' ? 1 : -1);
+      b.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, b.x + step * 10));
+    }
+
     // Decrement state ticks
     if (b.stateTicks > 0) {
       b.stateTicks--;
@@ -232,6 +242,7 @@ export class BoxingRoom extends BaseGameRoom {
       if (b.stateTicks <= 0) {
         b.isDodging = false;
         b.isCounterVulnerable = false;
+        inp.dashActiveTicks = 0;
         if (inp.block && b.stamina >= 6) {
           b.state = 'BLOCK';
           b.isGuarding = true;
@@ -261,10 +272,11 @@ export class BoxingRoom extends BaseGameRoom {
       const dashDir = inp.dashDir || (b.side === 'A' ? 1 : -1);
       b.stamina = Math.max(0, b.stamina - 14);
       b.state = 'DODGE';
-      b.stateTicks = 7;
+      b.stateTicks = 8;
       b.isDodging = true;
       b.isGuarding = false;
-      b.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, b.x + dashDir * 32));
+      inp.dashActiveTicks = 8;
+      b.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, b.x + dashDir * 15)); // initial burst + 8 ticks * 10px = ~95px displacement
 
       // Counter window on opponent if dashing during their punch windup
       if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
@@ -349,18 +361,18 @@ export class BoxingRoom extends BaseGameRoom {
 
     if (!isJabHitFrame && !isHookHitFrame && !isUppercutHitFrame) return;
 
-    let range = 125;
+    let range = 92;
     let baseDmg = 9;
     let hitType: BoxingHitEvent['type'] = 'JAB';
     let superGain = 12;
 
     if (attacker.state === 'HOOK') {
-      range = 105;
+      range = 84;
       baseDmg = 22;
       hitType = 'HOOK';
       superGain = 22;
     } else if (attacker.state === 'UPPERCUT') {
-      range = 110;
+      range = 88;
       baseDmg = 28;
       hitType = 'UPPERCUT';
       superGain = 0;

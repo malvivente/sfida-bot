@@ -12,6 +12,7 @@ export interface Translations {
 export const translations: Translations = {
   // Common
   'common.cancel': { it: 'ANNULLA', en: 'CANCEL' },
+  'common.close': { it: 'CHIUDI', en: 'CLOSE' },
 
   // Navigation
   'nav.home': { it: 'Home', en: 'Home' },
@@ -409,6 +410,15 @@ export const translations: Translations = {
   // Profile
   'profile.title': { it: 'PROFILO GUERRIERO', en: 'WARRIOR PROFILE' },
   'profile.streakTitle': { it: '{streak} GIORNI DI STREAK', en: '{streak} DAY STREAK' },
+  'profile.streakMilestonesBadge': { it: 'Traguardi', en: 'Goals' },
+  'profile.streakModalTitle': { it: 'TRAGUARDI STREAK', en: 'STREAK MILESTONES' },
+  'profile.streakCurrent': { it: 'Serie attuale: {days} giorni', en: 'Current streak: {days} days' },
+  'profile.streakModalDesc': { it: 'Vinci almeno 1 duello ogni giorno (PvP o Vs Bot) per incrementare la serie e sbloccare ricompense in GRAM e Ticket Raffle! Se salti un giorno senza vincere, la streak si azzera.', en: 'Win at least 1 match every day (PvP or Vs Bot) to extend your streak and unlock rewards in GRAM and Raffle Tickets! If you miss a day without winning, your streak resets.' },
+  'profile.streakTargetLabel': { it: 'Traguardo {days} gg:', en: 'Goal {days}d:' },
+  'profile.streakMaxLegend': { it: 'LEGGENDA MAX STREAK!', en: 'MAX STREAK LEGEND!' },
+  'profile.streakUnlocked': { it: 'Sbloccato ✓', en: 'Unlocked ✓' },
+  'profile.streakDaysProgress': { it: '{current}/{total} gg', en: '{current}/{total} d' },
+  'profile.streakDaysShort': { it: '{days} gg', en: '{days}d' },
   'profile.streakAction': { it: 'Vinci 1 duello oggi', en: 'Win 1 match today' },
   'profile.streakCompleted': { it: '✓ Completato per oggi!', en: '✓ Completed today!' },
   'profile.rewardSample': { it: 'Prossimo premio: Bonus GRAM', en: 'Upcoming prize: GRAM Bonus' },

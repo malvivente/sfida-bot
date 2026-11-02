@@ -79,6 +79,7 @@ export const RankPill: React.FC<{
   const renderIcon = () => {
     const iconClass = "w-3 h-3 shrink-0";
     switch (rank) {
+      case 'iron': return <Shield className={`${iconClass} text-zinc-300 fill-zinc-400`} />;
       case 'bronze': return <Award className={`${iconClass} text-amber-300`} />;
       case 'silver': return <Star className={`${iconClass} text-slate-200 fill-slate-200`} />;
       case 'gold': return <Crown className={`${iconClass} text-yellow-300 fill-yellow-300`} />;
