@@ -267,22 +267,25 @@ export class BoxingRoom extends BaseGameRoom {
     }
 
     // 1b. Dash (Double-tap directional sprint burst, consumes 14 stamina, uses dodge/weave animation)
-    if (inp.dashBufferTicks > 0 && b.stamina >= 14) {
-      inp.dashBufferTicks = 0;
-      const dashDir = inp.dashDir || (b.side === 'A' ? 1 : -1);
-      b.stamina = Math.max(0, b.stamina - 14);
-      b.state = 'DODGE';
-      b.stateTicks = 8;
-      b.isDodging = true;
-      b.isGuarding = false;
-      inp.dashActiveTicks = 8;
-      b.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, b.x + dashDir * 15)); // initial burst + 8 ticks * 10px = ~95px displacement
+    if (inp.dashBufferTicks > 0) {
+      const canDash = b.stamina >= 14;
+      inp.dashBufferTicks = 0; // Consume intent immediately so it never waits for stamina!
+      if (canDash) {
+        const dashDir = inp.dashDir || (b.side === 'A' ? 1 : -1);
+        b.stamina = Math.max(0, b.stamina - 14);
+        b.state = 'DODGE';
+        b.stateTicks = 8;
+        b.isDodging = true;
+        b.isGuarding = false;
+        inp.dashActiveTicks = 8;
+        b.x = Math.max(RING_MIN_X, Math.min(RING_MAX_X, b.x + dashDir * 15)); // initial burst + 8 ticks * 10px = ~95px displacement
 
-      // Counter window on opponent if dashing during their punch windup
-      if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
-        opponent.isCounterVulnerable = true;
+        // Counter window on opponent if dashing during their punch windup
+        if (opponent.state === 'JAB' || opponent.state === 'HOOK' || opponent.state === 'UPPERCUT') {
+          opponent.isCounterVulnerable = true;
+        }
+        return;
       }
-      return;
     }
 
     // 2. Dodge / Weave
@@ -478,8 +481,13 @@ export class BoxingRoom extends BaseGameRoom {
       if (data.dodge) inp.dodgeBufferTicks = 8;
       if (data.super) inp.superBufferTicks = 8;
       if (data.dash) {
-        inp.dashBufferTicks = 8;
-        inp.dashDir = data.dashDir !== undefined ? data.dashDir : (data.dash === 'left' ? -1 : 1);
+        const boxer = side === 'A' ? this.boxerA : this.boxerB;
+        if (boxer.stamina >= 14) {
+          inp.dashBufferTicks = 8;
+          inp.dashDir = data.dashDir !== undefined ? data.dashDir : (data.dash === 'left' ? -1 : 1);
+        } else {
+          inp.dashBufferTicks = 0; // Do not queue if insufficient stamina
+        }
       }
     }
   }

@@ -142,6 +142,13 @@ function getOrLoadBoxingSprite(src: string): HTMLImageElement {
   return img;
 }
 
+// Preload all game sprites immediately so they are cached and ready before match starts
+if (typeof window !== 'undefined') {
+  Object.values(BOXING_SPRITE_PATHS).forEach((src) => {
+    getOrLoadBoxingSprite(src);
+  });
+}
+
 export const BoxingArena: React.FC<BoxingArenaProps> = ({
   gameData,
   role,
@@ -193,6 +200,8 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
   });
 
   const [localState, setLocalState] = useState<BoxingState | undefined>(gameData);
+  const localStateRef = useRef<BoxingState | undefined>(localState);
+  localStateRef.current = localState;
   const particlesRef = useRef<CombatParticle[]>([]);
   const floatingTextsRef = useRef<FloatingText[]>([]);
   const screenShakeRef = useRef<number>(0);
@@ -313,25 +322,35 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
 
   const handleLeftPress = useCallback(() => {
     const now = Date.now();
+    const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+    const myStamina = myBoxer?.stamina ?? 100;
+
     if (now - lastLeftTap.current < 280) {
-      triggerImpact('heavy');
-      sendInput({ dash: 'left', dashDir: -1 });
+      if (myStamina >= 14) {
+        triggerImpact('heavy');
+        sendInput({ dash: 'left', dashDir: -1 });
+      }
     } else {
       sendInput({ left: true });
     }
     lastLeftTap.current = now;
-  }, [sendInput, triggerImpact]);
+  }, [sendInput, triggerImpact, userSide]);
 
   const handleRightPress = useCallback(() => {
     const now = Date.now();
+    const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+    const myStamina = myBoxer?.stamina ?? 100;
+
     if (now - lastRightTap.current < 280) {
-      triggerImpact('heavy');
-      sendInput({ dash: 'right', dashDir: 1 });
+      if (myStamina >= 14) {
+        triggerImpact('heavy');
+        sendInput({ dash: 'right', dashDir: 1 });
+      }
     } else {
       sendInput({ right: true });
     }
     lastRightTap.current = now;
-  }, [sendInput, triggerImpact]);
+  }, [sendInput, triggerImpact, userSide]);
 
   // Keyboard controls for desktop pair testing
   useEffect(() => {
@@ -341,19 +360,25 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       if (e.repeat) return;
       keysPressed.current[e.key.toLowerCase()] = true;
       const now = Date.now();
+      const myBoxer = userSide === 'A' ? localStateRef.current?.boxerA : localStateRef.current?.boxerB;
+      const myStamina = myBoxer?.stamina ?? 100;
 
       if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') {
         if (now - lastLeftKey.current < 280) {
-          triggerImpact('heavy');
-          sendInput({ dash: 'left', dashDir: -1 });
+          if (myStamina >= 14) {
+            triggerImpact('heavy');
+            sendInput({ dash: 'left', dashDir: -1 });
+          }
         } else {
           sendInput({ left: true });
         }
         lastLeftKey.current = now;
       } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
         if (now - lastRightKey.current < 280) {
-          triggerImpact('heavy');
-          sendInput({ dash: 'right', dashDir: 1 });
+          if (myStamina >= 14) {
+            triggerImpact('heavy');
+            sendInput({ dash: 'right', dashDir: 1 });
+          }
         } else {
           sendInput({ right: true });
         }
@@ -361,8 +386,10 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
       } else if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
         sendInput({ block: true });
       } else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') {
-        triggerImpact('heavy');
-        sendInput({ dash: userSide === 'A' ? 'left' : 'right', dashDir: userSide === 'A' ? -1 : 1 });
+        if (myStamina >= 14) {
+          triggerImpact('heavy');
+          sendInput({ dash: userSide === 'A' ? 'left' : 'right', dashDir: userSide === 'A' ? -1 : 1 });
+        }
       } else if (e.key.toLowerCase() === 'j' || e.key.toLowerCase() === 'z') {
         sendInput({ jab: true });
       } else if (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'x') {
@@ -645,48 +672,12 @@ export const BoxingArena: React.FC<BoxingArenaProps> = ({
         ctx.restore();
       }
     } else {
-      // High-quality canvas fallback in exact Head Soccer mascot style
-      const headColor = isBlue ? '#38bdf8' : '#f87171';
-      const bodyColor = isBlue ? '#0284c7' : '#dc2626';
-
-      // Torso & shorts
-      ctx.fillStyle = bodyColor;
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.roundRect(x - 18, y - 55, 36, 45, 8);
-      ctx.fill();
-      ctx.stroke();
-
-      // Big Round Mascot Head
-      ctx.fillStyle = headColor;
-      ctx.beginPath();
-      ctx.arc(x, y - 85, 32, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Specular highlight
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.beginPath();
-      ctx.ellipse(x - 10, y - 98, 9, 4, -0.4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Fierce Ninja Eyes
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      if (facingRight) {
-        ctx.moveTo(x + 2, y - 88);
-        ctx.lineTo(x + 16, y - 84);
-        ctx.lineTo(x + 12, y - 76);
-        ctx.lineTo(x, y - 80);
-      } else {
-        ctx.moveTo(x - 2, y - 88);
-        ctx.lineTo(x - 16, y - 84);
-        ctx.lineTo(x - 12, y - 76);
-        ctx.lineTo(x, y - 80);
+      // Fallback: If specific action frame is still decoding, use Idle sprite if ready
+      const idleImg = isBlue ? spritesRef.current.boxerAIdle : spritesRef.current.boxerBIdle;
+      if (idleImg && idleImg.complete && idleImg.naturalWidth > 0) {
+        const targetW = targetH * (idleImg.naturalWidth / idleImg.naturalHeight);
+        ctx.drawImage(idleImg, x - targetW / 2, y - targetH, targetW, targetH);
       }
-      ctx.closePath();
-      ctx.fill();
     }
 
     // 6. "YOU" Marker above active player boxer head

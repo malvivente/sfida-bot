@@ -1410,17 +1410,19 @@ export const VsBotArenaRunner: React.FC<VsBotArenaRunnerProps> = ({
           const wantHook = inp.hook || inp.hookBufferTicks > 0;
           const wantJab = inp.jab || inp.jabBufferTicks > 0;
 
-          if (wantDash && pA.stamina >= 14) {
+          if (wantDash) {
             inp.dash = false;
             inp.dashBufferTicks = 0;
-            const dir = inp.dashDir || 1;
-            pA.stamina = Math.max(0, pA.stamina - 14);
-            pA.state = 'DODGE';
-            pA.stateTicks = 8;
-            pA.isDodging = true;
-            pA.isGuarding = false;
-            inp.dashActiveTicks = 8;
-            pA.x = Math.max(140, Math.min(660, pA.x + dir * 15));
+            if (pA.stamina >= 14) {
+              const dir = inp.dashDir || 1;
+              pA.stamina = Math.max(0, pA.stamina - 14);
+              pA.state = 'DODGE';
+              pA.stateTicks = 8;
+              pA.isDodging = true;
+              pA.isGuarding = false;
+              inp.dashActiveTicks = 8;
+              pA.x = Math.max(140, Math.min(660, pA.x + dir * 15));
+            }
           } else if (wantSuper && pA.superMeter >= 100) {
             inp.super = false;
             inp.superBufferTicks = 0;

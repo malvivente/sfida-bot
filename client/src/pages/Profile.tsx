@@ -395,66 +395,66 @@ export const Profile: React.FC<ProfileProps> = ({ onResumeDuel, onOpenLeaderboar
             <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-orange-500/10 blur-xl pointer-events-none group-hover:bg-orange-500/20 transition-all" />
 
             <div>
-              <div className="flex items-center justify-between mb-1 gap-1">
-                <div className="flex items-center space-x-1.5 text-xs text-orange-400 font-semibold min-w-0">
+              <div className="flex items-center justify-between text-xs mb-1 font-semibold">
+                <div className="flex items-center space-x-1.5 text-orange-400 min-w-0">
                   <Flame className={`w-3.5 h-3.5 ${dailyStreak > 0 ? 'fill-orange-400 text-orange-400 animate-pulse' : 'text-slate-500'} shrink-0`} />
-                  <span className="font-heading font-black text-white text-[11px] sm:text-xs tracking-wider truncate">
-                    {t('profile.streakTitle', { streak: dailyStreak })}
+                  <span className="truncate uppercase font-heading font-bold text-slate-300">
+                    {t('profile.streakCardHeader')}
                   </span>
                 </div>
-                <span className="text-[9px] font-heading font-bold text-orange-300/90 bg-orange-500/15 px-1.5 py-0.5 rounded-md flex items-center space-x-0.5 shrink-0 whitespace-nowrap">
-                  <span>{t('profile.streakMilestonesBadge')}</span>
-                  <ChevronRight className="w-2.5 h-2.5" />
+                <ChevronRight className="w-3.5 h-3.5 text-orange-400/80 group-hover:translate-x-0.5 transition-transform shrink-0 ml-1" />
+              </div>
+
+              <div className="flex items-baseline space-x-1.5">
+                <span className="text-sm sm:text-base font-heading font-black text-white leading-tight">
+                  {dailyStreak}
+                </span>
+                <span className="text-[11px] font-heading font-bold text-slate-400 uppercase">
+                  {dailyStreak === 1 ? t('profile.streakDaySingular') : t('profile.streakDayPlural')}
                 </span>
               </div>
 
-              <div className="text-[11px] font-medium mt-0.5">
+              <div className="mt-1">
                 {hasWonToday ? (
-                  <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                  <span className="text-[10px] font-heading font-bold text-emerald-400 flex items-center space-x-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span>{t('profile.streakCompleted')}</span>
+                    <span className="truncate">{t('profile.streakCompleted')}</span>
                   </span>
                 ) : (
-                  <span className="text-amber-400 font-semibold flex items-center space-x-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                    <span>{t('profile.streakAction')}</span>
+                  <span className="text-[10px] font-heading font-semibold text-amber-400/90 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+                    <span className="truncate">{t('profile.streakAction')}</span>
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="mt-2.5 space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] text-slate-400">
-                <span className="text-emerald-400 font-mono font-bold shrink-0">
-                  {t('profile.streakDaysShort', { days: prevMilestoneDays })} ✓
-                </span>
-                <div className="flex-1 mx-2 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/10 p-[0.5px]">
-                  <div
-                    style={{ width: `${streakProgressPct}%` }}
-                    className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 rounded-full transition-all duration-500"
-                  />
-                </div>
-                <span className="text-amber-300 font-mono font-bold shrink-0">
-                  {t('profile.streakDaysShort', { days: nextMilestoneDays })} 🎁
-                </span>
-              </div>
-
+            {/* Bottom Progress & Reward Preview */}
+            <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
               {nextMilestoneObj ? (
-                <div className="flex items-center justify-center space-x-1 text-[10px] font-mono font-bold text-slate-300 whitespace-nowrap overflow-hidden">
-                  <span className="text-slate-400">{t('profile.streakTargetLabel', { days: nextMilestoneObj.days })}</span>
-                  <span className="inline-flex items-center space-x-0.5 text-cyan-300 shrink-0">
-                    <span>+{nextMilestoneObj.rewardGram}</span>
-                    <GramIcon className="w-3 h-3 text-cyan-400 inline shrink-0" />
-                  </span>
-                  <span className="text-slate-500">•</span>
-                  <span className="inline-flex items-center space-x-0.5 text-purple-300 shrink-0">
-                    <span>+{nextMilestoneObj.rewardTickets}</span>
-                    <Ticket className="w-3 h-3 text-purple-400 inline shrink-0" />
-                  </span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between text-[9px] font-mono font-bold text-slate-400">
+                    <span className="text-orange-300/90 truncate">
+                      {t('profile.streakTargetMini', { days: nextMilestoneObj.days })}
+                    </span>
+                    <span className="inline-flex items-center space-x-1 text-cyan-300 shrink-0 ml-1">
+                      <span>+{nextMilestoneObj.rewardGram}</span>
+                      <GramIcon className="w-2.5 h-2.5 text-cyan-400 inline shrink-0" />
+                      <span className="text-slate-600">•</span>
+                      <span className="text-purple-300">+{nextMilestoneObj.rewardTickets}</span>
+                      <Ticket className="w-2.5 h-2.5 text-purple-400 inline shrink-0" />
+                    </span>
+                  </div>
+                  <div className="h-1 bg-black/60 rounded-full overflow-hidden border border-white/10 p-[0.5px]">
+                    <div
+                      style={{ width: `${streakProgressPct}%` }}
+                      className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 rounded-full transition-all duration-500"
+                    />
+                  </div>
+                </>
               ) : (
-                <div className="text-[10px] font-heading font-black text-amber-300 text-center">
-                  {t('profile.streakMaxLegend')}
+                <div className="text-[9px] font-heading font-black text-amber-300 text-center uppercase tracking-wide py-0.5">
+                  👑 {t('profile.streakMaxLegend')}
                 </div>
               )}
             </div>
